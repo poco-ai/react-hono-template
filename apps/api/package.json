@@ -4,13 +4,21 @@
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"cf-typegen": "wrangler types",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate:local": "wrangler d1 migrations apply react-hono-db --local",
+		"db:migrate:remote": "wrangler d1 migrations apply react-hono-db --remote",
+		"db:push": "drizzle-kit push"
 	},
 	"dependencies": {
+		"dotenv": "^18.0.4",
+		"drizzle-orm": "^1.0.0-rc.4",
 		"hono": "^4.13.9"
 	},
 	"devDependencies": {
 		"@types/node": "^24",
+		"drizzle-kit": "^1.0.0-rc.4",
+		"tsx": "^4.23.15",
 		"wrangler": "^4.141.0"
 	}
 }

@@ -6,8 +6,10 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"noEmit": true,
+		// drizzle-orm@rc 的类型声明需要 skipLibCheck（官方模板同样如此）
+		"skipLibCheck": true,
 		// workers 运行时类型由 `wrangler types` 生成的 worker-configuration.d.ts 提供
-		// 置空以避免其他全局类型包和 workerd 类型冲突
-		"types": []
+		// node 类型仅用于 drizzle.config.ts 里的 process.env
+		"types": ["node"]
 	}
 }
