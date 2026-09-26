@@ -1,0 +1,36 @@
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/ui/**"
+      - "bun.lock"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Web Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        working-directory: apps/web
+        run: bun run build
+        env:
+          # 前端调用后端时使用，代码里通过 import.meta.env.VITE_API_URL 读取
+          VITE_API_URL: https://react-hono-api.chenqiyuan1012.workers.dev
+
+      - name: Deploy
+        working-directory: apps/web
+        run: bunx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

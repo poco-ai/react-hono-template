@@ -1,0 +1,12 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "react-hono-web",
+	"compatibility_date": "2026-09-26",
+	"assets": {
+		// Vite 构建产物目录
+		"directory": "./dist",
+		// SPA 回退：未命中静态资源的路径返回 index.html（等价于 Pages 的 _redirects）
+		"not_found_handling": "single-page-application"
+	}
+	// 纯静态托管没有 Worker 脚本，因此不需要 "main"
+}

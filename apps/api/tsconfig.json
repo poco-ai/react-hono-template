@@ -1,8 +1,13 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"types": ["bun"],
-		"jsx": "react-jsx",
-		"jsxImportSource": "hono/jsx"
+		"target": "ES2022",
+		"lib": ["ESNext"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		// workers 运行时类型由 `wrangler types` 生成的 worker-configuration.d.ts 提供
+		// 置空以避免其他全局类型包和 workerd 类型冲突
+		"types": []
 	}
 }

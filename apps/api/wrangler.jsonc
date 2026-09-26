@@ -1,0 +1,13 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "react-hono-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-26",
+	"observability": {
+		"enabled": true
+	}
+	// 以后需要 KV / D1 / R2 等 binding 时在这里声明，例如：
+	// "vars": { "ENVIRONMENT": "production" },
+	// "d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "<id>" }]
+	// secrets 用 `bunx wrangler secret put <NAME>` 设置，不要写进这个文件
+}
