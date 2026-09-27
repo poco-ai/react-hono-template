@@ -14,15 +14,16 @@ const trustedOrigins = [
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use("/api/*", cors({ origin: trustedOrigins }));
-
-app.route("/", createRoutes(db));
+app.use("/api/*", cors({ origin: trustedOrigins, credentials: true }));
 
 const auth = createAuth({
 	db,
 	secret: env.BETTER_AUTH_SECRET,
 	trustedOrigins,
 });
+
+app.route("/", createRoutes({ db, auth }));
+
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.notFound((c) => fail(c, ApiErrorCode.NOT_FOUND, "Route not found", 404));
