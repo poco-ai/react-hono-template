@@ -15,7 +15,5 @@
 			"migrations_pattern": "drizzle/*/migration.sql"
 		}
 	]
-	// 以后需要 KV / R2 等 binding 时在这里声明，例如：
 	// "vars": { "ENVIRONMENT": "production" }
-	// secrets 用 `bunx wrangler secret put <NAME>` 设置，不要写进这个文件
 }

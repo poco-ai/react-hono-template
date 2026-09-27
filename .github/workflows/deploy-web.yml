@@ -25,7 +25,6 @@ jobs:
         working-directory: apps/web
         run: bun run build
         env:
-          # 前端调用后端时使用，代码里通过 import.meta.env.VITE_API_URL 读取
           VITE_API_URL: https://react-hono-api.chenqiyuan1012.workers.dev
 
       - name: Deploy

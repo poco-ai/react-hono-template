@@ -6,7 +6,6 @@ export default defineConfig({
 	schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"],
 	dialect: "sqlite",
 	driver: "d1-http",
-	// 只有 push/migrate 会真正连接远端 D1，generate 不需要
 	dbCredentials: {
 		accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? "",
 		databaseId: process.env.CLOUDFLARE_DATABASE_ID ?? "",

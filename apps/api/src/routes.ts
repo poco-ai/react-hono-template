@@ -7,14 +7,6 @@ import type { authRelations } from "./db/auth-schema";
 import { usersTable } from "./db/schema";
 import { fail, ok } from "./lib/response";
 
-/**
- * 业务路由工厂（依赖注入）：db 由组合根 index.ts 注入，
- * 本文件不 import 任何 cloudflare 模块，因此 web 端可以安全地
- * `import type { AppType } from ...` 共享 RPC 类型。
- *
- * RPC 约定：路由必须链式定义，中断链会让该路由从 AppType 中消失。
- */
-
 export type Database = DrizzleD1Database<typeof authRelations>;
 
 export const createRoutes = (db: Database) => {
@@ -57,5 +49,4 @@ export const createRoutes = (db: Database) => {
 		});
 };
 
-/** 前端通过 `hc<AppType>()` 获得全部路径 / 请求 / 响应类型推导 */
 export type AppType = ReturnType<typeof createRoutes>;

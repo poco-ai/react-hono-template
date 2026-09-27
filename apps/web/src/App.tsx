@@ -8,7 +8,6 @@ export function App() {
 
 	const loadHello = useCallback(async () => {
 		try {
-			// 响应类型由后端 ok(c, { message: ... }) 自动推导，无需手写接口定义
 			const body = await unwrap(await client.api.hello.$get());
 			setHello(body.message);
 			setError("");
@@ -22,7 +21,6 @@ export function App() {
 		loadHello();
 	}, [loadHello]);
 
-	// 请求不存在的用户，后端 throw ApiError → onError 统一序列化为 ApiErr
 	const fetchMissingUser = useCallback(async () => {
 		try {
 			await unwrap(
