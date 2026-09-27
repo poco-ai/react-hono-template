@@ -10,6 +10,10 @@
 		"skipLibCheck": true,
 		// workers 运行时类型由 `wrangler types` 生成的 worker-configuration.d.ts 提供
 		// node 类型仅用于 drizzle.config.ts 里的 process.env
-		"types": ["node"]
+		"types": ["node"],
+		"paths": {
+			"@workspace/shared": ["../../packages/shared/src/index.ts"],
+			"@workspace/shared/*": ["../../packages/shared/src/*"]
+		}
 	}
 }
