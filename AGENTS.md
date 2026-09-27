@@ -19,7 +19,7 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
 
 ## Layout
 
-- `apps/api` — Hono on Cloudflare Workers. Entry `src/index.ts` (default export). D1 binding `DB` via drizzle-orm; better-auth mounted at `/api/auth/*`.
+- `apps/api` — Hono on Cloudflare Workers. Entry `src/index.ts` (default export). D1 binding `DB` via drizzle-orm; better-auth mounted at `/api/auth/*`. Classic layered structure (controller → service → dao → db), see "API (apps/api)".
 - `apps/web` — React 19 + Vite SPA (Tailwind v4), deployed as static Workers assets with SPA fallback — its `wrangler.jsonc` has no `main`/Worker script.
 - `packages/shared` — shared TS types (`ApiResult`, error codes). No build step.
 - `packages/ui` — shadcn/ui components (Base UI, style "base-nova"). No build step.
@@ -36,6 +36,14 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
   - Prod secrets: `bunx wrangler secret put <NAME>` (never put them in `wrangler.jsonc`)
 - `worker-configuration.d.ts` is generated. After editing `wrangler.jsonc` (e.g. new bindings), run `bun run cf-typegen`; never edit it by hand.
 - Drizzle schema: `src/db/schema.ts` + `src/db/auth-schema.ts`. Workflow: `bun run db:generate` → `bun run db:migrate:local` (local miniflare D1). `db:migrate:remote` and `db:push` operate on the real remote D1 — do not run casually.
+- Layering (strictly one direction: `controller → service → dao → db`; dto is referenced by all layers):
+  - `src/controllers/` — HTTP handlers: parse/validate input, call service, wrap with `ok`/`fail` from `src/lib/response.ts`. Keep them thin.
+  - `src/services/` — business logic; throw `ApiError` (from `@workspace/shared`) for domain failures, mapped to responses by the `onError` handler in `routes.ts`.
+  - `src/dao/` — the only layer allowed to use drizzle/SQL; one file per table, `createXxxDao(db)` factory pattern.
+  - `src/dto/` — request/response types (`XxxDto`, derived from `$inferSelect`).
+  - `src/lib/` — framework helpers (response envelope, better-auth factory); `src/middleware/` for shared Hono middleware when needed.
+  - `src/routes.ts` — route table only: wires dao → service → controller and binds paths. Must keep exporting `AppType` (web's `@api/routes` alias depends on it).
+  - To add a resource: new table in `src/db/schema.ts` (`db:generate` + `db:migrate:local`), then `dto/user.dto.ts`-style file, dao, service, controller, and bind in `routes.ts`.
 - CORS trusted origins are hardcoded in `src/index.ts` (`trustedOrigins`). Add any new frontend origin there.
 - drizzle-orm/drizzle-kit are 1.0 RC; `skipLibCheck` in tsconfig is required for their types — don't remove it.
 
