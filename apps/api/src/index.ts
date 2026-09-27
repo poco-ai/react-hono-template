@@ -1,7 +1,8 @@
-import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { db } from "./db";
 import { usersTable } from "./db/schema";
+import { auth } from "./lib/auth";
 
 // Env（含 DB: D1Database）由 `wrangler types` 生成的 worker-configuration.d.ts 提供
 const app = new Hono<{ Bindings: Env }>();
@@ -18,6 +19,8 @@ app.use(
 	}),
 );
 
+app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+
 app.get("/", (c) => {
 	return c.text("Hello Hono!");
 });
@@ -27,7 +30,6 @@ app.get("/api/hello", (c) => {
 });
 
 app.get("/api/users", async (c) => {
-	const db = drizzle(c.env.DB);
 	const result = await db.select().from(usersTable).all();
 	return c.json(result);
 });
