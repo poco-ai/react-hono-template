@@ -2,7 +2,9 @@ import type { AppType } from "@api/routes";
 import type { ApiOk, ApiResult } from "@workspace/shared";
 import { type ClientResponse, hc } from "hono/client";
 
-export const client = hc<AppType>(import.meta.env.VITE_API_URL ?? "");
+export const client = hc<AppType>(import.meta.env.VITE_API_URL ?? "", {
+	init: { credentials: "include" },
+});
 
 export async function unwrap<T>(res: ClientResponse<ApiOk<T>>): Promise<T> {
 	const body = (await res.json()) as ApiResult<T>;
