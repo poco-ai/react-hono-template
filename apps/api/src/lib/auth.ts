@@ -1,7 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { betterAuth } from "better-auth";
 import * as authSchema from "../db/auth-schema";
-import type { Database } from "../routes";
+import type { Database } from "../db/types";
 
 export const createAuth = ({
 	db,
