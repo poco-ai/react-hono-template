@@ -33,7 +33,9 @@
       "name": "web",
       "version": "0.0.1",
       "dependencies": {
+        "@workspace/shared": "workspace:*",
         "@workspace/ui": "workspace:*",
+        "hono": "^4.13.9",
         "lucide-react": "^1.48.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",

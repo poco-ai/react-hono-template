@@ -23,6 +23,9 @@
 		"noFallthroughCasesInSwitch": true,
 		"paths": {
 			"@/*": ["./src/*"],
+			"@api/*": ["../api/src/*"],
+			"@workspace/shared": ["../../packages/shared/src/index.ts"],
+			"@workspace/shared/*": ["../../packages/shared/src/*"],
 			"@workspace/ui/*": ["../../packages/ui/src/*"]
 		}
 	},
