@@ -1,0 +1,221 @@
+import type { ProjectDto } from "@api/dto/project.dto";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@workspace/ui/components/alert-dialog";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@workspace/ui/components/card";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu";
+import { MoreHorizontal, Plus } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { CreateProjectDialog } from "@/components/create-project-dialog";
+import { client, unwrap } from "@/lib/api";
+import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
+import { projectsQuery } from "@/lib/queries/projects";
+import { useSession } from "@/lib/session";
+
+export function ProjectsPage({ orgId }: { orgId: string }) {
+	const { t } = useTranslation();
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	const { data: session } = useSession();
+	const projects = useQuery(projectsQuery(orgId));
+	const members = useQuery(membersQuery(orgId));
+	const [createOpen, setCreateOpen] = useState(false);
+	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
+
+	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
+	const canManage =
+		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
+
+	const archiveMutation = useMutation({
+		mutationFn: (project: ProjectDto) =>
+			unwrap(
+				client.api.orgs[":orgId"].projects[":projectId"].$patch({
+					param: { orgId, projectId: project.id },
+					json: { archived: !project.archived },
+				}),
+			),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
+			setArchiveTarget(null);
+		},
+	});
+
+	return (
+		<div className="mx-auto max-w-4xl p-8">
+			<div className="flex items-center justify-between pb-6">
+				<h1 className="text-2xl font-semibold tracking-tight">
+					{t("projects.title")}
+				</h1>
+				{canManage && (
+					<Button onClick={() => setCreateOpen(true)}>
+						<Plus />
+						{t("projects.create")}
+					</Button>
+				)}
+			</div>
+
+			{projects.isPending && (
+				<p className="text-muted-foreground py-16 text-center text-sm">
+					{t("common.loading")}
+				</p>
+			)}
+			{projects.isError && (
+				<p className="py-16 text-center text-sm text-red-500">
+					{projects.error.message}
+				</p>
+			)}
+
+			{projects.data?.length === 0 && (
+				<div className="border-muted-foreground/25 flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center">
+					<p className="text-muted-foreground">{t("projects.empty")}</p>
+					{canManage && (
+						<Button variant="outline" onClick={() => setCreateOpen(true)}>
+							<Plus />
+							{t("projects.emptyCta")}
+						</Button>
+					)}
+				</div>
+			)}
+
+			{projects.data && projects.data.length > 0 && (
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{projects.data.map((project) => (
+						<Card
+							key={project.id}
+							className="group cursor-pointer py-0 transition-colors hover:bg-accent/40"
+							onClick={() =>
+								navigate({
+									to: "/orgs/$orgId/projects/$projectId",
+									params: { orgId, projectId: project.id },
+									search: { page: 1, sort: "updated" },
+								})
+							}
+						>
+							<CardHeader>
+								<div className="flex items-start justify-between gap-2">
+									<CardTitle className="text-base">{project.name}</CardTitle>
+									{canManage && (
+										<DropdownMenu>
+											<DropdownMenuTrigger
+												render={
+													<Button
+														variant="ghost"
+														size="icon-sm"
+														aria-label={t("common.actions")}
+														onClick={(e) => e.stopPropagation()}
+													>
+														<MoreHorizontal />
+													</Button>
+												}
+											/>
+											<DropdownMenuContent
+												align="end"
+												onClick={(e) => e.stopPropagation()}
+											>
+												<DropdownMenuItem
+													onClick={() => setArchiveTarget(project)}
+												>
+													{project.archived
+														? t("projects.unarchive")
+														: t("projects.archive")}
+												</DropdownMenuItem>
+											</DropdownMenuContent>
+										</DropdownMenu>
+									)}
+								</div>
+								<CardDescription className="line-clamp-2 min-h-10">
+									{project.description ?? ""}
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="flex items-center gap-2">
+								<Badge variant="outline" className="font-mono">
+									{project.key}
+								</Badge>
+								{project.archived && (
+									<Badge variant="secondary">
+										{t("projects.archivedBadge")}
+									</Badge>
+								)}
+							</CardContent>
+						</Card>
+					))}
+				</div>
+			)}
+
+			{archiveMutation.isError && (
+				<p className="text-destructive pt-4 text-sm">
+					{archiveMutation.error.message}
+				</p>
+			)}
+
+			<CreateProjectDialog
+				orgId={orgId}
+				open={createOpen}
+				onOpenChange={setCreateOpen}
+			/>
+
+			<AlertDialog
+				open={archiveTarget !== null}
+				onOpenChange={(open) => !open && setArchiveTarget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{archiveTarget?.archived
+								? t("projects.unarchiveConfirmTitle")
+								: t("projects.archiveConfirmTitle")}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{archiveTarget?.archived
+								? t("projects.unarchiveConfirmDescription", {
+										name: archiveTarget?.name ?? "",
+									})
+								: t("projects.archiveConfirmDescription", {
+										name: archiveTarget?.name ?? "",
+									})}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+						<AlertDialogAction
+							disabled={archiveMutation.isPending}
+							onClick={(e) => {
+								e.preventDefault();
+								if (archiveTarget) {
+									archiveMutation.mutate(archiveTarget);
+								}
+							}}
+						>
+							{archiveTarget?.archived
+								? t("projects.unarchive")
+								: t("projects.archive")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	);
+}

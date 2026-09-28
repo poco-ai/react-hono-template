@@ -10,13 +10,31 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
+import { Route as AuthOnboardingRouteImport } from './routes/_auth/onboarding'
 import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
+import { Route as AuthOrgsOrgIdRouteImport } from './routes/_auth/orgs/$orgId'
+import { Route as AuthOrgsOrgIdIndexRouteImport } from './routes/_auth/orgs/$orgId/index'
+import { Route as AuthOrgsOrgIdMyIssuesRouteImport } from './routes/_auth/orgs/$orgId/my-issues'
+import { Route as AuthOrgsOrgIdSettingsRouteRouteImport } from './routes/_auth/orgs/$orgId/settings/route'
+import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/orgs/$orgId/projects.index'
+import { Route as AuthOrgsOrgIdSettingsIndexRouteImport } from './routes/_auth/orgs/$orgId/settings/index'
+import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/orgs/$orgId/settings/labels'
+import { Route as AuthOrgsOrgIdSettingsMembersRouteImport } from './routes/_auth/orgs/$orgId/settings/members'
+import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
+import { Route as AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -34,48 +52,198 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthAdminUsersRoute = AuthAdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
+const AuthAdminRoute = AuthAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthAdminUsersRoute = AuthAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthAdminRoute,
+} as any)
+const AuthOrgsOrgIdRoute = AuthOrgsOrgIdRouteImport.update({
+  id: '/orgs/$orgId',
+  path: '/orgs/$orgId',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthOrgsOrgIdIndexRoute = AuthOrgsOrgIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
+const AuthOrgsOrgIdMyIssuesRoute = AuthOrgsOrgIdMyIssuesRouteImport.update({
+  id: '/my-issues',
+  path: '/my-issues',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
+const AuthOrgsOrgIdSettingsRouteRoute =
+  AuthOrgsOrgIdSettingsRouteRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthOrgsOrgIdRoute,
+  } as any)
+const AuthOrgsOrgIdProjectsIndexRoute =
+  AuthOrgsOrgIdProjectsIndexRouteImport.update({
+    id: '/projects/',
+    path: '/projects/',
+    getParentRoute: () => AuthOrgsOrgIdRoute,
+  } as any)
+const AuthOrgsOrgIdSettingsIndexRoute =
+  AuthOrgsOrgIdSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
+const AuthOrgsOrgIdSettingsLabelsRoute =
+  AuthOrgsOrgIdSettingsLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
+const AuthOrgsOrgIdSettingsMembersRoute =
+  AuthOrgsOrgIdSettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
+const AuthOrgsOrgIdProjectsProjectIdIndexRoute =
+  AuthOrgsOrgIdProjectsProjectIdIndexRouteImport.update({
+    id: '/projects/$projectId/',
+    path: '/projects/$projectId/',
+    getParentRoute: () => AuthOrgsOrgIdRoute,
+  } as any)
+const AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute =
+  AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport.update({
+    id: '/projects/$projectId/$issueNumber',
+    path: '/projects/$projectId/$issueNumber',
+    getParentRoute: () => AuthOrgsOrgIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin': typeof AuthAdminRouteWithChildren
+  '/onboarding': typeof AuthOnboardingRoute
   '/admin/users': typeof AuthAdminUsersRoute
+  '/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
+  '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
+  '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
+  '/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
+  '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
+  '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
+  '/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
+  '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  '/orgs/$orgId/projects/$projectId/': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin': typeof AuthAdminRouteWithChildren
+  '/onboarding': typeof AuthOnboardingRoute
   '/': typeof AuthIndexRoute
   '/admin/users': typeof AuthAdminUsersRoute
+  '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
+  '/orgs/$orgId': typeof AuthOrgsOrgIdIndexRoute
+  '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
+  '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/orgs/$orgId/projects': typeof AuthOrgsOrgIdProjectsIndexRoute
+  '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsIndexRoute
+  '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  '/orgs/$orgId/projects/$projectId': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_auth/admin': typeof AuthAdminRouteWithChildren
+  '/_auth/onboarding': typeof AuthOnboardingRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/admin/users': typeof AuthAdminUsersRoute
+  '/_auth/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
+  '/_auth/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
+  '/_auth/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
+  '/_auth/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
+  '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
+  '/_auth/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/_auth/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
+  '/_auth/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
+  '/_auth/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  '/_auth/orgs/$orgId/projects/$projectId/': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/admin/users'
+  fullPaths:
+    | '/'
+    | '/invite'
+    | '/login'
+    | '/register'
+    | '/admin'
+    | '/onboarding'
+    | '/admin/users'
+    | '/orgs/$orgId'
+    | '/orgs/$orgId/settings'
+    | '/orgs/$orgId/my-issues'
+    | '/orgs/$orgId/'
+    | '/orgs/$orgId/settings/labels'
+    | '/orgs/$orgId/settings/members'
+    | '/orgs/$orgId/projects/'
+    | '/orgs/$orgId/settings/'
+    | '/orgs/$orgId/projects/$projectId/$issueNumber'
+    | '/orgs/$orgId/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/register' | '/' | '/admin/users'
+  to:
+    | '/invite'
+    | '/login'
+    | '/register'
+    | '/admin'
+    | '/onboarding'
+    | '/'
+    | '/admin/users'
+    | '/orgs/$orgId/my-issues'
+    | '/orgs/$orgId'
+    | '/orgs/$orgId/settings/labels'
+    | '/orgs/$orgId/settings/members'
+    | '/orgs/$orgId/projects'
+    | '/orgs/$orgId/settings'
+    | '/orgs/$orgId/projects/$projectId/$issueNumber'
+    | '/orgs/$orgId/projects/$projectId'
   id:
     | '__root__'
     | '/_auth'
+    | '/invite'
     | '/login'
     | '/register'
+    | '/_auth/admin'
+    | '/_auth/onboarding'
     | '/_auth/'
     | '/_auth/admin/users'
+    | '/_auth/orgs/$orgId'
+    | '/_auth/orgs/$orgId/settings'
+    | '/_auth/orgs/$orgId/my-issues'
+    | '/_auth/orgs/$orgId/'
+    | '/_auth/orgs/$orgId/settings/labels'
+    | '/_auth/orgs/$orgId/settings/members'
+    | '/_auth/orgs/$orgId/projects/'
+    | '/_auth/orgs/$orgId/settings/'
+    | '/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
+    | '/_auth/orgs/$orgId/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
+  InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -87,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -110,30 +285,173 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/admin': {
+      id: '/_auth/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthAdminRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/onboarding': {
+      id: '/_auth/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/admin/users': {
       id: '/_auth/admin/users'
-      path: '/admin/users'
+      path: '/users'
       fullPath: '/admin/users'
       preLoaderRoute: typeof AuthAdminUsersRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
+    '/_auth/orgs/$orgId': {
+      id: '/_auth/orgs/$orgId'
+      path: '/orgs/$orgId'
+      fullPath: '/orgs/$orgId'
+      preLoaderRoute: typeof AuthOrgsOrgIdRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_auth/orgs/$orgId/': {
+      id: '/_auth/orgs/$orgId/'
+      path: '/'
+      fullPath: '/orgs/$orgId/'
+      preLoaderRoute: typeof AuthOrgsOrgIdIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/my-issues': {
+      id: '/_auth/orgs/$orgId/my-issues'
+      path: '/my-issues'
+      fullPath: '/orgs/$orgId/my-issues'
+      preLoaderRoute: typeof AuthOrgsOrgIdMyIssuesRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/settings': {
+      id: '/_auth/orgs/$orgId/settings'
+      path: '/settings'
+      fullPath: '/orgs/$orgId/settings'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsRouteRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/projects/': {
+      id: '/_auth/orgs/$orgId/projects/'
+      path: '/projects'
+      fullPath: '/orgs/$orgId/projects/'
+      preLoaderRoute: typeof AuthOrgsOrgIdProjectsIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/settings/': {
+      id: '/_auth/orgs/$orgId/settings/'
+      path: '/'
+      fullPath: '/orgs/$orgId/settings/'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
+    '/_auth/orgs/$orgId/settings/labels': {
+      id: '/_auth/orgs/$orgId/settings/labels'
+      path: '/labels'
+      fullPath: '/orgs/$orgId/settings/labels'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsLabelsRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
+    '/_auth/orgs/$orgId/settings/members': {
+      id: '/_auth/orgs/$orgId/settings/members'
+      path: '/members'
+      fullPath: '/orgs/$orgId/settings/members'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsMembersRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
+    '/_auth/orgs/$orgId/projects/$projectId/': {
+      id: '/_auth/orgs/$orgId/projects/$projectId/'
+      path: '/projects/$projectId'
+      fullPath: '/orgs/$orgId/projects/$projectId/'
+      preLoaderRoute: typeof AuthOrgsOrgIdProjectsProjectIdIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/projects/$projectId/$issueNumber': {
+      id: '/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
+      path: '/projects/$projectId/$issueNumber'
+      fullPath: '/orgs/$orgId/projects/$projectId/$issueNumber'
+      preLoaderRoute: typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
     }
   }
 }
 
-interface AuthRouteChildren {
-  AuthIndexRoute: typeof AuthIndexRoute
+interface AuthAdminRouteChildren {
   AuthAdminUsersRoute: typeof AuthAdminUsersRoute
 }
 
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthIndexRoute: AuthIndexRoute,
+const AuthAdminRouteChildren: AuthAdminRouteChildren = {
   AuthAdminUsersRoute: AuthAdminUsersRoute,
+}
+
+const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
+  AuthAdminRouteChildren,
+)
+
+interface AuthOrgsOrgIdSettingsRouteRouteChildren {
+  AuthOrgsOrgIdSettingsLabelsRoute: typeof AuthOrgsOrgIdSettingsLabelsRoute
+  AuthOrgsOrgIdSettingsMembersRoute: typeof AuthOrgsOrgIdSettingsMembersRoute
+  AuthOrgsOrgIdSettingsIndexRoute: typeof AuthOrgsOrgIdSettingsIndexRoute
+}
+
+const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteChildren =
+  {
+    AuthOrgsOrgIdSettingsLabelsRoute: AuthOrgsOrgIdSettingsLabelsRoute,
+    AuthOrgsOrgIdSettingsMembersRoute: AuthOrgsOrgIdSettingsMembersRoute,
+    AuthOrgsOrgIdSettingsIndexRoute: AuthOrgsOrgIdSettingsIndexRoute,
+  }
+
+const AuthOrgsOrgIdSettingsRouteRouteWithChildren =
+  AuthOrgsOrgIdSettingsRouteRoute._addFileChildren(
+    AuthOrgsOrgIdSettingsRouteRouteChildren,
+  )
+
+interface AuthOrgsOrgIdRouteChildren {
+  AuthOrgsOrgIdSettingsRouteRoute: typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
+  AuthOrgsOrgIdMyIssuesRoute: typeof AuthOrgsOrgIdMyIssuesRoute
+  AuthOrgsOrgIdIndexRoute: typeof AuthOrgsOrgIdIndexRoute
+  AuthOrgsOrgIdProjectsIndexRoute: typeof AuthOrgsOrgIdProjectsIndexRoute
+  AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute: typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  AuthOrgsOrgIdProjectsProjectIdIndexRoute: typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
+}
+
+const AuthOrgsOrgIdRouteChildren: AuthOrgsOrgIdRouteChildren = {
+  AuthOrgsOrgIdSettingsRouteRoute: AuthOrgsOrgIdSettingsRouteRouteWithChildren,
+  AuthOrgsOrgIdMyIssuesRoute: AuthOrgsOrgIdMyIssuesRoute,
+  AuthOrgsOrgIdIndexRoute: AuthOrgsOrgIdIndexRoute,
+  AuthOrgsOrgIdProjectsIndexRoute: AuthOrgsOrgIdProjectsIndexRoute,
+  AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute:
+    AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute,
+  AuthOrgsOrgIdProjectsProjectIdIndexRoute:
+    AuthOrgsOrgIdProjectsProjectIdIndexRoute,
+}
+
+const AuthOrgsOrgIdRouteWithChildren = AuthOrgsOrgIdRoute._addFileChildren(
+  AuthOrgsOrgIdRouteChildren,
+)
+
+interface AuthRouteChildren {
+  AuthAdminRoute: typeof AuthAdminRouteWithChildren
+  AuthOnboardingRoute: typeof AuthOnboardingRoute
+  AuthIndexRoute: typeof AuthIndexRoute
+  AuthOrgsOrgIdRoute: typeof AuthOrgsOrgIdRouteWithChildren
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthAdminRoute: AuthAdminRouteWithChildren,
+  AuthOnboardingRoute: AuthOnboardingRoute,
+  AuthIndexRoute: AuthIndexRoute,
+  AuthOrgsOrgIdRoute: AuthOrgsOrgIdRouteWithChildren,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
+  InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
 }

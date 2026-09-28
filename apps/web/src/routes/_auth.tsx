@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { AppLayout } from "@/components/app-layout";
 import { sessionOptions } from "@/lib/session";
 
 export const Route = createFileRoute("/_auth")({
@@ -13,9 +12,5 @@ export const Route = createFileRoute("/_auth")({
 		}
 		return { session };
 	},
-	component: () => (
-		<AppLayout>
-			<Outlet />
-		</AppLayout>
-	),
+	component: () => <Outlet />,
 });
