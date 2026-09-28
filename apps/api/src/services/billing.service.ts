@@ -10,7 +10,7 @@ import type {
 	PortalResponseDto,
 } from "../dto/billing.dto";
 import { invalidatePlanCache } from "../lib/plan";
-import { isCheckoutEnabled, type StripeContext } from "../lib/stripe";
+import type { StripeSetup } from "../lib/stripe";
 
 const subscriptionPlanFor = (status: string) =>
 	status === "active" || status === "trialing" || status === "past_due"
@@ -31,16 +31,27 @@ export const createBillingService = ({
 	memberDao,
 	projectDao,
 	webhookDao,
-	stripe,
+	stripeSetup,
 }: {
 	subscriptionDao: SubscriptionDao;
 	memberDao: MemberDao;
 	projectDao: ProjectDao;
 	webhookDao: WebhookDao;
-	stripe: StripeContext | null;
+	stripeSetup: StripeSetup;
 }) => {
 	const afterPlanChange = (orgId: string) => {
 		invalidatePlanCache(orgId);
+	};
+
+	const requireCompleteStripe = () => {
+		if (stripeSetup.status === "incomplete") {
+			throw new ApiError(
+				503,
+				ApiErrorCode.SERVICE_UNAVAILABLE,
+				"Stripe is partially configured — set STRIPE_SECRET_KEY, STRIPE_PRICE_ID and STRIPE_WEBHOOK_SECRET",
+			);
+		}
+		return stripeSetup.context;
 	};
 
 	return {
@@ -55,7 +66,7 @@ export const createBillingService = ({
 				plan: subscription.plan,
 				limits: PLANS[subscription.plan],
 				usage: { members, projects, webhooks },
-				stripeEnabled: isCheckoutEnabled(stripe),
+				stripeEnabled: stripeSetup.status === "enabled",
 				currentPeriodEnd: subscription.currentPeriodEnd,
 			};
 		},
@@ -65,7 +76,8 @@ export const createBillingService = ({
 			ownerEmail: string | null,
 			origin: string,
 		): Promise<CheckoutResponseDto> => {
-			if (stripe?.priceId) {
+			const stripe = requireCompleteStripe();
+			if (stripe) {
 				const session = await stripe.client.checkout.sessions.create({
 					mode: "subscription",
 					line_items: [{ price: stripe.priceId, quantity: 1 }],
@@ -77,6 +89,7 @@ export const createBillingService = ({
 				return { url: session.url };
 			}
 			const seats = await memberDao.countByOrg(orgId);
+			await subscriptionDao.ensure(orgId);
 			await subscriptionDao.update(orgId, {
 				plan: "pro",
 				status: "active",
@@ -90,6 +103,7 @@ export const createBillingService = ({
 			orgId: string,
 			origin: string,
 		): Promise<PortalResponseDto> => {
+			const stripe = requireCompleteStripe();
 			if (stripe) {
 				const subscription = await subscriptionDao.findByOrg(orgId);
 				if (!subscription.stripeCustomerId) {
@@ -105,6 +119,7 @@ export const createBillingService = ({
 				});
 				return { url: session.url };
 			}
+			await subscriptionDao.ensure(orgId);
 			await subscriptionDao.update(orgId, {
 				plan: "free",
 				status: "active",
@@ -122,6 +137,7 @@ export const createBillingService = ({
 					return;
 				}
 				const seats = await memberDao.countByOrg(orgId);
+				await subscriptionDao.ensure(orgId);
 				await subscriptionDao.update(orgId, {
 					plan: "pro",
 					status: "active",

@@ -11,7 +11,7 @@ import { db } from "./db";
 import { createAuth } from "./lib/auth";
 import { fail } from "./lib/response";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
-import { createStripeContext } from "./lib/stripe";
+import { setupStripe } from "./lib/stripe";
 import { createRoutes } from "./routes";
 import { createBillingService } from "./services/billing.service";
 import { createV1App } from "./v1";
@@ -25,11 +25,12 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use("/api/*", cors({ origin: trustedOrigins, credentials: true }));
 
-const stripe = createStripeContext({
+const stripeSetup = setupStripe({
 	secretKey: env.STRIPE_SECRET_KEY,
 	priceId: env.STRIPE_PRICE_ID,
 	webhookSecret: env.STRIPE_WEBHOOK_SECRET,
 });
+const stripe = stripeSetup.context;
 
 const auth = createAuth({
 	db,
@@ -37,7 +38,10 @@ const auth = createAuth({
 	trustedOrigins,
 });
 
-app.route("/", createRoutes({ db, auth, storage: s3ClientFromEnv(), stripe }));
+app.route(
+	"/",
+	createRoutes({ db, auth, storage: s3ClientFromEnv(), stripeSetup }),
+);
 app.route("/api/v1", createV1App({ db }));
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
@@ -48,7 +52,7 @@ const stripeController = createStripeController({
 		memberDao: createMemberDao(db),
 		projectDao: createProjectDao(db),
 		webhookDao: createWebhookDao(db),
-		stripe,
+		stripeSetup,
 	}),
 	stripe,
 });

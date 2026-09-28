@@ -1,5 +1,5 @@
 import { and, count, eq } from "drizzle-orm";
-import { member, organization, user } from "../db/auth-schema";
+import { invitation, member, organization, user } from "../db/auth-schema";
 import { subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
 
@@ -33,6 +33,28 @@ export const createMemberDao = (db: Database) => ({
 			.from(member)
 			.where(eq(member.organizationId, orgId));
 		return row?.value ?? 0;
+	},
+
+	countPendingInvitationsByOrg: async (orgId: string): Promise<number> => {
+		const [row] = await db
+			.select({ value: count() })
+			.from(invitation)
+			.where(
+				and(
+					eq(invitation.organizationId, orgId),
+					eq(invitation.status, "pending"),
+				),
+			);
+		return row?.value ?? 0;
+	},
+
+	findInvitationOrgId: async (invitationId: string): Promise<string | null> => {
+		const row = await db
+			.select({ organizationId: invitation.organizationId })
+			.from(invitation)
+			.where(eq(invitation.id, invitationId))
+			.get();
+		return row?.organizationId ?? null;
 	},
 
 	countByUser: async (userId: string): Promise<number> => {

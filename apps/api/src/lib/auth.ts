@@ -82,7 +82,8 @@ export const createAuth = ({
 			before: createAuthMiddleware(async (ctx) => {
 				if (
 					ctx.path !== "/organization/create" &&
-					ctx.path !== "/organization/invite-member"
+					ctx.path !== "/organization/invite-member" &&
+					ctx.path !== "/organization/accept-invitation"
 				) {
 					return { context: ctx };
 				}
@@ -90,6 +91,10 @@ export const createAuth = ({
 				if (!session) {
 					return { context: ctx };
 				}
+				const body =
+					typeof ctx.body === "object" && ctx.body !== null
+						? (ctx.body as { organizationId?: string; invitationId?: string })
+						: {};
 				if (ctx.path === "/organization/create") {
 					const orgPlans = await memberDao.listOrgPlansByUser(session.user.id);
 					const plan = orgPlans.includes("pro") ? "pro" : "free";
@@ -100,20 +105,34 @@ export const createAuth = ({
 					}
 					return { context: ctx };
 				}
-				const body =
-					typeof ctx.body === "object" && ctx.body !== null
-						? (ctx.body as { organizationId?: string })
-						: {};
+				if (ctx.path === "/organization/accept-invitation") {
+					const orgId = body.invitationId
+						? await memberDao.findInvitationOrgId(body.invitationId)
+						: null;
+					if (!orgId) {
+						return { context: ctx };
+					}
+					const plan = await planService.getPlanForOrg(orgId);
+					const memberCount = await memberDao.countByOrg(orgId);
+					if (memberCount >= PLANS[plan].members) {
+						throw new APIError("FORBIDDEN", {
+							message: `Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members and this organization is full.`,
+						});
+					}
+					return { context: ctx };
+				}
 				const orgId =
 					body.organizationId ?? session.session.activeOrganizationId;
 				if (!orgId) {
 					return { context: ctx };
 				}
 				const plan = await planService.getPlanForOrg(orgId);
-				const memberCount = await memberDao.countByOrg(orgId);
+				const memberCount =
+					(await memberDao.countByOrg(orgId)) +
+					(await memberDao.countPendingInvitationsByOrg(orgId));
 				if (memberCount >= PLANS[plan].members) {
 					throw new APIError("FORBIDDEN", {
-						message: `Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members. Upgrade to invite more members.`,
+						message: `Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members (including pending invitations). Upgrade to invite more members.`,
 					});
 				}
 				return { context: ctx };

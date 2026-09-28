@@ -28,11 +28,17 @@ export const requireOrgMember = (memberDao: MemberDao) =>
 			throw new ApiError(404, ApiErrorCode.NOT_FOUND, "Organization not found");
 		}
 		if (membership.frozen) {
-			throw new ApiError(
-				403,
-				ApiErrorCode.ORG_FROZEN,
-				"Organization is frozen",
+			const method = c.req.method.toUpperCase();
+			const isBillingRoute = c.req.path.startsWith(
+				`/api/orgs/${orgId}/billing`,
 			);
+			if (method !== "GET" && method !== "HEAD" && !isBillingRoute) {
+				throw new ApiError(
+					403,
+					ApiErrorCode.ORG_FROZEN,
+					"Organization is frozen",
+				);
+			}
 		}
 		c.set("orgMember", {
 			orgId,

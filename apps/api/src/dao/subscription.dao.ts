@@ -1,4 +1,4 @@
-import { isPlanName, type PlanName } from "@workspace/shared";
+import { isPlanName } from "@workspace/shared";
 import { eq } from "drizzle-orm";
 import { subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
@@ -23,21 +23,33 @@ const toDto = (row: SubscriptionRow): SubscriptionDto => ({
 	updatedAt: row.updatedAt.toISOString(),
 });
 
+const freeDefault = (orgId: string): SubscriptionDto => ({
+	orgId,
+	plan: "free",
+	status: "active",
+	stripeCustomerId: null,
+	stripeSubscriptionId: null,
+	seats: 0,
+	currentPeriodEnd: null,
+	createdAt: new Date(0).toISOString(),
+	updatedAt: new Date(0).toISOString(),
+});
+
 export const createSubscriptionDao = (db: Database) => ({
-	findByOrg: async (orgId: string): Promise<SubscriptionDto> => {
+	ensure: async (orgId: string): Promise<void> => {
 		await db
 			.insert(subscriptions)
 			.values({ orgId })
 			.onConflictDoNothing({ target: subscriptions.orgId });
+	},
+
+	findByOrg: async (orgId: string): Promise<SubscriptionDto> => {
 		const row = await db
 			.select()
 			.from(subscriptions)
 			.where(eq(subscriptions.orgId, orgId))
 			.get();
-		if (!row) {
-			throw new Error(`Failed to load subscription for org ${orgId}`);
-		}
-		return toDto(row);
+		return row ? toDto(row) : freeDefault(orgId);
 	},
 
 	findByStripeCustomer: async (
@@ -77,6 +89,3 @@ export const createSubscriptionDao = (db: Database) => ({
 });
 
 export type SubscriptionDao = ReturnType<typeof createSubscriptionDao>;
-
-export const resolvePlanName = (plan: string): PlanName =>
-	isPlanName(plan) ? plan : "free";

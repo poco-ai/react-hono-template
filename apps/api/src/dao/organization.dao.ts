@@ -1,4 +1,4 @@
-import { count, desc, eq, like, or, type SQL, sql } from "drizzle-orm";
+import { count, desc, eq, or, type SQL, sql } from "drizzle-orm";
 import { organization, user as userTable } from "../db/auth-schema";
 import { issues, subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
@@ -41,10 +41,12 @@ export const createOrganizationDao = (db: Database) => ({
 		pageSize: number;
 		search: string;
 	}): Promise<ListAdminOrgsDto> => {
+		const escapeLike = (value: string) =>
+			value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 		const where: SQL | undefined = search
 			? or(
-					like(organization.name, `%${search}%`),
-					like(organization.slug, `%${search}%`),
+					sql`${organization.name} like ${`%${escapeLike(search)}%`} escape '\\'`,
+					sql`${organization.slug} like ${`%${escapeLike(search)}%`} escape '\\'`,
 				)
 			: undefined;
 		const [rows, totals] = await db.batch([
@@ -91,9 +93,9 @@ export const createOrganizationDao = (db: Database) => ({
 			.update(organization)
 			.set({ frozen })
 			.where(eq(organization.id, orgId))
-			.returning()
+			.returning({ id: organization.id, frozen: organization.frozen })
 			.get();
-		return row ? toOrgDto(row) : null;
+		return row ?? null;
 	},
 
 	getStats: async (): Promise<AdminStatsDto> => {

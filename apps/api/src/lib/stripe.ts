@@ -6,7 +6,12 @@ export type StripeContext = {
 	webhookSecret: string;
 };
 
-export const createStripeContext = ({
+export type StripeSetup = {
+	status: "disabled" | "enabled" | "incomplete";
+	context: StripeContext | null;
+};
+
+export const setupStripe = ({
 	secretKey,
 	priceId,
 	webhookSecret,
@@ -14,26 +19,23 @@ export const createStripeContext = ({
 	secretKey?: string;
 	priceId?: string;
 	webhookSecret?: string;
-}): StripeContext | null => {
-	if (!secretKey) {
-		return null;
+}): StripeSetup => {
+	if (!secretKey && !priceId && !webhookSecret) {
+		return { status: "disabled", context: null };
+	}
+	if (!secretKey || !priceId || !webhookSecret) {
+		return { status: "incomplete", context: null };
 	}
 	return {
-		client: new Stripe(secretKey, {
-			apiVersion: Stripe.API_VERSION,
-			httpClient: Stripe.createFetchHttpClient(),
-			maxNetworkRetries: 1,
-		}),
-		priceId: priceId ?? "",
-		webhookSecret: webhookSecret ?? "",
+		status: "enabled",
+		context: {
+			client: new Stripe(secretKey, {
+				apiVersion: Stripe.API_VERSION,
+				httpClient: Stripe.createFetchHttpClient(),
+				maxNetworkRetries: 1,
+			}),
+			priceId,
+			webhookSecret,
+		},
 	};
 };
-
-export const isCheckoutEnabled = (stripe: StripeContext | null): boolean =>
-	Boolean(stripe?.priceId);
-
-export const isPortalEnabled = (stripe: StripeContext | null): boolean =>
-	Boolean(stripe);
-
-export const isWebhookEnabled = (stripe: StripeContext | null): boolean =>
-	Boolean(stripe?.webhookSecret);

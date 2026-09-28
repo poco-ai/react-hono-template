@@ -59,7 +59,7 @@ import type { Auth } from "./lib/auth";
 import { createPlanService } from "./lib/plan";
 import { fail, ok } from "./lib/response";
 import type { StorageAdapter } from "./lib/storage/types";
-import type { StripeContext } from "./lib/stripe";
+import type { StripeSetup } from "./lib/stripe";
 import { requireAuth, requirePermission } from "./middleware/auth";
 import { requireOrgMember, requireOrgRole } from "./middleware/org";
 import { createActivityService } from "./services/activity.service";
@@ -102,12 +102,12 @@ export const createRoutes = ({
 	db,
 	auth,
 	storage,
-	stripe,
+	stripeSetup,
 }: {
 	db: Database;
 	auth: Auth;
 	storage: StorageAdapter | null;
-	stripe: StripeContext | null;
+	stripeSetup: StripeSetup;
 }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
@@ -169,7 +169,7 @@ export const createRoutes = ({
 		memberDao,
 		projectDao,
 		webhookDao,
-		stripe,
+		stripeSetup,
 	});
 
 	const projectController = createProjectController(projectService);
