@@ -27,6 +27,15 @@ export const createMemberDao = (db: Database) => ({
 		return row ? { ...row.member, frozen: row.frozen } : undefined;
 	},
 
+	isOrgFrozen: async (orgId: string): Promise<boolean> => {
+		const row = await db
+			.select({ frozen: organization.frozen })
+			.from(organization)
+			.where(eq(organization.id, orgId))
+			.get();
+		return row?.frozen ?? false;
+	},
+
 	countByOrg: async (orgId: string): Promise<number> => {
 		const [row] = await db
 			.select({ value: count() })

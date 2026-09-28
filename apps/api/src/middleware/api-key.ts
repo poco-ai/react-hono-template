@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
-import { ApiErrorCode, PLANS } from "@workspace/shared";
+import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import { createMiddleware } from "hono/factory";
 import type { ApiKeyDao } from "../dao/apiKey.dao";
+import type { MemberDao } from "../dao/member.dao";
 import { backgroundFromContext } from "../lib/background";
 import { sha256Hex } from "../lib/crypto";
 import type { PlanService } from "../lib/plan";
@@ -71,6 +72,25 @@ export const rateLimit = (plans: PlanService) =>
 				ApiErrorCode.RATE_LIMITED,
 				`Rate limit exceeded: max ${limitPerMin} requests per minute`,
 				429,
+			);
+		}
+		await next();
+	});
+
+export const forbidFrozenOrg = (memberDao: MemberDao) =>
+	createMiddleware<ApiKeyEnv>(async (c, next) => {
+		const method = c.req.method.toUpperCase();
+		if (method === "GET" || method === "HEAD") return next();
+		const auth = c.get("apiKeyAuth");
+		if (!auth) {
+			c.header("WWW-Authenticate", 'Bearer realm="api"');
+			return fail(c, ApiErrorCode.UNAUTHORIZED, "Invalid API key", 401);
+		}
+		if (await memberDao.isOrgFrozen(auth.orgId)) {
+			throw new ApiError(
+				403,
+				ApiErrorCode.ORG_FROZEN,
+				"Organization is frozen",
 			);
 		}
 		await next();

@@ -26,6 +26,7 @@ import { createPlanService } from "../lib/plan";
 import { fail } from "../lib/response";
 import {
 	type ApiKeyEnv,
+	forbidFrozenOrg,
 	rateLimit,
 	requireApiKey,
 } from "../middleware/api-key";
@@ -215,6 +216,7 @@ export const createV1App = ({ db }: { db: Database }) => {
 	for (const base of ["/projects", "/issues", "/labels"]) {
 		app.use(`${base}/*`, requireApiKey(apiKeyDao));
 		app.use(`${base}/*`, rateLimiter);
+		app.use(`${base}/*`, forbidFrozenOrg(memberDao));
 	}
 
 	app.openapi(listProjectsRoute, async (c) => {
