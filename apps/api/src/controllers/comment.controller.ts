@@ -5,6 +5,7 @@ import {
 	type CreateCommentInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
+import { backgroundFromContext } from "../lib/background";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -70,6 +71,7 @@ export const createCommentController = (service: CommentService) => ({
 				requireIssueNumber(c),
 				c.get("session").user.id,
 				input,
+				backgroundFromContext(c),
 			),
 		),
 

@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@better-auth/drizzle-adapter": "^1.7.6",
+		"@hono/zod-openapi": "^1.6.3",
 		"@workspace/shared": "workspace:*",
 		"aws4fetch": "^1.0.20",
 		"better-auth": "^1.7.6",

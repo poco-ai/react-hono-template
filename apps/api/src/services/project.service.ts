@@ -8,7 +8,8 @@ import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto } from "../dto/project.dto";
 
 export const createProjectService = (dao: ProjectDao) => ({
-	listProjects: (orgId: string) => dao.listByOrg(orgId),
+	listProjects: (orgId: string, options?: { includeArchived?: boolean }) =>
+		dao.listByOrg(orgId, options),
 
 	getProject: async (orgId: string, projectId: string): Promise<ProjectDto> => {
 		const project = await dao.findById(orgId, projectId);

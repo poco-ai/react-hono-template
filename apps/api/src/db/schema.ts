@@ -158,6 +158,94 @@ export const attachments = sqliteTable(
 	(table) => [index("attachments_issueId_idx").on(table.issueId)],
 );
 
+export const apiKeys = sqliteTable(
+	"api_keys",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		prefix: text("prefix").notNull(),
+		keyHash: text("key_hash").notNull(),
+		createdById: text("created_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+		revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("apiKeys_keyHash_uq").on(table.keyHash),
+		index("apiKeys_orgId_idx").on(table.orgId),
+	],
+);
+
+export const webhooks = sqliteTable(
+	"webhooks",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		url: text("url").notNull(),
+		secret: text("secret").notNull(),
+		events: text("events").notNull(),
+		active: integer("active", { mode: "boolean" }).notNull().default(true),
+		createdById: text("created_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [index("webhooks_orgId_idx").on(table.orgId)],
+);
+
+export const webhookDeliveries = sqliteTable(
+	"webhook_deliveries",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		webhookId: text("webhook_id")
+			.notNull()
+			.references(() => webhooks.id, { onDelete: "cascade" }),
+		event: text("event").notNull(),
+		payload: text("payload").notNull(),
+		status: text("status").notNull(),
+		attempts: integer("attempts").notNull().default(0),
+		responseStatus: integer("response_status"),
+		lastError: text("last_error"),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		lastAttemptAt: integer("last_attempt_at", { mode: "timestamp_ms" }),
+	},
+	(table) => [
+		index("webhookDeliveries_webhookId_idx").on(table.webhookId),
+		index("webhookDeliveries_orgId_createdAt_idx").on(
+			table.orgId,
+			sql`${table.createdAt} desc`,
+		),
+	],
+);
+
 export const activities = sqliteTable(
 	"activities",
 	{

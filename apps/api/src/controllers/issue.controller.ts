@@ -6,6 +6,7 @@ import {
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
+import { backgroundFromContext } from "../lib/background";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -70,6 +71,7 @@ export const createIssueController = (service: IssueService) => ({
 				requireProjectId(c),
 				c.get("session").user.id,
 				input,
+				backgroundFromContext(c),
 			),
 		),
 
@@ -82,6 +84,7 @@ export const createIssueController = (service: IssueService) => ({
 				requireIssueNumber(c),
 				c.get("session").user.id,
 				input,
+				backgroundFromContext(c),
 			),
 		),
 
@@ -91,6 +94,7 @@ export const createIssueController = (service: IssueService) => ({
 			requireProjectId(c),
 			requireIssueNumber(c),
 			c.get("session").user.id,
+			backgroundFromContext(c),
 		);
 		return ok(c, { deleted: true });
 	},

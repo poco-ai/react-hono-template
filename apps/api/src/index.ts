@@ -7,6 +7,7 @@ import { createAuth } from "./lib/auth";
 import { fail } from "./lib/response";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { createRoutes } from "./routes";
+import { createV1App } from "./v1";
 
 const trustedOrigins = [
 	"http://localhost:5173",
@@ -24,6 +25,7 @@ const auth = createAuth({
 });
 
 app.route("/", createRoutes({ db, auth, storage: s3ClientFromEnv() }));
+app.route("/api/v1", createV1App({ db }));
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 

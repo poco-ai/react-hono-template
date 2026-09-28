@@ -10,6 +10,8 @@ import type { IssueDao } from "../dao/issue.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import type { IssueDto } from "../dto/issue.dto";
+import type { BackgroundFn } from "../lib/background";
+import type { WebhookDispatcher } from "./webhook.service";
 
 const assertIssueCommentable = async (
 	issueDao: IssueDao,
@@ -41,10 +43,12 @@ export const createCommentService = ({
 	commentDao,
 	issueDao,
 	projectDao,
+	webhooks,
 }: {
 	commentDao: CommentDao;
 	issueDao: IssueDao;
 	projectDao: ProjectDao;
+	webhooks?: WebhookDispatcher;
 }) => {
 	const recordActivity = (
 		orgId: string,
@@ -113,6 +117,7 @@ export const createCommentService = ({
 			number: number,
 			userId: string,
 			input: CreateCommentInput,
+			background?: BackgroundFn,
 		): Promise<CommentDto> => {
 			const issue = await assertIssueCommentable(
 				issueDao,
@@ -136,6 +141,12 @@ export const createCommentService = ({
 					userId,
 					"comment.created",
 				),
+			);
+			await webhooks?.dispatch(
+				orgId,
+				"comment.created",
+				{ comment, issueId: issue.id, issueNumber: issue.number },
+				background,
 			);
 			return comment;
 		},

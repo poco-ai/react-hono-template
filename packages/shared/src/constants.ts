@@ -28,3 +28,14 @@ export const ISSUE_PRIORITIES = [
 	{ value: ISSUE_PRIORITY.medium, name: "medium" },
 	{ value: ISSUE_PRIORITY.low, name: "low" },
 ] as const;
+
+export const WEBHOOK_EVENTS = [
+	"issue.created",
+	"issue.updated",
+	"issue.status_changed",
+	"issue.deleted",
+	"comment.created",
+	"attachment.added",
+] as const;
+
+export type WebhookEventName = (typeof WEBHOOK_EVENTS)[number];

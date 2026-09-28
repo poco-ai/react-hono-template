@@ -12,11 +12,19 @@ export const toProjectDto = (row: ProjectRow): ProjectDto => ({
 });
 
 export const createProjectDao = (db: Database) => ({
-	listByOrg: async (orgId: string): Promise<ProjectDto[]> => {
+	listByOrg: async (
+		orgId: string,
+		options?: { includeArchived?: boolean },
+	): Promise<ProjectDto[]> => {
+		const includeArchived = options?.includeArchived ?? true;
 		const rows = await db
 			.select()
 			.from(projects)
-			.where(eq(projects.orgId, orgId))
+			.where(
+				includeArchived
+					? eq(projects.orgId, orgId)
+					: and(eq(projects.orgId, orgId), eq(projects.archived, false)),
+			)
 			.all();
 		return rows.map(toProjectDto);
 	},

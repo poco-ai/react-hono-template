@@ -2,18 +2,23 @@ import {
 	ApiError,
 	ApiErrorCode,
 	activityListQuerySchema,
+	apiKeyListQuerySchema,
 	attachmentPresignSchema,
 	commentListQuerySchema,
+	createApiKeySchema,
 	createCommentSchema,
 	createIssueSchema,
 	createLabelSchema,
 	createProjectSchema,
+	createWebhookSchema,
 	issueListQuerySchema,
 	type PresignUploadRequestDto,
 	registerAttachmentSchema,
 	updateIssueSchema,
 	updateLabelSchema,
 	updateProjectSchema,
+	updateWebhookSchema,
+	webhookDeliveryListQuerySchema,
 } from "@workspace/shared";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -21,20 +26,25 @@ import { validator } from "hono/validator";
 import type { ZodType } from "zod";
 import { createActivityController } from "./controllers/activity.controller";
 import { createAdminController } from "./controllers/admin-user.controller";
+import { createApiKeyController } from "./controllers/apikey.controller";
 import { createAttachmentController } from "./controllers/attachment.controller";
 import { createCommentController } from "./controllers/comment.controller";
 import { createIssueController } from "./controllers/issue.controller";
 import { createLabelController } from "./controllers/label.controller";
 import { createProjectController } from "./controllers/project.controller";
 import { createStorageController } from "./controllers/storage.controller";
+import { createWebhookController } from "./controllers/webhook.controller";
 import { createActivityDao } from "./dao/activity.dao";
 import { createAdminUserDao } from "./dao/admin-user.dao";
+import { createApiKeyDao } from "./dao/apiKey.dao";
 import { createAttachmentDao } from "./dao/attachment.dao";
 import { createCommentDao } from "./dao/comment.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createLabelDao } from "./dao/label.dao";
 import { createMemberDao } from "./dao/member.dao";
 import { createProjectDao } from "./dao/project.dao";
+import { createWebhookDao } from "./dao/webhook.dao";
+import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
 import type {
 	BanAdminUserDto,
@@ -47,12 +57,14 @@ import { requireAuth, requirePermission } from "./middleware/auth";
 import { requireOrgMember, requireOrgRole } from "./middleware/org";
 import { createActivityService } from "./services/activity.service";
 import { createAdminUserService } from "./services/admin-user.service";
+import { createApiKeyService } from "./services/apikey.service";
 import { createAttachmentService } from "./services/attachment.service";
 import { createCommentService } from "./services/comment.service";
 import { createIssueService } from "./services/issue.service";
 import { createLabelService } from "./services/label.service";
 import { createProjectService } from "./services/project.service";
 import { createStorageService } from "./services/storage.service";
+import { createWebhookService } from "./services/webhook.service";
 
 const formatZodError = (error: {
 	issues: { path: PropertyKey[]; message: string }[];
@@ -100,6 +112,14 @@ export const createRoutes = ({
 	const commentDao = createCommentDao(db);
 	const attachmentDao = createAttachmentDao(db);
 	const activityDao = createActivityDao(db);
+	const apiKeyDao = createApiKeyDao(db);
+	const webhookDao = createWebhookDao(db);
+	const webhookDeliveryDao = createWebhookDeliveryDao(db);
+
+	const webhookService = createWebhookService({
+		webhookDao,
+		deliveryDao: webhookDeliveryDao,
+	});
 
 	const projectService = createProjectService(projectDao);
 	const issueService = createIssueService({
@@ -107,20 +127,24 @@ export const createRoutes = ({
 		labelDao,
 		projectDao,
 		memberDao,
+		webhooks: webhookService,
 	});
 	const labelService = createLabelService(labelDao);
 	const commentService = createCommentService({
 		commentDao,
 		issueDao,
 		projectDao,
+		webhooks: webhookService,
 	});
 	const attachmentService = createAttachmentService({
 		attachmentDao,
 		issueDao,
 		projectDao,
 		storage,
+		webhooks: webhookService,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
+	const apiKeyService = createApiKeyService(apiKeyDao);
 
 	const projectController = createProjectController(projectService);
 	const issueController = createIssueController(issueService);
@@ -128,6 +152,8 @@ export const createRoutes = ({
 	const commentController = createCommentController(commentService);
 	const attachmentController = createAttachmentController(attachmentService);
 	const activityController = createActivityController(activityService);
+	const apiKeyController = createApiKeyController(apiKeyService);
+	const webhookController = createWebhookController(webhookService);
 
 	return new Hono()
 		.onError((err, c) => {
@@ -278,6 +304,65 @@ export const createRoutes = ({
 			"/api/orgs/:orgId/labels/:labelId",
 			requireOrgRole("owner", "admin"),
 			(c) => labelController.remove(c),
+		)
+		.get(
+			"/api/orgs/:orgId/api-keys",
+			requireOrgRole("owner", "admin"),
+			validate(apiKeyListQuerySchema, "query"),
+			(c) => apiKeyController.list(c, c.req.valid("query")),
+		)
+		.post(
+			"/api/orgs/:orgId/api-keys",
+			requireOrgRole("owner", "admin"),
+			validate(createApiKeySchema, "json"),
+			(c) => apiKeyController.create(c, c.req.valid("json")),
+		)
+		.delete(
+			"/api/orgs/:orgId/api-keys/:keyId",
+			requireOrgRole("owner", "admin"),
+			(c) => apiKeyController.revoke(c),
+		)
+		.get("/api/orgs/:orgId/webhooks", requireOrgRole("owner", "admin"), (c) =>
+			webhookController.list(c),
+		)
+		.post(
+			"/api/orgs/:orgId/webhooks",
+			requireOrgRole("owner", "admin"),
+			validate(createWebhookSchema, "json"),
+			(c) => webhookController.create(c, c.req.valid("json")),
+		)
+		.patch(
+			"/api/orgs/:orgId/webhooks/:webhookId",
+			requireOrgRole("owner", "admin"),
+			validate(updateWebhookSchema, "json"),
+			(c) => webhookController.update(c, c.req.valid("json")),
+		)
+		.delete(
+			"/api/orgs/:orgId/webhooks/:webhookId",
+			requireOrgRole("owner", "admin"),
+			(c) => webhookController.remove(c),
+		)
+		.get(
+			"/api/orgs/:orgId/webhooks/:webhookId/deliveries",
+			requireOrgRole("owner", "admin"),
+			validate(webhookDeliveryListQuerySchema, "query"),
+			(c) => webhookController.listDeliveries(c, c.req.valid("query")),
+		)
+		.get(
+			"/api/orgs/:orgId/webhook-deliveries",
+			requireOrgRole("owner", "admin"),
+			validate(webhookDeliveryListQuerySchema, "query"),
+			(c) => webhookController.listOrgDeliveries(c, c.req.valid("query")),
+		)
+		.post(
+			"/api/orgs/:orgId/webhooks/:webhookId/ping",
+			requireOrgRole("owner", "admin"),
+			(c) => webhookController.ping(c),
+		)
+		.post(
+			"/api/orgs/:orgId/webhook-deliveries/:deliveryId/redeliver",
+			requireOrgRole("owner", "admin"),
+			(c) => webhookController.redeliver(c),
 		);
 };
 

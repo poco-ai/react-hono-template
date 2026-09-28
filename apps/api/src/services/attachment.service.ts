@@ -15,7 +15,9 @@ import type {
 	PresignAttachmentResponseDto,
 } from "../dto/attachment.dto";
 import type { IssueDto } from "../dto/issue.dto";
+import type { BackgroundFn } from "../lib/background";
 import type { StorageAdapter } from "../lib/storage/types";
+import type { WebhookDispatcher } from "./webhook.service";
 
 export const ATTACHMENT_UPLOAD_URL_EXPIRES_IN = 600;
 export const ATTACHMENT_DOWNLOAD_URL_EXPIRES_IN = 300;
@@ -63,11 +65,13 @@ export const createAttachmentService = ({
 	issueDao,
 	projectDao,
 	storage,
+	webhooks,
 }: {
 	attachmentDao: AttachmentDao;
 	issueDao: IssueDao;
 	projectDao: ProjectDao;
 	storage: StorageAdapter | null;
+	webhooks?: WebhookDispatcher;
 }) => {
 	const requireIssue = async (
 		orgId: string,
@@ -154,6 +158,7 @@ export const createAttachmentService = ({
 			number: number,
 			userId: string,
 			input: RegisterAttachmentInput,
+			background?: BackgroundFn,
 		): Promise<AttachmentWithUrlDto> => {
 			const issue = await requireWritableIssue(orgId, projectId, number);
 			const expectedPrefix = `orgs/${orgId}/issues/${issue.id}/`;
@@ -215,7 +220,14 @@ export const createAttachmentService = ({
 						ATTACHMENT_DOWNLOAD_URL_EXPIRES_IN,
 					)
 				: null;
-			return { ...attachment, url };
+			const result = { ...attachment, url };
+			await webhooks?.dispatch(
+				orgId,
+				"attachment.added",
+				{ attachment, issueId: issue.id, issueNumber: issue.number },
+				background,
+			);
+			return result;
 		},
 
 		list: async (

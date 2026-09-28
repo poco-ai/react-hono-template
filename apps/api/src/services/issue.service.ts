@@ -11,6 +11,8 @@ import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { IssueDetailDto, ListIssuesDto } from "../dto/issue.dto";
+import type { BackgroundFn } from "../lib/background";
+import type { WebhookDispatcher } from "./webhook.service";
 
 const toDueDate = (
 	value: string | null | undefined,
@@ -126,11 +128,13 @@ export const createIssueService = ({
 	labelDao,
 	projectDao,
 	memberDao,
+	webhooks,
 }: {
 	issueDao: IssueDao;
 	labelDao: LabelDao;
 	projectDao: ProjectDao;
 	memberDao: MemberDao;
+	webhooks?: WebhookDispatcher;
 }) => ({
 	listIssues: (
 		orgId: string,
@@ -159,11 +163,28 @@ export const createIssueService = ({
 		return { ...issue, labelIds };
 	},
 
+	getIssueById: async (
+		orgId: string,
+		issueId: string,
+	): Promise<IssueDetailDto> => {
+		const issue = await issueDao.findById(orgId, issueId);
+		if (!issue) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.ISSUE_NOT_FOUND,
+				`Issue ${issueId} not found`,
+			);
+		}
+		const labelIds = await issueDao.findLabelIds(issue.id);
+		return { ...issue, labelIds };
+	},
+
 	createIssue: async (
 		orgId: string,
 		projectId: string,
-		userId: string,
+		userId: string | null,
 		input: CreateIssueInput,
+		background?: BackgroundFn,
 	): Promise<IssueDetailDto> => {
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
@@ -211,17 +232,22 @@ export const createIssueService = ({
 				estimate: input.estimate ?? null,
 			},
 			labelIds,
-			buildActivity(orgId, projectId, id, userId, "issue.created"),
+			userId
+				? buildActivity(orgId, projectId, id, userId, "issue.created")
+				: undefined,
 		);
-		return { ...issue, labelIds };
+		const result = { ...issue, labelIds };
+		await webhooks?.dispatch(orgId, "issue.created", result, background);
+		return result;
 	},
 
 	updateIssue: async (
 		orgId: string,
 		projectId: string,
 		number: number,
-		userId: string,
+		userId: string | null,
 		input: UpdateIssueInput,
+		background?: BackgroundFn,
 	): Promise<IssueDetailDto> => {
 		const issue = await issueDao.findByProjectAndNumber(
 			orgId,
@@ -260,16 +286,19 @@ export const createIssueService = ({
 		const currentLabelIds = await issueDao.findLabelIds(issue.id);
 		const current: IssueDetailDto = { ...issue, labelIds: currentLabelIds };
 		const diffs = computeIssueDiff(current, input);
-		const activityRows = diffs.map((diff) =>
-			buildActivity(
-				orgId,
-				issue.projectId,
-				issue.id,
-				userId,
-				"issue.updated",
-				diff,
-			),
-		);
+		const statusChanged = diffs.some((diff) => diff.field === "status");
+		const activityRows = userId
+			? diffs.map((diff) =>
+					buildActivity(
+						orgId,
+						issue.projectId,
+						issue.id,
+						userId,
+						"issue.updated",
+						diff,
+					),
+				)
+			: [];
 		const updated = await issueDao.update(
 			orgId,
 			issue.id,
@@ -293,14 +322,27 @@ export const createIssueService = ({
 			);
 		}
 		const labelIds = await issueDao.findLabelIds(issue.id);
-		return { ...updated, labelIds };
+		const result = { ...updated, labelIds };
+		if (diffs.length > 0) {
+			await webhooks?.dispatch(orgId, "issue.updated", result, background);
+		}
+		if (statusChanged) {
+			await webhooks?.dispatch(
+				orgId,
+				"issue.status_changed",
+				{ issue: result, previousStatus: issue.status, status: updated.status },
+				background,
+			);
+		}
+		return result;
 	},
 
 	deleteIssue: async (
 		orgId: string,
 		projectId: string,
 		number: number,
-		userId: string,
+		userId: string | null,
+		background?: BackgroundFn,
 	) => {
 		const issue = await issueDao.findByProjectAndNumber(
 			orgId,
@@ -319,8 +361,17 @@ export const createIssueService = ({
 		await issueDao.softDelete(
 			orgId,
 			issue.id,
-			buildActivity(orgId, issue.projectId, issue.id, userId, "issue.deleted"),
+			userId
+				? buildActivity(
+						orgId,
+						issue.projectId,
+						issue.id,
+						userId,
+						"issue.deleted",
+					)
+				: undefined,
 		);
+		await webhooks?.dispatch(orgId, "issue.deleted", issue, background);
 	},
 });
 
