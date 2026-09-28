@@ -31,6 +31,7 @@ const zh: typeof en = {
 		done: "完成",
 		edit: "编辑",
 		loadMore: "加载更多",
+		justNow: "刚刚",
 	},
 	nav: {
 		home: "首页",

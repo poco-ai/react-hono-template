@@ -29,6 +29,7 @@ const en = {
 		done: "Done",
 		edit: "Edit",
 		loadMore: "Load more",
+		justNow: "Just now",
 	},
 	nav: {
 		home: "Home",

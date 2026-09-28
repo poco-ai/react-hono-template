@@ -51,6 +51,9 @@ export function formatRelativeTime(value: string | null | undefined): string {
 		numeric: "auto",
 	});
 	const minutes = Math.round(diff / 60000);
+	if (minutes === 0) {
+		return i18n.t("common.justNow");
+	}
 	if (Math.abs(minutes) < 60) {
 		return formatter.format(minutes, "minute");
 	}
