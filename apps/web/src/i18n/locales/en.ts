@@ -105,6 +105,7 @@ const en = {
 		createTitle: "Create project",
 		createDescription:
 			"A project groups issues under a short key like WEB-123.",
+		name: "Name",
 		namePlaceholder: "e.g. Website Redesign",
 		key: "Key",
 		keyPlaceholder: "e.g. WEB",
@@ -283,6 +284,7 @@ const en = {
 		createTitle: "Create label",
 		editTitle: "Edit label",
 		createDescription: "Labels help you categorize issues.",
+		name: "Name",
 		namePlaceholder: "e.g. bug",
 		color: "Color",
 		edit: "Edit label",
@@ -365,6 +367,7 @@ const en = {
 		createTitle: "Create API key",
 		createDescription:
 			"Give the key a recognizable name — it can be revoked at any time.",
+		name: "Name",
 		namePlaceholder: "e.g. CI pipeline",
 		key: "Key",
 		createdBy: "Created by",

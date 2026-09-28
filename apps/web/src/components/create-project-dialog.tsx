@@ -107,7 +107,7 @@ export function CreateProjectDialog({
 					}}
 				>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor="project-name">{t("common.name")}</Label>
+						<Label htmlFor="project-name">{t("projects.name")}</Label>
 						<Input
 							id="project-name"
 							value={name}

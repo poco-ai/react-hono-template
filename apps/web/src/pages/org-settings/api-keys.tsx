@@ -109,7 +109,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>{t("common.name")}</TableHead>
+						<TableHead>{t("apiKeys.name")}</TableHead>
 						<TableHead>{t("apiKeys.key")}</TableHead>
 						<TableHead>{t("apiKeys.createdBy")}</TableHead>
 						<TableHead>{t("apiKeys.created")}</TableHead>
@@ -367,7 +367,7 @@ function CreateApiKeyDialog({
 						}}
 					>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="api-key-name">{t("common.name")}</Label>
+							<Label htmlFor="api-key-name">{t("apiKeys.name")}</Label>
 							<Input
 								id="api-key-name"
 								value={name}
