@@ -434,6 +434,9 @@ const en = {
 	},
 	adminUsers: {
 		title: "User management",
+		banTitle: "Ban this user?",
+		banDescription:
+			"{{name}} will immediately lose access and can no longer sign in.",
 		description:
 			"Admin-only area, guarded by RBAC permissions. Page and search live in the URL.",
 		searchPlaceholder: "Search by name or email...",

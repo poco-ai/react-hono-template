@@ -420,6 +420,8 @@ const zh: typeof en = {
 	},
 	adminUsers: {
 		title: "用户管理",
+		banTitle: "封禁该用户？",
+		banDescription: "{{name}} 将立即失去访问权限且无法再登录。",
 		description:
 			"仅管理员可访问，由 RBAC 权限保护。分页与搜索状态保存在 URL 中。",
 		searchPlaceholder: "按姓名或邮箱搜索…",

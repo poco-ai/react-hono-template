@@ -1,6 +1,16 @@
 import type { ListAdminUsersDto } from "@api/dto/admin-user.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@workspace/ui/components/alert-dialog";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -30,6 +40,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 import { useSession } from "@/lib/session";
 
 const PAGE_SIZE = 10;
@@ -41,6 +52,10 @@ export function AdminUsersPage() {
 	const navigate = useNavigate({ from: "/admin/users" });
 	const queryClient = useQueryClient();
 	const [searchInput, setSearchInput] = useState(search);
+	const [banTarget, setBanTarget] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 
 	const usersQuery = useQuery({
 		queryKey: ["admin-users", page, search],
@@ -72,8 +87,10 @@ export function AdminUsersPage() {
 			unwrap(
 				client.api.admin.users[":id"].ban.$post({ param: { id }, json: {} }),
 			),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+		onSuccess: () => {
+			setBanTarget(null);
+			queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+		},
 	});
 	const unbanMutation = useMutation({
 		mutationFn: (id: string) =>
@@ -119,7 +136,7 @@ export function AdminUsersPage() {
 				</form>
 
 				{mutationError && (
-					<p className="text-sm text-red-500">{mutationError.message}</p>
+					<p className="text-sm text-red-500">{errorMessage(mutationError)}</p>
 				)}
 
 				<Table>
@@ -198,7 +215,9 @@ export function AdminUsersPage() {
 												variant="destructive"
 												size="sm"
 												disabled={isSelf || user.role === "admin" || mutating}
-												onClick={() => banMutation.mutate(user.id)}
+												onClick={() =>
+													setBanTarget({ id: user.id, name: user.name })
+												}
 											>
 												{t("adminUsers.ban")}
 											</Button>
@@ -264,6 +283,35 @@ export function AdminUsersPage() {
 					</div>
 				</div>
 			</CardContent>
+
+			<AlertDialog
+				open={banTarget !== null}
+				onOpenChange={(open) => !open && setBanTarget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t("adminUsers.banTitle")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("adminUsers.banDescription", { name: banTarget?.name ?? "" })}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							disabled={banMutation.isPending}
+							onClick={(e) => {
+								e.preventDefault();
+								if (banTarget) {
+									banMutation.mutate(banTarget.id);
+								}
+							}}
+						>
+							{t("adminUsers.ban")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Card>
 	);
 }
