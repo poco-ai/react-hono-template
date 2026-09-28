@@ -19,6 +19,7 @@ import { Route as AuthOnboardingRouteImport } from './routes/_auth/onboarding'
 import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
 import { Route as AuthOrgsOrgIdRouteImport } from './routes/_auth/orgs/$orgId'
 import { Route as AuthOrgsOrgIdIndexRouteImport } from './routes/_auth/orgs/$orgId/index'
+import { Route as AuthOrgsOrgIdActivityRouteImport } from './routes/_auth/orgs/$orgId/activity'
 import { Route as AuthOrgsOrgIdMyIssuesRouteImport } from './routes/_auth/orgs/$orgId/my-issues'
 import { Route as AuthOrgsOrgIdSettingsRouteRouteImport } from './routes/_auth/orgs/$orgId/settings/route'
 import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/orgs/$orgId/projects.index'
@@ -75,6 +76,11 @@ const AuthOrgsOrgIdRoute = AuthOrgsOrgIdRouteImport.update({
 const AuthOrgsOrgIdIndexRoute = AuthOrgsOrgIdIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
+const AuthOrgsOrgIdActivityRoute = AuthOrgsOrgIdActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => AuthOrgsOrgIdRoute,
 } as any)
 const AuthOrgsOrgIdMyIssuesRoute = AuthOrgsOrgIdMyIssuesRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthAdminUsersRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
   '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
+  '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthOnboardingRoute
   '/': typeof AuthIndexRoute
   '/admin/users': typeof AuthAdminUsersRoute
+  '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdIndexRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/_auth/admin/users': typeof AuthAdminUsersRoute
   '/_auth/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
   '/_auth/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
+  '/_auth/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/_auth/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/_auth/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
   '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/orgs/$orgId'
     | '/orgs/$orgId/settings'
+    | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId/'
     | '/orgs/$orgId/settings/labels'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/'
     | '/admin/users'
+    | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId'
     | '/orgs/$orgId/settings/labels'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/_auth/admin/users'
     | '/_auth/orgs/$orgId'
     | '/_auth/orgs/$orgId/settings'
+    | '/_auth/orgs/$orgId/activity'
     | '/_auth/orgs/$orgId/my-issues'
     | '/_auth/orgs/$orgId/'
     | '/_auth/orgs/$orgId/settings/labels'
@@ -318,6 +330,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/orgs/$orgId/'
       preLoaderRoute: typeof AuthOrgsOrgIdIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/activity': {
+      id: '/_auth/orgs/$orgId/activity'
+      path: '/activity'
+      fullPath: '/orgs/$orgId/activity'
+      preLoaderRoute: typeof AuthOrgsOrgIdActivityRouteImport
       parentRoute: typeof AuthOrgsOrgIdRoute
     }
     '/_auth/orgs/$orgId/my-issues': {
@@ -411,6 +430,7 @@ const AuthOrgsOrgIdSettingsRouteRouteWithChildren =
 
 interface AuthOrgsOrgIdRouteChildren {
   AuthOrgsOrgIdSettingsRouteRoute: typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
+  AuthOrgsOrgIdActivityRoute: typeof AuthOrgsOrgIdActivityRoute
   AuthOrgsOrgIdMyIssuesRoute: typeof AuthOrgsOrgIdMyIssuesRoute
   AuthOrgsOrgIdIndexRoute: typeof AuthOrgsOrgIdIndexRoute
   AuthOrgsOrgIdProjectsIndexRoute: typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -420,6 +440,7 @@ interface AuthOrgsOrgIdRouteChildren {
 
 const AuthOrgsOrgIdRouteChildren: AuthOrgsOrgIdRouteChildren = {
   AuthOrgsOrgIdSettingsRouteRoute: AuthOrgsOrgIdSettingsRouteRouteWithChildren,
+  AuthOrgsOrgIdActivityRoute: AuthOrgsOrgIdActivityRoute,
   AuthOrgsOrgIdMyIssuesRoute: AuthOrgsOrgIdMyIssuesRoute,
   AuthOrgsOrgIdIndexRoute: AuthOrgsOrgIdIndexRoute,
   AuthOrgsOrgIdProjectsIndexRoute: AuthOrgsOrgIdProjectsIndexRoute,

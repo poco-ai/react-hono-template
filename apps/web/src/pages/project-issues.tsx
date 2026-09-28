@@ -9,6 +9,7 @@ import {
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
+import { Checkbox } from "@workspace/ui/components/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -35,10 +36,13 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { Plus, Search } from "lucide-react";
+import { cn } from "@workspace/ui/lib/utils";
+import { Columns3, List, Plus, Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BoardView } from "@/components/issue/board-view";
+import { BulkActionBar } from "@/components/issue/bulk-bar";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
@@ -66,6 +70,7 @@ export interface IssuesSearch {
 	labelId?: string;
 	search?: string;
 	sort: "updated" | "created" | "priority";
+	view?: "list" | "board";
 }
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
@@ -91,11 +96,20 @@ export function ProjectIssuesPage({
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
 	const [createOpen, setCreateOpen] = useState(false);
+	const [createStatus, setCreateStatus] = useState<IssueStatus>("backlog");
 	const [searchInput, setSearchInput] = useState(search.search ?? "");
+	const [selected, setSelected] = useState<Set<string>>(new Set());
 
 	useEffect(() => {
 		setSearchInput(search.search ?? "");
 	}, [search.search]);
+
+	const updateSearch = (next: Partial<IssuesSearch>) => {
+		setSelected(new Set());
+		setSearch(next);
+	};
+
+	const view = search.view ?? "list";
 
 	const statusFilter = parseCsv(search.status).filter((value) =>
 		(ISSUE_STATUSES as readonly string[]).includes(value),
@@ -136,10 +150,49 @@ export function ProjectIssuesPage({
 
 	const onSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setSearch({ search: searchInput.trim(), page: 1 });
+		updateSearch({ search: searchInput.trim(), page: 1 });
 	};
 
-	const gotoPage = (next: number) => setSearch({ page: next });
+	const gotoPage = (next: number) => updateSearch({ page: next });
+
+	const openCreate = (status?: IssueStatus) => {
+		setCreateStatus(status ?? "backlog");
+		setCreateOpen(true);
+	};
+
+	const allOnPageSelected =
+		(result?.items.length ?? 0) > 0 &&
+		result?.items.every((issue) => selected.has(issue.id));
+
+	const toggleAllOnPage = (checked: boolean) => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			for (const issue of result?.items ?? []) {
+				if (checked) {
+					next.add(issue.id);
+				} else {
+					next.delete(issue.id);
+				}
+			}
+			return next;
+		});
+	};
+
+	const toggleOne = (id: string, checked: boolean) => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			if (checked) {
+				next.add(id);
+			} else {
+				next.delete(id);
+			}
+			return next;
+		});
+	};
+
+	const selectedNumbers = (result?.items ?? [])
+		.filter((issue) => selected.has(issue.id))
+		.map((issue) => issue.number);
 
 	return (
 		<div className="flex min-h-svh flex-col">
@@ -162,10 +215,32 @@ export function ProjectIssuesPage({
 							</p>
 						)}
 					</div>
-					<Button onClick={() => setCreateOpen(true)}>
-						<Plus />
-						{t("issues.newIssue")}
-					</Button>
+					<div className="flex items-center gap-2">
+						<div className="bg-muted flex rounded-lg p-0.5">
+							<Button
+								variant={view === "list" ? "secondary" : "ghost"}
+								size="sm"
+								className="gap-1.5"
+								onClick={() => updateSearch({ view: "list" })}
+							>
+								<List className="size-4" />
+								{t("issues.viewList")}
+							</Button>
+							<Button
+								variant={view === "board" ? "secondary" : "ghost"}
+								size="sm"
+								className="gap-1.5"
+								onClick={() => updateSearch({ view: "board" })}
+							>
+								<Columns3 className="size-4" />
+								{t("issues.viewBoard")}
+							</Button>
+						</div>
+						<Button onClick={() => openCreate()}>
+							<Plus />
+							{t("issues.newIssue")}
+						</Button>
+					</div>
 				</div>
 			</header>
 
@@ -178,7 +253,7 @@ export function ProjectIssuesPage({
 						label: t(`issues.statuses.${status}`),
 					}))}
 					onChange={(next) =>
-						setSearch({ status: serializeCsv(next), page: 1 })
+						updateSearch({ status: serializeCsv(next), page: 1 })
 					}
 				/>
 				<MultiSelect
@@ -189,13 +264,13 @@ export function ProjectIssuesPage({
 						label: t(`issues.priorities.${name}`),
 					}))}
 					onChange={(next) =>
-						setSearch({ priority: serializeCsv(next), page: 1 })
+						updateSearch({ priority: serializeCsv(next), page: 1 })
 					}
 				/>
 				<Select
 					value={search.assigneeId ?? ASSIGNEE_ALL}
 					onValueChange={(value) =>
-						setSearch({
+						updateSearch({
 							assigneeId: value && value !== ASSIGNEE_ALL ? value : undefined,
 							page: 1,
 						})
@@ -217,7 +292,7 @@ export function ProjectIssuesPage({
 				<Select
 					value={search.labelId ?? LABEL_ALL}
 					onValueChange={(value) =>
-						setSearch({
+						updateSearch({
 							labelId: value && value !== LABEL_ALL ? value : undefined,
 							page: 1,
 						})
@@ -249,7 +324,7 @@ export function ProjectIssuesPage({
 				<Select
 					value={search.sort}
 					onValueChange={(value) =>
-						setSearch({ sort: value as IssuesSearch["sort"] })
+						updateSearch({ sort: value as IssuesSearch["sort"] })
 					}
 				>
 					<SelectTrigger className="w-40">
@@ -272,7 +347,7 @@ export function ProjectIssuesPage({
 						variant="ghost"
 						size="sm"
 						onClick={() =>
-							setSearch({
+							updateSearch({
 								status: "",
 								priority: "",
 								assigneeId: "",
@@ -287,145 +362,210 @@ export function ProjectIssuesPage({
 				)}
 			</div>
 
-			<div className="flex-1 overflow-auto px-8 py-4">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="w-24">{t("issues.number")}</TableHead>
-							<TableHead>{t("issues.titleField")}</TableHead>
-							<TableHead className="w-28">{t("issues.status")}</TableHead>
-							<TableHead className="w-28">{t("issues.priority")}</TableHead>
-							<TableHead className="w-36">{t("issues.assignee")}</TableHead>
-							<TableHead className="w-48">{t("issues.labels")}</TableHead>
-							<TableHead className="w-28">{t("issues.dueDate")}</TableHead>
-							<TableHead className="w-44">{t("issues.updated")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{result?.items.map((issue) => {
-							const assignee = issue.assigneeId
-								? memberById.get(issue.assigneeId)
-								: undefined;
-							return (
-								<TableRow
-									key={issue.id}
-									className="cursor-pointer"
-									onClick={() =>
-										navigate({
-											to: "/orgs/$orgId/projects/$projectId/$issueNumber",
-											params: { orgId, projectId, issueNumber: issue.number },
-										})
-									}
-								>
-									<TableCell className="text-muted-foreground font-mono text-xs">
-										{project.data?.key}-{issue.number}
-									</TableCell>
-									<TableCell>
-										<Link
-											to="/orgs/$orgId/projects/$projectId/$issueNumber"
-											params={{ orgId, projectId, issueNumber: issue.number }}
-											className="hover:underline"
-										>
-											{issue.title}
-										</Link>
-									</TableCell>
-									<TableCell>
-										<StatusBadge status={issue.status as IssueStatus} />
-									</TableCell>
-									<TableCell>
-										<PriorityBadge value={issue.priority} />
-									</TableCell>
-									<TableCell>
-										{assignee && (
-											<span className="flex items-center gap-2 text-sm">
-												<UserAvatar name={assignee.user.name} />
-												<span className="truncate">{assignee.user.name}</span>
-											</span>
-										)}
-									</TableCell>
-									<TableCell>
-										<span className="flex flex-wrap gap-1">
-											{issue.labelIds.map((labelId) => {
-												const label = labelById.get(labelId);
-												return label ? (
-													<LabelBadge key={labelId} label={label} />
-												) : null;
-											})}
-										</span>
-									</TableCell>
-									<TableCell className="text-muted-foreground text-xs">
-										{formatDueDate(issue.dueDate)}
-									</TableCell>
-									<TableCell className="text-muted-foreground text-xs">
-										{formatDateTime(issue.updatedAt)}
-									</TableCell>
-								</TableRow>
-							);
-						})}
-						{issues.isPending && (
-							<TableRow>
-								<TableCell
-									colSpan={8}
-									className="text-muted-foreground h-16 text-center"
-								>
-									{t("common.loading")}
-								</TableCell>
-							</TableRow>
-						)}
-						{issues.isError && (
-							<TableRow>
-								<TableCell colSpan={8} className="text-center text-red-500">
-									{issues.error.message}
-								</TableCell>
-							</TableRow>
-						)}
-						{!issues.isPending && result?.items.length === 0 && (
-							<TableRow>
-								<TableCell
-									colSpan={8}
-									className="text-muted-foreground h-16 text-center"
-								>
-									{hasFilters ? t("issues.noResults") : t("issues.empty")}
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
-			</div>
-
-			<footer className="text-muted-foreground flex items-center justify-between border-t px-8 py-3 text-sm">
-				<span>{result ? t("issues.count", { total: result.total }) : ""}</span>
-				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={search.page <= 1 || issues.isPending}
-						onClick={() => gotoPage(search.page - 1)}
-					>
-						{t("common.prev")}
-					</Button>
-					<span>
-						{t("issues.pageIndicator", {
-							page: search.page,
-							total: totalPages,
-						})}
-					</span>
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={search.page >= totalPages || issues.isPending}
-						onClick={() => gotoPage(search.page + 1)}
-					>
-						{t("common.next")}
-					</Button>
+			{view === "board" ? (
+				<div className="flex-1 overflow-x-auto px-8 py-4">
+					<BoardView
+						orgId={orgId}
+						projectId={projectId}
+						projectKey={project.data?.key ?? ""}
+						filters={{
+							status: statusFilter,
+							priority: priorityFilter,
+							assigneeId: search.assigneeId,
+							labelId: search.labelId,
+							search: search.search ?? "",
+							sort: search.sort,
+						}}
+						members={members.data ?? []}
+						labels={labels.data ?? []}
+						onNewIssue={openCreate}
+					/>
 				</div>
-			</footer>
+			) : (
+				<>
+					<div className="flex-1 overflow-auto px-8 py-4">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="w-10">
+										<Checkbox
+											aria-label={t("bulk.selectAll")}
+											checked={allOnPageSelected}
+											indeterminate={selected.size > 0 && !allOnPageSelected}
+											onCheckedChange={(checked) => toggleAllOnPage(checked)}
+										/>
+									</TableHead>
+									<TableHead className="w-24">{t("issues.number")}</TableHead>
+									<TableHead>{t("issues.titleField")}</TableHead>
+									<TableHead className="w-28">{t("issues.status")}</TableHead>
+									<TableHead className="w-28">{t("issues.priority")}</TableHead>
+									<TableHead className="w-36">{t("issues.assignee")}</TableHead>
+									<TableHead className="w-48">{t("issues.labels")}</TableHead>
+									<TableHead className="w-28">{t("issues.dueDate")}</TableHead>
+									<TableHead className="w-44">{t("issues.updated")}</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{result?.items.map((issue) => {
+									const assignee = issue.assigneeId
+										? memberById.get(issue.assigneeId)
+										: undefined;
+									return (
+										<TableRow
+											key={issue.id}
+											className={cn(
+												"cursor-pointer",
+												selected.has(issue.id) && "bg-accent/40",
+											)}
+											onClick={() =>
+												navigate({
+													to: "/orgs/$orgId/projects/$projectId/$issueNumber",
+													params: {
+														orgId,
+														projectId,
+														issueNumber: issue.number,
+													},
+												})
+											}
+										>
+											<TableCell onClick={(e) => e.stopPropagation()}>
+												<Checkbox
+													aria-label={issue.title}
+													checked={selected.has(issue.id)}
+													onCheckedChange={(checked) =>
+														toggleOne(issue.id, checked)
+													}
+												/>
+											</TableCell>
+											<TableCell className="text-muted-foreground font-mono text-xs">
+												{project.data?.key}-{issue.number}
+											</TableCell>
+											<TableCell>
+												<Link
+													to="/orgs/$orgId/projects/$projectId/$issueNumber"
+													params={{
+														orgId,
+														projectId,
+														issueNumber: issue.number,
+													}}
+													className="hover:underline"
+												>
+													{issue.title}
+												</Link>
+											</TableCell>
+											<TableCell>
+												<StatusBadge status={issue.status as IssueStatus} />
+											</TableCell>
+											<TableCell>
+												<PriorityBadge value={issue.priority} />
+											</TableCell>
+											<TableCell>
+												{assignee && (
+													<span className="flex items-center gap-2 text-sm">
+														<UserAvatar name={assignee.user.name} />
+														<span className="truncate">
+															{assignee.user.name}
+														</span>
+													</span>
+												)}
+											</TableCell>
+											<TableCell>
+												<span className="flex flex-wrap gap-1">
+													{issue.labelIds.map((labelId) => {
+														const label = labelById.get(labelId);
+														return label ? (
+															<LabelBadge key={labelId} label={label} />
+														) : null;
+													})}
+												</span>
+											</TableCell>
+											<TableCell className="text-muted-foreground text-xs">
+												{formatDueDate(issue.dueDate)}
+											</TableCell>
+											<TableCell className="text-muted-foreground text-xs">
+												{formatDateTime(issue.updatedAt)}
+											</TableCell>
+										</TableRow>
+									);
+								})}
+								{issues.isPending && (
+									<TableRow>
+										<TableCell
+											colSpan={9}
+											className="text-muted-foreground h-16 text-center"
+										>
+											{t("common.loading")}
+										</TableCell>
+									</TableRow>
+								)}
+								{issues.isError && (
+									<TableRow>
+										<TableCell colSpan={9} className="text-center text-red-500">
+											{issues.error.message}
+										</TableCell>
+									</TableRow>
+								)}
+								{!issues.isPending && result?.items.length === 0 && (
+									<TableRow>
+										<TableCell
+											colSpan={9}
+											className="text-muted-foreground h-16 text-center"
+										>
+											{hasFilters ? t("issues.noResults") : t("issues.empty")}
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
+						</Table>
+					</div>
+
+					<footer className="text-muted-foreground flex items-center justify-between border-t px-8 py-3 text-sm">
+						<span>
+							{result ? t("issues.count", { count: result.total }) : ""}
+						</span>
+						<div className="flex items-center gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={search.page <= 1 || issues.isPending}
+								onClick={() => gotoPage(search.page - 1)}
+							>
+								{t("common.prev")}
+							</Button>
+							<span>
+								{t("issues.pageIndicator", {
+									page: search.page,
+									total: totalPages,
+								})}
+							</span>
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={search.page >= totalPages || issues.isPending}
+								onClick={() => gotoPage(search.page + 1)}
+							>
+								{t("common.next")}
+							</Button>
+						</div>
+					</footer>
+				</>
+			)}
+
+			{selectedNumbers.length > 0 && view === "list" && (
+				<BulkActionBar
+					orgId={orgId}
+					projectId={projectId}
+					numbers={selectedNumbers}
+					onDone={() => setSelected(new Set())}
+				/>
+			)}
 
 			<CreateIssueDialog
 				orgId={orgId}
 				projectId={projectId}
 				open={createOpen}
 				onOpenChange={setCreateOpen}
+				defaultStatus={createStatus}
 				members={members.data ?? []}
 				labels={labels.data ?? []}
 				onCreated={() =>
@@ -443,6 +583,7 @@ function CreateIssueDialog({
 	projectId,
 	open,
 	onOpenChange,
+	defaultStatus,
 	members,
 	labels,
 	onCreated,
@@ -451,6 +592,7 @@ function CreateIssueDialog({
 	projectId: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	defaultStatus: IssueStatus;
 	members: { userId: string; user: { name: string } }[];
 	labels: { id: string; name: string }[];
 	onCreated: () => void;
@@ -458,7 +600,7 @@ function CreateIssueDialog({
 	const { t } = useTranslation();
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	const [status, setStatus] = useState<IssueStatus>("backlog");
+	const [status, setStatus] = useState<IssueStatus>(defaultStatus);
 	const [priority, setPriority] = useState<IssuePriorityName>("none");
 	const [assigneeId, setAssigneeId] = useState(UNASSIGNED);
 	const [labelIds, setLabelIds] = useState<string[]>([]);
@@ -468,13 +610,13 @@ function CreateIssueDialog({
 		if (open) {
 			setTitle("");
 			setDescription("");
-			setStatus("backlog");
+			setStatus(defaultStatus);
 			setPriority("none");
 			setAssigneeId(UNASSIGNED);
 			setLabelIds([]);
 			setDueDate("");
 		}
-	}, [open]);
+	}, [open, defaultStatus]);
 
 	const createMutation = useMutation({
 		mutationFn: () =>

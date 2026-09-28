@@ -42,6 +42,47 @@ export function formatDueDate(value: string | null | undefined): string {
 	return value ? value.slice(0, 10) : "";
 }
 
+export function formatRelativeTime(value: string | null | undefined): string {
+	if (!value) {
+		return "";
+	}
+	const diff = new Date(value).getTime() - Date.now();
+	const formatter = new Intl.RelativeTimeFormat(i18n.language, {
+		numeric: "auto",
+	});
+	const minutes = Math.round(diff / 60000);
+	if (Math.abs(minutes) < 60) {
+		return formatter.format(minutes, "minute");
+	}
+	const hours = Math.round(minutes / 60);
+	if (Math.abs(hours) < 24) {
+		return formatter.format(hours, "hour");
+	}
+	const days = Math.round(hours / 24);
+	if (Math.abs(days) < 7) {
+		return formatter.format(days, "day");
+	}
+	const weeks = Math.round(days / 7);
+	if (Math.abs(weeks) < 5) {
+		return formatter.format(weeks, "week");
+	}
+	const months = Math.round(days / 30);
+	if (Math.abs(months) < 12) {
+		return formatter.format(months, "month");
+	}
+	return formatter.format(Math.round(days / 365), "year");
+}
+
+export function formatBytes(size: number): string {
+	if (size < 1024) {
+		return `${size} B`;
+	}
+	if (size < 1024 * 1024) {
+		return `${(size / 1024).toFixed(1)} KB`;
+	}
+	return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function toDateInputValue(iso: string | null | undefined): string {
 	return iso ? new Date(iso).toISOString().slice(0, 10) : "";
 }

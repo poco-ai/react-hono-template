@@ -30,6 +30,7 @@ function SidebarLink({
 	to:
 		| "/orgs/$orgId/projects"
 		| "/orgs/$orgId/my-issues"
+		| "/orgs/$orgId/activity"
 		| "/orgs/$orgId/settings";
 	exact?: boolean;
 	children: ReactNode;
@@ -117,6 +118,9 @@ export function OrgLayout() {
 					</SidebarLink>
 					<SidebarLink to="/orgs/$orgId/my-issues" exact>
 						{t("nav.myIssues")}
+					</SidebarLink>
+					<SidebarLink to="/orgs/$orgId/activity" exact>
+						{t("nav.activity")}
 					</SidebarLink>
 					<SidebarLink to="/orgs/$orgId/settings">
 						{t("nav.settings")}

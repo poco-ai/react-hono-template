@@ -1,4 +1,3 @@
-import type { IssueDetailDto } from "@api/dto/issue.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -29,11 +28,14 @@ import {
 	SelectValue,
 } from "@workspace/ui/components/select";
 import { Separator } from "@workspace/ui/components/separator";
-import { Textarea } from "@workspace/ui/components/textarea";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { IssueActivityTimeline } from "@/components/issue/issue-activity";
+import { IssueAttachments } from "@/components/issue/issue-attachments";
+import { IssueComments } from "@/components/issue/issue-comments";
+import { IssueDescription } from "@/components/issue/issue-description";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { MultiSelect } from "@/components/multi-select";
 import { client, unwrap } from "@/lib/api";
@@ -44,6 +46,7 @@ import {
 	priorityValue,
 	toDateInputValue,
 } from "@/lib/issue-utils";
+import { orgActivitiesRootKey } from "@/lib/queries/activities";
 import { issueQuery } from "@/lib/queries/issues";
 import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
@@ -70,8 +73,6 @@ export function IssueDetailPage({
 	const labels = useQuery(labelsQuery(orgId));
 
 	const [title, setTitle] = useState("");
-	const [descriptionEditing, setDescriptionEditing] = useState(false);
-	const [descriptionDraft, setDescriptionDraft] = useState("");
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [estimateDraft, setEstimateDraft] = useState("");
 
@@ -102,7 +103,7 @@ export function IssueDetailPage({
 		onMutate: async (input) => {
 			await queryClient.cancelQueries({ queryKey: detailKey });
 			const previous = queryClient.getQueryData(detailKey);
-			queryClient.setQueryData<IssueDetailDto>(detailKey, (old) => {
+			queryClient.setQueryData(detailKey, (old) => {
 				if (!old) {
 					return old;
 				}
@@ -144,6 +145,9 @@ export function IssueDetailPage({
 			queryClient.invalidateQueries({ queryKey: detailKey });
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "issues"] });
+			queryClient.invalidateQueries({
+				queryKey: orgActivitiesRootKey(orgId),
+			});
 		},
 	});
 
@@ -157,6 +161,9 @@ export function IssueDetailPage({
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "issues"] });
+			queryClient.invalidateQueries({
+				queryKey: orgActivitiesRootKey(orgId),
+			});
 			navigate({
 				to: "/orgs/$orgId/projects/$projectId",
 				params: { orgId, projectId },
@@ -228,60 +235,46 @@ export function IssueDetailPage({
 					{t("issues.updated")} {formatDateTime(data.updatedAt)}
 				</p>
 
-				<div className="mt-8">
-					{descriptionEditing ? (
-						<div className="flex flex-col gap-2">
-							<Textarea
-								value={descriptionDraft}
-								placeholder={t("issues.descriptionPlaceholder")}
-								onChange={(e) => setDescriptionDraft(e.target.value)}
-								rows={8}
-							/>
-							<div className="flex items-center gap-2">
-								<Button
-									size="sm"
-									disabled={updateMutation.isPending}
-									onClick={() => {
-										update({
-											description: descriptionDraft.trim() || null,
-										});
-										setDescriptionEditing(false);
-									}}
-								>
-									{t("common.save")}
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onClick={() => setDescriptionEditing(false)}
-								>
-									{t("common.cancel")}
-								</Button>
-							</div>
-						</div>
-					) : (
-						<Button
-							variant="ghost"
-							className="text-muted-foreground hover:text-foreground min-h-24 h-auto w-full justify-start rounded-md p-2 text-left text-sm font-normal whitespace-pre-wrap"
-							onClick={() => {
-								setDescriptionDraft(data.description ?? "");
-								setDescriptionEditing(true);
-							}}
-						>
-							{data.description ? (
-								<span className="text-foreground whitespace-pre-wrap">
-									{data.description}
-								</span>
-							) : (
-								<span className="text-muted-foreground">
-									{t("issues.descriptionEmpty")}
-								</span>
-							)}
-						</Button>
-					)}
+				<div className="mt-6">
+					<IssueDescription
+						description={issue.data?.description ?? null}
+						onSave={async (description) => {
+							try {
+								await updateMutation.mutateAsync({ description });
+								return true;
+							} catch {
+								return false;
+							}
+						}}
+					/>
 				</div>
 
 				<Separator className="my-8" />
+
+				<div className="flex flex-col gap-8">
+					<IssueComments
+						orgId={orgId}
+						projectId={projectId}
+						issueNumber={issueNumber}
+					/>
+					<Separator />
+					<IssueAttachments
+						orgId={orgId}
+						projectId={projectId}
+						issueNumber={issueNumber}
+					/>
+					<Separator />
+					<IssueActivityTimeline
+						orgId={orgId}
+						projectId={projectId}
+						issueNumber={issueNumber}
+						members={members.data ?? []}
+						labels={labels.data ?? []}
+					/>
+				</div>
+
+				<Separator className="my-8" />
+
 				<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
 					<Button
 						variant="outline"
