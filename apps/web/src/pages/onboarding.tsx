@@ -17,7 +17,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/lib/issue-utils";
-import { orgsQuery } from "@/lib/queries/org";
+import { type Organization, orgsQuery } from "@/lib/queries/org";
 
 export function OnboardingPage() {
 	const { t } = useTranslation();
@@ -41,14 +41,18 @@ export function OnboardingPage() {
 			return data;
 		},
 		onSuccess: (org) => {
-			queryClient.invalidateQueries({ queryKey: orgsQuery().queryKey });
 			if (org) {
+				queryClient.setQueryData<Organization[]>(
+					orgsQuery().queryKey,
+					(prev) => [...(prev ?? []), org],
+				);
 				navigate({
 					to: "/orgs/$orgId/projects",
 					params: { orgId: org.id },
 					replace: true,
 				});
 			}
+			queryClient.invalidateQueries({ queryKey: orgsQuery().queryKey });
 		},
 	});
 
