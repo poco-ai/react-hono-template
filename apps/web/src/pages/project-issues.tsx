@@ -148,6 +148,15 @@ export function ProjectIssuesPage({
 	const labelById = new Map(
 		(labels.data ?? []).map((label) => [label.id, label]),
 	);
+	const assigneeFilterLabel =
+		search.assigneeId === undefined || search.assigneeId === ""
+			? t("common.all")
+			: search.assigneeId === "none"
+				? t("common.unassigned")
+				: (memberById.get(search.assigneeId)?.user.name ?? t("common.all"));
+	const labelFilterLabel = search.labelId
+		? (labelById.get(search.labelId)?.name ?? t("issues.labels"))
+		: t("issues.labels");
 
 	const onSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -278,7 +287,7 @@ export function ProjectIssuesPage({
 					}
 				>
 					<SelectTrigger className="w-40">
-						<SelectValue />
+						<SelectValue>{assigneeFilterLabel}</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value={ASSIGNEE_ALL}>{t("common.all")}</SelectItem>
@@ -300,7 +309,7 @@ export function ProjectIssuesPage({
 					}
 				>
 					<SelectTrigger className="w-36">
-						<SelectValue />
+						<SelectValue>{labelFilterLabel}</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value={LABEL_ALL}>{t("issues.labels")}</SelectItem>
@@ -329,7 +338,7 @@ export function ProjectIssuesPage({
 					}
 				>
 					<SelectTrigger className="w-40">
-						<SelectValue />
+						<SelectValue>{t(`issues.sortOptions.${search.sort}`)}</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="updated">
@@ -690,7 +699,7 @@ function CreateIssueDialog({
 								onValueChange={(v) => v && setStatus(v as IssueStatus)}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue />
+									<SelectValue>{t(`issues.statuses.${status}`)}</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									{ISSUE_STATUSES.map((s) => (
@@ -708,7 +717,9 @@ function CreateIssueDialog({
 								onValueChange={(v) => v && setPriority(v as IssuePriorityName)}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue />
+									<SelectValue>
+										{t(`issues.priorities.${priority}`)}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									{PRIORITY_NAMES.map((name) => (
@@ -726,7 +737,12 @@ function CreateIssueDialog({
 								onValueChange={(v) => v !== null && setAssigneeId(v)}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue />
+									<SelectValue>
+										{assigneeId === UNASSIGNED
+											? t("common.unassigned")
+											: (members.find((m) => m.userId === assigneeId)?.user
+													.name ?? t("common.unassigned"))}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value={UNASSIGNED}>

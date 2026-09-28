@@ -67,7 +67,12 @@ export function OrgActivityPage({
 					}
 				>
 					<SelectTrigger className="w-44">
-						<SelectValue />
+						<SelectValue>
+							{projectId
+								? ((projects.data ?? []).find((p) => p.id === projectId)
+										?.name ?? t("activityFeed.allProjects"))
+								: t("activityFeed.allProjects")}
+						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value={ALL_PROJECTS}>

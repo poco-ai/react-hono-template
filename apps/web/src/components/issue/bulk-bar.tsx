@@ -80,7 +80,7 @@ export function BulkActionBar({
 				}
 			>
 				<SelectTrigger className="h-8 w-36">
-					<SelectValue />
+					<SelectValue>{t("bulk.changeStatus")}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value={NO_ACTION}>{t("bulk.changeStatus")}</SelectItem>
@@ -101,7 +101,7 @@ export function BulkActionBar({
 				}
 			>
 				<SelectTrigger className="h-8 w-36">
-					<SelectValue />
+					<SelectValue>{t("bulk.changePriority")}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value={NO_ACTION}>{t("bulk.changePriority")}</SelectItem>

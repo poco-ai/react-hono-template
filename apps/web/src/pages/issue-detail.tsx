@@ -206,6 +206,12 @@ export function IssueDetailPage({
 	}
 
 	const data = issue.data;
+	const memberById = new Map(
+		(members.data ?? []).map((member) => [member.userId, member]),
+	);
+	const assigneeLabel = data.assigneeId
+		? (memberById.get(data.assigneeId)?.user.name ?? t("common.unassigned"))
+		: t("common.unassigned");
 
 	return (
 		<div className="mx-auto flex max-w-5xl gap-8 p-8">
@@ -329,7 +335,9 @@ export function IssueDetailPage({
 						}
 					>
 						<SelectTrigger className="w-full">
-							<SelectValue />
+							<SelectValue>
+								{t(`issues.statuses.${data.status as IssueStatus}`)}
+							</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							{ISSUE_STATUSES.map((status) => (
@@ -352,7 +360,9 @@ export function IssueDetailPage({
 						}
 					>
 						<SelectTrigger className="w-full">
-							<SelectValue />
+							<SelectValue>
+								{t(`issues.priorities.${priorityName(data.priority)}`)}
+							</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							{PRIORITY_NAMES.map((name) => (
@@ -372,7 +382,7 @@ export function IssueDetailPage({
 						}
 					>
 						<SelectTrigger className="w-full">
-							<SelectValue />
+							<SelectValue>{assigneeLabel}</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value={UNASSIGNED}>

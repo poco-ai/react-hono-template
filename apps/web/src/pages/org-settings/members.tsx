@@ -187,7 +187,9 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 											}
 										>
 											<SelectTrigger className="w-28">
-												<SelectValue />
+												<SelectValue>
+													{t(`members.roles.${member.role as OrgRole}`)}
+												</SelectValue>
 											</SelectTrigger>
 											<SelectContent>
 												{ORG_ROLES.map((role) => (
@@ -455,7 +457,7 @@ function InviteDialog({
 								onValueChange={(v) => v && setRole(v as OrgRole)}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue />
+									<SelectValue>{t(`members.roles.${role}`)}</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									{INVITABLE_ROLES.map((r) => (
