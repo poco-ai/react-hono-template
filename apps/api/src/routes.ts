@@ -33,6 +33,7 @@ import { createAdminController } from "./controllers/admin-user.controller";
 import { createApiKeyController } from "./controllers/apikey.controller";
 import { createAttachmentController } from "./controllers/attachment.controller";
 import { createBillingController } from "./controllers/billing.controller";
+import { createBootstrapController } from "./controllers/bootstrap.controller";
 import { createCommentController } from "./controllers/comment.controller";
 import { createIssueController } from "./controllers/issue.controller";
 import { createLabelController } from "./controllers/label.controller";
@@ -110,6 +111,7 @@ export const createRoutes = ({
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
 	const adminController = createAdminController(adminUserService);
+	const bootstrapController = createBootstrapController(adminUserDao);
 
 	const organizationDao = createOrganizationDao(db);
 	const adminOrgService = createAdminOrgService(organizationDao);
@@ -195,6 +197,7 @@ export const createRoutes = ({
 			return fail(c, ApiErrorCode.INTERNAL_ERROR, "Internal Server Error", 500);
 		})
 		.get("/api/hello", (c) => ok(c, { message: "Hello from Workers API!" }))
+		.get("/api/bootstrap", (c) => bootstrapController.hasAdmin(c))
 		.use("/api/admin/*", requireAuth(auth))
 		.get(
 			"/api/admin/users",

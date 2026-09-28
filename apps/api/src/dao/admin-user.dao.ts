@@ -56,6 +56,16 @@ export const createAdminUserDao = (db: Database) => ({
 		};
 	},
 
+	hasAdminUser: async (): Promise<boolean> => {
+		const row = await db
+			.select({ id: userTable.id })
+			.from(userTable)
+			.where(eq(userTable.role, "admin"))
+			.limit(1)
+			.get();
+		return row !== undefined;
+	},
+
 	findById: async (id: string): Promise<AdminUserDto | null> => {
 		const row = await db
 			.select()

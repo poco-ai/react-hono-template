@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -19,6 +19,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/errors";
+import { bootstrapQuery } from "@/lib/queries/bootstrap";
 import { sessionOptions } from "@/lib/session";
 
 export function RegisterPage() {
@@ -26,6 +27,7 @@ export function RegisterPage() {
 	const navigate = useNavigate({ from: "/register" });
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
+	const { data: bootstrap } = useQuery(bootstrapQuery());
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -58,7 +60,9 @@ export function RegisterPage() {
 			<Card className="w-full max-w-sm">
 				<CardHeader>
 					<CardTitle>{t("register.title")}</CardTitle>
-					<CardDescription>{t("register.description")}</CardDescription>
+					{bootstrap?.hasAdmin === false && (
+						<CardDescription>{t("register.description")}</CardDescription>
+					)}
 				</CardHeader>
 				<CardContent>
 					<form className="flex flex-col gap-4" onSubmit={onSubmit}>
