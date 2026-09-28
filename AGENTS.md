@@ -49,6 +49,7 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
 - Billing: `src/services/billing.service.ts` + `src/lib/stripe.ts`. Without any `STRIPE_*` vars it's mock mode **only if `BILLING_MOCK_MODE=true`** (local default via `.dev.vars`); partial Stripe config fails closed with 503. Plan quotas (members incl. pending invitations, orgs per user) are enforced in better-auth `hooks.before` inside `src/lib/auth.ts`.
 - CORS trusted origins are hardcoded in `src/index.ts` (`trustedOrigins`). Add any new frontend origin there.
 - drizzle-orm/drizzle-kit are 1.0 RC; `skipLibCheck` in tsconfig is required for their types — don't remove it.
+- D1 batch caveat: `db.batch()` returns rows keyed by column NAME (D1 has no array mode), so duplicate SQL column names across joined tables collapse and shift every value (drizzle-orm#6038). Single queries map correctly. Any select that joins another table must alias the joined columns to unique names with `.as()` (see `COMMENT_SELECT` in `src/dao/comment.dao.ts`) — including before moving an existing joined select into a batch.
 
 ## Web (apps/web)
 
