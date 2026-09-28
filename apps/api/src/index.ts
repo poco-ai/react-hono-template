@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { db } from "./db";
 import { createAuth } from "./lib/auth";
 import { fail } from "./lib/response";
+import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { createRoutes } from "./routes";
 
 const trustedOrigins = [
@@ -22,7 +23,7 @@ const auth = createAuth({
 	trustedOrigins,
 });
 
-app.route("/", createRoutes({ db, auth }));
+app.route("/", createRoutes({ db, auth, storage: s3ClientFromEnv() }));
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 

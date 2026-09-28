@@ -1,8 +1,13 @@
-import { ApiError, ApiErrorCode } from "@workspace/shared";
+import {
+	ApiError,
+	ApiErrorCode,
+	type PresignUploadRequestDto,
+} from "@workspace/shared";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { validator } from "hono/validator";
 import { createAdminController } from "./controllers/admin-user.controller";
+import { createStorageController } from "./controllers/storage.controller";
 import { createUserController } from "./controllers/user.controller";
 import { createAdminUserDao } from "./dao/admin-user.dao";
 import { createUserDao } from "./dao/user.dao";
@@ -13,11 +18,21 @@ import type {
 } from "./dto/admin-user.dto";
 import type { Auth } from "./lib/auth";
 import { fail, ok } from "./lib/response";
+import type { StorageAdapter } from "./lib/storage/types";
 import { requireAuth, requirePermission } from "./middleware/auth";
 import { createAdminUserService } from "./services/admin-user.service";
+import { createStorageService } from "./services/storage.service";
 import { createUserService } from "./services/user.service";
 
-export const createRoutes = ({ db, auth }: { db: Database; auth: Auth }) => {
+export const createRoutes = ({
+	db,
+	auth,
+	storage,
+}: {
+	db: Database;
+	auth: Auth;
+	storage: StorageAdapter;
+}) => {
 	const userDao = createUserDao(db);
 	const userService = createUserService(userDao);
 	const usersController = createUserController(userService);
@@ -25,6 +40,9 @@ export const createRoutes = ({ db, auth }: { db: Database; auth: Auth }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
 	const adminController = createAdminController(adminUserService);
+
+	const storageService = createStorageService(storage);
+	const storageController = createStorageController(storageService);
 
 	return new Hono()
 		.onError((err, c) => {
@@ -43,6 +61,14 @@ export const createRoutes = ({ db, auth }: { db: Database; auth: Auth }) => {
 		.use("/api/users/*", requireAuth(auth))
 		.get("/api/users", (c) => usersController.list(c))
 		.get("/api/users/:id", (c) => usersController.getById(c))
+		.use("/api/storage/*", requireAuth(auth))
+		.post(
+			"/api/storage/presign",
+			validator("json", (value) => value as PresignUploadRequestDto),
+			(c) => storageController.presignUpload(c),
+		)
+		.get("/api/storage/download", (c) => storageController.presignDownload(c))
+		.delete("/api/storage/objects", (c) => storageController.remove(c))
 		.use("/api/admin/*", requireAuth(auth))
 		.get("/api/admin/users", requirePermission({ user: ["list"] }), (c) =>
 			adminController.list(c),
