@@ -353,12 +353,6 @@ export function IssueAttachments({
 				</Alert>
 			)}
 
-			{!attachments.isPending && items.length === 0 && !attachments.isError && (
-				<p className="text-muted-foreground text-sm">
-					{t("attachments.empty")}
-				</p>
-			)}
-
 			{items.length > 0 && (
 				<ul className="flex flex-col gap-2">
 					{items.map((attachment) => {

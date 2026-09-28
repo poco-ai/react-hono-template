@@ -548,7 +548,20 @@ export function ProjectIssuesPage({
 											colSpan={9}
 											className="text-muted-foreground h-16 text-center"
 										>
-											{hasFilters ? t("issues.noResults") : t("issues.empty")}
+											{hasFilters ? (
+												t("issues.noResults")
+											) : (
+												<span className="flex items-center justify-center gap-2">
+													{t("issues.empty")}
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => openCreate()}
+													>
+														{t("issues.emptyCta")}
+													</Button>
+												</span>
+											)}
 										</TableCell>
 									</TableRow>
 								)}
