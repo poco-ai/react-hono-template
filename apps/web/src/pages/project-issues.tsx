@@ -62,6 +62,7 @@ import { isNotFoundError } from "@/lib/errors";
 import {
 	formatDateTime,
 	formatDueDate,
+	formatRelativeTime,
 	fromDateInputValue,
 	parseCsv,
 	priorityValue,
@@ -519,8 +520,11 @@ export function ProjectIssuesPage({
 											<TableCell className="text-muted-foreground text-xs">
 												{formatDueDate(issue.dueDate)}
 											</TableCell>
-											<TableCell className="text-muted-foreground text-xs">
-												{formatDateTime(issue.updatedAt)}
+											<TableCell
+												title={formatDateTime(issue.updatedAt)}
+												className="text-muted-foreground text-xs"
+											>
+												{formatRelativeTime(issue.updatedAt)}
 											</TableCell>
 										</TableRow>
 									);

@@ -13,7 +13,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivitySentence } from "@/components/issue/activity-sentence";
 import { UserAvatar } from "@/components/user-avatar";
-import { formatDateTime } from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import {
 	ORG_ACTIVITY_MAX_LIMIT,
 	ORG_ACTIVITY_PAGE_SIZE,
@@ -141,9 +141,10 @@ export function OrgActivityPage({
 								</div>
 								<time
 									dateTime={activity.createdAt}
+									title={formatDateTime(activity.createdAt)}
 									className="text-muted-foreground text-xs"
 								>
-									{formatDateTime(activity.createdAt)}
+									{formatRelativeTime(activity.createdAt)}
 								</time>
 							</div>
 						</li>

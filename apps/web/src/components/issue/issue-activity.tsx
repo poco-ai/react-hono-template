@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivitySentence } from "@/components/issue/activity-sentence";
 import { UserAvatar } from "@/components/user-avatar";
-import { formatDateTime } from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import { issueActivitiesQuery } from "@/lib/queries/activities";
 import type { OrgMember } from "@/lib/queries/members";
 
@@ -76,9 +76,10 @@ export function IssueActivityTimeline({
 									/>
 									<time
 										dateTime={activity.createdAt}
+										title={formatDateTime(activity.createdAt)}
 										className="text-muted-foreground text-xs"
 									>
-										{formatDateTime(activity.createdAt)}
+										{formatRelativeTime(activity.createdAt)}
 									</time>
 								</div>
 							</li>

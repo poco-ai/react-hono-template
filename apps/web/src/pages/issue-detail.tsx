@@ -44,6 +44,7 @@ import { client, unwrap } from "@/lib/api";
 import { isNotFoundError } from "@/lib/errors";
 import {
 	formatDateTime,
+	formatRelativeTime,
 	fromDateInputValue,
 	priorityName,
 	priorityValue,
@@ -268,8 +269,20 @@ export function IssueDetailPage({
 					maxLength={500}
 				/>
 				<p className="text-muted-foreground mt-2 text-xs">
-					{t("issues.created")} {formatDateTime(data.createdAt)} ·{" "}
-					{t("issues.updated")} {formatDateTime(data.updatedAt)}
+					{t("issues.created")}{" "}
+					<time
+						dateTime={data.createdAt}
+						title={formatDateTime(data.createdAt)}
+					>
+						{formatRelativeTime(data.createdAt)}
+					</time>{" "}
+					· {t("issues.updated")}{" "}
+					<time
+						dateTime={data.updatedAt}
+						title={formatDateTime(data.updatedAt)}
+					>
+						{formatRelativeTime(data.updatedAt)}
+					</time>
 				</p>
 
 				<div className="mt-6">
