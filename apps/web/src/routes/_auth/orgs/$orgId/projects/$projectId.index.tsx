@@ -10,7 +10,11 @@ const searchSchema = z.object({
 	labelId: z.string().optional().catch(""),
 	search: z.string().optional().catch(""),
 	sort: z.enum(["updated", "created", "priority"]).catch("updated"),
-	view: z.enum(["list", "board"]).optional().catch("list"),
+	view: z
+		.enum(["list", "board", "kanban"])
+		.transform((value) => (value === "kanban" ? "board" : value))
+		.optional()
+		.catch("list"),
 });
 
 export const Route = createFileRoute("/_auth/orgs/$orgId/projects/$projectId/")(

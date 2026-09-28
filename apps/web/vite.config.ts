@@ -18,7 +18,8 @@ export default defineConfig({
 	},
 	server: {
 		proxy: {
-			"/api": "http://localhost:8787",
+			// Exact "/api/" prefix only, so SPA routes like /api-docs are not proxied.
+			"/api/": "http://localhost:8787",
 		},
 	},
 });
