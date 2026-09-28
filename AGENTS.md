@@ -52,6 +52,8 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
 - API base URL is `import.meta.env.VITE_API_URL`, baked in at build time (CI sets it to the prod API URL). Unset in dev, so `hc<AppType>("")` relies on the Vite `/api` proxy.
 - Add shadcn components from repo root: `bunx shadcn@latest add <name> -c apps/web` — files land in `packages/ui/src/components` (per `apps/web/components.json` aliases). Import as `@workspace/ui/components/<name>`.
 - `@/*` maps to `apps/web/src/*`.
+- **i18n (react-i18next): never hardcode user-facing strings.** All UI text must be referenced via `useTranslation()` → `t("key")`. Translations live in `apps/web/src/i18n/locales/{en,zh}.ts`; `en.ts` is the source of truth (typed via `CustomTypeOptions` in `src/i18n/index.ts`), and `zh.ts` is typed as `typeof en` so keys can't drift. To change language programmatically use `changeLanguage()` from `@/i18n` (persists to localStorage + updates `<html lang>`). Exception: brand names (e.g. "React Hono Template") and enum values echoed from the API (e.g. `admin`/`user` role codes).
+- **Theming:** custom ThemeProvider in `src/components/theme-provider.tsx` (class-based dark mode, `dark/light/system`, localStorage key `theme`). Use `useTheme()` for programmatic changes; the `<html>` class is pre-applied by an inline script in `index.html` to avoid FOUC — keep that script in sync with the provider's storage key if it changes. Tailwind dark variant is `@custom-variant dark (&:is(.dark *))` in `packages/ui/src/styles/globals.css`.
 
 ## Style
 
