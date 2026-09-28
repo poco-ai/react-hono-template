@@ -28,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
 import { labelsQuery } from "@/lib/queries/labels";
+import { useOrgRole } from "@/lib/use-org-role";
 
 const DEFAULT_COLOR = "#94a3b8";
 
@@ -35,6 +36,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const labels = useQuery(labelsQuery(orgId));
+	const { canManage } = useOrgRole(orgId);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<LabelDto | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<LabelDto | null>(null);
@@ -80,15 +82,17 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 		<div className="flex flex-col gap-6">
 			<div className="flex items-center justify-between">
 				<h2 className="text-lg font-medium">{t("settings.labels")}</h2>
-				<Button
-					onClick={() => {
-						setEditing(null);
-						setDialogOpen(true);
-					}}
-				>
-					<Plus />
-					{t("labels.create")}
-				</Button>
+				{canManage && (
+					<Button
+						onClick={() => {
+							setEditing(null);
+							setDialogOpen(true);
+						}}
+					>
+						<Plus />
+						{t("labels.create")}
+					</Button>
+				)}
 			</div>
 
 			{labels.isPending && (
@@ -114,28 +118,30 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 							className="flex items-center justify-between border-b px-3 py-2 last:border-b-0"
 						>
 							<LabelBadge label={label} className="text-sm" />
-							<div className="flex items-center gap-1">
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									aria-label={t("labels.edit")}
-									onClick={() => {
-										setEditing(label);
-										setDialogOpen(true);
-									}}
-								>
-									<Pencil />
-								</Button>
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									className="text-destructive hover:text-destructive"
-									aria-label={t("common.delete")}
-									onClick={() => setDeleteTarget(label)}
-								>
-									<Trash2 />
-								</Button>
-							</div>
+							{canManage && (
+								<div className="flex items-center gap-1">
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										aria-label={t("labels.edit")}
+										onClick={() => {
+											setEditing(label);
+											setDialogOpen(true);
+										}}
+									>
+										<Pencil />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										className="text-destructive hover:text-destructive"
+										aria-label={t("common.delete")}
+										onClick={() => setDeleteTarget(label)}
+									>
+										<Trash2 />
+									</Button>
+								</div>
+							)}
 						</div>
 					))}
 				</div>

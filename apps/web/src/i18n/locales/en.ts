@@ -291,6 +291,7 @@ const en = {
 		empty: "No labels yet.",
 	},
 	settings: {
+		noPermission: "You do not have permission to view that settings page.",
 		title: "Settings",
 		general: "General",
 		members: "Members",

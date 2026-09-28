@@ -284,6 +284,7 @@ const zh: typeof en = {
 		empty: "还没有标签。",
 	},
 	settings: {
+		noPermission: "你没有权限访问该设置页。",
 		title: "设置",
 		general: "常规",
 		members: "成员",

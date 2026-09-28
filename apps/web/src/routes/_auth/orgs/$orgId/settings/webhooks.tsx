@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_auth/orgs/$orgId/settings/webhooks")({
 			throw redirect({
 				to: "/orgs/$orgId/settings",
 				params: { orgId: params.orgId },
+				search: { denied: true },
 			});
 		}
 	},

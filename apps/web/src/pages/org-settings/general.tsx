@@ -35,7 +35,13 @@ import { membersQuery } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { useSession } from "@/lib/session";
 
-export function GeneralSettingsPage({ orgId }: { orgId: string }) {
+export function GeneralSettingsPage({
+	orgId,
+	denied,
+}: {
+	orgId: string;
+	denied?: boolean;
+}) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -62,6 +68,7 @@ export function GeneralSettingsPage({ orgId }: { orgId: string }) {
 
 	const myMember = members.data?.find((m) => m.userId === session?.user.id);
 	const isOwner = myMember?.role === "owner";
+	const canManage = isOwner || myMember?.role === "admin";
 	const soleOwner =
 		isOwner &&
 		(members.data ?? []).filter((m) => m.role === "owner").length === 1;
@@ -125,10 +132,16 @@ export function GeneralSettingsPage({ orgId }: { orgId: string }) {
 		);
 	}
 
-	const dirty = name.trim() !== org.name || slug !== org.slug;
+	const dirty = canManage && (name.trim() !== org.name || slug !== org.slug);
 
 	return (
 		<div className="flex flex-col gap-10">
+			{denied && (
+				<Alert>
+					<CircleAlert />
+					<AlertDescription>{t("settings.noPermission")}</AlertDescription>
+				</Alert>
+			)}
 			<section className="flex flex-col gap-4">
 				<h2 className="text-lg font-medium">{t("settings.general")}</h2>
 				<div className="max-w-md">
@@ -139,6 +152,7 @@ export function GeneralSettingsPage({ orgId }: { orgId: string }) {
 								id="org-name"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
+								disabled={!canManage}
 							/>
 						</div>
 						<div className="flex flex-col gap-2">
@@ -148,21 +162,28 @@ export function GeneralSettingsPage({ orgId }: { orgId: string }) {
 								value={slug}
 								onChange={(e) => setSlug(e.target.value)}
 								className="font-mono text-sm"
+								disabled={!canManage}
 							/>
 						</div>
-						<div className="flex items-center gap-3">
-							<Button
-								onClick={() => updateMutation.mutate()}
-								disabled={!dirty || !name.trim() || updateMutation.isPending}
-							>
-								{t("settings.save")}
-							</Button>
-							{saved && (
-								<span className="text-muted-foreground text-sm">
-									{t("settings.saved")}
-								</span>
-							)}
-						</div>
+						{canManage ? (
+							<div className="flex items-center gap-3">
+								<Button
+									onClick={() => updateMutation.mutate()}
+									disabled={!dirty || !name.trim() || updateMutation.isPending}
+								>
+									{t("settings.save")}
+								</Button>
+								{saved && (
+									<span className="text-muted-foreground text-sm">
+										{t("settings.saved")}
+									</span>
+								)}
+							</div>
+						) : (
+							<p className="text-muted-foreground text-xs">
+								{t("errors.orgSettingsRequired")}
+							</p>
+						)}
 						{updateMutation.isError && (
 							<Alert variant="destructive">
 								<CircleAlert />
