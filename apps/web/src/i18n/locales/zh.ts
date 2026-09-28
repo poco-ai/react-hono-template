@@ -80,6 +80,13 @@ const zh: typeof en = {
 		successDescription: "邀请已被接受，你现在可以访问该组织了。",
 		errorTitle: "接受邀请失败",
 		continue: "继续",
+		errors: {
+			invitationNotFound: "邀请不存在或已被撤销。",
+			invitationExpired: "邀请已过期。",
+			emailMismatch: "该邀请与当前邮箱不符。",
+			alreadyMember: "你已是该组织成员。",
+			generic: "该邀请无效或已过期。",
+		},
 	},
 	onboarding: {
 		title: "创建你的组织",

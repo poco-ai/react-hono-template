@@ -82,6 +82,13 @@ const en = {
 			"The invitation was accepted. You now have access to the organization.",
 		errorTitle: "Invitation failed",
 		continue: "Continue",
+		errors: {
+			invitationNotFound: "This invitation doesn't exist or has been revoked.",
+			invitationExpired: "This invitation has expired.",
+			emailMismatch: "This invitation was sent to a different email address.",
+			alreadyMember: "You're already a member of this organization.",
+			generic: "This invitation is invalid or has expired.",
+		},
 	},
 	onboarding: {
 		title: "Create your organization",

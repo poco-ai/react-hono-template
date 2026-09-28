@@ -21,6 +21,36 @@ const searchSchema = z.object({
 	invitationId: z.string().min(1),
 });
 
+type InviteErrorKey =
+	| "invite.errors.invitationNotFound"
+	| "invite.errors.invitationExpired"
+	| "invite.errors.emailMismatch"
+	| "invite.errors.alreadyMember"
+	| "invite.errors.generic";
+
+const inviteErrorKeys: Record<string, InviteErrorKey> = {
+	INVITATION_NOT_FOUND: "invite.errors.invitationNotFound",
+	INVITATION_EXPIRED: "invite.errors.invitationExpired",
+	INVITATION_CANCELED: "invite.errors.invitationNotFound",
+	INVITATION_ALREADY_ACCEPTED: "invite.errors.invitationNotFound",
+	YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION: "invite.errors.emailMismatch",
+	USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "invite.errors.alreadyMember",
+	YOU_MAY_ALREADY_BE_A_MEMBER_OF_THIS_ORGANIZATION:
+		"invite.errors.alreadyMember",
+};
+
+class InviteAcceptError extends Error {
+	code?: string;
+	constructor(code?: string | null) {
+		super("invitation failed");
+		this.code = code ?? undefined;
+	}
+}
+
+function getInviteErrorKey(code?: string): InviteErrorKey {
+	return (code ? inviteErrorKeys[code] : undefined) ?? "invite.errors.generic";
+}
+
 export const Route = createFileRoute("/invite")({
 	beforeLoad: async ({ context, location }) => {
 		const session = await context.queryClient.ensureQueryData(sessionOptions);
@@ -48,7 +78,7 @@ function InvitePage() {
 				invitationId,
 			});
 			if (error) {
-				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
+				throw new InviteAcceptError(error.code);
 			}
 		},
 		onSuccess: () => {
@@ -91,7 +121,13 @@ function InvitePage() {
 						<Alert variant="destructive">
 							<CircleAlert />
 							<AlertDescription>
-								{acceptMutation.error.message}
+								{t(
+									getInviteErrorKey(
+										acceptMutation.error instanceof InviteAcceptError
+											? acceptMutation.error.code
+											: undefined,
+									),
+								)}
 							</AlertDescription>
 						</Alert>
 					)}
