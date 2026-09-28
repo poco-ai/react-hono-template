@@ -15,11 +15,12 @@ const ATTACHMENT_SELECT = {
 	contentType: attachments.contentType,
 	size: attachments.size,
 	createdAt: attachments.createdAt,
+	// Joined columns need unique SQL names — see drizzle-orm#6038.
 	uploader: {
-		id: user.id,
-		name: user.name,
-		email: user.email,
-		image: user.image,
+		id: user.id.as("uploader_user_id"),
+		name: user.name.as("uploader_user_name"),
+		email: user.email.as("uploader_user_email"),
+		image: user.image.as("uploader_user_image"),
 	},
 };
 

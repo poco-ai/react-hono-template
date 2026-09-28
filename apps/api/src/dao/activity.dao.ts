@@ -26,11 +26,12 @@ const ACTIVITY_SELECT = {
 	oldValue: activities.oldValue,
 	newValue: activities.newValue,
 	createdAt: activities.createdAt,
+	// Joined columns need unique SQL names — see drizzle-orm#6038.
 	actor: {
-		id: user.id,
-		name: user.name,
-		email: user.email,
-		image: user.image,
+		id: user.id.as("actor_user_id"),
+		name: user.name.as("actor_user_name"),
+		email: user.email.as("actor_user_email"),
+		image: user.image.as("actor_user_image"),
 	},
 };
 
@@ -88,15 +89,16 @@ export const createActivityDao = (db: Database) => ({
 		const rows = await db
 			.select({
 				...ACTIVITY_SELECT,
+				// Joined columns need unique SQL names — see drizzle-orm#6038.
 				issue: {
-					id: issues.id,
-					number: issues.number,
-					title: issues.title,
+					id: issues.id.as("activity_issue_id"),
+					number: issues.number.as("activity_issue_number"),
+					title: issues.title.as("activity_issue_title"),
 				},
 				project: {
-					id: projects.id,
-					key: projects.key,
-					name: projects.name,
+					id: projects.id.as("activity_project_id"),
+					key: projects.key.as("activity_project_key"),
+					name: projects.name.as("activity_project_name"),
 				},
 			})
 			.from(activities)
