@@ -30,8 +30,16 @@ export function priorityValue(name: IssuePriorityName): number {
 	return ISSUE_PRIORITY[name];
 }
 
+function parseDateValue(value: string): Date {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+	if (match) {
+		return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+	}
+	return new Date(value);
+}
+
 export function formatDate(value: string | null | undefined): string {
-	return value ? new Date(value).toLocaleDateString(i18n.language) : "";
+	return value ? parseDateValue(value).toLocaleDateString(i18n.language) : "";
 }
 
 export function formatDateTime(value: string | null | undefined): string {
@@ -39,7 +47,9 @@ export function formatDateTime(value: string | null | undefined): string {
 }
 
 export function formatDueDate(value: string | null | undefined): string {
-	return value ? value.slice(0, 10) : "";
+	return value
+		? parseDateValue(value.slice(0, 10)).toLocaleDateString(i18n.language)
+		: "";
 }
 
 export function formatRelativeTime(value: string | null | undefined): string {
@@ -87,7 +97,13 @@ export function formatBytes(size: number): string {
 }
 
 export function toDateInputValue(iso: string | null | undefined): string {
-	return iso ? new Date(iso).toISOString().slice(0, 10) : "";
+	if (!iso) {
+		return "";
+	}
+	const date = parseDateValue(iso.slice(0, 10));
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export function fromDateInputValue(value: string): string | null {
