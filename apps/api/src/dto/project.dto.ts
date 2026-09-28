@@ -6,7 +6,3 @@ export type ProjectDto = Omit<ProjectRow, "createdAt" | "updatedAt"> & {
 	createdAt: string;
 	updatedAt: string;
 };
-
-export type ListProjectsDto = {
-	items: ProjectDto[];
-};

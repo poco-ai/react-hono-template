@@ -47,7 +47,10 @@ const formatZodError = (error: {
 		.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
 		.join("; ");
 
-const validate = <T>(schema: ZodType<T>, source: "json" | "query") =>
+const validate = <T, const S extends "json" | "query">(
+	schema: ZodType<T>,
+	source: S,
+) =>
 	validator(source, (value) => {
 		const result = schema.safeParse(value);
 		if (result.error) {
@@ -82,7 +85,12 @@ export const createRoutes = ({
 	const labelDao = createLabelDao(db);
 
 	const projectService = createProjectService(projectDao);
-	const issueService = createIssueService({ issueDao, labelDao, projectDao });
+	const issueService = createIssueService({
+		issueDao,
+		labelDao,
+		projectDao,
+		memberDao,
+	});
 	const labelService = createLabelService(labelDao);
 
 	const projectController = createProjectController(projectService);

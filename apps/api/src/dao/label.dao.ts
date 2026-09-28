@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { issueLabels, issues, labels } from "../db/schema";
 import type { Database } from "../db/types";
 import type { LabelDto } from "../dto/label.dto";
@@ -94,7 +94,13 @@ export const createLabelDao = (db: Database) => ({
 			.select({ value: count() })
 			.from(issueLabels)
 			.innerJoin(issues, eq(issues.id, issueLabels.issueId))
-			.where(and(eq(issues.orgId, orgId), eq(issueLabels.labelId, id)));
+			.where(
+				and(
+					eq(issues.orgId, orgId),
+					eq(issueLabels.labelId, id),
+					isNull(issues.deletedAt),
+				),
+			);
 		return row?.value ?? 0;
 	},
 });

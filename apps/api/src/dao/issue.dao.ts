@@ -6,11 +6,10 @@ import {
 	eq,
 	inArray,
 	isNull,
-	like,
-	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { issueLabels, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -20,6 +19,9 @@ import type {
 } from "../dto/issue.dto";
 
 type IssueRow = typeof issues.$inferSelect;
+
+const escapeLike = (value: string) =>
+	value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 
 const toIssueDto = (row: IssueRow): IssueDto => ({
 	...row,
@@ -35,19 +37,22 @@ const isConstraintViolation = (err: unknown) =>
 const MAX_INSERT_ATTEMPTS = 3;
 
 export const createIssueDao = (db: Database) => ({
-	createWithNumber: async (data: {
-		id: string;
-		orgId: string;
-		projectId: string;
-		title: string;
-		description: string | null;
-		status: string;
-		priority: number;
-		assigneeId: string | null;
-		createdById: string | null;
-		dueDate: Date | null;
-		estimate: number | null;
-	}): Promise<IssueDto> => {
+	createWithNumber: async (
+		data: {
+			id: string;
+			orgId: string;
+			projectId: string;
+			title: string;
+			description: string | null;
+			status: string;
+			priority: number;
+			assigneeId: string | null;
+			createdById: string | null;
+			dueDate: Date | null;
+			estimate: number | null;
+		},
+		labelIds: string[],
+	): Promise<IssueDto> => {
 		let lastError: unknown;
 		for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
 			try {
@@ -73,6 +78,16 @@ export const createIssueDao = (db: Database) => ({
 							)`,
 						})
 						.returning(),
+					...(labelIds.length
+						? [
+								db.insert(issueLabels).values(
+									labelIds.map((labelId) => ({
+										issueId: data.id,
+										labelId,
+									})),
+								),
+							]
+						: []),
 				]);
 				return toIssueDto(inserted[0]);
 			} catch (err) {
@@ -158,14 +173,10 @@ export const createIssueDao = (db: Database) => ({
 			);
 		}
 		if (query.search) {
-			const pattern = `%${query.search}%`;
-			const searchCondition = or(
-				like(issues.title, pattern),
-				like(issues.description, pattern),
+			const pattern = `%${escapeLike(query.search)}%`;
+			conditions.push(
+				sql`(${issues.title} like ${pattern} escape '\\' or ${issues.description} like ${pattern} escape '\\')`,
 			);
-			if (searchCondition) {
-				conditions.push(searchCondition);
-			}
 		}
 		const where = and(...conditions);
 		const orderBy =
@@ -226,36 +237,45 @@ export const createIssueDao = (db: Database) => ({
 			dueDate: Date | null;
 			estimate: number | null;
 		}>,
+		labelIds?: string[],
 	): Promise<IssueDto | null> => {
 		const patchEntries = Object.fromEntries(
 			Object.entries(patch).filter(([, value]) => value !== undefined),
 		);
-		if (Object.keys(patchEntries).length === 0) {
-			const current = await db
-				.select()
-				.from(issues)
-				.where(
-					and(
-						eq(issues.orgId, orgId),
-						eq(issues.id, id),
-						isNull(issues.deletedAt),
-					),
-				)
-				.get();
+		const scope = and(
+			eq(issues.orgId, orgId),
+			eq(issues.id, id),
+			isNull(issues.deletedAt),
+		);
+		if (Object.keys(patchEntries).length === 0 && labelIds === undefined) {
+			const current = await db.select().from(issues).where(scope).get();
 			return current ? toIssueDto(current) : null;
 		}
-		const row = await db
-			.update(issues)
-			.set(patchEntries)
-			.where(
-				and(
-					eq(issues.orgId, orgId),
-					eq(issues.id, id),
-					isNull(issues.deletedAt),
-				),
-			)
-			.returning()
-			.get();
+		if (labelIds === undefined) {
+			const row = await db
+				.update(issues)
+				.set(patchEntries)
+				.where(scope)
+				.returning()
+				.get();
+			return row ? toIssueDto(row) : null;
+		}
+		const hasPatch = Object.keys(patchEntries).length > 0;
+		const statements = [
+			hasPatch
+				? db.update(issues).set(patchEntries).where(scope).returning()
+				: db.select().from(issues).where(scope),
+			db.delete(issueLabels).where(eq(issueLabels.issueId, id)),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+		if (labelIds.length > 0) {
+			statements.push(
+				db
+					.insert(issueLabels)
+					.values(labelIds.map((labelId) => ({ issueId: id, labelId }))),
+			);
+		}
+		const [baseRows] = await db.batch(statements);
+		const row = baseRows[0] as IssueRow | undefined;
 		return row ? toIssueDto(row) : null;
 	},
 
@@ -283,12 +303,17 @@ export const createIssueDao = (db: Database) => ({
 	},
 
 	replaceLabels: async (issueId: string, labelIds: string[]): Promise<void> => {
-		await db.delete(issueLabels).where(eq(issueLabels.issueId, issueId));
+		const statements = [
+			db.delete(issueLabels).where(eq(issueLabels.issueId, issueId)),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 		if (labelIds.length > 0) {
-			await db
-				.insert(issueLabels)
-				.values(labelIds.map((labelId) => ({ issueId, labelId })));
+			statements.push(
+				db
+					.insert(issueLabels)
+					.values(labelIds.map((labelId) => ({ issueId, labelId }))),
+			);
 		}
+		await db.batch(statements);
 	},
 });
 
