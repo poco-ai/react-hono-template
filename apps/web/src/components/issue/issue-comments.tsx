@@ -4,6 +4,7 @@ import {
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -17,7 +18,7 @@ import {
 import { Button } from "@workspace/ui/components/button";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { cn } from "@workspace/ui/lib/utils";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { CircleAlert, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownContent } from "@/components/markdown";
@@ -153,7 +154,10 @@ export function IssueComments({
 				<p className="text-muted-foreground text-sm">{t("common.loading")}</p>
 			)}
 			{query.isError && (
-				<p className="text-destructive text-sm">{query.error.message}</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{query.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			{!query.isPending && comments.length === 0 && !query.isError && (
@@ -274,9 +278,10 @@ export function IssueComments({
 			)}
 
 			{updateMutation.isError && (
-				<p className="text-destructive text-sm">
-					{updateMutation.error.message}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{updateMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			<div className="rounded-lg border">
@@ -335,9 +340,10 @@ export function IssueComments({
 				</div>
 			</div>
 			{createMutation.isError && (
-				<p className="text-destructive text-sm">
-					{createMutation.error.message}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{createMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			<AlertDialog
@@ -370,9 +376,10 @@ export function IssueComments({
 				</AlertDialogContent>
 			</AlertDialog>
 			{deleteMutation.isError && (
-				<p className="text-destructive text-sm">
-					{deleteMutation.error.message}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 		</section>
 	);

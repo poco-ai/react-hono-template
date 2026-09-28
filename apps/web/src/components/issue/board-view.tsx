@@ -13,9 +13,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
-import { Plus } from "lucide-react";
+import { CircleAlert, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
@@ -133,14 +134,16 @@ export function BoardView({
 				</p>
 			)}
 			{issues.isError && (
-				<p className="text-destructive px-1 py-8 text-center text-sm">
-					{issues.error.message}
-				</p>
+				<Alert variant="destructive" className="my-8">
+					<CircleAlert />
+					<AlertDescription>{issues.error.message}</AlertDescription>
+				</Alert>
 			)}
 			{moveMutation.isError && (
-				<p className="text-destructive px-1 text-sm">
-					{moveMutation.error.message}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{moveMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 			{issues.data && issues.data.total > items.length && (
 				<p className="text-muted-foreground px-1 text-xs">

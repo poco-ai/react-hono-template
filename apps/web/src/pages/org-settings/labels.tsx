@@ -1,5 +1,6 @@
 import type { LabelDto } from "@api/dto/label.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,7 +22,7 @@ import {
 } from "@workspace/ui/components/dialog";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LabelBadge } from "@/components/issue/label-badge";
@@ -141,9 +142,10 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 			)}
 
 			{deleteMutation.isError && (
-				<p className="text-destructive text-sm">
-					{deleteMutation.error.message}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			<LabelDialog
@@ -254,7 +256,12 @@ function LabelDialog({
 							className="h-9 w-16 p-1"
 						/>
 					</div>
-					{error && <p className="text-destructive text-sm">{error.message}</p>}
+					{error && (
+						<Alert variant="destructive">
+							<CircleAlert />
+							<AlertDescription>{error.message}</AlertDescription>
+						</Alert>
+					)}
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
 							{label ? t("common.save") : t("common.create")}

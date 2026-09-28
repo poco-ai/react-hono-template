@@ -7,6 +7,7 @@ import {
 	type IssueStatus,
 	type UpdateIssueInput,
 } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,7 +29,7 @@ import {
 	SelectValue,
 } from "@workspace/ui/components/select";
 import { Separator } from "@workspace/ui/components/separator";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, CircleAlert, Loader2, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -194,9 +195,12 @@ export function IssueDetailPage({
 	if (issue.isError || !issue.data) {
 		return (
 			<div className="p-8">
-				<p className="text-destructive text-sm">
-					{issue.error?.message ?? t("common.failedToLoad")}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>
+						{issue.error?.message ?? t("common.failedToLoad")}
+					</AlertDescription>
+				</Alert>
 			</div>
 		);
 	}
@@ -309,9 +313,10 @@ export function IssueDetailPage({
 					</AlertDialogContent>
 				</AlertDialog>
 				{deleteMutation.isError && (
-					<p className="text-destructive mt-2 text-sm">
-						{deleteMutation.error.message}
-					</p>
+					<Alert variant="destructive" className="mt-2">
+						<CircleAlert />
+						<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+					</Alert>
 				)}
 			</div>
 
@@ -447,9 +452,10 @@ export function IssueDetailPage({
 				</PropertyRow>
 
 				{updateMutation.isError && (
-					<p className="text-destructive text-sm">
-						{updateMutation.error.message}
-					</p>
+					<Alert variant="destructive">
+						<CircleAlert />
+						<AlertDescription>{updateMutation.error.message}</AlertDescription>
+					</Alert>
 				)}
 			</aside>
 		</div>

@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
+import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isPlanLimitError } from "@/lib/api";
 
@@ -17,7 +19,10 @@ export function QuotaError({
 	}
 	return (
 		<div className="flex flex-col gap-1">
-			<p className="text-destructive text-sm">{error.message}</p>
+			<Alert variant="destructive">
+				<CircleAlert />
+				<AlertDescription>{error.message}</AlertDescription>
+			</Alert>
 			{canUpgrade && isPlanLimitError(error) && (
 				<Link
 					to="/orgs/$orgId/settings/billing"

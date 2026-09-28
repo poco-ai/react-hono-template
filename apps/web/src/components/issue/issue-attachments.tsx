@@ -4,6 +4,7 @@ import {
 	ATTACHMENT_CONTENT_TYPES,
 	ATTACHMENT_MAX_SIZE,
 } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -17,6 +18,7 @@ import {
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 import {
+	CircleAlert,
 	FileArchive,
 	FileImage,
 	FileText,
@@ -345,7 +347,10 @@ export function IssueAttachments({
 			)}
 
 			{attachments.isError && (
-				<p className="text-destructive text-sm">{attachments.error.message}</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{attachments.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			{!attachments.isPending && items.length === 0 && !attachments.isError && (
@@ -453,9 +458,10 @@ export function IssueAttachments({
 				</AlertDialogContent>
 			</AlertDialog>
 			{deleteMutation.isError && (
-				<p className="text-destructive text-sm">
-					{deleteMutation.error.message}
-				</p>
+				<Alert variant="destructive" className="mt-2">
+					<CircleAlert />
+					<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 		</section>
 	);

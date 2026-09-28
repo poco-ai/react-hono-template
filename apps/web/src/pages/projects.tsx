@@ -1,6 +1,7 @@
 import type { ProjectDto } from "@api/dto/project.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -26,7 +27,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { CircleAlert, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
@@ -166,9 +167,10 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 			)}
 
 			{archiveMutation.isError && (
-				<p className="text-destructive pt-4 text-sm">
-					{archiveMutation.error.message}
-				</p>
+				<Alert variant="destructive" className="mt-4">
+					<CircleAlert />
+					<AlertDescription>{archiveMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			<CreateProjectDialog

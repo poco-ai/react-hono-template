@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -35,7 +36,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { Plus } from "lucide-react";
+import { CircleAlert, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
@@ -230,15 +231,13 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						)}
 					</TableBody>
 				</Table>
-				{roleMutation.isError && (
-					<p className="text-destructive text-sm">
-						{roleMutation.error.message}
-					</p>
-				)}
-				{removeMutation.isError && (
-					<p className="text-destructive text-sm">
-						{removeMutation.error.message}
-					</p>
+				{(roleMutation.isError || removeMutation.isError) && (
+					<Alert variant="destructive">
+						<CircleAlert />
+						<AlertDescription>
+							{(roleMutation.error ?? removeMutation.error)?.message}
+						</AlertDescription>
+					</Alert>
 				)}
 			</section>
 
@@ -288,9 +287,12 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						</Table>
 					)}
 					{revokeMutation.isError && (
-						<p className="text-destructive text-sm">
-							{revokeMutation.error.message}
-						</p>
+						<Alert variant="destructive">
+							<CircleAlert />
+							<AlertDescription>
+								{revokeMutation.error.message}
+							</AlertDescription>
+						</Alert>
 					)}
 				</section>
 			)}

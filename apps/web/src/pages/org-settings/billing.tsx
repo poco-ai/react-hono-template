@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { PLANS, type PlanLimits } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,6 +29,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
+import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
@@ -283,9 +285,12 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 						)}
 					</div>
 					{(checkoutMutation.isError || portalMutation.isError) && (
-						<p className="text-destructive text-sm">
-							{(checkoutMutation.error ?? portalMutation.error)?.message}
-						</p>
+						<Alert variant="destructive">
+							<CircleAlert />
+							<AlertDescription>
+								{(checkoutMutation.error ?? portalMutation.error)?.message}
+							</AlertDescription>
+						</Alert>
 					)}
 				</CardContent>
 			</Card>

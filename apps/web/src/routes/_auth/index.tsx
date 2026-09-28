@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
-import { Loader2 } from "lucide-react";
+import { CircleAlert, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { orgsQuery } from "@/lib/queries/org";
@@ -33,7 +34,10 @@ function HomeRedirect() {
 	if (orgs.isError) {
 		return (
 			<div className="flex min-h-svh flex-col items-center justify-center gap-4">
-				<p className="text-destructive text-sm">{orgs.error.message}</p>
+				<Alert variant="destructive" className="max-w-md">
+					<CircleAlert />
+					<AlertDescription>{orgs.error.message}</AlertDescription>
+				</Alert>
 				<Button variant="outline" onClick={() => orgs.refetch()}>
 					{t("common.retry")}
 				</Button>

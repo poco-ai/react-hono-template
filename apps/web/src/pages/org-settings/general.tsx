@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -26,6 +27,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
+import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authClient } from "@/lib/auth-client";
@@ -162,9 +164,12 @@ export function GeneralSettingsPage({ orgId }: { orgId: string }) {
 							)}
 						</div>
 						{updateMutation.isError && (
-							<p className="text-destructive text-sm">
-								{updateMutation.error.message}
-							</p>
+							<Alert variant="destructive">
+								<CircleAlert />
+								<AlertDescription>
+									{updateMutation.error.message}
+								</AlertDescription>
+							</Alert>
 						)}
 					</div>
 				</div>
@@ -261,9 +266,12 @@ export function GeneralSettingsPage({ orgId }: { orgId: string }) {
 							onChange={(e) => setDeleteConfirm(e.target.value)}
 						/>
 						{deleteMutation.isError && (
-							<p className="text-destructive text-sm">
-								{deleteMutation.error.message}
-							</p>
+							<Alert variant="destructive">
+								<CircleAlert />
+								<AlertDescription>
+									{deleteMutation.error.message}
+								</AlertDescription>
+							</Alert>
 						)}
 					</div>
 					<DialogFooter>

@@ -7,6 +7,7 @@ import {
 	type IssuePriorityName,
 	type IssueStatus,
 } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
@@ -37,7 +38,7 @@ import {
 } from "@workspace/ui/components/table";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { cn } from "@workspace/ui/lib/utils";
-import { Columns3, List, Plus, Search } from "lucide-react";
+import { CircleAlert, Columns3, List, Plus, Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -761,9 +762,12 @@ function CreateIssueDialog({
 						/>
 					</div>
 					{createMutation.isError && (
-						<p className="text-destructive text-sm">
-							{createMutation.error.message}
-						</p>
+						<Alert variant="destructive">
+							<CircleAlert />
+							<AlertDescription>
+								{createMutation.error.message}
+							</AlertDescription>
+						</Alert>
 					)}
 					<DialogFooter>
 						<Button type="submit" disabled={createMutation.isPending}>

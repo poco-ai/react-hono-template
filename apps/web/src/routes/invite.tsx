@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Card,
@@ -8,6 +9,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
+import { CircleAlert } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -86,9 +88,12 @@ function InvitePage() {
 				</CardHeader>
 				<CardContent className="flex flex-col gap-4">
 					{acceptMutation.isError && (
-						<p className="text-destructive text-sm">
-							{acceptMutation.error.message}
-						</p>
+						<Alert variant="destructive">
+							<CircleAlert />
+							<AlertDescription>
+								{acceptMutation.error.message}
+							</AlertDescription>
+						</Alert>
 					)}
 					{(acceptMutation.isSuccess || acceptMutation.isError) && (
 						<Button onClick={goHome}>{t("invite.continue")}</Button>

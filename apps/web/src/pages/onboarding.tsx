@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Card,
@@ -10,6 +11,7 @@ import {
 } from "@workspace/ui/components/card";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
+import { CircleAlert } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -111,9 +113,12 @@ export function OnboardingPage() {
 							</p>
 						</div>
 						{createMutation.isError && (
-							<p className="text-destructive text-sm">
-								{createMutation.error.message}
-							</p>
+							<Alert variant="destructive">
+								<CircleAlert />
+								<AlertDescription>
+									{createMutation.error.message}
+								</AlertDescription>
+							</Alert>
 						)}
 						<Button type="submit" disabled={createMutation.isPending}>
 							{t("onboarding.submit")}

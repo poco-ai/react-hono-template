@@ -1,6 +1,7 @@
 import type { ApiKeyDto } from "@api/dto/apikey.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -31,7 +32,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { ExternalLink, Plus } from "lucide-react";
+import { CircleAlert, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UserAvatar } from "@/components/user-avatar";
@@ -226,9 +227,10 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 			</div>
 
 			{revokeMutation.isError && (
-				<p className="text-destructive text-sm">
-					{revokeMutation.error.message}
-				</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{revokeMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			<CreateApiKeyDialog
@@ -372,9 +374,12 @@ function CreateApiKeyDialog({
 							/>
 						</div>
 						{createMutation.isError && (
-							<p className="text-destructive text-sm">
-								{createMutation.error.message}
-							</p>
+							<Alert variant="destructive">
+								<CircleAlert />
+								<AlertDescription>
+									{createMutation.error.message}
+								</AlertDescription>
+							</Alert>
 						)}
 						<DialogFooter>
 							<Button type="submit" disabled={createMutation.isPending}>

@@ -1,8 +1,9 @@
 import type { LabelDto } from "@api/dto/label.dto";
 import { useQuery } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
-import { ChevronDown, History } from "lucide-react";
+import { ChevronDown, CircleAlert, History } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivitySentence } from "@/components/issue/activity-sentence";
@@ -50,9 +51,10 @@ export function IssueActivityTimeline({
 						{t("common.loading")}
 					</p>
 				) : activities.isError ? (
-					<p className="text-destructive px-2 text-sm">
-						{activities.error.message}
-					</p>
+					<Alert variant="destructive" className="mx-2">
+						<CircleAlert />
+						<AlertDescription>{activities.error.message}</AlertDescription>
+					</Alert>
 				) : (activities.data ?? []).length === 0 ? (
 					<p className="text-muted-foreground px-2 text-sm">
 						{t("activity.empty")}

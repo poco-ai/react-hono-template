@@ -2,6 +2,7 @@ import type { WebhookDeliveryDto, WebhookDto } from "@api/dto/webhook.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WebhookEventName } from "@workspace/shared";
 import { WEBHOOK_EVENTS } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -35,6 +36,7 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import {
+	CircleAlert,
 	Inbox,
 	Loader2,
 	Pencil,
@@ -165,7 +167,10 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				</p>
 			)}
 			{pingMutation.isError && (
-				<p className="text-destructive text-sm">{pingMutation.error.message}</p>
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>{pingMutation.error.message}</AlertDescription>
+				</Alert>
 			)}
 
 			<Table>
@@ -279,15 +284,13 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				</TableBody>
 			</Table>
 
-			{toggleMutation.isError && (
-				<p className="text-destructive text-sm">
-					{toggleMutation.error.message}
-				</p>
-			)}
-			{deleteMutation.isError && (
-				<p className="text-destructive text-sm">
-					{deleteMutation.error.message}
-				</p>
+			{(toggleMutation.isError || deleteMutation.isError) && (
+				<Alert variant="destructive">
+					<CircleAlert />
+					<AlertDescription>
+						{(toggleMutation.error ?? deleteMutation.error)?.message}
+					</AlertDescription>
+				</Alert>
 			)}
 
 			<WebhookDialog
@@ -676,9 +679,12 @@ function DeliveriesDialog({
 					</TableBody>
 				</Table>
 				{redeliverMutation.isError && (
-					<p className="text-destructive text-sm">
-						{redeliverMutation.error.message}
-					</p>
+					<Alert variant="destructive">
+						<CircleAlert />
+						<AlertDescription>
+							{redeliverMutation.error.message}
+						</AlertDescription>
+					</Alert>
 				)}
 				<div className="flex items-center justify-end gap-2 text-sm">
 					<Button
