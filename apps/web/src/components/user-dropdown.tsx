@@ -39,7 +39,10 @@ export function UserDropdown({
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				render={
-					<Button variant="ghost" className={cn("h-9 gap-2 px-2", className)}>
+					<Button
+						variant="ghost"
+						className={cn("h-9 min-w-0 gap-2 px-2", className)}
+					>
 						<Avatar className="size-6">
 							<AvatarFallback className="text-xs">
 								{user.name.slice(0, 1).toUpperCase()}
