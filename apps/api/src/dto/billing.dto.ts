@@ -11,6 +11,7 @@ export type BillingDto = {
 	limits: PlanLimits;
 	usage: BillingUsageDto;
 	stripeEnabled: boolean;
+	mockMode: boolean;
 	currentPeriodEnd: string | null;
 };
 

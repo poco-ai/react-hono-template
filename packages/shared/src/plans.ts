@@ -21,15 +21,4 @@ export type PlanName = keyof typeof PLANS;
 
 export type PlanLimits = (typeof PLANS)[PlanName];
 
-export type CountablePlanLimit = "orgs" | "members" | "projects" | "webhooks";
-
-export const SUBSCRIPTION_STATUSES = [
-	"active",
-	"trialing",
-	"past_due",
-	"canceled",
-] as const;
-
-export type SubscriptionStatusName = (typeof SUBSCRIPTION_STATUSES)[number];
-
 export const isPlanName = (value: string): value is PlanName => value in PLANS;

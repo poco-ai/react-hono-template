@@ -32,26 +32,33 @@ export const createBillingService = ({
 	projectDao,
 	webhookDao,
 	stripeSetup,
+	mockEnabled,
 }: {
 	subscriptionDao: SubscriptionDao;
 	memberDao: MemberDao;
 	projectDao: ProjectDao;
 	webhookDao: WebhookDao;
 	stripeSetup: StripeSetup;
+	mockEnabled: boolean;
 }) => {
 	const afterPlanChange = (orgId: string) => {
 		invalidatePlanCache(orgId);
 	};
 
 	const requireCompleteStripe = () => {
-		if (stripeSetup.status === "incomplete") {
-			throw new ApiError(
-				503,
-				ApiErrorCode.SERVICE_UNAVAILABLE,
-				"Stripe is partially configured — set STRIPE_SECRET_KEY, STRIPE_PRICE_ID and STRIPE_WEBHOOK_SECRET",
-			);
+		if (stripeSetup.status === "enabled") {
+			return stripeSetup.context;
 		}
-		return stripeSetup.context;
+		if (stripeSetup.status === "disabled" && mockEnabled) {
+			return null;
+		}
+		throw new ApiError(
+			503,
+			ApiErrorCode.SERVICE_UNAVAILABLE,
+			stripeSetup.status === "incomplete"
+				? "Stripe is partially configured — set STRIPE_SECRET_KEY, STRIPE_PRICE_ID and STRIPE_WEBHOOK_SECRET"
+				: "Billing is not configured on this instance",
+		);
 	};
 
 	return {
@@ -67,6 +74,7 @@ export const createBillingService = ({
 				limits: PLANS[subscription.plan],
 				usage: { members, projects, webhooks },
 				stripeEnabled: stripeSetup.status === "enabled",
+				mockMode: stripeSetup.status === "disabled" && mockEnabled,
 				currentPeriodEnd: subscription.currentPeriodEnd,
 			};
 		},

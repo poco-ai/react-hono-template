@@ -27,7 +27,7 @@ bun run cf-typegen
 
 ## 对象存储（S3 协议，R2 / MinIO / OSS 通用）
 
-`/api/storage/*` 基于 S3 协议实现（`aws4fetch` 签名 SigV4），实际厂商只由环境变量决定，换厂商零代码改动：
+附件存储基于 S3 协议实现（`aws4fetch` 签名 SigV4），实际厂商只由环境变量决定，换厂商零代码改动：
 
 | 变量 | 说明 | R2 示例 |
 |---|---|---|
@@ -38,7 +38,7 @@ bun run cf-typegen
 | `S3_BUCKET` | 桶名 | `my-bucket` |
 | `S3_PUBLIC_BASE_URL` | 可选，公开读自定义域 | `https://cdn.example.com` |
 
-本地放到 `.dev.vars`，生产用 `bunx wrangler secret put <NAME>`。未配置时服务可正常启动，仅 storage 接口返回 500。
+本地放到 `.dev.vars`，生产用 `bunx wrangler secret put <NAME>`。未配置时服务可正常启动，附件相关接口返回 503。
 
 ### R2 开通步骤
 
@@ -63,8 +63,8 @@ bun run cf-typegen
 
 ### 接口与约定
 
-- `POST /api/storage/presign` `{ scope, filename, contentType, size }` → `{ key, uploadUrl, publicUrl, expiresIn }`，客户端拿到 `uploadUrl` 后 `PUT` 直传（必须带签名时相同的 `Content-Type`）
-- `GET /api/storage/download?key=` → `{ url, expiresIn }`（配置了 `S3_PUBLIC_BASE_URL` 时直接返回永久公开链接）
-- `DELETE /api/storage/objects?key=` 删除对象
-- key 格式固定为 `{scope}/{ownerId}/{uuid}.{ext}`：scope 白名单和大小/类型限制在 `src/services/storage.service.ts` 的 `STORAGE_SCOPES` 里配置；用户只能访问自己 `ownerId` 前缀下的对象
-- 前端复用 `apps/web/src/hooks/use-presigned-upload.ts`，业务侧只传 scope
+附件上传走 issue 维度的预签名直传（org-scoped，见 `src/services/attachment.service.ts`）：
+
+- `POST /api/orgs/:orgId/projects/:projectId/issues/:number/attachments/presign` `{ filename, contentType }` → `{ key, uploadUrl, expiresIn }`，客户端拿到 `uploadUrl` 后 `PUT` 直传（必须带签名时相同的 `Content-Type`），完成后 `POST .../attachments` 注册并落库（服务端 HEAD 校验大小与类型）
+- `GET .../attachments` 返回附件列表及带签名的下载链接
+- key 由服务端生成，固定为 `orgs/{orgId}/issues/{issueId}/{uuid}.{ext}`，注册时校验 key 归属，禁止跨组织/跨 issue 写入

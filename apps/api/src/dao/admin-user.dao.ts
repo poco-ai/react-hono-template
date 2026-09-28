@@ -1,4 +1,4 @@
-import { count, desc, eq, like, or } from "drizzle-orm";
+import { count, desc, eq, or, sql } from "drizzle-orm";
 import { session as sessionTable, user as userTable } from "../db/auth-schema";
 import type { Database } from "../db/types";
 import type {
@@ -29,10 +29,13 @@ export const createAdminUserDao = (db: Database) => ({
 		pageSize,
 		search,
 	}: ListAdminUsersQueryDto): Promise<ListAdminUsersDto> => {
+		const escapeLike = (value: string) =>
+			value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+		const pattern = `%${escapeLike(search)}%`;
 		const where = search
 			? or(
-					like(userTable.name, `%${search}%`),
-					like(userTable.email, `%${search}%`),
+					sql`${userTable.name} like ${pattern} escape '\\'`,
+					sql`${userTable.email} like ${pattern} escape '\\'`,
 				)
 			: undefined;
 		const [rows, totals] = await db.batch([

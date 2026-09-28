@@ -11,6 +11,7 @@ declare global {
 			STRIPE_SECRET_KEY?: string;
 			STRIPE_PRICE_ID?: string;
 			STRIPE_WEBHOOK_SECRET?: string;
+			BILLING_MOCK_MODE?: string;
 		}
 	}
 
@@ -25,6 +26,7 @@ declare global {
 		STRIPE_SECRET_KEY?: string;
 		STRIPE_PRICE_ID?: string;
 		STRIPE_WEBHOOK_SECRET?: string;
+		BILLING_MOCK_MODE?: string;
 	}
 }
 

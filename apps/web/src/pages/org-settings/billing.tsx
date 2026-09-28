@@ -257,7 +257,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 								disabled={portalMutation.isPending}
 								onClick={() => {
 									setNotice(null);
-									if (data.stripeEnabled) {
+									if (data.stripeEnabled || !data.mockMode) {
 										portalMutation.mutate();
 									} else {
 										setPortalOpen(true);
@@ -271,7 +271,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 								disabled={checkoutMutation.isPending}
 								onClick={() => {
 									setNotice(null);
-									if (data.stripeEnabled) {
+									if (data.stripeEnabled || !data.mockMode) {
 										checkoutMutation.mutate();
 									} else {
 										setUpgradeOpen(true);

@@ -38,9 +38,17 @@ const auth = createAuth({
 	trustedOrigins,
 });
 
+const billingMockEnabled = env.BILLING_MOCK_MODE === "true";
+
 app.route(
 	"/",
-	createRoutes({ db, auth, storage: s3ClientFromEnv(), stripeSetup }),
+	createRoutes({
+		db,
+		auth,
+		storage: s3ClientFromEnv(),
+		stripeSetup,
+		billingMockEnabled,
+	}),
 );
 app.route("/api/v1", createV1App({ db }));
 
@@ -53,6 +61,7 @@ const stripeController = createStripeController({
 		projectDao: createProjectDao(db),
 		webhookDao: createWebhookDao(db),
 		stripeSetup,
+		mockEnabled: billingMockEnabled,
 	}),
 	stripe,
 });

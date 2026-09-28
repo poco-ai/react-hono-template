@@ -26,11 +26,3 @@ export type ListAdminUsersDto = {
 	page: number;
 	pageSize: number;
 };
-
-export type UpdateAdminUserRoleDto = {
-	role: AdminUserRole;
-};
-
-export type BanAdminUserDto = {
-	banReason?: string;
-};

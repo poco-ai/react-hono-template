@@ -9,8 +9,6 @@ export const ISSUE_STATUSES = [
 
 export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 
-export type IssueStatusType = IssueStatus;
-
 export const ISSUE_PRIORITY = {
 	none: 0,
 	urgent: 1,

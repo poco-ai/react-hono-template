@@ -3,8 +3,10 @@ import {
 	ApiErrorCode,
 	activityListQuerySchema,
 	adminOrgListQuerySchema,
+	adminUserListQuerySchema,
 	apiKeyListQuerySchema,
 	attachmentPresignSchema,
+	banAdminUserSchema,
 	commentListQuerySchema,
 	createApiKeySchema,
 	createCommentSchema,
@@ -13,8 +15,8 @@ import {
 	createProjectSchema,
 	createWebhookSchema,
 	issueListQuerySchema,
-	type PresignUploadRequestDto,
 	registerAttachmentSchema,
+	updateAdminUserRoleSchema,
 	updateIssueSchema,
 	updateLabelSchema,
 	updateProjectSchema,
@@ -35,7 +37,6 @@ import { createCommentController } from "./controllers/comment.controller";
 import { createIssueController } from "./controllers/issue.controller";
 import { createLabelController } from "./controllers/label.controller";
 import { createProjectController } from "./controllers/project.controller";
-import { createStorageController } from "./controllers/storage.controller";
 import { createWebhookController } from "./controllers/webhook.controller";
 import { createActivityDao } from "./dao/activity.dao";
 import { createAdminUserDao } from "./dao/admin-user.dao";
@@ -51,10 +52,6 @@ import { createSubscriptionDao } from "./dao/subscription.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
-import type {
-	BanAdminUserDto,
-	UpdateAdminUserRoleDto,
-} from "./dto/admin-user.dto";
 import type { Auth } from "./lib/auth";
 import { createPlanService } from "./lib/plan";
 import { fail, ok } from "./lib/response";
@@ -72,7 +69,6 @@ import { createCommentService } from "./services/comment.service";
 import { createIssueService } from "./services/issue.service";
 import { createLabelService } from "./services/label.service";
 import { createProjectService } from "./services/project.service";
-import { createStorageService } from "./services/storage.service";
 import { createWebhookService } from "./services/webhook.service";
 
 const formatZodError = (error: {
@@ -103,11 +99,13 @@ export const createRoutes = ({
 	auth,
 	storage,
 	stripeSetup,
+	billingMockEnabled,
 }: {
 	db: Database;
 	auth: Auth;
 	storage: StorageAdapter | null;
 	stripeSetup: StripeSetup;
+	billingMockEnabled: boolean;
 }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
@@ -116,9 +114,6 @@ export const createRoutes = ({
 	const organizationDao = createOrganizationDao(db);
 	const adminOrgService = createAdminOrgService(organizationDao);
 	const adminOrgController = createAdminOrgController(adminOrgService);
-
-	const storageService = createStorageService(storage);
-	const storageController = createStorageController(storageService);
 
 	const memberDao = createMemberDao(db);
 	const projectDao = createProjectDao(db);
@@ -170,6 +165,7 @@ export const createRoutes = ({
 		projectDao,
 		webhookDao,
 		stripeSetup,
+		mockEnabled: billingMockEnabled,
 	});
 
 	const projectController = createProjectController(projectService);
@@ -199,29 +195,28 @@ export const createRoutes = ({
 			return fail(c, ApiErrorCode.INTERNAL_ERROR, "Internal Server Error", 500);
 		})
 		.get("/api/hello", (c) => ok(c, { message: "Hello from Workers API!" }))
-		.use("/api/storage/*", requireAuth(auth))
-		.post(
-			"/api/storage/presign",
-			validator("json", (value) => value as PresignUploadRequestDto),
-			(c) => storageController.presignUpload(c),
-		)
-		.get("/api/storage/download", (c) => storageController.presignDownload(c))
-		.delete("/api/storage/objects", (c) => storageController.remove(c))
 		.use("/api/admin/*", requireAuth(auth))
-		.get("/api/admin/users", requirePermission({ user: ["list"] }), (c) =>
-			adminController.list(c),
+		.get(
+			"/api/admin/users",
+			requirePermission({ user: ["list"] }),
+			validate(adminUserListQuerySchema, "query"),
+			(c) =>
+				adminController.list(c, {
+					...c.req.valid("query"),
+					search: c.req.valid("query").search ?? "",
+				}),
 		)
 		.patch(
 			"/api/admin/users/:id/role",
 			requirePermission({ user: ["set-role"] }),
-			validator("json", (value) => value as UpdateAdminUserRoleDto),
-			(c) => adminController.updateRole(c),
+			validate(updateAdminUserRoleSchema, "json"),
+			(c) => adminController.updateRole(c, c.req.valid("json")),
 		)
 		.post(
 			"/api/admin/users/:id/ban",
 			requirePermission({ user: ["ban"] }),
-			validator("json", (value) => value as BanAdminUserDto),
-			(c) => adminController.ban(c),
+			validate(banAdminUserSchema, "json"),
+			(c) => adminController.ban(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/admin/users/:id/ban",

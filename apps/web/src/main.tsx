@@ -10,13 +10,16 @@ import "./i18n";
 
 const queryClient = new QueryClient();
 const router = createAppRouter(queryClient);
+const rootElement = document.getElementById("root");
 
-createRoot(document.getElementById("root")!).render(
-	<StrictMode>
-		<ThemeProvider>
-			<QueryClientProvider client={queryClient}>
-				<RouterProvider router={router} />
-			</QueryClientProvider>
-		</ThemeProvider>
-	</StrictMode>,
-);
+if (rootElement) {
+	createRoot(rootElement).render(
+		<StrictMode>
+			<ThemeProvider>
+				<QueryClientProvider client={queryClient}>
+					<RouterProvider router={router} />
+				</QueryClientProvider>
+			</ThemeProvider>
+		</StrictMode>,
+	);
+}
