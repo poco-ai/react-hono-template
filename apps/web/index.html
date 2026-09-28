@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>vite-monorepo</title>
+    <script>
+      (() => {
+        var stored = localStorage.getItem("theme");
+        var theme =
+          stored === "light" || stored === "dark" || stored === "system"
+            ? stored
+            : "system";
+        var dark =
+          theme === "dark" ||
+          (theme === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.add(dark ? "dark" : "light");
+        document.documentElement.lang =
+          localStorage.getItem("lang") === "zh" ? "zh" : "en";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

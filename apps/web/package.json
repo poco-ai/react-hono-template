@@ -17,9 +17,11 @@
 		"@workspace/ui": "workspace:*",
 		"better-auth": "^1.7.6",
 		"hono": "^4.13.9",
+		"i18next": "^26.4.2",
 		"lucide-react": "^1.48.0",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
+		"react-i18next": "^17.0.15",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {

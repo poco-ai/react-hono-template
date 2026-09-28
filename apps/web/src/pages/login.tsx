@@ -16,10 +16,14 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { sessionOptions } from "@/lib/session";
 
 export function LoginPage() {
+	const { t } = useTranslation();
 	const navigate = useNavigate({ from: "/login" });
 	const router = useRouter();
 	const queryClient = useQueryClient();
@@ -33,7 +37,7 @@ export function LoginPage() {
 			password: String(form.get("password") ?? ""),
 		});
 		if (error) {
-			alert(error.message ?? "Login failed");
+			alert(error.message ?? t("login.failed"));
 			return;
 		}
 		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
@@ -46,27 +50,29 @@ export function LoginPage() {
 
 	return (
 		<div className="flex min-h-svh items-center justify-center p-6">
+			<div className="absolute top-4 right-4 flex items-center gap-1">
+				<LanguageSwitcher />
+				<ThemeToggle />
+			</div>
 			<Card className="w-full max-w-sm">
 				<CardHeader>
-					<CardTitle>Sign in</CardTitle>
-					<CardDescription>
-						Enter your email and password to continue.
-					</CardDescription>
+					<CardTitle>{t("login.title")}</CardTitle>
+					<CardDescription>{t("login.description")}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="email">Email</Label>
+							<Label htmlFor="email">{t("common.email")}</Label>
 							<Input
 								id="email"
 								name="email"
 								type="email"
-								placeholder="you@example.com"
+								placeholder={t("common.emailPlaceholder")}
 								required
 							/>
 						</div>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="password">Password</Label>
+							<Label htmlFor="password">{t("common.password")}</Label>
 							<Input
 								id="password"
 								name="password"
@@ -75,12 +81,12 @@ export function LoginPage() {
 								required
 							/>
 						</div>
-						<Button type="submit">Sign in</Button>
+						<Button type="submit">{t("login.submit")}</Button>
 					</form>
 					<p className="text-muted-foreground mt-4 text-center text-sm">
-						No account?{" "}
+						{t("login.noAccount")}{" "}
 						<Link to="/register" className="text-primary underline">
-							Register
+							{t("login.registerLink")}
 						</Link>
 					</p>
 				</CardContent>

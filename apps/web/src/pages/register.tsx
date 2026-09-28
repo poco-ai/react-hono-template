@@ -11,10 +11,14 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { sessionOptions } from "@/lib/session";
 
 export function RegisterPage() {
+	const { t } = useTranslation();
 	const navigate = useNavigate({ from: "/register" });
 	const queryClient = useQueryClient();
 
@@ -27,7 +31,7 @@ export function RegisterPage() {
 			password: String(form.get("password") ?? ""),
 		});
 		if (error) {
-			alert(error.message ?? "Registration failed");
+			alert(error.message ?? t("register.failed"));
 			return;
 		}
 		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
@@ -36,46 +40,53 @@ export function RegisterPage() {
 
 	return (
 		<div className="flex min-h-svh items-center justify-center p-6">
+			<div className="absolute top-4 right-4 flex items-center gap-1">
+				<LanguageSwitcher />
+				<ThemeToggle />
+			</div>
 			<Card className="w-full max-w-sm">
 				<CardHeader>
-					<CardTitle>Create account</CardTitle>
-					<CardDescription>
-						The first registered user becomes the admin.
-					</CardDescription>
+					<CardTitle>{t("register.title")}</CardTitle>
+					<CardDescription>{t("register.description")}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="name">Name</Label>
-							<Input id="name" name="name" placeholder="Your name" required />
+							<Label htmlFor="name">{t("common.name")}</Label>
+							<Input
+								id="name"
+								name="name"
+								placeholder={t("register.namePlaceholder")}
+								required
+							/>
 						</div>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="email">Email</Label>
+							<Label htmlFor="email">{t("common.email")}</Label>
 							<Input
 								id="email"
 								name="email"
 								type="email"
-								placeholder="you@example.com"
+								placeholder={t("common.emailPlaceholder")}
 								required
 							/>
 						</div>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="password">Password</Label>
+							<Label htmlFor="password">{t("common.password")}</Label>
 							<Input
 								id="password"
 								name="password"
 								type="password"
-								placeholder="At least 8 characters"
+								placeholder={t("register.passwordPlaceholder")}
 								minLength={8}
 								required
 							/>
 						</div>
-						<Button type="submit">Register</Button>
+						<Button type="submit">{t("register.submit")}</Button>
 					</form>
 					<p className="text-muted-foreground mt-4 text-center text-sm">
-						Already have an account?{" "}
+						{t("register.haveAccount")}{" "}
 						<Link to="/login" className="text-primary underline">
-							Sign in
+							{t("register.signInLink")}
 						</Link>
 					</p>
 				</CardContent>

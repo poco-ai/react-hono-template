@@ -28,12 +28,14 @@ import {
 } from "@workspace/ui/components/table";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
 const PAGE_SIZE = 10;
 
 export function AdminUsersPage() {
+	const { t } = useTranslation();
 	const { data: session } = useSession();
 	const { page = 1, search = "" } = useSearch({ from: "/_auth/admin/users" });
 	const navigate = useNavigate({ from: "/admin/users" });
@@ -100,22 +102,19 @@ export function AdminUsersPage() {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>User management</CardTitle>
-				<CardDescription>
-					Admin-only area, guarded by RBAC permissions. Page and search live in
-					the URL.
-				</CardDescription>
+				<CardTitle>{t("adminUsers.title")}</CardTitle>
+				<CardDescription>{t("adminUsers.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				<form className="flex gap-2" onSubmit={onSearch}>
 					<Input
-						placeholder="Search by name or email..."
+						placeholder={t("adminUsers.searchPlaceholder")}
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
 						className="max-w-xs"
 					/>
 					<Button type="submit" variant="outline">
-						Search
+						{t("adminUsers.search")}
 					</Button>
 				</form>
 
@@ -126,11 +125,13 @@ export function AdminUsersPage() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>User</TableHead>
-							<TableHead>Role</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead>Created</TableHead>
-							<TableHead className="text-right">Actions</TableHead>
+							<TableHead>{t("adminUsers.user")}</TableHead>
+							<TableHead>{t("common.role")}</TableHead>
+							<TableHead>{t("adminUsers.status")}</TableHead>
+							<TableHead>{t("adminUsers.created")}</TableHead>
+							<TableHead className="text-right">
+								{t("adminUsers.actions")}
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -170,11 +171,13 @@ export function AdminUsersPage() {
 										{user.banned ? (
 											<Badge variant="destructive">
 												{user.banReason
-													? `banned: ${user.banReason}`
-													: "banned"}
+													? t("adminUsers.bannedWithReason", {
+															reason: user.banReason,
+														})
+													: t("adminUsers.banned")}
 											</Badge>
 										) : (
-											<Badge variant="outline">active</Badge>
+											<Badge variant="outline">{t("adminUsers.active")}</Badge>
 										)}
 									</TableCell>
 									<TableCell className="text-muted-foreground text-xs">
@@ -188,7 +191,7 @@ export function AdminUsersPage() {
 												disabled={mutating}
 												onClick={() => unbanMutation.mutate(user.id)}
 											>
-												Unban
+												{t("adminUsers.unban")}
 											</Button>
 										) : (
 											<Button
@@ -197,7 +200,7 @@ export function AdminUsersPage() {
 												disabled={isSelf || user.role === "admin" || mutating}
 												onClick={() => banMutation.mutate(user.id)}
 											>
-												Ban
+												{t("adminUsers.ban")}
 											</Button>
 										)}
 									</TableCell>
@@ -210,7 +213,7 @@ export function AdminUsersPage() {
 									colSpan={5}
 									className="text-muted-foreground h-16 text-center"
 								>
-									Loading…
+									{t("common.loading")}
 								</TableCell>
 							</TableRow>
 						)}
@@ -227,7 +230,7 @@ export function AdminUsersPage() {
 									colSpan={5}
 									className="text-muted-foreground h-16 text-center"
 								>
-									No users found.
+									{t("adminUsers.noUsers")}
 								</TableCell>
 							</TableRow>
 						)}
@@ -235,7 +238,9 @@ export function AdminUsersPage() {
 				</Table>
 
 				<div className="text-muted-foreground flex items-center justify-between text-sm">
-					<span>{result ? `${result.total} user(s)` : ""}</span>
+					<span>
+						{result ? t("adminUsers.userCount", { total: result.total }) : ""}
+					</span>
 					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
@@ -243,10 +248,10 @@ export function AdminUsersPage() {
 							disabled={page <= 1 || usersQuery.isPending}
 							onClick={() => gotoPage(page - 1)}
 						>
-							Prev
+							{t("adminUsers.prev")}
 						</Button>
 						<span>
-							Page {page} / {totalPages}
+							{t("adminUsers.pageIndicator", { page, total: totalPages })}
 						</span>
 						<Button
 							variant="outline"
@@ -254,7 +259,7 @@ export function AdminUsersPage() {
 							disabled={page >= totalPages || usersQuery.isPending}
 							onClick={() => gotoPage(page + 1)}
 						>
-							Next
+							{t("adminUsers.next")}
 						</Button>
 					</div>
 				</div>

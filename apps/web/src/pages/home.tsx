@@ -10,11 +10,13 @@ import {
 } from "@workspace/ui/components/card";
 import type { ChangeEvent } from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { usePresignedUpload } from "@/hooks/use-presigned-upload";
 import { client, unwrap } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
 export function HomePage() {
+	const { t } = useTranslation();
 	const { data: session } = useSession();
 	const helloQuery = useQuery({
 		queryKey: ["hello"],
@@ -30,31 +32,29 @@ export function HomePage() {
 			<Card>
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
-						Signed in
+						{t("home.signedIn")}
 						{session?.user.role === "admin" && (
 							<Badge variant="secondary">admin</Badge>
 						)}
 					</CardTitle>
-					<CardDescription>
-						Your session, issued by better-auth.
-					</CardDescription>
+					<CardDescription>{t("home.sessionDescription")}</CardDescription>
 				</CardHeader>
 				<CardContent className="text-sm">
 					<dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
 						<div className="flex gap-2">
-							<dt className="text-muted-foreground">Name:</dt>
+							<dt className="text-muted-foreground">{t("common.name")}:</dt>
 							<dd>{session?.user.name}</dd>
 						</div>
 						<div className="flex gap-2">
-							<dt className="text-muted-foreground">Email:</dt>
+							<dt className="text-muted-foreground">{t("common.email")}:</dt>
 							<dd>{session?.user.email}</dd>
 						</div>
 						<div className="flex gap-2">
-							<dt className="text-muted-foreground">Role:</dt>
+							<dt className="text-muted-foreground">{t("common.role")}:</dt>
 							<dd>{session?.user.role}</dd>
 						</div>
 						<div className="flex gap-2">
-							<dt className="text-muted-foreground">User ID:</dt>
+							<dt className="text-muted-foreground">{t("home.userId")}:</dt>
 							<dd className="font-mono text-xs">{session?.user.id}</dd>
 						</div>
 					</dl>
@@ -63,34 +63,34 @@ export function HomePage() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>RPC demo</CardTitle>
-					<CardDescription>
-						End-to-end typed calls via the Vite /api proxy.
-					</CardDescription>
+					<CardTitle>{t("home.rpcTitle")}</CardTitle>
+					<CardDescription>{t("home.rpcDescription")}</CardDescription>
 				</CardHeader>
 				<CardContent className="flex flex-col gap-3 text-sm">
 					<p className="text-muted-foreground">
 						/api/hello:{" "}
 						{helloQuery.isPending
-							? "Loading..."
+							? t("common.loading")
 							: (helloQuery.data?.message ??
 								helloQuery.error?.message ??
-								"Failed to load")}
+								t("common.failedToLoad"))}
 						{errorMutation.isError && (
 							<span className="text-red-500">
 								{" "}
-								| error: {errorMutation.error.message}
+								| {t("common.error")}: {errorMutation.error.message}
 							</span>
 						)}
 					</p>
 					<div className="flex gap-2">
-						<Button onClick={() => helloQuery.refetch()}>Refetch</Button>
+						<Button onClick={() => helloQuery.refetch()}>
+							{t("home.refetch")}
+						</Button>
 						<Button
 							variant="outline"
 							disabled={errorMutation.isPending}
 							onClick={() => errorMutation.mutate()}
 						>
-							Trigger API error
+							{t("home.triggerError")}
 						</Button>
 					</div>
 				</CardContent>
@@ -102,6 +102,7 @@ export function HomePage() {
 }
 
 function StorageDemo() {
+	const { t } = useTranslation();
 	const { upload, uploading, uploaded, error } = usePresignedUpload("avatars");
 	const [previewUrl, setPreviewUrl] = useState("");
 
@@ -125,11 +126,8 @@ function StorageDemo() {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Object storage demo</CardTitle>
-				<CardDescription>
-					Presigned upload to S3-compatible storage (R2) — file bytes bypass the
-					Worker entirely.
-				</CardDescription>
+				<CardTitle>{t("home.storageTitle")}</CardTitle>
+				<CardDescription>{t("home.storageDescription")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3 text-sm">
 				<input
@@ -139,7 +137,9 @@ function StorageDemo() {
 					disabled={uploading}
 					onChange={onFileChange}
 				/>
-				{uploading && <p className="text-muted-foreground">Uploading…</p>}
+				{uploading && (
+					<p className="text-muted-foreground">{t("home.uploading")}</p>
+				)}
 				{uploaded && (
 					<p className="font-mono text-xs break-all text-muted-foreground">
 						{uploaded.key}
@@ -148,7 +148,7 @@ function StorageDemo() {
 				{previewUrl && (
 					<img
 						src={previewUrl}
-						alt="Uploaded preview"
+						alt={t("home.uploadedPreviewAlt")}
 						className="max-h-48 rounded-md border"
 					/>
 				)}
