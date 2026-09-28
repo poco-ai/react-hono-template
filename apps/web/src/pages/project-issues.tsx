@@ -54,6 +54,7 @@ import { BulkActionBar } from "@/components/issue/bulk-bar";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
+import { MarkdownContent } from "@/components/markdown";
 import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
 import { UserAvatar } from "@/components/user-avatar";
@@ -662,27 +663,32 @@ function CreateIssueDialog({
 	const { t } = useTranslation();
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
+	const [descTab, setDescTab] = useState<"write" | "preview">("write");
 	const [status, setStatus] = useState<IssueStatus>(defaultStatus);
 	const [priority, setPriority] = useState<IssuePriorityName>("none");
 	const [assigneeId, setAssigneeId] = useState(UNASSIGNED);
 	const [labelIds, setLabelIds] = useState<string[]>([]);
 	const [dueDate, setDueDate] = useState("");
+	const [estimate, setEstimate] = useState("");
 
 	useEffect(() => {
 		if (open) {
 			setTitle("");
 			setDescription("");
+			setDescTab("write");
 			setStatus(defaultStatus);
 			setPriority("none");
 			setAssigneeId(UNASSIGNED);
 			setLabelIds([]);
 			setDueDate("");
+			setEstimate("");
 		}
 	}, [open, defaultStatus]);
 
 	const createMutation = useMutation({
-		mutationFn: () =>
-			unwrap(
+		mutationFn: () => {
+			const parsedEstimate = estimate === "" ? undefined : Number(estimate);
+			return unwrap(
 				client.api.orgs[":orgId"].projects[":projectId"].issues.$post({
 					param: { orgId, projectId },
 					json: {
@@ -693,9 +699,16 @@ function CreateIssueDialog({
 						assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
 						labelIds: labelIds.length > 0 ? labelIds : undefined,
 						dueDate: fromDateInputValue(dueDate) ?? undefined,
+						estimate:
+							parsedEstimate !== undefined &&
+							Number.isInteger(parsedEstimate) &&
+							parsedEstimate >= 0
+								? parsedEstimate
+								: undefined,
 					},
 				}),
-			),
+			);
+		},
 		onSuccess: () => {
 			onCreated();
 			onOpenChange(false);
@@ -736,12 +749,44 @@ function CreateIssueDialog({
 								({t("common.optional")})
 							</span>
 						</Label>
-						<Textarea
-							id="issue-description"
-							value={description}
-							placeholder={t("issues.descriptionPlaceholder")}
-							onChange={(e) => setDescription(e.target.value)}
-						/>
+						<div className="rounded-lg border">
+							<div className="border-b flex items-center gap-1 px-2 pt-1.5">
+								{(["write", "preview"] as const).map((value) => (
+									<button
+										key={value}
+										type="button"
+										className={cn(
+											"rounded-md px-2 py-1 text-xs font-medium",
+											descTab === value
+												? "bg-accent text-accent-foreground"
+												: "text-muted-foreground hover:text-foreground",
+										)}
+										onClick={() => setDescTab(value)}
+									>
+										{t(`common.${value}`)}
+									</button>
+								))}
+							</div>
+							{descTab === "write" ? (
+								<Textarea
+									id="issue-description"
+									value={description}
+									placeholder={t("issues.descriptionPlaceholder")}
+									onChange={(e) => setDescription(e.target.value)}
+									className="resize-y border-0 focus-visible:ring-0"
+								/>
+							) : (
+								<div className="min-h-24 px-3 py-2">
+									{description.trim() ? (
+										<MarkdownContent>{description}</MarkdownContent>
+									) : (
+										<p className="text-muted-foreground text-sm">
+											{t("comments.previewEmpty")}
+										</p>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
 					<div className="grid grid-cols-2 gap-4">
 						<div className="flex flex-col gap-2">
@@ -814,6 +859,17 @@ function CreateIssueDialog({
 								type="date"
 								value={dueDate}
 								onChange={(e) => setDueDate(e.target.value)}
+							/>
+						</div>
+						<div className="flex flex-col gap-2">
+							<Label>{t("issues.estimate")}</Label>
+							<Input
+								type="number"
+								min={0}
+								max={100}
+								step={1}
+								value={estimate}
+								onChange={(e) => setEstimate(e.target.value)}
 							/>
 						</div>
 					</div>
