@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
+import { Route as AuthApiDocsRouteImport } from './routes/_auth/api-docs'
 import { Route as AuthOnboardingRouteImport } from './routes/_auth/onboarding'
 import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
 import { Route as AuthOrgsOrgIdRouteImport } from './routes/_auth/orgs/$orgId'
@@ -24,8 +25,10 @@ import { Route as AuthOrgsOrgIdMyIssuesRouteImport } from './routes/_auth/orgs/$
 import { Route as AuthOrgsOrgIdSettingsRouteRouteImport } from './routes/_auth/orgs/$orgId/settings/route'
 import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/orgs/$orgId/projects.index'
 import { Route as AuthOrgsOrgIdSettingsIndexRouteImport } from './routes/_auth/orgs/$orgId/settings/index'
+import { Route as AuthOrgsOrgIdSettingsApiKeysRouteImport } from './routes/_auth/orgs/$orgId/settings/api-keys'
 import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/orgs/$orgId/settings/labels'
 import { Route as AuthOrgsOrgIdSettingsMembersRouteImport } from './routes/_auth/orgs/$orgId/settings/members'
+import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_auth/orgs/$orgId/settings/webhooks'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
 
@@ -56,6 +59,11 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
 const AuthAdminRoute = AuthAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthApiDocsRoute = AuthApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
@@ -106,6 +114,12 @@ const AuthOrgsOrgIdSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
+const AuthOrgsOrgIdSettingsApiKeysRoute =
+  AuthOrgsOrgIdSettingsApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
 const AuthOrgsOrgIdSettingsLabelsRoute =
   AuthOrgsOrgIdSettingsLabelsRouteImport.update({
     id: '/labels',
@@ -116,6 +130,12 @@ const AuthOrgsOrgIdSettingsMembersRoute =
   AuthOrgsOrgIdSettingsMembersRouteImport.update({
     id: '/members',
     path: '/members',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
+const AuthOrgsOrgIdSettingsWebhooksRoute =
+  AuthOrgsOrgIdSettingsWebhooksRouteImport.update({
+    id: '/webhooks',
+    path: '/webhooks',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
 const AuthOrgsOrgIdProjectsProjectIdIndexRoute =
@@ -137,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AuthAdminRouteWithChildren
+  '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
   '/admin/users': typeof AuthAdminUsersRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
@@ -144,8 +165,10 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
+  '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
@@ -156,14 +179,17 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AuthAdminRouteWithChildren
+  '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
   '/': typeof AuthIndexRoute
   '/admin/users': typeof AuthAdminUsersRoute
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdIndexRoute
+  '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/orgs/$orgId/projects': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
@@ -176,6 +202,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_auth/admin': typeof AuthAdminRouteWithChildren
+  '/_auth/api-docs': typeof AuthApiDocsRoute
   '/_auth/onboarding': typeof AuthOnboardingRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/admin/users': typeof AuthAdminUsersRoute
@@ -184,8 +211,10 @@ export interface FileRoutesById {
   '/_auth/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/_auth/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/_auth/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
+  '/_auth/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
   '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/_auth/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/_auth/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/_auth/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/_auth/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/_auth/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
@@ -199,6 +228,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/admin'
+    | '/api-docs'
     | '/onboarding'
     | '/admin/users'
     | '/orgs/$orgId'
@@ -206,8 +236,10 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId/'
+    | '/orgs/$orgId/settings/api-keys'
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/members'
+    | '/orgs/$orgId/settings/webhooks'
     | '/orgs/$orgId/projects/'
     | '/orgs/$orgId/settings/'
     | '/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -218,14 +250,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/admin'
+    | '/api-docs'
     | '/onboarding'
     | '/'
     | '/admin/users'
     | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId'
+    | '/orgs/$orgId/settings/api-keys'
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/members'
+    | '/orgs/$orgId/settings/webhooks'
     | '/orgs/$orgId/projects'
     | '/orgs/$orgId/settings'
     | '/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -237,6 +272,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_auth/admin'
+    | '/_auth/api-docs'
     | '/_auth/onboarding'
     | '/_auth/'
     | '/_auth/admin/users'
@@ -245,8 +281,10 @@ export interface FileRouteTypes {
     | '/_auth/orgs/$orgId/activity'
     | '/_auth/orgs/$orgId/my-issues'
     | '/_auth/orgs/$orgId/'
+    | '/_auth/orgs/$orgId/settings/api-keys'
     | '/_auth/orgs/$orgId/settings/labels'
     | '/_auth/orgs/$orgId/settings/members'
+    | '/_auth/orgs/$orgId/settings/webhooks'
     | '/_auth/orgs/$orgId/projects/'
     | '/_auth/orgs/$orgId/settings/'
     | '/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -302,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthAdminRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/api-docs': {
+      id: '/_auth/api-docs'
+      path: '/api-docs'
+      fullPath: '/api-docs'
+      preLoaderRoute: typeof AuthApiDocsRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/onboarding': {
@@ -367,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsIndexRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
+    '/_auth/orgs/$orgId/settings/api-keys': {
+      id: '/_auth/orgs/$orgId/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/orgs/$orgId/settings/api-keys'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsApiKeysRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
     '/_auth/orgs/$orgId/settings/labels': {
       id: '/_auth/orgs/$orgId/settings/labels'
       path: '/labels'
@@ -379,6 +431,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/orgs/$orgId/settings/members'
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsMembersRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
+    '/_auth/orgs/$orgId/settings/webhooks': {
+      id: '/_auth/orgs/$orgId/settings/webhooks'
+      path: '/webhooks'
+      fullPath: '/orgs/$orgId/settings/webhooks'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsWebhooksRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
     '/_auth/orgs/$orgId/projects/$projectId/': {
@@ -411,15 +470,19 @@ const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
 )
 
 interface AuthOrgsOrgIdSettingsRouteRouteChildren {
+  AuthOrgsOrgIdSettingsApiKeysRoute: typeof AuthOrgsOrgIdSettingsApiKeysRoute
   AuthOrgsOrgIdSettingsLabelsRoute: typeof AuthOrgsOrgIdSettingsLabelsRoute
   AuthOrgsOrgIdSettingsMembersRoute: typeof AuthOrgsOrgIdSettingsMembersRoute
+  AuthOrgsOrgIdSettingsWebhooksRoute: typeof AuthOrgsOrgIdSettingsWebhooksRoute
   AuthOrgsOrgIdSettingsIndexRoute: typeof AuthOrgsOrgIdSettingsIndexRoute
 }
 
 const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteChildren =
   {
+    AuthOrgsOrgIdSettingsApiKeysRoute: AuthOrgsOrgIdSettingsApiKeysRoute,
     AuthOrgsOrgIdSettingsLabelsRoute: AuthOrgsOrgIdSettingsLabelsRoute,
     AuthOrgsOrgIdSettingsMembersRoute: AuthOrgsOrgIdSettingsMembersRoute,
+    AuthOrgsOrgIdSettingsWebhooksRoute: AuthOrgsOrgIdSettingsWebhooksRoute,
     AuthOrgsOrgIdSettingsIndexRoute: AuthOrgsOrgIdSettingsIndexRoute,
   }
 
@@ -456,6 +519,7 @@ const AuthOrgsOrgIdRouteWithChildren = AuthOrgsOrgIdRoute._addFileChildren(
 
 interface AuthRouteChildren {
   AuthAdminRoute: typeof AuthAdminRouteWithChildren
+  AuthApiDocsRoute: typeof AuthApiDocsRoute
   AuthOnboardingRoute: typeof AuthOnboardingRoute
   AuthIndexRoute: typeof AuthIndexRoute
   AuthOrgsOrgIdRoute: typeof AuthOrgsOrgIdRouteWithChildren
@@ -463,6 +527,7 @@ interface AuthRouteChildren {
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthAdminRoute: AuthAdminRouteWithChildren,
+  AuthApiDocsRoute: AuthApiDocsRoute,
   AuthOnboardingRoute: AuthOnboardingRoute,
   AuthIndexRoute: AuthIndexRoute,
   AuthOrgsOrgIdRoute: AuthOrgsOrgIdRouteWithChildren,

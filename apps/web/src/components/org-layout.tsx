@@ -31,7 +31,8 @@ function SidebarLink({
 		| "/orgs/$orgId/projects"
 		| "/orgs/$orgId/my-issues"
 		| "/orgs/$orgId/activity"
-		| "/orgs/$orgId/settings";
+		| "/orgs/$orgId/settings"
+		| "/api-docs";
 	exact?: boolean;
 	children: ReactNode;
 }) {
@@ -39,7 +40,7 @@ function SidebarLink({
 	return (
 		<Link
 			to={to}
-			params={{ orgId }}
+			params={to === "/api-docs" ? undefined : { orgId }}
 			activeOptions={{ exact }}
 			className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium"
 			activeProps={{
@@ -125,6 +126,7 @@ export function OrgLayout() {
 					<SidebarLink to="/orgs/$orgId/settings">
 						{t("nav.settings")}
 					</SidebarLink>
+					<SidebarLink to="/api-docs">{t("nav.apiDocs")}</SidebarLink>
 				</nav>
 				<div className="mt-4 flex min-h-0 flex-1 flex-col px-2">
 					<div className="flex items-center justify-between px-2 pb-1">
