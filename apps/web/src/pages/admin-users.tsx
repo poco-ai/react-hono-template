@@ -215,6 +215,9 @@ export function AdminUsersPage() {
 												variant="destructive"
 												size="sm"
 												disabled={isSelf || user.role === "admin" || mutating}
+												title={
+													isSelf ? t("adminUsers.selfBanTooltip") : undefined
+												}
 												onClick={() =>
 													setBanTarget({ id: user.id, name: user.name })
 												}

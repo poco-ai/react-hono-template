@@ -61,11 +61,15 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const invitations = useQuery(invitationsQuery(orgId));
 	const [inviteOpen, setInviteOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<OrgMember | null>(null);
+	const [revokeTarget, setRevokeTarget] = useState<OrgInvitation | null>(null);
 
 	const myMember = members.data?.find((m) => m.userId === session?.user.id);
 	const canManage =
 		myMember !== undefined &&
 		(MANAGE_ROLES as string[]).includes(myMember.role);
+	const ownerCount = (members.data ?? []).filter(
+		(m) => m.role === "owner",
+	).length;
 	const pendingInvitations = (invitations.data ?? []).filter(
 		(invitation) => invitation.status === "pending",
 	);
@@ -120,7 +124,10 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
 			}
 		},
-		onSuccess: invalidateMembers,
+		onSuccess: () => {
+			invalidateMembers();
+			setRevokeTarget(null);
+		},
 	});
 
 	return (
@@ -148,6 +155,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 					<TableBody>
 						{members.data?.map((member) => {
 							const isSelf = member.userId === session?.user.id;
+							const isLastOwner = member.role === "owner" && ownerCount <= 1;
 							return (
 								<TableRow key={member.id}>
 									<TableCell>
@@ -174,8 +182,9 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 										<Select
 											value={member.role}
 											disabled={
-												member.role === "owner" ||
 												!canManage ||
+												isSelf ||
+												isLastOwner ||
 												roleMutation.isPending
 											}
 											onValueChange={(v) =>
@@ -186,7 +195,16 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 												})
 											}
 										>
-											<SelectTrigger className="w-28">
+											<SelectTrigger
+												className="w-28"
+												title={
+													isSelf
+														? t("members.selfRoleTooltip")
+														: isLastOwner
+															? t("members.lastOwnerTooltip")
+															: undefined
+												}
+											>
 												<SelectValue>
 													{t(`members.roles.${member.role as OrgRole}`)}
 												</SelectValue>
@@ -206,6 +224,9 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 											size="sm"
 											className="text-destructive hover:text-destructive"
 											disabled={!canManage || isSelf || member.role === "owner"}
+											title={
+												isSelf ? t("members.selfRemoveTooltip") : undefined
+											}
 											onClick={() => setRemoveTarget(member)}
 										>
 											{t("common.remove")}
@@ -278,7 +299,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 												size="sm"
 												className="text-destructive hover:text-destructive"
 												disabled={revokeMutation.isPending}
-												onClick={() => revokeMutation.mutate(invitation.id)}
+												onClick={() => setRevokeTarget(invitation)}
 											>
 												{t("members.revoke")}
 											</Button>
@@ -333,6 +354,35 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 							}}
 						>
 							{t("common.remove")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog
+				open={revokeTarget !== null}
+				onOpenChange={(open) => !open && setRevokeTarget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t("members.revokeTitle")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("members.revokeDescription")}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							disabled={revokeMutation.isPending}
+							onClick={(e) => {
+								e.preventDefault();
+								if (revokeTarget) {
+									revokeMutation.mutate(revokeTarget.id);
+								}
+							}}
+						>
+							{t("members.revoke")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
