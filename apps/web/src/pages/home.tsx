@@ -7,7 +7,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
-import { useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import { usePresignedUpload } from "@/hooks/use-presigned-upload";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
@@ -98,6 +99,65 @@ export function HomePage() {
 					</div>
 				</CardContent>
 			</Card>
+
+			<StorageDemo />
 		</div>
+	);
+}
+
+function StorageDemo() {
+	const { upload, uploading, uploaded, error } = usePresignedUpload("avatars");
+	const [previewUrl, setPreviewUrl] = useState("");
+
+	const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = "";
+		if (!file) return;
+		try {
+			const result = await upload(file);
+			const download = await unwrap(
+				await client.api.storage.download.$get({
+					query: { key: result.key },
+				}),
+			);
+			setPreviewUrl(download.url);
+		} catch {
+			// the hook already surfaces the error message
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Object storage demo</CardTitle>
+				<CardDescription>
+					Presigned upload to S3-compatible storage (R2) — file bytes bypass the
+					Worker entirely.
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="flex flex-col gap-3 text-sm">
+				<input
+					type="file"
+					accept="image/png,image/jpeg,image/webp,image/gif"
+					className="text-sm"
+					disabled={uploading}
+					onChange={onFileChange}
+				/>
+				{uploading && <p className="text-muted-foreground">Uploading…</p>}
+				{uploaded && (
+					<p className="font-mono text-xs break-all text-muted-foreground">
+						{uploaded.key}
+					</p>
+				)}
+				{previewUrl && (
+					<img
+						src={previewUrl}
+						alt="Uploaded preview"
+						className="max-h-48 rounded-md border"
+					/>
+				)}
+				{error && <p className="text-red-500">{error}</p>}
+			</CardContent>
+		</Card>
 	);
 }
