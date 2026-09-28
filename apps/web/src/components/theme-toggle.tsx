@@ -5,7 +5,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import { Moon, Sun } from "lucide-react";
+import { cn } from "@workspace/ui/lib/utils";
+import { Check, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type Theme, useTheme } from "@/components/theme-provider";
 
@@ -13,7 +14,7 @@ const THEMES: Theme[] = ["light", "dark", "system"];
 
 export function ThemeToggle() {
 	const { t } = useTranslation();
-	const { setTheme } = useTheme();
+	const { theme, setTheme } = useTheme();
 
 	return (
 		<DropdownMenu>
@@ -33,7 +34,13 @@ export function ThemeToggle() {
 			<DropdownMenuContent align="end">
 				{THEMES.map((value) => (
 					<DropdownMenuItem key={value} onClick={() => setTheme(value)}>
-						{t(`theme.${value}`)}
+						<Check
+							className={cn(
+								"size-4",
+								theme === value ? "opacity-100" : "opacity-0",
+							)}
+						/>
+						<span className="min-w-0 truncate">{t(`theme.${value}`)}</span>
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>
