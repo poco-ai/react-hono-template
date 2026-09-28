@@ -17,6 +17,8 @@ import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
 import { Route as AuthApiDocsRouteImport } from './routes/_auth/api-docs'
 import { Route as AuthOnboardingRouteImport } from './routes/_auth/onboarding'
+import { Route as AuthAdminIndexRouteImport } from './routes/_auth/admin/index'
+import { Route as AuthAdminOrgsRouteImport } from './routes/_auth/admin/orgs'
 import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
 import { Route as AuthOrgsOrgIdRouteImport } from './routes/_auth/orgs/$orgId'
 import { Route as AuthOrgsOrgIdIndexRouteImport } from './routes/_auth/orgs/$orgId/index'
@@ -26,6 +28,7 @@ import { Route as AuthOrgsOrgIdSettingsRouteRouteImport } from './routes/_auth/o
 import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/orgs/$orgId/projects.index'
 import { Route as AuthOrgsOrgIdSettingsIndexRouteImport } from './routes/_auth/orgs/$orgId/settings/index'
 import { Route as AuthOrgsOrgIdSettingsApiKeysRouteImport } from './routes/_auth/orgs/$orgId/settings/api-keys'
+import { Route as AuthOrgsOrgIdSettingsBillingRouteImport } from './routes/_auth/orgs/$orgId/settings/billing'
 import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/orgs/$orgId/settings/labels'
 import { Route as AuthOrgsOrgIdSettingsMembersRouteImport } from './routes/_auth/orgs/$orgId/settings/members'
 import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_auth/orgs/$orgId/settings/webhooks'
@@ -70,6 +73,16 @@ const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
   getParentRoute: () => AuthRoute,
+} as any)
+const AuthAdminIndexRoute = AuthAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthAdminRoute,
+} as any)
+const AuthAdminOrgsRoute = AuthAdminOrgsRouteImport.update({
+  id: '/orgs',
+  path: '/orgs',
+  getParentRoute: () => AuthAdminRoute,
 } as any)
 const AuthAdminUsersRoute = AuthAdminUsersRouteImport.update({
   id: '/users',
@@ -120,6 +133,12 @@ const AuthOrgsOrgIdSettingsApiKeysRoute =
     path: '/api-keys',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
+const AuthOrgsOrgIdSettingsBillingRoute =
+  AuthOrgsOrgIdSettingsBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
 const AuthOrgsOrgIdSettingsLabelsRoute =
   AuthOrgsOrgIdSettingsLabelsRouteImport.update({
     id: '/labels',
@@ -159,13 +178,16 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthAdminRouteWithChildren
   '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
+  '/admin/orgs': typeof AuthAdminOrgsRoute
   '/admin/users': typeof AuthAdminUsersRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
+  '/admin/': typeof AuthAdminIndexRoute
   '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
   '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  '/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
@@ -178,15 +200,17 @@ export interface FileRoutesByTo {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/admin': typeof AuthAdminRouteWithChildren
   '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
   '/': typeof AuthIndexRoute
+  '/admin/orgs': typeof AuthAdminOrgsRoute
   '/admin/users': typeof AuthAdminUsersRoute
+  '/admin': typeof AuthAdminIndexRoute
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdIndexRoute
   '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  '/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
@@ -205,13 +229,16 @@ export interface FileRoutesById {
   '/_auth/api-docs': typeof AuthApiDocsRoute
   '/_auth/onboarding': typeof AuthOnboardingRoute
   '/_auth/': typeof AuthIndexRoute
+  '/_auth/admin/orgs': typeof AuthAdminOrgsRoute
   '/_auth/admin/users': typeof AuthAdminUsersRoute
   '/_auth/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
+  '/_auth/admin/': typeof AuthAdminIndexRoute
   '/_auth/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
   '/_auth/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/_auth/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/_auth/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
   '/_auth/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  '/_auth/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/_auth/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/_auth/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
@@ -230,13 +257,16 @@ export interface FileRouteTypes {
     | '/admin'
     | '/api-docs'
     | '/onboarding'
+    | '/admin/orgs'
     | '/admin/users'
     | '/orgs/$orgId'
+    | '/admin/'
     | '/orgs/$orgId/settings'
     | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId/'
     | '/orgs/$orgId/settings/api-keys'
+    | '/orgs/$orgId/settings/billing'
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/members'
     | '/orgs/$orgId/settings/webhooks'
@@ -249,15 +279,17 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/register'
-    | '/admin'
     | '/api-docs'
     | '/onboarding'
     | '/'
+    | '/admin/orgs'
     | '/admin/users'
+    | '/admin'
     | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId'
     | '/orgs/$orgId/settings/api-keys'
+    | '/orgs/$orgId/settings/billing'
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/members'
     | '/orgs/$orgId/settings/webhooks'
@@ -275,13 +307,16 @@ export interface FileRouteTypes {
     | '/_auth/api-docs'
     | '/_auth/onboarding'
     | '/_auth/'
+    | '/_auth/admin/orgs'
     | '/_auth/admin/users'
     | '/_auth/orgs/$orgId'
+    | '/_auth/admin/'
     | '/_auth/orgs/$orgId/settings'
     | '/_auth/orgs/$orgId/activity'
     | '/_auth/orgs/$orgId/my-issues'
     | '/_auth/orgs/$orgId/'
     | '/_auth/orgs/$orgId/settings/api-keys'
+    | '/_auth/orgs/$orgId/settings/billing'
     | '/_auth/orgs/$orgId/settings/labels'
     | '/_auth/orgs/$orgId/settings/members'
     | '/_auth/orgs/$orgId/settings/webhooks'
@@ -356,6 +391,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOnboardingRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/admin/': {
+      id: '/_auth/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthAdminIndexRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
+    '/_auth/admin/orgs': {
+      id: '/_auth/admin/orgs'
+      path: '/orgs'
+      fullPath: '/admin/orgs'
+      preLoaderRoute: typeof AuthAdminOrgsRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
     '/_auth/admin/users': {
       id: '/_auth/admin/users'
       path: '/users'
@@ -419,6 +468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsApiKeysRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
+    '/_auth/orgs/$orgId/settings/billing': {
+      id: '/_auth/orgs/$orgId/settings/billing'
+      path: '/billing'
+      fullPath: '/orgs/$orgId/settings/billing'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsBillingRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
     '/_auth/orgs/$orgId/settings/labels': {
       id: '/_auth/orgs/$orgId/settings/labels'
       path: '/labels'
@@ -458,11 +514,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthAdminRouteChildren {
+  AuthAdminOrgsRoute: typeof AuthAdminOrgsRoute
   AuthAdminUsersRoute: typeof AuthAdminUsersRoute
+  AuthAdminIndexRoute: typeof AuthAdminIndexRoute
 }
 
 const AuthAdminRouteChildren: AuthAdminRouteChildren = {
+  AuthAdminOrgsRoute: AuthAdminOrgsRoute,
   AuthAdminUsersRoute: AuthAdminUsersRoute,
+  AuthAdminIndexRoute: AuthAdminIndexRoute,
 }
 
 const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
@@ -471,6 +531,7 @@ const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
 
 interface AuthOrgsOrgIdSettingsRouteRouteChildren {
   AuthOrgsOrgIdSettingsApiKeysRoute: typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  AuthOrgsOrgIdSettingsBillingRoute: typeof AuthOrgsOrgIdSettingsBillingRoute
   AuthOrgsOrgIdSettingsLabelsRoute: typeof AuthOrgsOrgIdSettingsLabelsRoute
   AuthOrgsOrgIdSettingsMembersRoute: typeof AuthOrgsOrgIdSettingsMembersRoute
   AuthOrgsOrgIdSettingsWebhooksRoute: typeof AuthOrgsOrgIdSettingsWebhooksRoute
@@ -480,6 +541,7 @@ interface AuthOrgsOrgIdSettingsRouteRouteChildren {
 const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteChildren =
   {
     AuthOrgsOrgIdSettingsApiKeysRoute: AuthOrgsOrgIdSettingsApiKeysRoute,
+    AuthOrgsOrgIdSettingsBillingRoute: AuthOrgsOrgIdSettingsBillingRoute,
     AuthOrgsOrgIdSettingsLabelsRoute: AuthOrgsOrgIdSettingsLabelsRoute,
     AuthOrgsOrgIdSettingsMembersRoute: AuthOrgsOrgIdSettingsMembersRoute,
     AuthOrgsOrgIdSettingsWebhooksRoute: AuthOrgsOrgIdSettingsWebhooksRoute,

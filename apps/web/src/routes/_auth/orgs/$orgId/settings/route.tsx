@@ -68,6 +68,16 @@ function SettingsLayout() {
 				>
 					{t("settings.webhooks")}
 				</Link>
+				<Link
+					to="/orgs/$orgId/settings/billing"
+					params={{ orgId }}
+					className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-3 py-1.5 text-sm"
+					activeProps={{
+						className: "bg-accent text-foreground font-medium",
+					}}
+				>
+					{t("settings.billing")}
+				</Link>
 			</nav>
 			<div className="min-w-0 flex-1">
 				<h1 className="text-2xl font-semibold tracking-tight pb-8">

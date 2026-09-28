@@ -14,5 +14,21 @@ export async function unwrap<T>(
 	if (body.ok) {
 		return body.data;
 	}
-	throw new Error(`[${body.error.code}] ${body.error.message}`);
+	throw Object.assign(new Error(`[${body.error.code}] ${body.error.message}`), {
+		code: body.error.code as string,
+	});
+}
+
+export function isPlanLimitError(err: unknown): boolean {
+	if (
+		typeof err === "object" &&
+		err !== null &&
+		(err as { code?: unknown }).code === "PLAN_LIMIT_EXCEEDED"
+	) {
+		return true;
+	}
+	return (
+		err instanceof Error &&
+		/plan limit reached|PLAN_LIMIT_EXCEEDED/i.test(err.message)
+	);
 }

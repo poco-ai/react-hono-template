@@ -33,6 +33,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 								{t("nav.users")}
 							</Link>
 						)}
+						{user?.role === "admin" && (
+							<Link
+								to="/admin/orgs"
+								className="text-muted-foreground hover:text-foreground"
+							>
+								{t("nav.orgs")}
+							</Link>
+						)}
 					</nav>
 					<div className="flex items-center gap-1">
 						<LanguageSwitcher />

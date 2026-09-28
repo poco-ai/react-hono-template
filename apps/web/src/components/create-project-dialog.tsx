@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -13,8 +13,11 @@ import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { QuotaError } from "@/components/quota-error";
 import { client, unwrap } from "@/lib/api";
 import { projectKeyFromName } from "@/lib/issue-utils";
+import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
+import { useSession } from "@/lib/session";
 
 const KEY_PATTERN = /^[A-Z]{2,6}$/;
 const DEFAULT_COLOR = "#6366f1";
@@ -30,6 +33,8 @@ export function CreateProjectDialog({
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
+	const { data: session } = useSession();
+	const members = useQuery(membersQuery(orgId));
 	const [name, setName] = useState("");
 	const [key, setKey] = useState("");
 	const [keyTouched, setKeyTouched] = useState(false);
@@ -73,6 +78,10 @@ export function CreateProjectDialog({
 	};
 
 	const keyInvalid = key.length > 0 && !KEY_PATTERN.test(key);
+
+	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
+	const canManage =
+		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
 
 	const onSubmit = () => {
 		if (!name.trim() || !KEY_PATTERN.test(key)) {
@@ -165,9 +174,11 @@ export function CreateProjectDialog({
 						/>
 					</div>
 					{createMutation.isError && (
-						<p className="text-destructive text-sm">
-							{createMutation.error.message}
-						</p>
+						<QuotaError
+							error={createMutation.error}
+							orgId={orgId}
+							canUpgrade={canManage}
+						/>
 					)}
 					<DialogFooter>
 						<Button type="submit" disabled={createMutation.isPending}>

@@ -45,14 +45,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { QuotaError } from "@/components/quota-error";
 import { client, unwrap } from "@/lib/api";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
+import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import {
 	webhookDeliveriesQuery,
 	webhookDeliveriesRootKey,
 	webhooksKey,
 	webhooksQuery,
 } from "@/lib/queries/webhooks";
+import { useSession } from "@/lib/session";
 
 type WebhookEventLabel = WebhookEventName | "ping";
 
@@ -349,6 +352,8 @@ function WebhookDialog({
 	onSaved: () => void;
 }) {
 	const { t } = useTranslation();
+	const { data: session } = useSession();
+	const members = useQuery(membersQuery(orgId));
 	const [url, setUrl] = useState("");
 	const [events, setEvents] = useState<string[]>([]);
 	const [active, setActive] = useState(true);
@@ -410,6 +415,10 @@ function WebhookDialog({
 	};
 
 	const canSubmit = url.trim().length > 0 && events.length >= MIN_EVENTS;
+
+	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
+	const canManage =
+		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -508,9 +517,11 @@ function WebhookDialog({
 							</div>
 						)}
 						{saveMutation.isError && (
-							<p className="text-destructive text-sm">
-								{saveMutation.error.message}
-							</p>
+							<QuotaError
+								error={saveMutation.error}
+								orgId={orgId}
+								canUpgrade={canManage}
+							/>
 						)}
 						<DialogFooter>
 							<Button type="submit" disabled={saveMutation.isPending}>

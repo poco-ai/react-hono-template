@@ -38,6 +38,7 @@ import {
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { QuotaError } from "@/components/quota-error";
 import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
 import type { OrgInvitation, OrgMember, OrgRole } from "@/lib/queries/members";
@@ -299,6 +300,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				open={inviteOpen}
 				onOpenChange={setInviteOpen}
 				onInvited={invalidateMembers}
+				canUpgrade={canManage}
 			/>
 
 			<AlertDialog
@@ -340,11 +342,13 @@ function InviteDialog({
 	open,
 	onOpenChange,
 	onInvited,
+	canUpgrade,
 }: {
 	orgId: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onInvited: () => void;
+	canUpgrade: boolean;
 }) {
 	const { t } = useTranslation();
 	const [email, setEmail] = useState("");
@@ -461,9 +465,11 @@ function InviteDialog({
 							</Select>
 						</div>
 						{inviteMutation.isError && (
-							<p className="text-destructive text-sm">
-								{inviteMutation.error.message}
-							</p>
+							<QuotaError
+								error={inviteMutation.error}
+								orgId={orgId}
+								canUpgrade={canUpgrade}
+							/>
 						)}
 						<DialogFooter>
 							<Button type="submit" disabled={inviteMutation.isPending}>
