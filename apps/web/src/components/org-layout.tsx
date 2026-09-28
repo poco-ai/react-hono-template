@@ -19,6 +19,7 @@ import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
+import { membersQuery, type OrgRole } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
@@ -60,9 +61,11 @@ export function OrgLayout() {
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
+	const members = useQuery(membersQuery(orgId));
 	const [createOpen, setCreateOpen] = useState(false);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
+	const myMember = members.data?.find((m) => m.userId === session?.user.id);
 	const activeProjects = (projects.data ?? []).filter(
 		(project) => !project.archived,
 	);
@@ -163,7 +166,13 @@ export function OrgLayout() {
 					</div>
 				</div>
 				<div className="flex items-center gap-1 border-t p-2">
-					{session && <UserDropdown user={session.user} className="flex-1" />}
+					{session && (
+						<UserDropdown
+							user={session.user}
+							orgRole={myMember?.role as OrgRole | undefined}
+							className="flex-1"
+						/>
+					)}
 					<LanguageSwitcher />
 					<ThemeToggle />
 				</div>

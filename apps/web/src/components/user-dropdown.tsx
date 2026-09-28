@@ -15,13 +15,16 @@ import {
 import { cn } from "@workspace/ui/lib/utils";
 import { useTranslation } from "react-i18next";
 import { authClient } from "@/lib/auth-client";
+import type { OrgRole } from "@/lib/queries/members";
 import { type SessionUser, sessionOptions } from "@/lib/session";
 
 export function UserDropdown({
 	user,
+	orgRole,
 	className,
 }: {
 	user: SessionUser;
+	orgRole?: OrgRole;
 	className?: string;
 }) {
 	const { t } = useTranslation();
@@ -49,7 +52,11 @@ export function UserDropdown({
 							</AvatarFallback>
 						</Avatar>
 						<span className="min-w-0 truncate text-sm">{user.name}</span>
-						{user.role === "admin" && <Badge variant="secondary">admin</Badge>}
+						{orgRole ? (
+							<Badge variant="secondary">{t(`org.roles.${orgRole}`)}</Badge>
+						) : (
+							user.role === "admin" && <Badge variant="secondary">admin</Badge>
+						)}
 					</Button>
 				}
 			/>

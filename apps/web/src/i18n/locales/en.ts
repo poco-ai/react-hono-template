@@ -104,6 +104,11 @@ const en = {
 	org: {
 		switcherLabel: "Organizations",
 		create: "Create organization",
+		roles: {
+			owner: "Owner",
+			admin: "Admin",
+			member: "Member",
+		},
 	},
 	projects: {
 		sidebarTitle: "Projects",

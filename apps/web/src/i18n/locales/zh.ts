@@ -102,6 +102,11 @@ const zh: typeof en = {
 	org: {
 		switcherLabel: "组织",
 		create: "创建组织",
+		roles: {
+			owner: "所有者",
+			admin: "管理员",
+			member: "成员",
+		},
 	},
 	projects: {
 		sidebarTitle: "项目",
