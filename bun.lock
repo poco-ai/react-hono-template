@@ -22,6 +22,7 @@
         "dotenv": "^18.0.4",
         "drizzle-orm": "^1.0.0-rc.4",
         "hono": "^4.13.9",
+        "zod": "^4.6.5",
       },
       "devDependencies": {
         "@types/node": "^24",
@@ -62,6 +63,9 @@
     "packages/shared": {
       "name": "@workspace/shared",
       "version": "0.0.0",
+      "dependencies": {
+        "zod": "^4.6.5",
+      },
       "devDependencies": {
         "typescript": "~6",
       },

@@ -73,8 +73,16 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 	};
 };
 
-export const s3ClientFromEnv = () =>
-	createS3Client({
+export const s3ClientFromEnv = (): StorageAdapter | null => {
+	if (
+		!env.S3_ACCESS_KEY_ID ||
+		!env.S3_SECRET_ACCESS_KEY ||
+		!env.S3_ENDPOINT ||
+		!env.S3_BUCKET
+	) {
+		return null;
+	}
+	return createS3Client({
 		accessKeyId: env.S3_ACCESS_KEY_ID,
 		secretAccessKey: env.S3_SECRET_ACCESS_KEY,
 		endpoint: env.S3_ENDPOINT,
@@ -82,3 +90,4 @@ export const s3ClientFromEnv = () =>
 		bucket: env.S3_BUCKET,
 		publicBaseUrl: env.S3_PUBLIC_BASE_URL,
 	});
+};

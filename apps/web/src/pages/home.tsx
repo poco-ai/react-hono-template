@@ -24,7 +24,11 @@ export function HomePage() {
 	});
 	const errorMutation = useMutation({
 		mutationFn: () =>
-			unwrap(client.api.users[":id"].$get({ param: { id: "999999" } })),
+			unwrap(
+				client.api.orgs[":orgId"].projects[":projectId"].$get({
+					param: { orgId: "demo", projectId: "demo" },
+				}),
+			),
 	});
 
 	return (

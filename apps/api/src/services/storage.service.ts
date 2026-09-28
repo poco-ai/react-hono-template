@@ -58,11 +58,23 @@ const assertOwnedKey = (key: string, ownerId: string) => {
 	}
 };
 
-export const createStorageService = (s3: StorageAdapter) => ({
+const requireStorage = (s3: StorageAdapter | null): StorageAdapter => {
+	if (!s3) {
+		throw new ApiError(
+			503,
+			ApiErrorCode.SERVICE_UNAVAILABLE,
+			"Storage is not configured",
+		);
+	}
+	return s3;
+};
+
+export const createStorageService = (s3: StorageAdapter | null) => ({
 	presignUpload: async (
 		ownerId: string,
 		input: PresignUploadRequestDto,
 	): Promise<PresignUploadResponseDto> => {
+		const storage = requireStorage(s3);
 		const rule = STORAGE_SCOPES[input.scope as StorageScope];
 		if (!rule) {
 			throw new ApiError(
@@ -98,7 +110,7 @@ export const createStorageService = (s3: StorageAdapter) => ({
 		}
 
 		const key = `${input.scope}/${ownerId}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
-		const uploadUrl = await s3.presignPut(
+		const uploadUrl = await storage.presignPut(
 			key,
 			input.contentType,
 			UPLOAD_URL_EXPIRES_IN,
@@ -106,7 +118,7 @@ export const createStorageService = (s3: StorageAdapter) => ({
 		return {
 			key,
 			uploadUrl,
-			publicUrl: s3.publicUrl(key),
+			publicUrl: storage.publicUrl(key),
 			expiresIn: UPLOAD_URL_EXPIRES_IN,
 		};
 	},
@@ -115,13 +127,14 @@ export const createStorageService = (s3: StorageAdapter) => ({
 		ownerId: string,
 		key: string,
 	): Promise<PresignDownloadResponseDto> => {
+		const storage = requireStorage(s3);
 		assertOwnedKey(key, ownerId);
-		const publicUrl = s3.publicUrl(key);
+		const publicUrl = storage.publicUrl(key);
 		if (publicUrl) {
 			return { url: publicUrl, expiresIn: 0 };
 		}
 		return {
-			url: await s3.presignGet(key, DOWNLOAD_URL_EXPIRES_IN),
+			url: await storage.presignGet(key, DOWNLOAD_URL_EXPIRES_IN),
 			expiresIn: DOWNLOAD_URL_EXPIRES_IN,
 		};
 	},
@@ -130,9 +143,10 @@ export const createStorageService = (s3: StorageAdapter) => ({
 		ownerId: string,
 		key: string,
 	): Promise<DeleteObjectResponseDto> => {
+		const storage = requireStorage(s3);
 		assertOwnedKey(key, ownerId);
 		try {
-			await s3.remove(key);
+			await storage.remove(key);
 		} catch (e) {
 			console.error("[storage] delete failed:", e);
 			throw new ApiError(

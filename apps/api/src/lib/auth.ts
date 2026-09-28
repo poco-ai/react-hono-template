@@ -1,6 +1,6 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { betterAuth } from "better-auth";
-import { admin } from "better-auth/plugins";
+import { admin, organization } from "better-auth/plugins";
 import { count } from "drizzle-orm";
 import * as authSchema from "../db/auth-schema";
 import { user as userTable } from "../db/auth-schema";
@@ -33,6 +33,7 @@ export const createAuth = ({
 				ac,
 				roles,
 			}),
+			organization(),
 		],
 		databaseHooks: {
 			user: {
