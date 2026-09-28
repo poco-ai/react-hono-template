@@ -276,7 +276,7 @@ function BoardCard({
 				{issue.title}
 			</p>
 			<div className="flex items-center justify-between gap-2">
-				<PriorityBadge value={issue.priority} />
+				{issue.priority !== 0 && <PriorityBadge value={issue.priority} />}
 				<div className="flex min-w-0 items-center gap-1">
 					<span className="flex items-center gap-0.5">
 						{issue.labelIds.slice(0, 4).map((labelId) => {

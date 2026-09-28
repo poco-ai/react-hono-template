@@ -498,27 +498,33 @@ export function ProjectIssuesPage({
 												<PriorityBadge value={issue.priority} />
 											</TableCell>
 											<TableCell>
-												{assignee && (
+												{assignee ? (
 													<span className="flex items-center gap-2 text-sm">
 														<UserAvatar name={assignee.user.name} />
 														<span className="truncate">
 															{assignee.user.name}
 														</span>
 													</span>
+												) : (
+													<span className="text-muted-foreground">—</span>
 												)}
 											</TableCell>
 											<TableCell>
-												<span className="flex flex-wrap gap-1">
-													{issue.labelIds.map((labelId) => {
-														const label = labelById.get(labelId);
-														return label ? (
-															<LabelBadge key={labelId} label={label} />
-														) : null;
-													})}
-												</span>
+												{issue.labelIds.length > 0 ? (
+													<span className="flex flex-wrap gap-1">
+														{issue.labelIds.map((labelId) => {
+															const label = labelById.get(labelId);
+															return label ? (
+																<LabelBadge key={labelId} label={label} />
+															) : null;
+														})}
+													</span>
+												) : (
+													<span className="text-muted-foreground">—</span>
+												)}
 											</TableCell>
 											<TableCell className="text-muted-foreground text-xs">
-												{formatDueDate(issue.dueDate)}
+												{formatDueDate(issue.dueDate) || "—"}
 											</TableCell>
 											<TableCell
 												title={formatDateTime(issue.updatedAt)}
@@ -577,30 +583,32 @@ export function ProjectIssuesPage({
 						<span>
 							{result ? t("issues.count", { count: result.total }) : ""}
 						</span>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={search.page <= 1 || issues.isPending}
-								onClick={() => gotoPage(search.page - 1)}
-							>
-								{t("common.prev")}
-							</Button>
-							<span>
-								{t("issues.pageIndicator", {
-									page: search.page,
-									total: totalPages,
-								})}
-							</span>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={search.page >= totalPages || issues.isPending}
-								onClick={() => gotoPage(search.page + 1)}
-							>
-								{t("common.next")}
-							</Button>
-						</div>
+						{totalPages > 1 && (
+							<div className="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={search.page <= 1 || issues.isPending}
+									onClick={() => gotoPage(search.page - 1)}
+								>
+									{t("common.prev")}
+								</Button>
+								<span>
+									{t("issues.pageIndicator", {
+										page: search.page,
+										total: totalPages,
+									})}
+								</span>
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={search.page >= totalPages || issues.isPending}
+									onClick={() => gotoPage(search.page + 1)}
+								>
+									{t("common.next")}
+								</Button>
+							</div>
+						)}
 					</footer>
 				</>
 			)}
@@ -748,7 +756,7 @@ function CreateIssueDialog({
 								<SelectContent>
 									{ISSUE_STATUSES.map((s) => (
 										<SelectItem key={s} value={s}>
-											{t(`issues.statuses.${s}`)}
+											<StatusBadge status={s} />
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -768,7 +776,7 @@ function CreateIssueDialog({
 								<SelectContent>
 									{PRIORITY_NAMES.map((name) => (
 										<SelectItem key={name} value={name}>
-											{t(`issues.priorities.${name}`)}
+											<PriorityBadge value={priorityValue(name)} />
 										</SelectItem>
 									))}
 								</SelectContent>

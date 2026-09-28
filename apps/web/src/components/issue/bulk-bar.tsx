@@ -16,6 +16,8 @@ import {
 } from "@workspace/ui/components/select";
 import { Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PriorityBadge } from "@/components/issue/priority-badge";
+import { StatusBadge } from "@/components/issue/status-badge";
 import { client, unwrap } from "@/lib/api";
 import { priorityValue } from "@/lib/issue-utils";
 import { orgActivitiesRootKey } from "@/lib/queries/activities";
@@ -86,7 +88,7 @@ export function BulkActionBar({
 					<SelectItem value={NO_ACTION}>{t("bulk.changeStatus")}</SelectItem>
 					{ISSUE_STATUSES.map((status) => (
 						<SelectItem key={status} value={status}>
-							{t(`issues.statuses.${status}`)}
+							<StatusBadge status={status} />
 						</SelectItem>
 					))}
 				</SelectContent>
@@ -107,7 +109,7 @@ export function BulkActionBar({
 					<SelectItem value={NO_ACTION}>{t("bulk.changePriority")}</SelectItem>
 					{PRIORITY_NAMES.map((name) => (
 						<SelectItem key={name} value={name}>
-							{t(`issues.priorities.${name}`)}
+							<PriorityBadge value={priorityValue(name)} />
 						</SelectItem>
 					))}
 				</SelectContent>

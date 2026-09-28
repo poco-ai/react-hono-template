@@ -38,6 +38,8 @@ import { IssueAttachments } from "@/components/issue/issue-attachments";
 import { IssueComments } from "@/components/issue/issue-comments";
 import { IssueDescription } from "@/components/issue/issue-description";
 import { LabelBadge } from "@/components/issue/label-badge";
+import { PriorityBadge } from "@/components/issue/priority-badge";
+import { StatusBadge } from "@/components/issue/status-badge";
 import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
 import { client, unwrap } from "@/lib/api";
@@ -382,7 +384,7 @@ export function IssueDetailPage({
 						<SelectContent>
 							{ISSUE_STATUSES.map((status) => (
 								<SelectItem key={status} value={status}>
-									{t(`issues.statuses.${status}`)}
+									<StatusBadge status={status} />
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -407,7 +409,7 @@ export function IssueDetailPage({
 						<SelectContent>
 							{PRIORITY_NAMES.map((name) => (
 								<SelectItem key={name} value={name}>
-									{t(`issues.priorities.${name}`)}
+									<PriorityBadge value={priorityValue(name)} />
 								</SelectItem>
 							))}
 						</SelectContent>
