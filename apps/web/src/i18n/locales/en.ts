@@ -497,7 +497,8 @@ const en = {
 		manageOrgs: "Manage organizations",
 	},
 	notFound: {
-		message: "404 — Page not found.",
+		title: "Page not found",
+		backHome: "Back home",
 	},
 	theme: {
 		toggle: "Toggle theme",

@@ -1,6 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import {
+	createRootRouteWithContext,
+	Link,
+	Outlet,
+} from "@tanstack/react-router";
+import { buttonVariants } from "@workspace/ui/components/button";
 import { useTranslation } from "react-i18next";
+import { NotFoundState } from "@/components/not-found-state";
 
 export interface RouterContext {
 	queryClient: QueryClient;
@@ -9,9 +15,17 @@ export interface RouterContext {
 function NotFound() {
 	const { t } = useTranslation();
 	return (
-		<div className="text-muted-foreground flex min-h-svh items-center justify-center text-sm">
-			{t("notFound.message")}
-		</div>
+		<NotFoundState
+			title={t("notFound.title")}
+			action={
+				<Link
+					to="/"
+					className={buttonVariants({ variant: "outline", size: "sm" })}
+				>
+					{t("notFound.backHome")}
+				</Link>
+			}
+		/>
 	);
 }
 

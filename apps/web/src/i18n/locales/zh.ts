@@ -481,7 +481,8 @@ const zh: typeof en = {
 		manageOrgs: "管理组织",
 	},
 	notFound: {
-		message: "404 — 页面不存在。",
+		title: "页面不存在",
+		backHome: "返回首页",
 	},
 	theme: {
 		toggle: "切换主题",
