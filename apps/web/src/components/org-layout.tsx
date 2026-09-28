@@ -4,6 +4,7 @@ import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -85,26 +86,28 @@ export function OrgLayout() {
 							}
 						/>
 						<DropdownMenuContent align="start" className="w-56">
-							<DropdownMenuLabel>{t("org.switcherLabel")}</DropdownMenuLabel>
-							{(orgs.data ?? []).map((org) => (
-								<DropdownMenuItem
-									key={org.id}
-									onClick={() =>
-										navigate({
-											to: "/orgs/$orgId/projects",
-											params: { orgId: org.id },
-										})
-									}
-								>
-									<Check
-										className={cn(
-											"size-4",
-											org.id === orgId ? "opacity-100" : "opacity-0",
-										)}
-									/>
-									<span className="min-w-0 truncate">{org.name}</span>
-								</DropdownMenuItem>
-							))}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>{t("org.switcherLabel")}</DropdownMenuLabel>
+								{(orgs.data ?? []).map((org) => (
+									<DropdownMenuItem
+										key={org.id}
+										onClick={() =>
+											navigate({
+												to: "/orgs/$orgId/projects",
+												params: { orgId: org.id },
+											})
+										}
+									>
+										<Check
+											className={cn(
+												"size-4",
+												org.id === orgId ? "opacity-100" : "opacity-0",
+											)}
+										/>
+										<span className="min-w-0 truncate">{org.name}</span>
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem onClick={() => navigate({ to: "/onboarding" })}>
 								<Plus className="size-4" />
