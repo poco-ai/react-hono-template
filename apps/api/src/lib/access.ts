@@ -1,7 +1,10 @@
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements } from "better-auth/plugins/admin/access";
 
-export const statements = defaultStatements;
+export const statements = {
+	...defaultStatements,
+	org: ["list", "freeze", "stats"],
+};
 
 export const ac = createAccessControl(statements);
 
@@ -10,6 +13,7 @@ export const userRole = ac.newRole({});
 export const adminRole = ac.newRole({
 	user: ["create", "list", "set-role", "ban", "delete", "get", "update"],
 	session: ["list", "revoke", "delete"],
+	org: ["list", "freeze", "stats"],
 });
 
 export const roles = { admin: adminRole, user: userRole } as const;

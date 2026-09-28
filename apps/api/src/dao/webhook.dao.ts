@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { webhooks } from "../db/schema";
 import type { Database } from "../db/types";
 import type { WebhookWithSecretDto } from "../dto/webhook.dto";
@@ -98,6 +98,14 @@ export const createWebhookDao = (db: Database) => ({
 			.from(webhooks)
 			.where(eq(webhooks.orgId, orgId));
 		return rows.map(toWebhookDto);
+	},
+
+	countByOrg: async (orgId: string): Promise<number> => {
+		const [row] = await db
+			.select({ value: count() })
+			.from(webhooks)
+			.where(eq(webhooks.orgId, orgId));
+		return row?.value ?? 0;
 	},
 
 	listByOrgAndEvent: async (

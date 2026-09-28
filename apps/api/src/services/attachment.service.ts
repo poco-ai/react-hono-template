@@ -2,8 +2,8 @@ import {
 	ApiError,
 	ApiErrorCode,
 	ATTACHMENT_CONTENT_TYPES,
-	ATTACHMENT_MAX_SIZE,
 	type AttachmentPresignInput,
+	PLANS,
 	type RegisterAttachmentInput,
 } from "@workspace/shared";
 import type { ActivityInsert } from "../dao/activity.dao";
@@ -16,6 +16,7 @@ import type {
 } from "../dto/attachment.dto";
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
+import type { PlanService } from "../lib/plan";
 import type { StorageAdapter } from "../lib/storage/types";
 import type { WebhookDispatcher } from "./webhook.service";
 
@@ -50,29 +51,31 @@ const assertContentTypeAllowed = (contentType: string) => {
 	}
 };
 
-const assertSizeAllowed = (size: number) => {
-	if (!Number.isSafeInteger(size) || size < 1 || size > ATTACHMENT_MAX_SIZE) {
-		throw new ApiError(
-			413,
-			ApiErrorCode.FILE_TOO_LARGE,
-			`Attachment size must be between 1 byte and ${ATTACHMENT_MAX_SIZE} bytes`,
-		);
-	}
-};
-
 export const createAttachmentService = ({
 	attachmentDao,
 	issueDao,
 	projectDao,
 	storage,
 	webhooks,
+	plans,
 }: {
 	attachmentDao: AttachmentDao;
 	issueDao: IssueDao;
 	projectDao: ProjectDao;
 	storage: StorageAdapter | null;
 	webhooks?: WebhookDispatcher;
+	plans: PlanService;
 }) => {
+	const assertSizeAllowed = (size: number, maxSize: number) => {
+		if (!Number.isSafeInteger(size) || size < 1 || size > maxSize) {
+			throw new ApiError(
+				413,
+				ApiErrorCode.FILE_TOO_LARGE,
+				`Attachment size must be between 1 byte and ${maxSize} bytes (plan limit)`,
+			);
+		}
+	};
+
 	const requireIssue = async (
 		orgId: string,
 		projectId: string,
@@ -139,6 +142,12 @@ export const createAttachmentService = ({
 			const s3 = requireStorage(storage);
 			const issue = await requireWritableIssue(orgId, projectId, number);
 			assertContentTypeAllowed(input.contentType);
+			if (input.size !== undefined) {
+				assertSizeAllowed(
+					input.size,
+					PLANS[await plans.getPlanForOrg(orgId)].attachmentMaxSize,
+				);
+			}
 			const key = `orgs/${orgId}/issues/${issue.id}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
 			const uploadUrl = await s3.presignPut(
 				key,
@@ -170,7 +179,8 @@ export const createAttachmentService = ({
 				);
 			}
 			assertContentTypeAllowed(input.contentType);
-			assertSizeAllowed(input.size);
+			const maxSize = PLANS[await plans.getPlanForOrg(orgId)].attachmentMaxSize;
+			assertSizeAllowed(input.size, maxSize);
 			const s3 = requireStorage(storage);
 			const stat = await s3.stat(input.key);
 			if (!stat) {
@@ -180,11 +190,11 @@ export const createAttachmentService = ({
 					"No uploaded object found for this key — upload the file before registering",
 				);
 			}
-			if (stat.size > ATTACHMENT_MAX_SIZE) {
+			if (stat.size > maxSize) {
 				throw new ApiError(
 					413,
 					ApiErrorCode.FILE_TOO_LARGE,
-					`Uploaded object is ${stat.size} bytes, exceeding the ${ATTACHMENT_MAX_SIZE} byte limit`,
+					`Uploaded object is ${stat.size} bytes, exceeding the ${maxSize} byte plan limit`,
 				);
 			}
 			if (stat.contentType && !stat.contentType.startsWith(input.contentType)) {

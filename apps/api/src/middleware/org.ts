@@ -7,6 +7,7 @@ export type OrgMember = {
 	orgId: string;
 	userId: string;
 	role: string;
+	frozen: boolean;
 };
 
 export type OrgEnv = {
@@ -26,10 +27,18 @@ export const requireOrgMember = (memberDao: MemberDao) =>
 		if (!orgId || !membership) {
 			throw new ApiError(404, ApiErrorCode.NOT_FOUND, "Organization not found");
 		}
+		if (membership.frozen) {
+			throw new ApiError(
+				403,
+				ApiErrorCode.ORG_FROZEN,
+				"Organization is frozen",
+			);
+		}
 		c.set("orgMember", {
 			orgId,
 			userId: session.user.id,
 			role: membership.role,
+			frozen: membership.frozen,
 		});
 		await next();
 	});

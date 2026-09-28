@@ -2,12 +2,14 @@ import {
 	ApiError,
 	ApiErrorCode,
 	type CreateProjectInput,
+	PLANS,
 	type UpdateProjectInput,
 } from "@workspace/shared";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto } from "../dto/project.dto";
+import { assertWithinLimit, type PlanService } from "../lib/plan";
 
-export const createProjectService = (dao: ProjectDao) => ({
+export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
 	listProjects: (orgId: string, options?: { includeArchived?: boolean }) =>
 		dao.listByOrg(orgId, options),
 
@@ -27,6 +29,13 @@ export const createProjectService = (dao: ProjectDao) => ({
 		orgId: string,
 		input: CreateProjectInput,
 	): Promise<ProjectDto> => {
+		const plan = await plans.getPlanForOrg(orgId);
+		assertWithinLimit(
+			"projects",
+			await dao.countByOrg(orgId),
+			PLANS[plan].projects,
+			plan,
+		);
 		const existing = await dao.findByKey(orgId, input.key);
 		if (existing) {
 			throw new ApiError(

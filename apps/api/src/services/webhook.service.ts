@@ -3,6 +3,7 @@ import {
 	ApiErrorCode,
 	type CreateWebhookInput,
 	isAllowedWebhookUrl,
+	PLANS,
 	type UpdateWebhookInput,
 	WEBHOOK_EVENTS,
 } from "@workspace/shared";
@@ -16,6 +17,7 @@ import type {
 } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
 import { randomHex } from "../lib/crypto";
+import { assertWithinLimit, type PlanService } from "../lib/plan";
 
 const WEBHOOK_TIMEOUT_MS = 5_000;
 const WEBHOOK_MAX_ATTEMPTS = 2;
@@ -58,9 +60,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const createWebhookService = ({
 	webhookDao,
 	deliveryDao,
+	plans,
 }: {
 	webhookDao: WebhookDao;
 	deliveryDao: WebhookDeliveryDao;
+	plans: PlanService;
 }) => {
 	const assertEventsValid = (events: string[]) => {
 		const invalid = events.filter(
@@ -197,6 +201,15 @@ export const createWebhookService = ({
 			createdById: string | null,
 			input: CreateWebhookInput,
 		): Promise<WebhookWithSecretDto> => {
+			const plan = await plans.getPlanForOrg(orgId);
+			const limit = PLANS[plan].webhooks;
+			assertWithinLimit(
+				"webhooks",
+				await webhookDao.countByOrg(orgId),
+				limit,
+				plan,
+				limit === 0 ? "Webhooks require the Pro plan" : undefined,
+			);
 			assertUrlAllowed(input.url);
 			assertEventsValid(input.events);
 			return webhookDao.create({

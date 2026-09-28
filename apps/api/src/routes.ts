@@ -2,6 +2,7 @@ import {
 	ApiError,
 	ApiErrorCode,
 	activityListQuerySchema,
+	adminOrgListQuerySchema,
 	apiKeyListQuerySchema,
 	attachmentPresignSchema,
 	commentListQuerySchema,
@@ -25,9 +26,11 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { validator } from "hono/validator";
 import type { ZodType } from "zod";
 import { createActivityController } from "./controllers/activity.controller";
+import { createAdminOrgController } from "./controllers/admin-org.controller";
 import { createAdminController } from "./controllers/admin-user.controller";
 import { createApiKeyController } from "./controllers/apikey.controller";
 import { createAttachmentController } from "./controllers/attachment.controller";
+import { createBillingController } from "./controllers/billing.controller";
 import { createCommentController } from "./controllers/comment.controller";
 import { createIssueController } from "./controllers/issue.controller";
 import { createLabelController } from "./controllers/label.controller";
@@ -42,7 +45,9 @@ import { createCommentDao } from "./dao/comment.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createLabelDao } from "./dao/label.dao";
 import { createMemberDao } from "./dao/member.dao";
+import { createOrganizationDao } from "./dao/organization.dao";
 import { createProjectDao } from "./dao/project.dao";
+import { createSubscriptionDao } from "./dao/subscription.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
@@ -51,14 +56,18 @@ import type {
 	UpdateAdminUserRoleDto,
 } from "./dto/admin-user.dto";
 import type { Auth } from "./lib/auth";
+import { createPlanService } from "./lib/plan";
 import { fail, ok } from "./lib/response";
 import type { StorageAdapter } from "./lib/storage/types";
+import type { StripeContext } from "./lib/stripe";
 import { requireAuth, requirePermission } from "./middleware/auth";
 import { requireOrgMember, requireOrgRole } from "./middleware/org";
 import { createActivityService } from "./services/activity.service";
+import { createAdminOrgService } from "./services/admin-org.service";
 import { createAdminUserService } from "./services/admin-user.service";
 import { createApiKeyService } from "./services/apikey.service";
 import { createAttachmentService } from "./services/attachment.service";
+import { createBillingService } from "./services/billing.service";
 import { createCommentService } from "./services/comment.service";
 import { createIssueService } from "./services/issue.service";
 import { createLabelService } from "./services/label.service";
@@ -93,14 +102,20 @@ export const createRoutes = ({
 	db,
 	auth,
 	storage,
+	stripe,
 }: {
 	db: Database;
 	auth: Auth;
 	storage: StorageAdapter | null;
+	stripe: StripeContext | null;
 }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
 	const adminController = createAdminController(adminUserService);
+
+	const organizationDao = createOrganizationDao(db);
+	const adminOrgService = createAdminOrgService(organizationDao);
+	const adminOrgController = createAdminOrgController(adminOrgService);
 
 	const storageService = createStorageService(storage);
 	const storageController = createStorageController(storageService);
@@ -115,13 +130,16 @@ export const createRoutes = ({
 	const apiKeyDao = createApiKeyDao(db);
 	const webhookDao = createWebhookDao(db);
 	const webhookDeliveryDao = createWebhookDeliveryDao(db);
+	const subscriptionDao = createSubscriptionDao(db);
+	const planService = createPlanService(subscriptionDao);
 
 	const webhookService = createWebhookService({
 		webhookDao,
 		deliveryDao: webhookDeliveryDao,
+		plans: planService,
 	});
 
-	const projectService = createProjectService(projectDao);
+	const projectService = createProjectService(projectDao, planService);
 	const issueService = createIssueService({
 		issueDao,
 		labelDao,
@@ -142,9 +160,17 @@ export const createRoutes = ({
 		projectDao,
 		storage,
 		webhooks: webhookService,
+		plans: planService,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
 	const apiKeyService = createApiKeyService(apiKeyDao);
+	const billingService = createBillingService({
+		subscriptionDao,
+		memberDao,
+		projectDao,
+		webhookDao,
+		stripe,
+	});
 
 	const projectController = createProjectController(projectService);
 	const issueController = createIssueController(issueService);
@@ -154,6 +180,10 @@ export const createRoutes = ({
 	const activityController = createActivityController(activityService);
 	const apiKeyController = createApiKeyController(apiKeyService);
 	const webhookController = createWebhookController(webhookService);
+	const billingController = createBillingController({
+		service: billingService,
+		memberDao,
+	});
 
 	return new Hono()
 		.onError((err, c) => {
@@ -197,6 +227,25 @@ export const createRoutes = ({
 			"/api/admin/users/:id/ban",
 			requirePermission({ user: ["ban"] }),
 			(c) => adminController.unban(c),
+		)
+		.get(
+			"/api/admin/orgs",
+			requirePermission({ org: ["list"] }),
+			validate(adminOrgListQuerySchema, "query"),
+			(c) => adminOrgController.list(c, c.req.valid("query")),
+		)
+		.post(
+			"/api/admin/orgs/:orgId/freeze",
+			requirePermission({ org: ["freeze"] }),
+			(c) => adminOrgController.freeze(c),
+		)
+		.delete(
+			"/api/admin/orgs/:orgId/freeze",
+			requirePermission({ org: ["freeze"] }),
+			(c) => adminOrgController.unfreeze(c),
+		)
+		.get("/api/admin/stats", requirePermission({ org: ["stats"] }), (c) =>
+			adminOrgController.stats(c),
 		)
 		.use("/api/orgs/:orgId/*", requireAuth(auth), requireOrgMember(memberDao))
 		.get("/api/orgs/:orgId/projects", (c) => projectController.list(c))
@@ -363,6 +412,19 @@ export const createRoutes = ({
 			"/api/orgs/:orgId/webhook-deliveries/:deliveryId/redeliver",
 			requireOrgRole("owner", "admin"),
 			(c) => webhookController.redeliver(c),
+		)
+		.get("/api/orgs/:orgId/billing", requireOrgRole("owner", "admin"), (c) =>
+			billingController.get(c),
+		)
+		.post(
+			"/api/orgs/:orgId/billing/checkout",
+			requireOrgRole("owner", "admin"),
+			(c) => billingController.checkout(c),
+		)
+		.post(
+			"/api/orgs/:orgId/billing/portal",
+			requireOrgRole("owner", "admin"),
+			(c) => billingController.portal(c),
 		);
 };
 

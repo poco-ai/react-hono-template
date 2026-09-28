@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ProjectDto } from "../dto/project.dto";
@@ -45,6 +45,14 @@ export const createProjectDao = (db: Database) => ({
 			.where(and(eq(projects.orgId, orgId), eq(projects.key, key)))
 			.get();
 		return row ? toProjectDto(row) : null;
+	},
+
+	countByOrg: async (orgId: string): Promise<number> => {
+		const [row] = await db
+			.select({ value: count() })
+			.from(projects)
+			.where(eq(projects.orgId, orgId));
+		return row?.value ?? 0;
 	},
 
 	create: async (data: {

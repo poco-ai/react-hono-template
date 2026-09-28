@@ -17,10 +17,12 @@ import { createIssueDao } from "../dao/issue.dao";
 import { createLabelDao } from "../dao/label.dao";
 import { createMemberDao } from "../dao/member.dao";
 import { createProjectDao } from "../dao/project.dao";
+import { createSubscriptionDao } from "../dao/subscription.dao";
 import { createWebhookDao } from "../dao/webhook.dao";
 import { createWebhookDeliveryDao } from "../dao/webhook-delivery.dao";
 import type { Database } from "../db/types";
 import { backgroundFromContext } from "../lib/background";
+import { createPlanService } from "../lib/plan";
 import { fail } from "../lib/response";
 import {
 	type ApiKeyEnv,
@@ -190,9 +192,14 @@ export const createV1App = ({ db }: { db: Database }) => {
 	const memberDao = createMemberDao(db);
 	const webhookDao = createWebhookDao(db);
 	const deliveryDao = createWebhookDeliveryDao(db);
+	const planService = createPlanService(createSubscriptionDao(db));
 
-	const webhookService = createWebhookService({ webhookDao, deliveryDao });
-	const projectService = createProjectService(projectDao);
+	const webhookService = createWebhookService({
+		webhookDao,
+		deliveryDao,
+		plans: planService,
+	});
+	const projectService = createProjectService(projectDao, planService);
 	const issueService = createIssueService({
 		issueDao,
 		labelDao,
@@ -203,12 +210,11 @@ export const createV1App = ({ db }: { db: Database }) => {
 	const labelService = createLabelService(labelDao);
 
 	const app = new OpenAPIHono<V1Env>();
+	const rateLimiter = rateLimit(planService);
 
 	for (const base of ["/projects", "/issues", "/labels"]) {
-		app.use(base, requireApiKey(apiKeyDao));
 		app.use(`${base}/*`, requireApiKey(apiKeyDao));
-		app.use(base, rateLimit());
-		app.use(`${base}/*`, rateLimit());
+		app.use(`${base}/*`, rateLimiter);
 	}
 
 	app.openapi(listProjectsRoute, async (c) => {

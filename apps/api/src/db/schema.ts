@@ -278,3 +278,22 @@ export const activities = sqliteTable(
 		index("activities_issueId_idx").on(table.issueId),
 	],
 );
+
+export const subscriptions = sqliteTable("subscriptions", {
+	orgId: text("org_id")
+		.primaryKey()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	plan: text("plan").notNull().default("free"),
+	status: text("status").notNull().default("active"),
+	stripeCustomerId: text("stripe_customer_id"),
+	stripeSubscriptionId: text("stripe_subscription_id"),
+	seats: integer("seats").notNull().default(0),
+	currentPeriodEnd: integer("current_period_end", { mode: "timestamp_ms" }),
+	createdAt: integer("created_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});

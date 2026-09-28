@@ -99,6 +99,7 @@ export const organization = sqliteTable("organization", {
 	slug: text("slug").notNull().unique(),
 	logo: text("logo"),
 	metadata: text("metadata"),
+	frozen: integer("frozen", { mode: "boolean" }).notNull().default(false),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
