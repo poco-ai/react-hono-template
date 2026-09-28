@@ -1,11 +1,16 @@
 import {
 	ApiError,
 	ApiErrorCode,
+	activityListQuerySchema,
+	attachmentPresignSchema,
+	commentListQuerySchema,
+	createCommentSchema,
 	createIssueSchema,
 	createLabelSchema,
 	createProjectSchema,
 	issueListQuerySchema,
 	type PresignUploadRequestDto,
+	registerAttachmentSchema,
 	updateIssueSchema,
 	updateLabelSchema,
 	updateProjectSchema,
@@ -14,12 +19,18 @@ import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { validator } from "hono/validator";
 import type { ZodType } from "zod";
+import { createActivityController } from "./controllers/activity.controller";
 import { createAdminController } from "./controllers/admin-user.controller";
+import { createAttachmentController } from "./controllers/attachment.controller";
+import { createCommentController } from "./controllers/comment.controller";
 import { createIssueController } from "./controllers/issue.controller";
 import { createLabelController } from "./controllers/label.controller";
 import { createProjectController } from "./controllers/project.controller";
 import { createStorageController } from "./controllers/storage.controller";
+import { createActivityDao } from "./dao/activity.dao";
 import { createAdminUserDao } from "./dao/admin-user.dao";
+import { createAttachmentDao } from "./dao/attachment.dao";
+import { createCommentDao } from "./dao/comment.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createLabelDao } from "./dao/label.dao";
 import { createMemberDao } from "./dao/member.dao";
@@ -34,7 +45,10 @@ import { fail, ok } from "./lib/response";
 import type { StorageAdapter } from "./lib/storage/types";
 import { requireAuth, requirePermission } from "./middleware/auth";
 import { requireOrgMember, requireOrgRole } from "./middleware/org";
+import { createActivityService } from "./services/activity.service";
 import { createAdminUserService } from "./services/admin-user.service";
+import { createAttachmentService } from "./services/attachment.service";
+import { createCommentService } from "./services/comment.service";
 import { createIssueService } from "./services/issue.service";
 import { createLabelService } from "./services/label.service";
 import { createProjectService } from "./services/project.service";
@@ -83,6 +97,9 @@ export const createRoutes = ({
 	const projectDao = createProjectDao(db);
 	const issueDao = createIssueDao(db);
 	const labelDao = createLabelDao(db);
+	const commentDao = createCommentDao(db);
+	const attachmentDao = createAttachmentDao(db);
+	const activityDao = createActivityDao(db);
 
 	const projectService = createProjectService(projectDao);
 	const issueService = createIssueService({
@@ -92,10 +109,25 @@ export const createRoutes = ({
 		memberDao,
 	});
 	const labelService = createLabelService(labelDao);
+	const commentService = createCommentService({
+		commentDao,
+		issueDao,
+		projectDao,
+	});
+	const attachmentService = createAttachmentService({
+		attachmentDao,
+		issueDao,
+		projectDao,
+		storage,
+	});
+	const activityService = createActivityService({ activityDao, issueDao });
 
 	const projectController = createProjectController(projectService);
 	const issueController = createIssueController(issueService);
 	const labelController = createLabelController(labelService);
+	const commentController = createCommentController(commentService);
+	const attachmentController = createAttachmentController(attachmentService);
+	const activityController = createActivityController(activityService);
 
 	return new Hono()
 		.onError((err, c) => {
@@ -179,9 +211,55 @@ export const createRoutes = ({
 			issueController.remove(c),
 		)
 		.get(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments",
+			validate(commentListQuerySchema, "query"),
+			(c) => commentController.list(c, c.req.valid("query")),
+		)
+		.post(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments",
+			validate(createCommentSchema, "json"),
+			(c) => commentController.create(c, c.req.valid("json")),
+		)
+		.patch(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId",
+			validate(createCommentSchema, "json"),
+			(c) => commentController.update(c, c.req.valid("json")),
+		)
+		.delete(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId",
+			(c) => commentController.remove(c),
+		)
+		.get(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/attachments",
+			(c) => attachmentController.list(c),
+		)
+		.post(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/attachments",
+			validate(registerAttachmentSchema, "json"),
+			(c) => attachmentController.register(c, c.req.valid("json")),
+		)
+		.post(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/attachments/presign",
+			validate(attachmentPresignSchema, "json"),
+			(c) => attachmentController.presign(c, c.req.valid("json")),
+		)
+		.delete(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/attachments/:attachmentId",
+			(c) => attachmentController.remove(c),
+		)
+		.get(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/activities",
+			(c) => activityController.listByIssue(c),
+		)
+		.get(
 			"/api/orgs/:orgId/issues",
 			validate(issueListQuerySchema, "query"),
 			(c) => issueController.listByOrg(c, c.req.valid("query")),
+		)
+		.get(
+			"/api/orgs/:orgId/activities",
+			validate(activityListQuerySchema, "query"),
+			(c) => activityController.listByOrg(c, c.req.valid("query")),
 		)
 		.get("/api/orgs/:orgId/labels", (c) => labelController.list(c))
 		.post(

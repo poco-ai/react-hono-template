@@ -10,13 +10,14 @@ import {
 	sql,
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import { issueLabels, issues, projects } from "../db/schema";
+import { activities, issueLabels, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
 	IssueDto,
 	ListIssuesDto,
 	ListIssuesQueryDto,
 } from "../dto/issue.dto";
+import type { ActivityInsert } from "./activity.dao";
 
 type IssueRow = typeof issues.$inferSelect;
 
@@ -52,6 +53,7 @@ export const createIssueDao = (db: Database) => ({
 			estimate: number | null;
 		},
 		labelIds: string[],
+		activity?: ActivityInsert,
 	): Promise<IssueDto> => {
 		let lastError: unknown;
 		for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
@@ -71,11 +73,11 @@ export const createIssueDao = (db: Database) => ({
 						.values({
 							...data,
 							number: sql`(
-								select ${projects.nextNumber} - 1
-								from ${projects}
-								where ${projects.id} = ${data.projectId}
-									and ${projects.orgId} = ${data.orgId}
-							)`,
+									select ${projects.nextNumber} - 1
+									from ${projects}
+									where ${projects.id} = ${data.projectId}
+										and ${projects.orgId} = ${data.orgId}
+								)`,
 						})
 						.returning(),
 					...(labelIds.length
@@ -88,6 +90,7 @@ export const createIssueDao = (db: Database) => ({
 								),
 							]
 						: []),
+					...(activity ? [db.insert(activities).values(activity)] : []),
 				]);
 				return toIssueDto(inserted[0]);
 			} catch (err) {
@@ -238,6 +241,7 @@ export const createIssueDao = (db: Database) => ({
 			estimate: number | null;
 		}>,
 		labelIds?: string[],
+		activityRows: ActivityInsert[] = [],
 	): Promise<IssueDto | null> => {
 		const patchEntries = Object.fromEntries(
 			Object.entries(patch).filter(([, value]) => value !== undefined),
@@ -247,11 +251,12 @@ export const createIssueDao = (db: Database) => ({
 			eq(issues.id, id),
 			isNull(issues.deletedAt),
 		);
-		if (Object.keys(patchEntries).length === 0 && labelIds === undefined) {
-			const current = await db.select().from(issues).where(scope).get();
-			return current ? toIssueDto(current) : null;
-		}
-		if (labelIds === undefined) {
+		const needsBatch = labelIds !== undefined || activityRows.length > 0;
+		if (!needsBatch) {
+			if (Object.keys(patchEntries).length === 0) {
+				const current = await db.select().from(issues).where(scope).get();
+				return current ? toIssueDto(current) : null;
+			}
 			const row = await db
 				.update(issues)
 				.set(patchEntries)
@@ -265,32 +270,47 @@ export const createIssueDao = (db: Database) => ({
 			hasPatch
 				? db.update(issues).set(patchEntries).where(scope).returning()
 				: db.select().from(issues).where(scope),
-			db.delete(issueLabels).where(eq(issueLabels.issueId, id)),
+			...(labelIds !== undefined
+				? [db.delete(issueLabels).where(eq(issueLabels.issueId, id))]
+				: []),
 		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		if (labelIds.length > 0) {
+		if (labelIds !== undefined && labelIds.length > 0) {
 			statements.push(
 				db
 					.insert(issueLabels)
 					.values(labelIds.map((labelId) => ({ issueId: id, labelId }))),
 			);
 		}
+		if (activityRows.length > 0) {
+			statements.push(db.insert(activities).values(activityRows));
+		}
 		const [baseRows] = await db.batch(statements);
 		const row = baseRows[0] as IssueRow | undefined;
 		return row ? toIssueDto(row) : null;
 	},
 
-	softDelete: async (orgId: string, id: string): Promise<boolean> => {
-		const rows = await db
-			.update(issues)
-			.set({ deletedAt: new Date() })
-			.where(
-				and(
-					eq(issues.orgId, orgId),
-					eq(issues.id, id),
-					isNull(issues.deletedAt),
-				),
-			)
-			.returning({ id: issues.id });
+	softDelete: async (
+		orgId: string,
+		id: string,
+		activity?: ActivityInsert,
+	): Promise<boolean> => {
+		const statements = [
+			db
+				.update(issues)
+				.set({ deletedAt: new Date() })
+				.where(
+					and(
+						eq(issues.orgId, orgId),
+						eq(issues.id, id),
+						isNull(issues.deletedAt),
+					),
+				)
+				.returning({ id: issues.id }),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+		if (activity) {
+			statements.push(db.insert(activities).values(activity));
+		}
+		const [rows] = await db.batch(statements);
 		return rows.length > 0;
 	},
 

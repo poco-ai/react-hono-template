@@ -60,6 +60,19 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 			});
 			return signed.url;
 		},
+		stat: async (key) => {
+			const res = await client().fetch(objectUrl(key), { method: "HEAD" });
+			if (res.status === 404) {
+				return null;
+			}
+			if (!res.ok) {
+				throw new Error(`S3 HEAD ${key} failed with status ${res.status}`);
+			}
+			return {
+				size: Number(res.headers.get("content-length") ?? 0),
+				contentType: res.headers.get("content-type"),
+			};
+		},
 		remove: async (key) => {
 			const res = await client().fetch(objectUrl(key), { method: "DELETE" });
 			if (!res.ok && res.status !== 404) {

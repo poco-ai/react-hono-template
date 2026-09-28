@@ -108,3 +108,85 @@ export const issueLabels = sqliteTable(
 	},
 	(table) => [primaryKey({ columns: [table.issueId, table.labelId] })],
 );
+
+export const comments = sqliteTable(
+	"comments",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		authorId: text("author_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		body: text("body").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [index("comments_issueId_idx").on(table.issueId)],
+);
+
+export const attachments = sqliteTable(
+	"attachments",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		uploaderId: text("uploader_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		key: text("key").notNull(),
+		filename: text("filename").notNull(),
+		contentType: text("content_type").notNull(),
+		size: integer("size").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [index("attachments_issueId_idx").on(table.issueId)],
+);
+
+export const activities = sqliteTable(
+	"activities",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		projectId: text("project_id")
+			.notNull()
+			.references(() => projects.id, { onDelete: "cascade" }),
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		actorId: text("actor_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		action: text("action").notNull(),
+		field: text("field"),
+		oldValue: text("old_value"),
+		newValue: text("new_value"),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("activities_orgId_createdAt_idx").on(
+			table.orgId,
+			sql`${table.createdAt} desc`,
+		),
+		index("activities_issueId_idx").on(table.issueId),
+	],
+);

@@ -1,15 +1,14 @@
 import {
 	ApiError,
 	ApiErrorCode,
-	type CreateIssueInput,
-	type IssueListQuery,
-	type UpdateIssueInput,
+	type CommentListQuery,
+	type CreateCommentInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
-import type { IssueService } from "../services/issue.service";
+import type { CommentService } from "../services/comment.service";
 
 type Env = SessionEnv & OrgEnv;
 
@@ -38,62 +37,65 @@ const requireIssueNumber = (c: Context<Env>) => {
 	return number;
 };
 
-export const createIssueController = (service: IssueService) => ({
-	listByProject: async (c: Context<Env>, query: IssueListQuery) =>
+const requireCommentId = (c: Context<Env>) => {
+	const commentId = c.req.param("commentId");
+	if (!commentId) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.INVALID_PARAM,
+			"Missing required param: commentId",
+		);
+	}
+	return commentId;
+};
+
+export const createCommentController = (service: CommentService) => ({
+	list: async (c: Context<Env>, query: CommentListQuery) =>
 		ok(
 			c,
-			await service.listIssues(
+			await service.listComments(
 				c.get("orgMember").orgId,
 				requireProjectId(c),
+				requireIssueNumber(c),
 				query,
 			),
 		),
 
-	listByOrg: async (c: Context<Env>, query: IssueListQuery) =>
-		ok(c, await service.listIssues(c.get("orgMember").orgId, null, query)),
-
-	get: async (c: Context<Env>) =>
+	create: async (c: Context<Env>, input: CreateCommentInput) =>
 		ok(
 			c,
-			await service.getIssue(
+			await service.createComment(
 				c.get("orgMember").orgId,
 				requireProjectId(c),
 				requireIssueNumber(c),
-			),
-		),
-
-	create: async (c: Context<Env>, input: CreateIssueInput) =>
-		ok(
-			c,
-			await service.createIssue(
-				c.get("orgMember").orgId,
-				requireProjectId(c),
 				c.get("session").user.id,
 				input,
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateIssueInput) =>
+	update: async (c: Context<Env>, input: CreateCommentInput) =>
 		ok(
 			c,
-			await service.updateIssue(
+			await service.updateComment(
 				c.get("orgMember").orgId,
 				requireProjectId(c),
 				requireIssueNumber(c),
+				requireCommentId(c),
 				c.get("session").user.id,
 				input,
 			),
 		),
 
 	remove: async (c: Context<Env>) => {
-		await service.deleteIssue(
+		await service.deleteComment(
 			c.get("orgMember").orgId,
 			requireProjectId(c),
 			requireIssueNumber(c),
+			requireCommentId(c),
 			c.get("session").user.id,
 		);
 		return ok(c, { deleted: true });
 	},
 });
 
-export type IssueController = ReturnType<typeof createIssueController>;
+export type CommentController = ReturnType<typeof createCommentController>;

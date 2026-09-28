@@ -1,15 +1,14 @@
 import {
 	ApiError,
 	ApiErrorCode,
-	type CreateIssueInput,
-	type IssueListQuery,
-	type UpdateIssueInput,
+	type AttachmentPresignInput,
+	type RegisterAttachmentInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
-import type { IssueService } from "../services/issue.service";
+import type { AttachmentService } from "../services/attachment.service";
 
 type Env = SessionEnv & OrgEnv;
 
@@ -38,45 +37,44 @@ const requireIssueNumber = (c: Context<Env>) => {
 	return number;
 };
 
-export const createIssueController = (service: IssueService) => ({
-	listByProject: async (c: Context<Env>, query: IssueListQuery) =>
+const requireAttachmentId = (c: Context<Env>) => {
+	const attachmentId = c.req.param("attachmentId");
+	if (!attachmentId) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.INVALID_PARAM,
+			"Missing required param: attachmentId",
+		);
+	}
+	return attachmentId;
+};
+
+export const createAttachmentController = (service: AttachmentService) => ({
+	list: async (c: Context<Env>) =>
 		ok(
 			c,
-			await service.listIssues(
-				c.get("orgMember").orgId,
-				requireProjectId(c),
-				query,
-			),
-		),
-
-	listByOrg: async (c: Context<Env>, query: IssueListQuery) =>
-		ok(c, await service.listIssues(c.get("orgMember").orgId, null, query)),
-
-	get: async (c: Context<Env>) =>
-		ok(
-			c,
-			await service.getIssue(
+			await service.list(
 				c.get("orgMember").orgId,
 				requireProjectId(c),
 				requireIssueNumber(c),
 			),
 		),
 
-	create: async (c: Context<Env>, input: CreateIssueInput) =>
+	presign: async (c: Context<Env>, input: AttachmentPresignInput) =>
 		ok(
 			c,
-			await service.createIssue(
+			await service.presignUpload(
 				c.get("orgMember").orgId,
 				requireProjectId(c),
-				c.get("session").user.id,
+				requireIssueNumber(c),
 				input,
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateIssueInput) =>
+	register: async (c: Context<Env>, input: RegisterAttachmentInput) =>
 		ok(
 			c,
-			await service.updateIssue(
+			await service.register(
 				c.get("orgMember").orgId,
 				requireProjectId(c),
 				requireIssueNumber(c),
@@ -86,14 +84,20 @@ export const createIssueController = (service: IssueService) => ({
 		),
 
 	remove: async (c: Context<Env>) => {
-		await service.deleteIssue(
-			c.get("orgMember").orgId,
-			requireProjectId(c),
-			requireIssueNumber(c),
-			c.get("session").user.id,
+		const orgMember = c.get("orgMember");
+		return ok(
+			c,
+			await service.remove(
+				orgMember.orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireAttachmentId(c),
+				{ userId: orgMember.userId, role: orgMember.role },
+			),
 		);
-		return ok(c, { deleted: true });
 	},
 });
 
-export type IssueController = ReturnType<typeof createIssueController>;
+export type AttachmentController = ReturnType<
+	typeof createAttachmentController
+>;

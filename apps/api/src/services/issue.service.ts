@@ -5,6 +5,7 @@ import {
 	type IssueListQuery,
 	type UpdateIssueInput,
 } from "@workspace/shared";
+import type { ActivityInsert } from "../dao/activity.dao";
 import type { IssueDao } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
@@ -25,6 +26,100 @@ const assertProjectWritable = (archived: boolean) => {
 		);
 	}
 };
+
+export type IssueFieldDiff = {
+	field: string;
+	oldValue: string | null;
+	newValue: string | null;
+};
+
+export const computeIssueDiff = (
+	current: IssueDetailDto,
+	input: UpdateIssueInput,
+): IssueFieldDiff[] => {
+	const diffs: IssueFieldDiff[] = [];
+	if (input.title !== undefined && input.title !== current.title) {
+		diffs.push({
+			field: "title",
+			oldValue: current.title,
+			newValue: input.title,
+		});
+	}
+	if (
+		"description" in input &&
+		input.description !== undefined &&
+		input.description !== (current.description ?? null)
+	) {
+		diffs.push({ field: "description", oldValue: null, newValue: null });
+	}
+	if (input.status !== undefined && input.status !== current.status) {
+		diffs.push({
+			field: "status",
+			oldValue: current.status,
+			newValue: input.status,
+		});
+	}
+	if (
+		"priority" in input &&
+		input.priority !== undefined &&
+		input.priority !== current.priority
+	) {
+		diffs.push({
+			field: "priority",
+			oldValue: String(current.priority),
+			newValue: String(input.priority ?? 0),
+		});
+	}
+	if (
+		"assigneeId" in input &&
+		input.assigneeId !== undefined &&
+		input.assigneeId !== (current.assigneeId ?? "")
+	) {
+		diffs.push({
+			field: "assigneeId",
+			oldValue: current.assigneeId ?? "",
+			newValue: input.assigneeId ?? "",
+		});
+	}
+	if ("dueDate" in input && input.dueDate !== undefined) {
+		const oldDue = current.dueDate ? Date.parse(current.dueDate) : null;
+		const newDue = input.dueDate ? Date.parse(input.dueDate) : null;
+		if (oldDue !== newDue) {
+			diffs.push({
+				field: "dueDate",
+				oldValue: current.dueDate ?? "",
+				newValue: input.dueDate ?? "",
+			});
+		}
+	}
+	if (input.labelIds) {
+		const oldValue = [...current.labelIds].sort().join(",");
+		const newValue = [...input.labelIds].sort().join(",");
+		if (oldValue !== newValue) {
+			diffs.push({ field: "labels", oldValue, newValue });
+		}
+	}
+	return diffs;
+};
+
+const buildActivity = (
+	orgId: string,
+	projectId: string,
+	issueId: string,
+	actorId: string,
+	action: string,
+	diff?: IssueFieldDiff,
+): ActivityInsert => ({
+	id: crypto.randomUUID(),
+	orgId,
+	projectId,
+	issueId,
+	actorId,
+	action,
+	field: diff?.field ?? null,
+	oldValue: diff?.oldValue ?? null,
+	newValue: diff?.newValue ?? null,
+});
 
 export const createIssueService = ({
 	issueDao,
@@ -100,9 +195,10 @@ export const createIssueService = ({
 				);
 			}
 		}
+		const id = crypto.randomUUID();
 		const issue = await issueDao.createWithNumber(
 			{
-				id: crypto.randomUUID(),
+				id,
 				orgId,
 				projectId,
 				title: input.title,
@@ -115,6 +211,7 @@ export const createIssueService = ({
 				estimate: input.estimate ?? null,
 			},
 			labelIds,
+			buildActivity(orgId, projectId, id, userId, "issue.created"),
 		);
 		return { ...issue, labelIds };
 	},
@@ -123,6 +220,7 @@ export const createIssueService = ({
 		orgId: string,
 		projectId: string,
 		number: number,
+		userId: string,
 		input: UpdateIssueInput,
 	): Promise<IssueDetailDto> => {
 		const issue = await issueDao.findByProjectAndNumber(
@@ -159,6 +257,19 @@ export const createIssueService = ({
 				);
 			}
 		}
+		const currentLabelIds = await issueDao.findLabelIds(issue.id);
+		const current: IssueDetailDto = { ...issue, labelIds: currentLabelIds };
+		const diffs = computeIssueDiff(current, input);
+		const activityRows = diffs.map((diff) =>
+			buildActivity(
+				orgId,
+				issue.projectId,
+				issue.id,
+				userId,
+				"issue.updated",
+				diff,
+			),
+		);
 		const updated = await issueDao.update(
 			orgId,
 			issue.id,
@@ -172,6 +283,7 @@ export const createIssueService = ({
 				estimate: "estimate" in input ? input.estimate : undefined,
 			},
 			input.labelIds,
+			activityRows,
 		);
 		if (!updated) {
 			throw new ApiError(
@@ -184,7 +296,12 @@ export const createIssueService = ({
 		return { ...updated, labelIds };
 	},
 
-	deleteIssue: async (orgId: string, projectId: string, number: number) => {
+	deleteIssue: async (
+		orgId: string,
+		projectId: string,
+		number: number,
+		userId: string,
+	) => {
 		const issue = await issueDao.findByProjectAndNumber(
 			orgId,
 			projectId,
@@ -199,7 +316,11 @@ export const createIssueService = ({
 		}
 		const project = await projectDao.findById(orgId, issue.projectId);
 		assertProjectWritable(project?.archived ?? true);
-		await issueDao.softDelete(orgId, issue.id);
+		await issueDao.softDelete(
+			orgId,
+			issue.id,
+			buildActivity(orgId, issue.projectId, issue.id, userId, "issue.deleted"),
+		);
 	},
 });
 
