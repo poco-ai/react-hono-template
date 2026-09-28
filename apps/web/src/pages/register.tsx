@@ -11,6 +11,7 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import type { FormEvent } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -21,9 +22,11 @@ export function RegisterPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate({ from: "/register" });
 	const queryClient = useQueryClient();
+	const [error, setError] = useState<string | null>(null);
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		setError(null);
 		const form = new FormData(e.currentTarget);
 		const { error } = await authClient.signUp.email({
 			name: String(form.get("name") ?? ""),
@@ -31,7 +34,9 @@ export function RegisterPage() {
 			password: String(form.get("password") ?? ""),
 		});
 		if (error) {
-			alert(error.message ?? t("register.failed"));
+			setError(
+				`[${error.code ?? "error"}] ${error.message ?? t("register.failed")}`,
+			);
 			return;
 		}
 		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
@@ -81,6 +86,7 @@ export function RegisterPage() {
 								required
 							/>
 						</div>
+						{error && <p className="text-destructive text-sm">{error}</p>}
 						<Button type="submit">{t("register.submit")}</Button>
 					</form>
 					<p className="text-muted-foreground mt-4 text-center text-sm">
