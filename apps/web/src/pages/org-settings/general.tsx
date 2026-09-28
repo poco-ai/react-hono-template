@@ -208,20 +208,26 @@ export function GeneralSettingsPage({
 							{t("settings.leaveDescription")}
 						</p>
 					</div>
-					<Tooltip>
-						<TooltipTrigger
-							render={
-								<Button
-									variant="outline"
-									disabled={soleOwner}
-									onClick={() => setLeaveOpen(true)}
-								>
-									{t("settings.leaveButton")}
-								</Button>
-							}
-						/>
-						<TooltipContent>{t("settings.soleOwnerHint")}</TooltipContent>
-					</Tooltip>
+					{soleOwner ? (
+						<Tooltip>
+							<TooltipTrigger
+								render={
+									<Button
+										variant="outline"
+										disabled
+										onClick={() => setLeaveOpen(true)}
+									>
+										{t("settings.leaveButton")}
+									</Button>
+								}
+							/>
+							<TooltipContent>{t("settings.soleOwnerHint")}</TooltipContent>
+						</Tooltip>
+					) : (
+						<Button variant="outline" onClick={() => setLeaveOpen(true)}>
+							{t("settings.leaveButton")}
+						</Button>
+					)}
 				</div>
 
 				{isOwner && (
