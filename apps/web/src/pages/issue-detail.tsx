@@ -49,7 +49,10 @@ import {
 	priorityValue,
 	toDateInputValue,
 } from "@/lib/issue-utils";
-import { orgActivitiesRootKey } from "@/lib/queries/activities";
+import {
+	issueActivitiesKey,
+	orgActivitiesRootKey,
+} from "@/lib/queries/activities";
 import { issueQuery } from "@/lib/queries/issues";
 import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
@@ -150,6 +153,9 @@ export function IssueDetailPage({
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "issues"] });
 			queryClient.invalidateQueries({
 				queryKey: orgActivitiesRootKey(orgId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: issueActivitiesKey(orgId, projectId, issueNumber),
 			});
 		},
 	});
