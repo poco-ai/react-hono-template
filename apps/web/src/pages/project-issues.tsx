@@ -9,7 +9,7 @@ import {
 } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import {
 	Dialog,
@@ -38,7 +38,14 @@ import {
 } from "@workspace/ui/components/table";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { cn } from "@workspace/ui/lib/utils";
-import { CircleAlert, Columns3, List, Plus, Search } from "lucide-react";
+import {
+	ArrowLeft,
+	CircleAlert,
+	Columns3,
+	List,
+	Plus,
+	Search,
+} from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,8 +55,10 @@ import { LabelBadge } from "@/components/issue/label-badge";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
 import { MultiSelect } from "@/components/multi-select";
+import { NotFoundState } from "@/components/not-found-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
+import { isNotFoundError } from "@/lib/errors";
 import {
 	formatDateTime,
 	formatDueDate,
@@ -203,6 +212,24 @@ export function ProjectIssuesPage({
 	const selectedNumbers = (result?.items ?? [])
 		.filter((issue) => selected.has(issue.id))
 		.map((issue) => issue.number);
+
+	if (project.isError && isNotFoundError(project.error)) {
+		return (
+			<NotFoundState
+				title={t("projects.notFoundTitle")}
+				action={
+					<Link
+						to="/orgs/$orgId/projects"
+						params={{ orgId }}
+						className={buttonVariants({ variant: "outline", size: "sm" })}
+					>
+						<ArrowLeft className="size-4" />
+						{t("projects.backToProjects")}
+					</Link>
+				}
+			/>
+		);
+	}
 
 	return (
 		<div className="flex min-h-svh flex-col">

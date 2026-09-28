@@ -18,7 +18,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
-import { Button } from "@workspace/ui/components/button";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import {
@@ -39,7 +39,9 @@ import { IssueComments } from "@/components/issue/issue-comments";
 import { IssueDescription } from "@/components/issue/issue-description";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { MultiSelect } from "@/components/multi-select";
+import { NotFoundState } from "@/components/not-found-state";
 import { client, unwrap } from "@/lib/api";
+import { isNotFoundError } from "@/lib/errors";
 import {
 	formatDateTime,
 	fromDateInputValue,
@@ -189,6 +191,25 @@ export function IssueDetailPage({
 			<div className="flex min-h-svh items-center justify-center">
 				<Loader2 className="text-muted-foreground size-6 animate-spin" />
 			</div>
+		);
+	}
+
+	if (issue.isError && isNotFoundError(issue.error)) {
+		return (
+			<NotFoundState
+				title={t("issues.notFoundTitle")}
+				action={
+					<Link
+						to="/orgs/$orgId/projects/$projectId"
+						params={{ orgId, projectId }}
+						search={{ page: 1, sort: "updated" }}
+						className={buttonVariants({ variant: "outline", size: "sm" })}
+					>
+						<ArrowLeft className="size-4" />
+						{t("issues.backToProject")}
+					</Link>
+				}
+			/>
 		);
 	}
 

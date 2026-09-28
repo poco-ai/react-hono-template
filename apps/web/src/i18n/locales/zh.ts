@@ -105,6 +105,8 @@ const zh: typeof en = {
 		unarchiveConfirmTitle: "恢复项目？",
 		unarchiveConfirmDescription: "{{name}} 将重新显示在侧边栏中。",
 		empty: "还没有项目。",
+		notFoundTitle: "项目不存在",
+		backToProjects: "返回项目列表",
 		emptyCta: "创建第一个项目",
 	},
 	issues: {
@@ -153,6 +155,7 @@ const zh: typeof en = {
 		count_other: "{{count}} 个事项",
 		pageIndicator: "第 {{page}} / {{total}} 页",
 		backToProject: "返回事项列表",
+		notFoundTitle: "事项不存在",
 		descriptionEmpty: "添加描述…",
 		descriptionPlaceholder: "描述这个事项…",
 		deleteTitle: "删除事项？",

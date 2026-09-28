@@ -106,6 +106,8 @@ const en = {
 		unarchiveConfirmTitle: "Unarchive project?",
 		unarchiveConfirmDescription: "{{name}} will show up in the sidebar again.",
 		empty: "No projects yet.",
+		notFoundTitle: "Project not found",
+		backToProjects: "Back to projects",
 		emptyCta: "Create your first project",
 	},
 	issues: {
@@ -154,6 +156,7 @@ const en = {
 		count_other: "{{count}} issues",
 		pageIndicator: "Page {{page}} / {{total}}",
 		backToProject: "Back to issues",
+		notFoundTitle: "Issue not found",
 		descriptionEmpty: "Add a description…",
 		descriptionPlaceholder: "Describe the issue…",
 		deleteTitle: "Delete issue?",
