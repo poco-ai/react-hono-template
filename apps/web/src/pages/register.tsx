@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
+import { errorMessage } from "@/lib/errors";
 import { sessionOptions } from "@/lib/session";
 
 export function RegisterPage() {
@@ -37,7 +38,10 @@ export function RegisterPage() {
 		});
 		if (error) {
 			setError(
-				`[${error.code ?? "error"}] ${error.message ?? t("register.failed")}`,
+				errorMessage({
+					code: error.code ?? undefined,
+					message: error.message ?? t("register.failed"),
+				}),
 			);
 			return;
 		}

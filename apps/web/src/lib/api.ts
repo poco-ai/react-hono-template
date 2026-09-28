@@ -1,6 +1,7 @@
 import type { AppType } from "@api/routes";
 import type { ApiOk, ApiResult } from "@workspace/shared";
 import { type ClientResponse, hc } from "hono/client";
+import { errorMessage } from "@/lib/errors";
 
 export const client = hc<AppType>(import.meta.env.VITE_API_URL ?? "", {
 	init: { credentials: "include" },
@@ -14,8 +15,10 @@ export async function unwrap<T>(
 	if (body.ok) {
 		return body.data;
 	}
-	throw Object.assign(new Error(`[${body.error.code}] ${body.error.message}`), {
-		code: body.error.code as string,
+	const { code } = body.error;
+	throw Object.assign(new Error(errorMessage(body.error)), {
+		code: code as string,
+		status: response.status,
 	});
 }
 

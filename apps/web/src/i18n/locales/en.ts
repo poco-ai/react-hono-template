@@ -41,6 +41,20 @@ const en = {
 		settings: "Settings",
 		apiDocs: "API",
 	},
+	errors: {
+		unexpected: "Something went wrong. Please try again.",
+		orgFrozen: "Organization is frozen. Ask an owner to unfreeze it first.",
+		forbidden: "You do not have permission to perform this action.",
+		unauthorized: "Please sign in and try again.",
+		planLimit:
+			"You have reached the limit of the current plan. Upgrade to continue.",
+		orgSettingsRequired:
+			"Only owners and admins can change organization settings.",
+		orgLeaveOwner:
+			"Owners must transfer ownership before leaving the organization.",
+		invalidEmailOrPassword: "Invalid email or password.",
+		userAlreadyExists: "An account with this email already exists.",
+	},
 	login: {
 		title: "Sign in",
 		description: "Enter your email and password to continue.",

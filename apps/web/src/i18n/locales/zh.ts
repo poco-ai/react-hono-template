@@ -43,6 +43,17 @@ const zh: typeof en = {
 		settings: "设置",
 		apiDocs: "API",
 	},
+	errors: {
+		unexpected: "出了点问题，请重试。",
+		orgFrozen: "组织已被冻结，请先联系所有者解冻。",
+		forbidden: "你没有权限执行此操作。",
+		unauthorized: "请重新登录后再试。",
+		planLimit: "已达到当前方案上限，请升级后继续。",
+		orgSettingsRequired: "只有所有者或管理员可以修改组织设置。",
+		orgLeaveOwner: "所有者需先转移所有权才能退出组织。",
+		invalidEmailOrPassword: "邮箱或密码错误。",
+		userAlreadyExists: "该邮箱已注册过账号。",
+	},
 	login: {
 		title: "登录",
 		description: "输入邮箱和密码继续。",
