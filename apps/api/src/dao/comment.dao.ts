@@ -6,6 +6,9 @@ import type { Database } from "../db/types";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import type { ActivityInsert } from "./activity.dao";
 
+// D1 batch rows are keyed by column name, so joined columns colliding with
+// comments columns (e.g. both tables have "id") shift values. Alias the user
+// columns to unique names — see drizzle-orm#6038.
 const COMMENT_SELECT = {
 	id: comments.id,
 	orgId: comments.orgId,
@@ -14,10 +17,10 @@ const COMMENT_SELECT = {
 	createdAt: comments.createdAt,
 	updatedAt: comments.updatedAt,
 	author: {
-		id: user.id,
-		name: user.name,
-		email: user.email,
-		image: user.image,
+		id: user.id.as("author_user_id"),
+		name: user.name.as("author_user_name"),
+		email: user.email.as("author_user_email"),
+		image: user.image.as("author_user_image"),
 	},
 };
 
