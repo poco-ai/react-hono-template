@@ -158,15 +158,19 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 									)}
 								</TableCell>
 								<TableCell className="text-right">
-									<Button
-										variant="ghost"
-										size="sm"
-										className="text-destructive hover:text-destructive"
-										disabled={revoked || revokeMutation.isPending}
-										onClick={() => setRevokeTarget(apiKey)}
-									>
-										{t("apiKeys.revoke")}
-									</Button>
+									{revoked ? (
+										<span className="text-muted-foreground">—</span>
+									) : (
+										<Button
+											variant="ghost"
+											size="sm"
+											className="text-destructive hover:text-destructive"
+											disabled={revokeMutation.isPending}
+											onClick={() => setRevokeTarget(apiKey)}
+										>
+											{t("apiKeys.revoke")}
+										</Button>
+									)}
 								</TableCell>
 							</TableRow>
 						);
