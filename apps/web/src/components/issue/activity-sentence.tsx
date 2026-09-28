@@ -36,6 +36,8 @@ export function ActivitySentence({
 				return t("activity.fields.labels");
 			case "dueDate":
 				return t("activity.fields.dueDate");
+			case "estimate":
+				return t("activity.fields.estimate");
 			default:
 				return field;
 		}
@@ -70,6 +72,8 @@ export function ActivitySentence({
 			}
 			case "dueDate":
 				return formatDueDate(value) || t("activity.emptyValue");
+			case "estimate":
+				return value || t("activity.emptyValue");
 			default:
 				return value ?? "";
 		}

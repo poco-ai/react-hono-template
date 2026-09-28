@@ -94,6 +94,17 @@ export const computeIssueDiff = (
 			});
 		}
 	}
+	if (
+		"estimate" in input &&
+		input.estimate !== undefined &&
+		input.estimate !== current.estimate
+	) {
+		diffs.push({
+			field: "estimate",
+			oldValue: current.estimate != null ? String(current.estimate) : "",
+			newValue: input.estimate != null ? String(input.estimate) : "",
+		});
+	}
 	if (input.labelIds) {
 		const oldValue = [...current.labelIds].sort().join(",");
 		const newValue = [...input.labelIds].sort().join(",");

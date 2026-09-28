@@ -211,6 +211,7 @@ const zh: typeof en = {
 			assignee: "经办人",
 			labels: "标签",
 			dueDate: "截止日期",
+			estimate: "预估",
 		},
 		comment: {
 			created: "{{name}} 发表了评论",

@@ -213,6 +213,7 @@ const en = {
 			assignee: "assignee",
 			labels: "labels",
 			dueDate: "due date",
+			estimate: "estimate",
 		},
 		comment: {
 			created: "{{name}} commented",
