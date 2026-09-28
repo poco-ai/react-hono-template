@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Card,
@@ -9,16 +11,12 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import type { FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
+import { sessionOptions } from "@/lib/session";
 
 export function RegisterPage() {
-	const { data: session } = authClient.useSession();
-	const navigate = useNavigate();
-
-	if (session) {
-		return <Navigate to="/" replace />;
-	}
+	const navigate = useNavigate({ from: "/register" });
+	const queryClient = useQueryClient();
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -32,7 +30,8 @@ export function RegisterPage() {
 			alert(error.message ?? "Registration failed");
 			return;
 		}
-		navigate("/", { replace: true });
+		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
+		navigate({ to: "/", replace: true });
 	};
 
 	return (

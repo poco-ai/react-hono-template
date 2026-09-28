@@ -1,4 +1,6 @@
 import type { ListAdminUsersDto } from "@api/dto/admin-user.dto";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -25,93 +27,83 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import type { FormEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { client, unwrap } from "@/lib/api";
-import { authClient } from "@/lib/auth-client";
+import { useSession } from "@/lib/session";
 
 const PAGE_SIZE = 10;
 
-const errorMessage = (e: unknown) =>
-	e instanceof Error ? e.message : String(e);
-
 export function AdminUsersPage() {
-	const { data: session } = authClient.useSession();
-	const [page, setPage] = useState(1);
-	const [searchInput, setSearchInput] = useState("");
-	const [search, setSearch] = useState("");
-	const [result, setResult] = useState<ListAdminUsersDto | null>(null);
-	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(false);
+	const { data: session } = useSession();
+	const { page = 1, search = "" } = useSearch({ from: "/_auth/admin/users" });
+	const navigate = useNavigate({ from: "/admin/users" });
+	const queryClient = useQueryClient();
+	const [searchInput, setSearchInput] = useState(search);
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			const data = await unwrap(
-				await client.api.admin.users.$get({
-					query: { page: String(page), pageSize: String(PAGE_SIZE), search },
+	const usersQuery = useQuery({
+		queryKey: ["admin-users", page, search],
+		queryFn: () =>
+			unwrap(
+				client.api.admin.users.$get({
+					query: {
+						page: String(page),
+						pageSize: String(PAGE_SIZE),
+						search,
+					},
 				}),
-			);
-			setResult(data);
-			setError("");
-		} catch (e) {
-			setError(errorMessage(e));
-		} finally {
-			setLoading(false);
-		}
-	}, [page, search]);
+			),
+	});
 
-	useEffect(() => {
-		load();
-	}, [load]);
+	const roleMutation = useMutation({
+		mutationFn: ({ id, role }: { id: string; role: "admin" | "user" }) =>
+			unwrap(
+				client.api.admin.users[":id"].role.$patch({
+					param: { id },
+					json: { role },
+				}),
+			),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+	});
+	const banMutation = useMutation({
+		mutationFn: (id: string) =>
+			unwrap(
+				client.api.admin.users[":id"].ban.$post({ param: { id }, json: {} }),
+			),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+	});
+	const unbanMutation = useMutation({
+		mutationFn: (id: string) =>
+			unwrap(client.api.admin.users[":id"].ban.$delete({ param: { id } })),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+	});
 
 	const onSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setPage(1);
-		setSearch(searchInput.trim());
+		navigate({ search: { page: 1, search: searchInput.trim() } });
 	};
 
-	const run = async (fn: () => Promise<unknown>) => {
-		try {
-			await fn();
-			setError("");
-			await load();
-		} catch (e) {
-			setError(errorMessage(e));
-		}
-	};
+	const gotoPage = (next: number) =>
+		navigate({ search: (prev) => ({ ...prev, page: next }) });
 
-	const changeRole = (id: string, role: string) =>
-		run(() =>
-			client.api.admin.users[":id"].role
-				.$patch({
-					param: { id },
-					json: { role: role as "admin" | "user" },
-				})
-				.then(unwrap),
-		);
-
-	const ban = (id: string) =>
-		run(() =>
-			client.api.admin.users[":id"].ban
-				.$post({ param: { id }, json: {} })
-				.then(unwrap),
-		);
-
-	const unban = (id: string) =>
-		run(() =>
-			client.api.admin.users[":id"].ban.$delete({ param: { id } }).then(unwrap),
-		);
-
+	const result: ListAdminUsersDto | undefined = usersQuery.data;
 	const totalPages = result
 		? Math.max(1, Math.ceil(result.total / result.pageSize))
 		: 1;
+	const mutating =
+		roleMutation.isPending || banMutation.isPending || unbanMutation.isPending;
+	const mutationError =
+		roleMutation.error ?? banMutation.error ?? unbanMutation.error;
 
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>User management</CardTitle>
 				<CardDescription>
-					Admin-only area, guarded by RBAC permissions.
+					Admin-only area, guarded by RBAC permissions. Page and search live in
+					the URL.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
@@ -127,7 +119,9 @@ export function AdminUsersPage() {
 					</Button>
 				</form>
 
-				{error && <p className="text-sm text-red-500">{error}</p>}
+				{mutationError && (
+					<p className="text-sm text-red-500">{mutationError.message}</p>
+				)}
 
 				<Table>
 					<TableHeader>
@@ -153,9 +147,14 @@ export function AdminUsersPage() {
 									<TableCell>
 										<Select
 											value={user.role}
-											disabled={isSelf}
+											disabled={isSelf || roleMutation.isPending}
 											onValueChange={(v) => {
-												if (v) changeRole(user.id, v);
+												if (v) {
+													roleMutation.mutate({
+														id: user.id,
+														role: v as "admin" | "user",
+													});
+												}
 											}}
 										>
 											<SelectTrigger className="w-28">
@@ -186,7 +185,8 @@ export function AdminUsersPage() {
 											<Button
 												variant="outline"
 												size="sm"
-												onClick={() => unban(user.id)}
+												disabled={mutating}
+												onClick={() => unbanMutation.mutate(user.id)}
 											>
 												Unban
 											</Button>
@@ -194,8 +194,8 @@ export function AdminUsersPage() {
 											<Button
 												variant="destructive"
 												size="sm"
-												disabled={isSelf || user.role === "admin"}
-												onClick={() => ban(user.id)}
+												disabled={isSelf || user.role === "admin" || mutating}
+												onClick={() => banMutation.mutate(user.id)}
 											>
 												Ban
 											</Button>
@@ -204,7 +204,24 @@ export function AdminUsersPage() {
 								</TableRow>
 							);
 						})}
-						{!loading && result?.items.length === 0 && (
+						{usersQuery.isPending && (
+							<TableRow>
+								<TableCell
+									colSpan={5}
+									className="text-muted-foreground h-16 text-center"
+								>
+									Loading…
+								</TableCell>
+							</TableRow>
+						)}
+						{usersQuery.isError && (
+							<TableRow>
+								<TableCell colSpan={5} className="text-center text-red-500">
+									{usersQuery.error.message}
+								</TableCell>
+							</TableRow>
+						)}
+						{!usersQuery.isPending && result?.items.length === 0 && (
 							<TableRow>
 								<TableCell
 									colSpan={5}
@@ -223,8 +240,8 @@ export function AdminUsersPage() {
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={page <= 1 || loading}
-							onClick={() => setPage((p) => p - 1)}
+							disabled={page <= 1 || usersQuery.isPending}
+							onClick={() => gotoPage(page - 1)}
 						>
 							Prev
 						</Button>
@@ -234,8 +251,8 @@ export function AdminUsersPage() {
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={page >= totalPages || loading}
-							onClick={() => setPage((p) => p + 1)}
+							disabled={page >= totalPages || usersQuery.isPending}
+							onClick={() => gotoPage(page + 1)}
 						>
 							Next
 						</Button>

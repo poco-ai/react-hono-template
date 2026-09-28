@@ -1,3 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
+import {
+	Link,
+	useNavigate,
+	useRouter,
+	useSearch,
+} from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Card,
@@ -9,17 +16,14 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import type { FormEvent } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
+import { sessionOptions } from "@/lib/session";
 
 export function LoginPage() {
-	const { data: session } = authClient.useSession();
-	const navigate = useNavigate();
-	const location = useLocation();
-
-	if (session) {
-		return <Navigate to="/" replace />;
-	}
+	const navigate = useNavigate({ from: "/login" });
+	const router = useRouter();
+	const queryClient = useQueryClient();
+	const { redirect: redirectTo } = useSearch({ from: "/login" });
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -32,8 +36,12 @@ export function LoginPage() {
 			alert(error.message ?? "Login failed");
 			return;
 		}
-		const from = (location.state as { from?: string } | null)?.from;
-		navigate(from ?? "/", { replace: true });
+		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
+		if (redirectTo) {
+			router.history.push(redirectTo);
+		} else {
+			navigate({ to: "/", replace: true });
+		}
 	};
 
 	return (

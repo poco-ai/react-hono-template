@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
@@ -10,17 +12,20 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import { Link, Outlet, useNavigate } from "react-router";
+import type { ReactNode } from "react";
 import { authClient } from "@/lib/auth-client";
+import { sessionOptions, useSession } from "@/lib/session";
 
-export function AppLayout() {
-	const { data: session } = authClient.useSession();
+export function AppLayout({ children }: { children: ReactNode }) {
+	const { data: session } = useSession();
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const user = session?.user;
 
 	const signOut = async () => {
 		await authClient.signOut();
-		navigate("/login", { replace: true });
+		queryClient.setQueryData(sessionOptions.queryKey, null);
+		navigate({ to: "/login", replace: true });
 	};
 
 	return (
@@ -79,9 +84,7 @@ export function AppLayout() {
 					)}
 				</div>
 			</header>
-			<main className="mx-auto max-w-5xl px-6 py-8">
-				<Outlet />
-			</main>
+			<main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
 		</div>
 	);
 }

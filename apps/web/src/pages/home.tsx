@@ -1,3 +1,4 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -7,41 +8,22 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useState } from "react";
 import { usePresignedUpload } from "@/hooks/use-presigned-upload";
 import { client, unwrap } from "@/lib/api";
-import { authClient } from "@/lib/auth-client";
+import { useSession } from "@/lib/session";
 
 export function HomePage() {
-	const { data: session } = authClient.useSession();
-	const [hello, setHello] = useState("Loading...");
-	const [error, setError] = useState("");
-
-	const loadHello = useCallback(async () => {
-		try {
-			const body = await unwrap(await client.api.hello.$get());
-			setHello(body.message);
-			setError("");
-		} catch (e) {
-			setHello("");
-			setError(e instanceof Error ? e.message : String(e));
-		}
-	}, []);
-
-	useEffect(() => {
-		loadHello();
-	}, [loadHello]);
-
-	const fetchMissingUser = useCallback(async () => {
-		try {
-			await unwrap(
-				await client.api.users[":id"].$get({ param: { id: "999999" } }),
-			);
-			setError("");
-		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e));
-		}
-	}, []);
+	const { data: session } = useSession();
+	const helloQuery = useQuery({
+		queryKey: ["hello"],
+		queryFn: () => unwrap(client.api.hello.$get()),
+	});
+	const errorMutation = useMutation({
+		mutationFn: () =>
+			unwrap(client.api.users[":id"].$get({ param: { id: "999999" } })),
+	});
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -88,12 +70,26 @@ export function HomePage() {
 				</CardHeader>
 				<CardContent className="flex flex-col gap-3 text-sm">
 					<p className="text-muted-foreground">
-						/api/hello: {hello}
-						{error && <span className="text-red-500"> | error: {error}</span>}
+						/api/hello:{" "}
+						{helloQuery.isPending
+							? "Loading..."
+							: (helloQuery.data?.message ??
+								helloQuery.error?.message ??
+								"Failed to load")}
+						{errorMutation.isError && (
+							<span className="text-red-500">
+								{" "}
+								| error: {errorMutation.error.message}
+							</span>
+						)}
 					</p>
 					<div className="flex gap-2">
-						<Button onClick={loadHello}>Refetch</Button>
-						<Button variant="outline" onClick={fetchMissingUser}>
+						<Button onClick={() => helloQuery.refetch()}>Refetch</Button>
+						<Button
+							variant="outline"
+							disabled={errorMutation.isPending}
+							onClick={() => errorMutation.mutate()}
+						>
 							Trigger API error
 						</Button>
 					</div>
