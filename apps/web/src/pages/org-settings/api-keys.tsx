@@ -51,13 +51,13 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 	const keys = useQuery(apiKeysQuery(orgId, page));
 	const members = useQuery(membersQuery(orgId));
 
-	const creatorName = (createdById: string | null) => {
+	const creatorOf = (createdById: string | null) => {
 		if (!createdById) {
 			return null;
 		}
 		return (
-			members.data?.find((member) => member.userId === createdById)?.user
-				.name ?? null
+			members.data?.find((member) => member.userId === createdById)?.user ??
+			null
 		);
 	};
 
@@ -110,43 +110,40 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 				<TableHeader>
 					<TableRow>
 						<TableHead>{t("apiKeys.name")}</TableHead>
-						<TableHead>{t("apiKeys.key")}</TableHead>
-						<TableHead>{t("apiKeys.createdBy")}</TableHead>
-						<TableHead>{t("apiKeys.created")}</TableHead>
-						<TableHead>{t("apiKeys.lastUsed")}</TableHead>
-						<TableHead>{t("members.status")}</TableHead>
-						<TableHead className="text-right">{t("common.actions")}</TableHead>
+						<TableHead className="w-40">{t("apiKeys.key")}</TableHead>
+						<TableHead className="w-24">{t("members.status")}</TableHead>
+						<TableHead className="w-24 text-right">
+							{t("common.actions")}
+						</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
 					{keys.data?.items.map((apiKey) => {
 						const revoked = apiKey.revokedAt !== null;
-						const creator = creatorName(apiKey.createdById);
+						const creator = creatorOf(apiKey.createdById);
 						return (
 							<TableRow key={apiKey.id}>
-								<TableCell className="font-medium">{apiKey.name}</TableCell>
+								<TableCell>
+									<div className="flex items-center gap-3">
+										{creator && (
+											<UserAvatar name={creator.name} className="size-8" />
+										)}
+										<div className="min-w-0">
+											<div className="truncate font-medium">{apiKey.name}</div>
+											<div className="text-muted-foreground truncate text-xs">
+												{creator ? creator.name : t("apiKeys.unknownCreator")}
+												{" · "}
+												{t("apiKeys.created")} {formatDate(apiKey.createdAt)}
+												{" · "}
+												{apiKey.lastUsedAt
+													? `${t("apiKeys.lastUsed")} ${formatRelativeTime(apiKey.lastUsedAt)}`
+													: t("apiKeys.lastUsedNever")}
+											</div>
+										</div>
+									</div>
+								</TableCell>
 								<TableCell className="font-mono text-xs">
 									{apiKey.prefix}…
-								</TableCell>
-								<TableCell>
-									{creator ? (
-										<div className="flex items-center gap-2">
-											<UserAvatar name={creator} />
-											<span className="truncate text-sm">{creator}</span>
-										</div>
-									) : (
-										<span className="text-muted-foreground text-sm">
-											{t("apiKeys.unknownCreator")}
-										</span>
-									)}
-								</TableCell>
-								<TableCell className="text-muted-foreground text-xs">
-									{formatDate(apiKey.createdAt)}
-								</TableCell>
-								<TableCell className="text-muted-foreground text-xs">
-									{apiKey.lastUsedAt
-										? formatRelativeTime(apiKey.lastUsedAt)
-										: t("apiKeys.lastUsedNever")}
 								</TableCell>
 								<TableCell>
 									{revoked ? (
@@ -178,7 +175,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 					{keys.isPending && (
 						<TableRow>
 							<TableCell
-								colSpan={7}
+								colSpan={4}
 								className="text-muted-foreground h-16 text-center"
 							>
 								{t("common.loading")}
@@ -187,7 +184,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 					)}
 					{keys.isError && (
 						<TableRow>
-							<TableCell colSpan={7} className="text-center text-red-500">
+							<TableCell colSpan={4} className="text-center text-red-500">
 								{keys.error.message}
 							</TableCell>
 						</TableRow>
@@ -195,7 +192,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 					{!keys.isPending && keys.data?.items.length === 0 && (
 						<TableRow>
 							<TableCell
-								colSpan={7}
+								colSpan={4}
 								className="text-muted-foreground h-16 text-center"
 							>
 								{t("apiKeys.empty")}

@@ -376,7 +376,6 @@ const zh: typeof en = {
 		name: "名称",
 		namePlaceholder: "例如：CI 流水线",
 		key: "密钥",
-		createdBy: "创建者",
 		created: "创建时间",
 		lastUsed: "最近使用",
 		lastUsedNever: "从未使用",
