@@ -160,6 +160,12 @@ export function OrgLayout() {
 									className: "bg-accent text-foreground font-medium",
 								}}
 							>
+								<span
+									className="size-2 shrink-0 rounded-full"
+									style={{
+										backgroundColor: project.color ?? "var(--muted-foreground)",
+									}}
+								/>
 								<span className="min-w-0 truncate">{project.name}</span>
 							</Link>
 						))}

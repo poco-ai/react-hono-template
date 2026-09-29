@@ -31,6 +31,7 @@ import { CircleAlert, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
+import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { client, unwrap } from "@/lib/api";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import { projectsQuery } from "@/lib/queries/projects";
@@ -44,11 +45,17 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));
 	const [createOpen, setCreateOpen] = useState(false);
+	const [showArchived, setShowArchived] = useState(false);
 	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
+	const [editTarget, setEditTarget] = useState<ProjectDto | null>(null);
 
 	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
 	const canManage =
 		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
+
+	const visibleProjects = (projects.data ?? []).filter(
+		(project) => project.archived === showArchived,
+	);
 
 	const archiveMutation = useMutation({
 		mutationFn: (project: ProjectDto) =>
@@ -78,6 +85,23 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				)}
 			</div>
 
+			<div className="bg-muted mb-4 flex w-fit rounded-lg p-0.5">
+				<Button
+					variant={showArchived ? "ghost" : "secondary"}
+					size="sm"
+					onClick={() => setShowArchived(false)}
+				>
+					{t("projects.activeTab")}
+				</Button>
+				<Button
+					variant={showArchived ? "secondary" : "ghost"}
+					size="sm"
+					onClick={() => setShowArchived(true)}
+				>
+					{t("projects.archivedTab")}
+				</Button>
+			</div>
+
 			{projects.isPending && (
 				<p className="text-muted-foreground py-16 text-center text-sm">
 					{t("common.loading")}
@@ -101,9 +125,19 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				</div>
 			)}
 
-			{projects.data && projects.data.length > 0 && (
+			{projects.data &&
+				projects.data.length > 0 &&
+				visibleProjects.length === 0 && (
+					<p className="text-muted-foreground py-16 text-center text-sm">
+						{showArchived
+							? t("projects.archivedEmpty")
+							: t("projects.activeEmpty")}
+					</p>
+				)}
+
+			{visibleProjects.length > 0 && (
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{projects.data.map((project) => (
+					{visibleProjects.map((project) => (
 						<Card
 							key={project.id}
 							className="group cursor-pointer py-0 transition-colors hover:bg-accent/40"
@@ -136,6 +170,11 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 												align="end"
 												onClick={(e) => e.stopPropagation()}
 											>
+												<DropdownMenuItem
+													onClick={() => setEditTarget(project)}
+												>
+													{t("common.edit")}
+												</DropdownMenuItem>
 												<DropdownMenuItem
 													onClick={() => setArchiveTarget(project)}
 												>
@@ -177,6 +216,13 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				orgId={orgId}
 				open={createOpen}
 				onOpenChange={setCreateOpen}
+			/>
+
+			<EditProjectDialog
+				orgId={orgId}
+				project={editTarget}
+				open={editTarget !== null}
+				onOpenChange={(open) => !open && setEditTarget(null)}
 			/>
 
 			<AlertDialog
