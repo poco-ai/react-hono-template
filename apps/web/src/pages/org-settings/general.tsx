@@ -126,7 +126,7 @@ export function GeneralSettingsPage({
 
 	if (!org) {
 		return (
-			<div className="p-8">
+			<div className="px-4 py-8 lg:px-6">
 				<p className="text-muted-foreground text-sm">
 					{orgs.isPending ? t("common.loading") : t("common.failedToLoad")}
 				</p>

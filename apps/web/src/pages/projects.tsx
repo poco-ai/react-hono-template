@@ -1,6 +1,6 @@
 import type { ProjectDto } from "@api/dto/project.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -41,22 +41,27 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 export function ProjectsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("projects.title"));
-	const navigate = useNavigate();
+	const navigate = useNavigate({ from: "/orgs/$orgId/projects/" });
+	const { archived } = useSearch({ from: "/_auth/orgs/$orgId/projects/" });
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));
 	const [createOpen, setCreateOpen] = useState(false);
-	const [showArchived, setShowArchived] = useState(false);
 	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
 	const [editTarget, setEditTarget] = useState<ProjectDto | null>(null);
+
+	const setShowArchived = (next: boolean) =>
+		navigate({
+			search: (prev) => ({ ...prev, archived: next || undefined }),
+		});
 
 	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
 	const canManage =
 		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
 
 	const visibleProjects = (projects.data ?? []).filter(
-		(project) => project.archived === showArchived,
+		(project) => project.archived === archived,
 	);
 
 	const archiveMutation = useMutation({
@@ -89,14 +94,14 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 
 			<div className="bg-muted mb-4 flex w-fit rounded-lg p-0.5">
 				<Button
-					variant={showArchived ? "ghost" : "secondary"}
+					variant={archived ? "ghost" : "secondary"}
 					size="sm"
 					onClick={() => setShowArchived(false)}
 				>
 					{t("projects.activeTab")}
 				</Button>
 				<Button
-					variant={showArchived ? "secondary" : "ghost"}
+					variant={archived ? "secondary" : "ghost"}
 					size="sm"
 					onClick={() => setShowArchived(true)}
 				>
@@ -144,9 +149,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				projects.data.length > 0 &&
 				visibleProjects.length === 0 && (
 					<p className="text-muted-foreground py-16 text-center text-sm">
-						{showArchived
-							? t("projects.archivedEmpty")
-							: t("projects.activeEmpty")}
+						{archived ? t("projects.archivedEmpty") : t("projects.activeEmpty")}
 					</p>
 				)}
 

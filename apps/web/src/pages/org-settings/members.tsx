@@ -42,6 +42,7 @@ import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
 import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
+import { errorMessage } from "@/lib/errors";
 import type { OrgInvitation, OrgMember, OrgRole } from "@/lib/queries/members";
 import {
 	invitationsQuery,
@@ -53,6 +54,14 @@ import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const INVITABLE_ROLES: OrgRole[] = ["admin", "member"];
+
+class MemberActionError extends Error {
+	code?: string;
+	constructor(code: string | null | undefined, message: string) {
+		super(message);
+		this.code = code ?? undefined;
+	}
+}
 
 export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -95,7 +104,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				role,
 			});
 			if (error) {
-				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
+				throw new MemberActionError(error.code, t("members.roleUpdateFailed"));
 			}
 		},
 		onSuccess: invalidateMembers,
@@ -108,7 +117,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				memberIdOrEmail: memberId,
 			});
 			if (error) {
-				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
+				throw new MemberActionError(error.code, t("members.removeFailed"));
 			}
 		},
 		onSuccess: () => {
@@ -123,7 +132,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				invitationId,
 			});
 			if (error) {
-				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
+				throw new MemberActionError(error.code, t("members.revokeFailed"));
 			}
 		},
 		onSuccess: () => {
@@ -197,8 +206,8 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 												})
 											}
 										>
-											<SelectTrigger
-												className="w-28"
+											<span
+												className="inline-block"
 												title={
 													isSelf
 														? t("members.selfRoleTooltip")
@@ -207,10 +216,12 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 															: undefined
 												}
 											>
-												<SelectValue>
-													{t(`members.roles.${member.role as OrgRole}`)}
-												</SelectValue>
-											</SelectTrigger>
+												<SelectTrigger className="w-28">
+													<SelectValue>
+														{t(`members.roles.${member.role as OrgRole}`)}
+													</SelectValue>
+												</SelectTrigger>
+											</span>
 											<SelectContent>
 												{ORG_ROLES.map((role) => (
 													<SelectItem key={role} value={role}>
@@ -221,18 +232,24 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 										</Select>
 									</TableCell>
 									<TableCell className="text-right">
-										<Button
-											variant="ghost"
-											size="sm"
-											className="text-destructive hover:text-destructive"
-											disabled={!canManage || isSelf || member.role === "owner"}
+										<span
+											className="inline-block"
 											title={
 												isSelf ? t("members.selfRemoveTooltip") : undefined
 											}
-											onClick={() => setRemoveTarget(member)}
 										>
-											{t("common.remove")}
-										</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="text-destructive hover:text-destructive"
+												disabled={
+													!canManage || isSelf || member.role === "owner"
+												}
+												onClick={() => setRemoveTarget(member)}
+											>
+												{t("common.remove")}
+											</Button>
+										</span>
 									</TableCell>
 								</TableRow>
 							);
@@ -260,7 +277,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 					<Alert variant="destructive">
 						<CircleAlert />
 						<AlertDescription>
-							{(roleMutation.error ?? removeMutation.error)?.message}
+							{errorMessage(roleMutation.error ?? removeMutation.error)}
 						</AlertDescription>
 					</Alert>
 				)}
@@ -315,7 +332,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						<Alert variant="destructive">
 							<CircleAlert />
 							<AlertDescription>
-								{revokeMutation.error.message}
+								{errorMessage(revokeMutation.error)}
 							</AlertDescription>
 						</Alert>
 					)}

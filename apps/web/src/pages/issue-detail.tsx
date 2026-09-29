@@ -228,7 +228,7 @@ export function IssueDetailPage({
 
 	if (issue.isError || !issue.data) {
 		return (
-			<div className="p-8">
+			<div className="px-4 py-8 lg:px-6">
 				<Alert variant="destructive">
 					<CircleAlert />
 					<AlertDescription>

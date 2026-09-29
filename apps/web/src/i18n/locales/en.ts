@@ -88,6 +88,8 @@ const en = {
 			invitationExpired: "This invitation has expired.",
 			emailMismatch: "This invitation was sent to a different email address.",
 			alreadyMember: "You're already a member of this organization.",
+			orgFull:
+				"This organization has no open member slots on its current plan.",
 			generic: "This invitation is invalid or has expired.",
 		},
 	},
@@ -162,6 +164,7 @@ const en = {
 		dueDate: "Due date",
 		estimate: "Estimate",
 		estimateUnit: "points",
+		estimateInvalid: "Estimate must be a whole number between 0 and 100.",
 		statuses: {
 			backlog: "Backlog",
 			todo: "Todo",
@@ -295,9 +298,11 @@ const en = {
 		removeTitle: "Remove member?",
 		removeDescription:
 			"{{name}} will lose access to this organization. They can be invited again later.",
+		removeFailed: "Failed to remove member.",
 		selfRemoveTooltip: "You cannot remove yourself",
 		selfRoleTooltip: "You cannot change your own role",
 		lastOwnerTooltip: "An organization must keep at least one owner",
+		roleUpdateFailed: "Failed to update role.",
 		pendingTitle: "Pending invitations",
 		noPending: "No pending invitations.",
 		status: "Status",
@@ -305,6 +310,7 @@ const en = {
 		revoke: "Revoke",
 		revokeTitle: "Revoke invitation?",
 		revokeDescription: "They will not be able to join with this link.",
+		revokeFailed: "Failed to revoke invitation.",
 	},
 	labels: {
 		create: "New label",

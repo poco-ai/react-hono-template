@@ -24,20 +24,16 @@ const searchSchema = z.object({
 
 type InviteErrorKey =
 	| "invite.errors.invitationNotFound"
-	| "invite.errors.invitationExpired"
 	| "invite.errors.emailMismatch"
 	| "invite.errors.alreadyMember"
+	| "invite.errors.orgFull"
 	| "invite.errors.generic";
 
 const inviteErrorKeys: Record<string, InviteErrorKey> = {
 	INVITATION_NOT_FOUND: "invite.errors.invitationNotFound",
-	INVITATION_EXPIRED: "invite.errors.invitationExpired",
-	INVITATION_CANCELED: "invite.errors.invitationNotFound",
-	INVITATION_ALREADY_ACCEPTED: "invite.errors.invitationNotFound",
 	YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION: "invite.errors.emailMismatch",
 	USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "invite.errors.alreadyMember",
-	YOU_MAY_ALREADY_BE_A_MEMBER_OF_THIS_ORGANIZATION:
-		"invite.errors.alreadyMember",
+	ORGANIZATION_MEMBERSHIP_LIMIT_REACHED: "invite.errors.orgFull",
 };
 
 class InviteAcceptError extends Error {

@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import {
+	Link,
+	Outlet,
+	useLocation,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
@@ -18,7 +24,7 @@ import {
 import { cn } from "@workspace/ui/lib/utils";
 import { Check, ChevronsUpDown, Menu, Plus } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -210,8 +216,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function OrgLayout() {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
+	const location = useLocation();
 	const orgs = useQuery(orgsQuery());
 	const [menuOpen, setMenuOpen] = useState(false);
+
+	useEffect(() => {
+		if (location.pathname) {
+			setMenuOpen(false);
+		}
+	}, [location.pathname]);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 

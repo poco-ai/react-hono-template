@@ -673,6 +673,13 @@ function CreateIssueDialog({
 	const [dueDate, setDueDate] = useState("");
 	const [estimate, setEstimate] = useState("");
 
+	const estimateNumber = estimate === "" ? undefined : Number(estimate);
+	const estimateValid =
+		estimateNumber === undefined ||
+		(Number.isInteger(estimateNumber) &&
+			estimateNumber >= 0 &&
+			estimateNumber <= 100);
+
 	useEffect(() => {
 		if (open) {
 			setTitle("");
@@ -876,6 +883,11 @@ function CreateIssueDialog({
 							<p className="text-muted-foreground text-xs">
 								{t("issues.estimateUnit")}
 							</p>
+							{!estimateValid && (
+								<p className="text-destructive text-xs">
+									{t("issues.estimateInvalid")}
+								</p>
+							)}
 						</div>
 					</div>
 					<div className="flex flex-col gap-2">
@@ -899,7 +911,10 @@ function CreateIssueDialog({
 						</Alert>
 					)}
 					<DialogFooter>
-						<Button type="submit" disabled={createMutation.isPending}>
+						<Button
+							type="submit"
+							disabled={createMutation.isPending || !estimateValid}
+						>
 							{t("common.create")}
 						</Button>
 					</DialogFooter>

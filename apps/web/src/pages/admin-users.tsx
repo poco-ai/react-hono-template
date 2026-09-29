@@ -217,19 +217,23 @@ export function AdminUsersPage() {
 												{t("adminUsers.unban")}
 											</Button>
 										) : (
-											<Button
-												variant="destructive"
-												size="sm"
-												disabled={isSelf || user.role === "admin" || mutating}
+											<span
+												className="inline-block"
 												title={
 													isSelf ? t("adminUsers.selfBanTooltip") : undefined
 												}
-												onClick={() =>
-													setBanTarget({ id: user.id, name: user.name })
-												}
 											>
-												{t("adminUsers.ban")}
-											</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													disabled={isSelf || user.role === "admin" || mutating}
+													onClick={() =>
+														setBanTarget({ id: user.id, name: user.name })
+													}
+												>
+													{t("adminUsers.ban")}
+												</Button>
+											</span>
 										)}
 									</TableCell>
 								</TableRow>

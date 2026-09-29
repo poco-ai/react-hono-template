@@ -37,14 +37,6 @@ export function EditProjectDialog({
 	const [description, setDescription] = useState("");
 	const [color, setColor] = useState(DEFAULT_COLOR);
 
-	useEffect(() => {
-		if (open && project) {
-			setName(project.name);
-			setDescription(project.description ?? "");
-			setColor(project.color ?? DEFAULT_COLOR);
-		}
-	}, [open, project]);
-
 	const updateMutation = useMutation({
 		mutationFn: (target: ProjectDto) =>
 			unwrap(
@@ -62,6 +54,15 @@ export function EditProjectDialog({
 			onOpenChange(false);
 		},
 	});
+
+	useEffect(() => {
+		if (open && project) {
+			updateMutation.reset();
+			setName(project.name);
+			setDescription(project.description ?? "");
+			setColor(project.color ?? DEFAULT_COLOR);
+		}
+	}, [open, project, updateMutation.reset]);
 
 	const onSubmit = () => {
 		if (!project || !name.trim()) {
