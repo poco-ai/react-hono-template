@@ -7,8 +7,10 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { Toaster } from "@workspace/ui/components/sonner";
 import { useTranslation } from "react-i18next";
 import { NotFoundState } from "@/components/not-found-state";
+import { useTheme } from "@/components/theme-provider";
 
 export interface RouterContext {
 	queryClient: QueryClient;
@@ -65,8 +67,18 @@ function RootError({ error, reset }: ErrorComponentProps) {
 	);
 }
 
+function RootComponent() {
+	const { theme } = useTheme();
+	return (
+		<>
+			<Toaster theme={theme} />
+			<Outlet />
+		</>
+	);
+}
+
 export const Route = createRootRouteWithContext<RouterContext>()({
-	component: () => <Outlet />,
+	component: RootComponent,
 	notFoundComponent: NotFound,
 	errorComponent: RootError,
 });

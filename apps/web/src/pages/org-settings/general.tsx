@@ -30,6 +30,7 @@ import {
 import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { apiErrorMessage, errorCode } from "@/lib/errors";
 import { membersQuery } from "@/lib/queries/members";
@@ -55,7 +56,6 @@ export function GeneralSettingsPage({
 	const frozen = useOrgFrozen(orgId);
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
-	const [saved, setSaved] = useState(false);
 	const [leaveOpen, setLeaveOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -92,9 +92,8 @@ export function GeneralSettingsPage({
 			}
 		},
 		onSuccess: () => {
+			toast.success(t("toast.settingsSaved"));
 			queryClient.invalidateQueries({ queryKey: orgsQuery().queryKey });
-			setSaved(true);
-			setTimeout(() => setSaved(false), 2000);
 		},
 	});
 
@@ -176,21 +175,14 @@ export function GeneralSettingsPage({
 							/>
 						</div>
 						{canManage ? (
-							<div className="flex items-center gap-3">
-								<Button
-									onClick={() => updateMutation.mutate()}
-									disabled={
-										frozen || !dirty || !name.trim() || updateMutation.isPending
-									}
-								>
-									{t("settings.save")}
-								</Button>
-								{saved && (
-									<span className="text-muted-foreground text-sm">
-										{t("settings.saved")}
-									</span>
-								)}
-							</div>
+							<Button
+								onClick={() => updateMutation.mutate()}
+								disabled={
+									frozen || !dirty || !name.trim() || updateMutation.isPending
+								}
+							>
+								{t("settings.save")}
+							</Button>
 						) : (
 							<p className="text-muted-foreground text-xs">
 								{t("errors.orgSettingsRequired")}

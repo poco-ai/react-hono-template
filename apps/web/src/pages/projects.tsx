@@ -30,6 +30,7 @@ import {
 import { CircleAlert, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { client, unwrap } from "@/lib/api";
@@ -78,7 +79,14 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 					json: { archived: !project.archived },
 				}),
 			),
-		onSuccess: () => {
+		onSuccess: (_data, project) => {
+			toast.success(
+				t(
+					project.archived
+						? "toast.projectUnarchived"
+						: "toast.projectArchived",
+				),
+			);
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
 			setArchiveTarget(null);
 		},

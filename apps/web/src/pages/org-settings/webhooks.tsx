@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
@@ -108,15 +109,6 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 	const [deliveriesTarget, setDeliveriesTarget] = useState<WebhookDto | null>(
 		null,
 	);
-	const [pingNotice, setPingNotice] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!pingNotice) {
-			return;
-		}
-		const timer = setTimeout(() => setPingNotice(null), 4000);
-		return () => clearTimeout(timer);
-	}, [pingNotice]);
 
 	const invalidate = () =>
 		queryClient.invalidateQueries({ queryKey: webhooksKey(orgId) });
@@ -140,6 +132,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.webhookDeleted"));
 			invalidate();
 			setDeleteTarget(null);
 		},
@@ -152,8 +145,8 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 					param: { orgId, webhookId },
 				}),
 			),
-		onSuccess: (_, webhookId) => {
-			setPingNotice(webhookId);
+		onSuccess: () => {
+			toast.success(t("toast.webhookPinged"));
 		},
 	});
 
@@ -173,11 +166,6 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				</Button>
 			</div>
 
-			{pingMutation.isSuccess && pingNotice && (
-				<p className="text-sm text-emerald-600 dark:text-emerald-400">
-					{t("webhooks.pingSent")}
-				</p>
-			)}
 			{pingMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
@@ -409,6 +397,9 @@ function WebhookDialog({
 						}),
 					),
 		onSuccess: (saved) => {
+			toast.success(
+				t(webhook ? "toast.webhookUpdated" : "toast.webhookCreated"),
+			);
 			onSaved();
 			if (!webhook && "secret" in saved) {
 				setCreatedSecret(saved.secret as string);

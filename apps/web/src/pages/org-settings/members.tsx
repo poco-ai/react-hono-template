@@ -39,6 +39,7 @@ import {
 import { CircleAlert, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { z } from "zod";
 import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
@@ -121,7 +122,10 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				throw new MemberActionError(error.code, t("members.roleUpdateFailed"));
 			}
 		},
-		onSuccess: invalidateMembers,
+		onSuccess: () => {
+			toast.success(t("toast.memberRoleUpdated"));
+			invalidateMembers();
+		},
 	});
 
 	const removeMutation = useMutation({
@@ -135,6 +139,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 			}
 		},
 		onSuccess: () => {
+			toast.success(t("toast.memberRemoved"));
 			invalidateMembers();
 			setRemoveTarget(null);
 		},
@@ -150,6 +155,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 			}
 		},
 		onSuccess: () => {
+			toast.success(t("toast.invitationRevoked"));
 			invalidateMembers();
 			setRevokeTarget(null);
 		},

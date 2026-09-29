@@ -346,7 +346,6 @@ const zh: typeof en = {
 		orgName: "组织名称",
 		slug: "Slug",
 		save: "保存更改",
-		saved: "已保存。",
 		updateFailed: "更新组织失败",
 		dangerZone: "危险操作",
 		leaveTitle: "退出组织",
@@ -393,10 +392,7 @@ const zh: typeof en = {
 		mockDowngradeTitle: "降级到 Free？",
 		mockDowngradeDescription:
 			"本实例未配置 Stripe，降级为模拟操作。如果组织用量超过 Free 方案的限制，超出限制的成员、项目和 Webhooks 将无法继续使用。",
-		checkoutSuccess: "支付完成——欢迎升级到 Pro！",
 		checkoutCanceled: "支付已取消。",
-		upgradedNotice: "升级已模拟完成——组织现已切换为 Pro 方案。",
-		downgradedNotice: "降级已模拟完成——组织现已切换为 Free 方案。",
 		dismiss: "关闭",
 	},
 	quota: {
@@ -454,7 +450,6 @@ const zh: typeof en = {
 		time: "时间",
 		redeliver: "重新投递",
 		ping: "Ping",
-		pingSent: "已发送 Ping——请查看投递记录了解结果。",
 		events: {
 			"issue.created": "事项已创建",
 			"issue.updated": "事项已更新",
@@ -552,6 +547,31 @@ const zh: typeof en = {
 	},
 	language: {
 		toggle: "切换语言",
+	},
+	toast: {
+		projectCreated: "项目已创建。",
+		projectUpdated: "项目已更新。",
+		projectArchived: "项目已归档。",
+		projectUnarchived: "项目已取消归档。",
+		issueCreated: "事项已创建。",
+		issueDeleted: "事项已删除。",
+		bulkUpdated_one: "已更新 {{count}} 个事项。",
+		bulkUpdated_other: "已更新 {{count}} 个事项。",
+		commentPosted: "评论已发布。",
+		labelCreated: "标签已创建。",
+		labelUpdated: "标签已更新。",
+		labelDeleted: "标签已删除。",
+		apiKeyRevoked: "API 密钥已吊销。",
+		webhookCreated: "Webhook 已创建。",
+		webhookUpdated: "Webhook 已更新。",
+		webhookDeleted: "Webhook 已删除。",
+		webhookPinged: "Ping 已发送，请查看投递结果。",
+		memberRoleUpdated: "角色已更新。",
+		memberRemoved: "成员已移除。",
+		invitationRevoked: "邀请已撤销。",
+		settingsSaved: "设置已保存。",
+		billingUpgraded: "升级成功，欢迎使用 Pro！",
+		billingDowngraded: "降级成功，已切换到 Free。",
 	},
 };
 

@@ -30,8 +30,9 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { CircleAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/issue-utils";
@@ -89,11 +90,16 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 		from: "/_auth/orgs/$orgId/settings/billing",
 	});
 	const [bannerDismissed, setBannerDismissed] = useState(false);
-	const [notice, setNotice] = useState<"upgraded" | "downgraded" | null>(null);
 	const [upgradeOpen, setUpgradeOpen] = useState(false);
 	const [portalOpen, setPortalOpen] = useState(false);
 
 	const billing = useQuery(billingQuery(orgId));
+
+	useEffect(() => {
+		if (checkout === "success") {
+			toast.success(t("toast.billingUpgraded"));
+		}
+	}, [checkout, t]);
 
 	const checkoutMutation = useMutation({
 		mutationFn: () =>
@@ -106,7 +112,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 				return;
 			}
 			setUpgradeOpen(false);
-			setNotice("upgraded");
+			toast.success(t("toast.billingUpgraded"));
 			queryClient.invalidateQueries({ queryKey: billingRootKey(orgId) });
 		},
 	});
@@ -122,7 +128,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 				return;
 			}
 			setPortalOpen(false);
-			setNotice("downgraded");
+			toast.success(t("toast.billingDowngraded"));
 			queryClient.invalidateQueries({ queryKey: billingRootKey(orgId) });
 		},
 	});
@@ -180,18 +186,6 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			{checkout === "success" && !bannerDismissed && (
-				<div className="flex items-center justify-between rounded-md border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-					<span>{t("billing.checkoutSuccess")}</span>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => setBannerDismissed(true)}
-					>
-						{t("billing.dismiss")}
-					</Button>
-				</div>
-			)}
 			{checkout === "canceled" && !bannerDismissed && (
 				<div className="flex items-center justify-between rounded-md border px-4 py-3 text-sm text-muted-foreground">
 					<span>{t("billing.checkoutCanceled")}</span>
@@ -202,16 +196,6 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 					>
 						{t("billing.dismiss")}
 					</Button>
-				</div>
-			)}
-			{notice === "upgraded" && (
-				<div className="rounded-md border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-					{t("billing.upgradedNotice")}
-				</div>
-			)}
-			{notice === "downgraded" && (
-				<div className="rounded-md border px-4 py-3 text-sm text-muted-foreground">
-					{t("billing.downgradedNotice")}
 				</div>
 			)}
 
@@ -261,10 +245,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 							data.stripeEnabled || !data.mockMode ? (
 								<Button
 									disabled={portalMutation.isPending}
-									onClick={() => {
-										setNotice(null);
-										portalMutation.mutate();
-									}}
+									onClick={() => portalMutation.mutate()}
 								>
 									{t("billing.manageBilling")}
 								</Button>
@@ -272,10 +253,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 								<Button
 									variant="destructive"
 									disabled={portalMutation.isPending}
-									onClick={() => {
-										setNotice(null);
-										setPortalOpen(true);
-									}}
+									onClick={() => setPortalOpen(true)}
 								>
 									{t("billing.downgrade")}
 								</Button>
@@ -284,7 +262,6 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 							<Button
 								disabled={checkoutMutation.isPending}
 								onClick={() => {
-									setNotice(null);
 									if (data.stripeEnabled || !data.mockMode) {
 										checkoutMutation.mutate();
 									} else {

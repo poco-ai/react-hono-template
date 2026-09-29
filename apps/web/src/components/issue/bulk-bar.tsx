@@ -16,6 +16,7 @@ import {
 } from "@workspace/ui/components/select";
 import { Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
 import { client, unwrap } from "@/lib/api";
@@ -61,6 +62,9 @@ export function BulkActionBar({
 					t("bulk.partialFailure", { failed, total: numbers.length }),
 				);
 			}
+		},
+		onSuccess: () => {
+			toast.success(t("toast.bulkUpdated", { count: numbers.length }));
 		},
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });

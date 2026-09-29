@@ -51,6 +51,7 @@ import {
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { BoardView } from "@/components/issue/board-view";
 import { BulkActionBar } from "@/components/issue/bulk-bar";
 import { LabelBadge } from "@/components/issue/label-badge";
@@ -704,6 +705,7 @@ function CreateIssueDialog({
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.issueCreated"));
 			onCreated();
 			onOpenChange(false);
 		},

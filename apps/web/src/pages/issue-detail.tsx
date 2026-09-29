@@ -33,6 +33,7 @@ import { ArrowLeft, CircleAlert, Loader2, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { IssueActivityTimeline } from "@/components/issue/issue-activity";
 import { IssueAttachments } from "@/components/issue/issue-attachments";
 import { IssueComments } from "@/components/issue/issue-comments";
@@ -177,6 +178,7 @@ export function IssueDetailPage({
 				].$delete({ param: { orgId, projectId, number: String(issueNumber) } }),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.issueDeleted"));
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "issues"] });
 			queryClient.invalidateQueries({

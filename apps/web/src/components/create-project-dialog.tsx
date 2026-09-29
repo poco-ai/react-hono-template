@@ -14,6 +14,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { QuotaError } from "@/components/quota-error";
 import { client, unwrap } from "@/lib/api";
 import {
@@ -79,6 +80,7 @@ export function CreateProjectDialog({
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.projectCreated"));
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
 			onOpenChange(false);
 		},

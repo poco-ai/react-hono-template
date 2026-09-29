@@ -358,7 +358,6 @@ const en = {
 		orgName: "Organization name",
 		slug: "Slug",
 		save: "Save changes",
-		saved: "Saved.",
 		updateFailed: "Failed to update organization",
 		dangerZone: "Danger zone",
 		leaveTitle: "Leave organization",
@@ -408,10 +407,7 @@ const en = {
 		mockDowngradeTitle: "Downgrade to Free?",
 		mockDowngradeDescription:
 			"This instance has no Stripe configured, so the downgrade is simulated. If your organization is over the Free plan limits, you will lose access to members, projects and webhooks above those limits.",
-		checkoutSuccess: "Checkout complete — welcome to Pro!",
 		checkoutCanceled: "Checkout was canceled.",
-		upgradedNotice: "Upgrade simulated — your organization is now on Pro.",
-		downgradedNotice: "Downgrade simulated — your organization is now on Free.",
 		dismiss: "Dismiss",
 	},
 	quota: {
@@ -473,7 +469,6 @@ const en = {
 		time: "Time",
 		redeliver: "Redeliver",
 		ping: "Ping",
-		pingSent: "Ping sent — check the deliveries for the result.",
 		events: {
 			"issue.created": "Issue created",
 			"issue.updated": "Issue updated",
@@ -573,6 +568,31 @@ const en = {
 	},
 	language: {
 		toggle: "Change language",
+	},
+	toast: {
+		projectCreated: "Project created.",
+		projectUpdated: "Project updated.",
+		projectArchived: "Project archived.",
+		projectUnarchived: "Project unarchived.",
+		issueCreated: "Issue created.",
+		issueDeleted: "Issue deleted.",
+		bulkUpdated_one: "{{count}} issue updated.",
+		bulkUpdated_other: "{{count}} issues updated.",
+		commentPosted: "Comment posted.",
+		labelCreated: "Label created.",
+		labelUpdated: "Label updated.",
+		labelDeleted: "Label deleted.",
+		apiKeyRevoked: "API key revoked.",
+		webhookCreated: "Webhook created.",
+		webhookUpdated: "Webhook updated.",
+		webhookDeleted: "Webhook deleted.",
+		webhookPinged: "Ping sent — check deliveries for the result.",
+		memberRoleUpdated: "Role updated.",
+		memberRemoved: "Member removed.",
+		invitationRevoked: "Invitation revoked.",
+		settingsSaved: "Settings saved.",
+		billingUpgraded: "Upgrade complete — welcome to Pro!",
+		billingDowngraded: "Downgrade complete — you are now on Free.",
 	},
 };
 

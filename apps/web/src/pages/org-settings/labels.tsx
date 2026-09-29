@@ -26,6 +26,7 @@ import { Label } from "@workspace/ui/components/label";
 import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
@@ -72,6 +73,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 						}),
 					),
 		onSuccess: () => {
+			toast.success(t(editing ? "toast.labelUpdated" : "toast.labelCreated"));
 			invalidate();
 			setDialogOpen(false);
 		},
@@ -85,6 +87,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.labelDeleted"));
 			invalidate();
 			setDeleteTarget(null);
 		},

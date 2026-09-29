@@ -21,6 +21,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import { CircleAlert, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { MarkdownContent } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
@@ -95,6 +96,7 @@ export function IssueComments({
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.commentPosted"));
 			invalidate();
 			setBody("");
 			setTab("write");

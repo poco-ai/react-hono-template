@@ -36,6 +36,7 @@ import {
 import { CircleAlert, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
@@ -86,6 +87,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.apiKeyRevoked"));
 			invalidate();
 			setRevokeTarget(null);
 			setPage((current) => {

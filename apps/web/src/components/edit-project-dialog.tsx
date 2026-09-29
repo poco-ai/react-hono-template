@@ -17,6 +17,7 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
 import {
@@ -64,6 +65,7 @@ export function EditProjectDialog({
 				}),
 			),
 		onSuccess: () => {
+			toast.success(t("toast.projectUpdated"));
 			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
 			onOpenChange(false);
 		},
