@@ -42,6 +42,7 @@ import { membersQuery, type OrgRole } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
+import { useHotkeys } from "@/lib/use-hotkeys";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 function SidebarLink({
@@ -250,10 +251,18 @@ export function OrgLayout() {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
 	const location = useLocation();
+	const navigate = useNavigate();
 	const orgs = useQuery(orgsQuery());
 	const frozen = useOrgFrozen(orgId);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [paletteOpen, setPaletteOpen] = useState(false);
+
+	useHotkeys({
+		"g p": () => navigate({ to: "/orgs/$orgId/projects", params: { orgId } }),
+		"g i": () => navigate({ to: "/orgs/$orgId/my-issues", params: { orgId } }),
+		"g a": () => navigate({ to: "/orgs/$orgId/activity", params: { orgId } }),
+		"g s": () => navigate({ to: "/orgs/$orgId/settings", params: { orgId } }),
+	});
 
 	useEffect(() => {
 		if (location.pathname) {

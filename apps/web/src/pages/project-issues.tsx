@@ -49,7 +49,7 @@ import {
 	Search,
 } from "lucide-react";
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BoardView } from "@/components/issue/board-view";
@@ -84,6 +84,7 @@ import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
 import { projectQuery } from "@/lib/queries/projects";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useHotkeys } from "@/lib/use-hotkeys";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export interface IssuesSearch {
@@ -195,6 +196,18 @@ export function ProjectIssuesPage({
 		setCreateOpen(true);
 	};
 
+	const searchInputRef = useRef<HTMLInputElement>(null);
+	useHotkeys({
+		c: () => {
+			if (!frozen) {
+				openCreate();
+			}
+		},
+		"/": () => {
+			searchInputRef.current?.focus();
+		},
+	});
+
 	const allOnPageSelected =
 		(result?.items.length ?? 0) > 0 &&
 		result?.items.every((issue) => selected.has(issue.id));
@@ -289,7 +302,7 @@ export function ProjectIssuesPage({
 								{t("issues.viewBoard")}
 							</Button>
 						</div>
-						<Button onClick={() => openCreate()} disabled={frozen}>
+						<Button onClick={() => openCreate()} disabled={frozen} title="C">
 							<Plus />
 							{t("issues.newIssue")}
 						</Button>
@@ -367,10 +380,12 @@ export function ProjectIssuesPage({
 					<div className="relative">
 						<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
 						<Input
+							ref={searchInputRef}
 							value={searchInput}
 							placeholder={t("issues.searchPlaceholder")}
 							onChange={(e) => setSearchInput(e.target.value)}
 							className="h-8 w-56 pl-8"
+							title="/"
 						/>
 					</div>
 				</form>
