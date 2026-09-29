@@ -27,6 +27,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import {
 	Tooltip,
 	TooltipContent,
@@ -131,9 +132,32 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 			</div>
 
 			{projects.isPending && (
-				<p className="text-muted-foreground py-16 text-center text-sm">
-					{t("common.loading")}
-				</p>
+				<div
+					className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+					aria-hidden="true"
+					aria-busy="true"
+				>
+					{["card-1", "card-2", "card-3", "card-4", "card-5", "card-6"].map(
+						(cardKey) => (
+							<Card key={cardKey} className="py-0">
+								<CardHeader>
+									<Skeleton className="h-5 w-1/2" />
+									<div className="flex flex-col gap-1.5">
+										<Skeleton className="h-4 w-full" />
+										<Skeleton className="h-4 w-2/3" />
+									</div>
+								</CardHeader>
+								<CardContent className="flex flex-col gap-2">
+									<div className="flex items-center gap-2">
+										<Skeleton className="h-5 w-16 rounded-md" />
+										<Skeleton className="h-5 w-20 rounded-md" />
+									</div>
+									<Skeleton className="h-3 w-full" />
+								</CardContent>
+							</Card>
+						),
+					)}
+				</div>
 			)}
 			{projects.isError && (
 				<p className="py-16 text-center text-sm text-red-500">

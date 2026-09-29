@@ -36,6 +36,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import {
 	Table,
 	TableBody,
@@ -446,7 +447,10 @@ export function ProjectIssuesPage({
 				</div>
 			) : (
 				<>
-					<div className="flex-1 overflow-auto px-4 py-4 lg:px-6">
+					<div
+						className="flex-1 overflow-auto px-4 py-4 lg:px-6"
+						aria-busy={issues.isPending || undefined}
+					>
 						<Table>
 							{!listEmpty && (
 								<TableHeader>
@@ -577,16 +581,40 @@ export function ProjectIssuesPage({
 										</TableRow>
 									);
 								})}
-								{issues.isPending && (
-									<TableRow>
-										<TableCell
-											colSpan={9}
-											className="text-muted-foreground h-16 text-center"
-										>
-											{t("common.loading")}
-										</TableCell>
-									</TableRow>
-								)}
+								{issues.isPending &&
+									["row-1", "row-2", "row-3", "row-4", "row-5"].map(
+										(rowKey) => (
+											<TableRow key={rowKey} aria-hidden="true">
+												<TableCell className="hidden md:table-cell">
+													<Skeleton className="size-4" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-3.5 w-14" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-4 w-3/4" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-5 w-20 rounded-md" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-5 w-16 rounded-full" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="size-6 rounded-full" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-5 w-16 rounded-md" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-3.5 w-16" />
+												</TableCell>
+												<TableCell>
+													<Skeleton className="h-3.5 w-20" />
+												</TableCell>
+											</TableRow>
+										),
+									)}
 								{issues.isError && (
 									<TableRow>
 										<TableCell colSpan={9} className="text-center text-red-500">

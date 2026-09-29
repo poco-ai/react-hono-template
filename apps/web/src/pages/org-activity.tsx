@@ -9,6 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@workspace/ui/components/select";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -94,9 +95,23 @@ export function OrgActivityPage({
 
 			<div className="mt-6 flex flex-col gap-4">
 				{activities.isPending && (
-					<p className="text-muted-foreground py-8 text-center text-sm">
-						{t("common.loading")}
-					</p>
+					<ul
+						className="flex flex-col gap-4"
+						aria-hidden="true"
+						aria-busy="true"
+					>
+						{["item-1", "item-2", "item-3", "item-4", "item-5", "item-6"].map(
+							(itemKey) => (
+								<li key={itemKey} className="flex gap-3">
+									<Skeleton className="mt-0.5 size-6 shrink-0 rounded-full" />
+									<div className="flex min-w-0 flex-1 flex-col gap-1.5">
+										<Skeleton className="h-4 w-2/3" />
+										<Skeleton className="h-3.5 w-1/3" />
+									</div>
+								</li>
+							),
+						)}
+					</ul>
 				)}
 				{activities.isError && (
 					<p className="py-8 text-center text-sm text-red-500">

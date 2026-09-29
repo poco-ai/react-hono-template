@@ -15,6 +15,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
 import { CircleAlert, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -147,9 +148,33 @@ export function BoardView({
 	return (
 		<div className="flex min-h-full flex-col gap-3">
 			{issues.isPending && (
-				<p className="text-muted-foreground px-1 py-8 text-center text-sm">
-					{t("common.loading")}
-				</p>
+				<div
+					className="flex items-start gap-4 overflow-hidden pb-4"
+					aria-hidden="true"
+					aria-busy="true"
+				>
+					{ISSUE_STATUSES.map((status) => (
+						<div
+							key={status}
+							className="flex min-w-[200px] max-w-[360px] flex-1 flex-col gap-2 rounded-lg border p-2"
+						>
+							<Skeleton className="mx-1 mb-1 h-5 w-20 rounded-md" />
+							{["card-1", "card-2"].map((cardKey) => (
+								<div
+									key={cardKey}
+									className="flex w-full flex-col gap-2 rounded-md border p-2.5"
+								>
+									<Skeleton className="h-3 w-12" />
+									<Skeleton className="h-4 w-full" />
+									<div className="flex items-center justify-between">
+										<Skeleton className="h-4 w-14 rounded-full" />
+										<Skeleton className="size-5 rounded-full" />
+									</div>
+								</div>
+							))}
+						</div>
+					))}
+				</div>
 			)}
 			{issues.isError && (
 				<Alert variant="destructive" className="my-8">
