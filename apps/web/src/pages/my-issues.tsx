@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatDueDate } from "@/lib/issue-utils";
 import { orgIssuesQuery } from "@/lib/queries/issues";
 import { projectsQuery } from "@/lib/queries/projects";
@@ -60,7 +61,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 				)}
 				{issues.isError && (
 					<p className="py-8 text-center text-sm text-red-500">
-						{issues.error.message}
+						{apiErrorMessage(t, issues.error)}
 					</p>
 				)}
 				{[...grouped.entries()].map(([status, items]) => (

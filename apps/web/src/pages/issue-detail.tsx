@@ -43,7 +43,7 @@ import { StatusBadge } from "@/components/issue/status-badge";
 import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
 import { client, unwrap } from "@/lib/api";
-import { isNotFoundError } from "@/lib/errors";
+import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import {
 	formatDateTime,
 	formatRelativeTime,
@@ -518,14 +518,18 @@ export function IssueDetailPage({
 				{deleteMutation.isError && (
 					<Alert variant="destructive">
 						<CircleAlert />
-						<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+						<AlertDescription>
+							{apiErrorMessage(t, deleteMutation.error)}
+						</AlertDescription>
 					</Alert>
 				)}
 
 				{updateMutation.isError && (
 					<Alert variant="destructive">
 						<CircleAlert />
-						<AlertDescription>{updateMutation.error.message}</AlertDescription>
+						<AlertDescription>
+							{apiErrorMessage(t, updateMutation.error)}
+						</AlertDescription>
 					</Alert>
 				)}
 			</aside>

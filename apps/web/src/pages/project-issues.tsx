@@ -62,7 +62,7 @@ import { NotFoundState } from "@/components/not-found-state";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
-import { isNotFoundError } from "@/lib/errors";
+import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -565,7 +565,7 @@ export function ProjectIssuesPage({
 								{issues.isError && (
 									<TableRow>
 										<TableCell colSpan={9} className="text-center text-red-500">
-											{issues.error.message}
+											{apiErrorMessage(t, issues.error)}
 										</TableCell>
 									</TableRow>
 								)}
@@ -949,7 +949,7 @@ function CreateIssueDialog({
 						<Alert variant="destructive">
 							<CircleAlert />
 							<AlertDescription>
-								{createMutation.error.message}
+								{apiErrorMessage(t, createMutation.error)}
 							</AlertDescription>
 						</Alert>
 					)}

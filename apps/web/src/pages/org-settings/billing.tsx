@@ -33,6 +33,7 @@ import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/issue-utils";
 import { billingQuery, billingRootKey } from "@/lib/queries/billing";
 import { useDocumentTitle } from "@/lib/use-document-title";
@@ -137,7 +138,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 	if (billing.isError) {
 		return (
 			<p className="py-16 text-center text-sm text-red-500">
-				{billing.error.message}
+				{apiErrorMessage(t, billing.error)}
 			</p>
 		);
 	}

@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { MarkdownContent } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import {
 	issueActivitiesKey,
@@ -158,7 +159,7 @@ export function IssueComments({
 			{query.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{query.error.message}</AlertDescription>
+					<AlertDescription>{apiErrorMessage(t, query.error)}</AlertDescription>
 				</Alert>
 			)}
 
@@ -285,7 +286,9 @@ export function IssueComments({
 			{updateMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{updateMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, updateMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 
@@ -348,7 +351,9 @@ export function IssueComments({
 			{createMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{createMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, createMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 
@@ -384,7 +389,9 @@ export function IssueComments({
 			{deleteMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, deleteMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 		</section>

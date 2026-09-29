@@ -18,6 +18,7 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -201,7 +202,7 @@ export function EditProjectDialog({
 						<Alert variant="destructive">
 							<CircleAlert />
 							<AlertDescription>
-								{updateMutation.error.message}
+								{apiErrorMessage(t, updateMutation.error)}
 							</AlertDescription>
 						</Alert>
 					)}

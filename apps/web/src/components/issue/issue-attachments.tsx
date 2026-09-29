@@ -31,6 +31,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatBytes, formatRelativeTime } from "@/lib/issue-utils";
 import {
 	issueActivitiesKey,
@@ -352,7 +353,9 @@ export function IssueAttachments({
 			{attachments.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{attachments.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, attachments.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 
@@ -458,7 +461,9 @@ export function IssueAttachments({
 			{deleteMutation.isError && (
 				<Alert variant="destructive" className="mt-2">
 					<CircleAlert />
-					<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, deleteMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 		</section>

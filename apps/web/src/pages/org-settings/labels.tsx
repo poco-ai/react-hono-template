@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -114,7 +115,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 			)}
 			{labels.isError && (
 				<p className="py-8 text-center text-sm text-red-500">
-					{labels.error.message}
+					{apiErrorMessage(t, labels.error)}
 				</p>
 			)}
 			{labels.data?.length === 0 && (
@@ -164,7 +165,9 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 			{deleteMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, deleteMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 
@@ -301,7 +304,7 @@ function LabelDialog({
 					{error && (
 						<Alert variant="destructive">
 							<CircleAlert />
-							<AlertDescription>{error.message}</AlertDescription>
+							<AlertDescription>{apiErrorMessage(t, error)}</AlertDescription>
 						</Alert>
 					)}
 					<DialogFooter>

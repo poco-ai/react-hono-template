@@ -44,7 +44,7 @@ import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
 import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
-import { errorMessage } from "@/lib/errors";
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -285,7 +285,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						{members.isError && (
 							<TableRow>
 								<TableCell colSpan={3} className="text-center text-red-500">
-									{members.error.message}
+									{apiErrorMessage(t, members.error)}
 								</TableCell>
 							</TableRow>
 						)}
@@ -295,7 +295,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 					<Alert variant="destructive">
 						<CircleAlert />
 						<AlertDescription>
-							{errorMessage(roleMutation.error ?? removeMutation.error)}
+							{apiErrorMessage(t, roleMutation.error ?? removeMutation.error)}
 						</AlertDescription>
 					</Alert>
 				)}
@@ -350,7 +350,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						<Alert variant="destructive">
 							<CircleAlert />
 							<AlertDescription>
-								{errorMessage(revokeMutation.error)}
+								{apiErrorMessage(t, revokeMutation.error)}
 							</AlertDescription>
 						</Alert>
 					)}

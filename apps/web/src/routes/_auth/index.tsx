@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button";
 import { CircleAlert, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { apiErrorMessage } from "@/lib/errors";
 import { orgsQuery } from "@/lib/queries/org";
 
 export const Route = createFileRoute("/_auth/")({
@@ -36,7 +37,7 @@ function HomeRedirect() {
 			<div className="flex min-h-svh flex-col items-center justify-center gap-4">
 				<Alert variant="destructive" className="max-w-md">
 					<CircleAlert />
-					<AlertDescription>{orgs.error.message}</AlertDescription>
+					<AlertDescription>{apiErrorMessage(t, orgs.error)}</AlertDescription>
 				</Alert>
 				<Button variant="outline" onClick={() => orgs.refetch()}>
 					{t("common.retry")}

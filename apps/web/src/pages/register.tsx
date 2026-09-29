@@ -20,7 +20,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
-import { errorMessage } from "@/lib/errors";
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -69,12 +69,7 @@ export function RegisterPage() {
 		}
 		const { error } = await authClient.signUp.email(parsed.data);
 		if (error) {
-			setError(
-				errorMessage({
-					code: error.code ?? undefined,
-					message: error.message ?? t("register.failed"),
-				}),
-			);
+			setError(apiErrorMessage(t, error, "register.failed"));
 			return;
 		}
 		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });

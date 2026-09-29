@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivitySentence } from "@/components/issue/activity-sentence";
 import { UserAvatar } from "@/components/user-avatar";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import { issueActivitiesQuery } from "@/lib/queries/activities";
 import type { OrgMember } from "@/lib/queries/members";
@@ -53,7 +54,9 @@ export function IssueActivityTimeline({
 				) : activities.isError ? (
 					<Alert variant="destructive" className="mx-2">
 						<CircleAlert />
-						<AlertDescription>{activities.error.message}</AlertDescription>
+						<AlertDescription>
+							{apiErrorMessage(t, activities.error)}
+						</AlertDescription>
 					</Alert>
 				) : (activities.data ?? []).length === 0 ? (
 					<p className="text-muted-foreground px-2 text-sm">

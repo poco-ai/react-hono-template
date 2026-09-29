@@ -44,12 +44,20 @@ const en = {
 		apiDocs: "API",
 	},
 	errors: {
-		unexpected: "Something went wrong. Please try again.",
-		orgFrozen: "Organization is frozen. Ask an owner to unfreeze it first.",
-		forbidden: "You do not have permission to perform this action.",
-		unauthorized: "Please sign in and try again.",
-		planLimit:
-			"You have reached the limit of the current plan. Upgrade to continue.",
+		generic: "Something went wrong. Please try again.",
+		codes: {
+			ORG_FROZEN:
+				"This organization is frozen. Ask an owner to unfreeze it first.",
+			PLAN_LIMIT_EXCEEDED:
+				"You have reached the limit of the current plan. Upgrade to continue.",
+			NOT_FOUND: "This item does not exist or has been deleted.",
+			FORBIDDEN: "You do not have permission to perform this action.",
+			UNAUTHORIZED: "Please sign in and try again.",
+			VALIDATION:
+				"Some of the provided values are invalid. Please check and try again.",
+			CONFLICT:
+				"This change conflicts with the current state. Please refresh and try again.",
+		},
 		orgSettingsRequired:
 			"Only owners and admins can change organization settings.",
 		orgLeaveOwner:

@@ -22,6 +22,7 @@ import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { type IssueFilters, projectIssuesQuery } from "@/lib/queries/issues";
 import type { OrgMember } from "@/lib/queries/members";
 
@@ -138,13 +139,17 @@ export function BoardView({
 			{issues.isError && (
 				<Alert variant="destructive" className="my-8">
 					<CircleAlert />
-					<AlertDescription>{issues.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, issues.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 			{moveMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{moveMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, moveMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 			{issues.data && issues.data.total > items.length && (

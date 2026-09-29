@@ -34,6 +34,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -123,7 +124,9 @@ export function AdminOrgsPage() {
 				</form>
 
 				{mutationError && (
-					<p className="text-sm text-red-500">{mutationError.message}</p>
+					<p className="text-sm text-red-500">
+						{apiErrorMessage(t, mutationError)}
+					</p>
 				)}
 
 				<Table>
@@ -206,7 +209,7 @@ export function AdminOrgsPage() {
 						{orgsQuery.isError && (
 							<TableRow>
 								<TableCell colSpan={7} className="text-center text-red-500">
-									{orgsQuery.error.message}
+									{apiErrorMessage(t, orgsQuery.error)}
 								</TableCell>
 							</TableRow>
 						)}

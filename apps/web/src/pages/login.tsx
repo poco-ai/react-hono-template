@@ -24,7 +24,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
-import { errorMessage } from "@/lib/errors";
+import { apiErrorMessage } from "@/lib/errors";
 import { sessionOptions } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -46,12 +46,7 @@ export function LoginPage() {
 			password: String(form.get("password") ?? ""),
 		});
 		if (error) {
-			setError(
-				errorMessage({
-					code: error.code ?? undefined,
-					message: error.message ?? t("login.failed"),
-				}),
-			);
+			setError(apiErrorMessage(t, error, "login.failed"));
 			return;
 		}
 		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });

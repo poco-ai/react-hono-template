@@ -40,6 +40,7 @@ import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -198,7 +199,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 					{keys.isError && (
 						<TableRow>
 							<TableCell colSpan={4} className="text-center text-red-500">
-								{keys.error.message}
+								{apiErrorMessage(t, keys.error)}
 							</TableCell>
 						</TableRow>
 					)}
@@ -231,7 +232,9 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 			{revokeMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{revokeMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, revokeMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 
@@ -380,7 +383,7 @@ function CreateApiKeyDialog({
 							<Alert variant="destructive">
 								<CircleAlert />
 								<AlertDescription>
-									{createMutation.error.message}
+									{apiErrorMessage(t, createMutation.error)}
 								</AlertDescription>
 							</Alert>
 						)}

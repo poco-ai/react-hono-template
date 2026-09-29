@@ -31,6 +31,7 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authClient } from "@/lib/auth-client";
+import { apiErrorMessage, errorCode } from "@/lib/errors";
 import { membersQuery } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { useSession } from "@/lib/session";
@@ -84,8 +85,9 @@ export function GeneralSettingsPage({
 				data: { name: name.trim(), slug },
 			});
 			if (error) {
-				throw new Error(
-					`[${error.code ?? "error"}] ${error.message ?? t("settings.updateFailed")}`,
+				throw Object.assign(
+					new Error(error.message ?? t("settings.updateFailed")),
+					{ code: errorCode(error) },
 				);
 			}
 		},
@@ -102,7 +104,9 @@ export function GeneralSettingsPage({
 				organizationId: orgId,
 			});
 			if (error) {
-				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
+				throw Object.assign(new Error(error.message ?? ""), {
+					code: errorCode(error),
+				});
 			}
 		},
 		onSuccess: () => {
@@ -117,7 +121,9 @@ export function GeneralSettingsPage({
 				organizationId: orgId,
 			});
 			if (error) {
-				throw new Error(`[${error.code ?? "error"}] ${error.message ?? ""}`);
+				throw Object.assign(new Error(error.message ?? ""), {
+					code: errorCode(error),
+				});
 			}
 		},
 		onSuccess: () => {
@@ -194,7 +200,11 @@ export function GeneralSettingsPage({
 							<Alert variant="destructive">
 								<CircleAlert />
 								<AlertDescription>
-									{updateMutation.error.message}
+									{apiErrorMessage(
+										t,
+										updateMutation.error,
+										"settings.updateFailed",
+									)}
 								</AlertDescription>
 							</Alert>
 						)}
@@ -310,7 +320,7 @@ export function GeneralSettingsPage({
 							<Alert variant="destructive">
 								<CircleAlert />
 								<AlertDescription>
-									{deleteMutation.error.message}
+									{apiErrorMessage(t, deleteMutation.error)}
 								</AlertDescription>
 							</Alert>
 						)}

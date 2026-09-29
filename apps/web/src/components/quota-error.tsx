@@ -3,6 +3,7 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isPlanLimitError } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 
 export function QuotaError({
 	error,
@@ -21,7 +22,7 @@ export function QuotaError({
 		<div className="flex flex-col gap-1">
 			<Alert variant="destructive">
 				<CircleAlert />
-				<AlertDescription>{error.message}</AlertDescription>
+				<AlertDescription>{apiErrorMessage(t, error)}</AlertDescription>
 			</Alert>
 			{canUpgrade && isPlanLimitError(error) && (
 				<Link

@@ -8,6 +8,7 @@ import {
 } from "@workspace/ui/components/card";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AdminHomePage() {
@@ -51,7 +52,7 @@ export function AdminHomePage() {
 			)}
 			{statsQuery.isError && (
 				<p className="py-16 text-center text-sm text-red-500">
-					{statsQuery.error.message}
+					{apiErrorMessage(t, statsQuery.error)}
 				</p>
 			)}
 

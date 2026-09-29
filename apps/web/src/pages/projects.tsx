@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
@@ -121,7 +122,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 			)}
 			{projects.isError && (
 				<p className="py-16 text-center text-sm text-red-500">
-					{projects.error.message}
+					{apiErrorMessage(t, projects.error)}
 				</p>
 			)}
 
@@ -236,7 +237,9 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 			{archiveMutation.isError && (
 				<Alert variant="destructive" className="mt-4">
 					<CircleAlert />
-					<AlertDescription>{archiveMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, archiveMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 

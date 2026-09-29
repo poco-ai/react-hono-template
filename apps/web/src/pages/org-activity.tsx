@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivitySentence } from "@/components/issue/activity-sentence";
 import { UserAvatar } from "@/components/user-avatar";
+import { apiErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import {
 	ORG_ACTIVITY_MAX_LIMIT,
@@ -97,7 +98,7 @@ export function OrgActivityPage({
 				)}
 				{activities.isError && (
 					<p className="py-8 text-center text-sm text-red-500">
-						{activities.error.message}
+						{apiErrorMessage(t, activities.error)}
 					</p>
 				)}
 				{!activities.isPending && items.length === 0 && !activities.isError && (

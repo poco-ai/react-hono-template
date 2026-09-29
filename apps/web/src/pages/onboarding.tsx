@@ -20,6 +20,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
+import { apiErrorMessage, errorCode } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -59,8 +60,9 @@ export function OnboardingPage() {
 				slug: slug || slugify(name),
 			});
 			if (error) {
-				throw new Error(
-					`[${error.code ?? "error"}] ${error.message ?? t("onboarding.failed")}`,
+				throw Object.assign(
+					new Error(error.message ?? t("onboarding.failed")),
+					{ code: errorCode(error) },
 				);
 			}
 			return data;
@@ -172,7 +174,11 @@ export function OnboardingPage() {
 							<Alert variant="destructive">
 								<CircleAlert />
 								<AlertDescription>
-									{createMutation.error.message}
+									{apiErrorMessage(
+										t,
+										createMutation.error,
+										"onboarding.failed",
+									)}
 								</AlertDescription>
 							</Alert>
 						)}

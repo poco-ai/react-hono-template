@@ -51,6 +51,7 @@ import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -180,7 +181,9 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 			{pingMutation.isError && (
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertDescription>{pingMutation.error.message}</AlertDescription>
+					<AlertDescription>
+						{apiErrorMessage(t, pingMutation.error)}
+					</AlertDescription>
 				</Alert>
 			)}
 
@@ -280,7 +283,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 					{webhooks.isError && (
 						<TableRow>
 							<TableCell colSpan={5} className="text-center text-red-500">
-								{webhooks.error.message}
+								{apiErrorMessage(t, webhooks.error)}
 							</TableCell>
 						</TableRow>
 					)}
@@ -694,7 +697,7 @@ function DeliveriesDialog({
 						{deliveries.isError && (
 							<TableRow>
 								<TableCell colSpan={6} className="text-center text-red-500">
-									{deliveries.error.message}
+									{apiErrorMessage(t, deliveries.error)}
 								</TableCell>
 							</TableRow>
 						)}
@@ -714,7 +717,7 @@ function DeliveriesDialog({
 					<Alert variant="destructive">
 						<CircleAlert />
 						<AlertDescription>
-							{redeliverMutation.error.message}
+							{apiErrorMessage(t, redeliverMutation.error)}
 						</AlertDescription>
 					</Alert>
 				)}
