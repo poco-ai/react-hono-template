@@ -256,7 +256,7 @@ const zh: typeof en = {
 		showingCap: "仅显示最近 {{count}} 条事项。",
 		viewList: "列表",
 		viewBoard: "看板",
-		boardEmpty: "暂无事项",
+		dropHere: "拖到此处",
 	},
 	comments: {
 		title: "评论",

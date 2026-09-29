@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 import { CircleAlert, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
@@ -111,6 +112,20 @@ export function BoardView({
 		]),
 	);
 
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const [overflows, setOverflows] = useState(false);
+	useEffect(() => {
+		const el = scrollRef.current;
+		if (!el) {
+			return;
+		}
+		const update = () => setOverflows(el.scrollWidth > el.clientWidth);
+		update();
+		const observer = new ResizeObserver(update);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, []);
+
 	const onDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
 		if (!over) {
@@ -158,20 +173,28 @@ export function BoardView({
 				</p>
 			)}
 			<DndContext sensors={sensors} onDragEnd={onDragEnd}>
-				<div className="flex items-start gap-4 overflow-x-auto pb-4">
-					{ISSUE_STATUSES.map((status) => (
-						<BoardColumn
-							key={status}
-							status={status}
-							issues={grouped.get(status) ?? []}
-							projectKey={projectKey}
-							frozen={frozen}
-							memberById={memberById}
-							labelById={labelById}
-							onNewIssue={onNewIssue}
-							onOpen={openIssue}
-						/>
-					))}
+				<div className="relative">
+					<div
+						ref={scrollRef}
+						className="scroll-p-4 flex items-start gap-4 overflow-x-auto pb-4"
+					>
+						{ISSUE_STATUSES.map((status) => (
+							<BoardColumn
+								key={status}
+								status={status}
+								issues={grouped.get(status) ?? []}
+								projectKey={projectKey}
+								frozen={frozen}
+								memberById={memberById}
+								labelById={labelById}
+								onNewIssue={onNewIssue}
+								onOpen={openIssue}
+							/>
+						))}
+					</div>
+					{overflows && (
+						<div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent" />
+					)}
 				</div>
 			</DndContext>
 		</div>
@@ -204,7 +227,7 @@ function BoardColumn({
 		<div
 			ref={setNodeRef}
 			className={cn(
-				"flex w-72 shrink-0 flex-col rounded-lg border p-2 transition-colors",
+				"flex min-w-[200px] max-w-[360px] flex-1 flex-col rounded-lg border p-2 transition-colors",
 				isOver && "border-primary/60 bg-accent/50",
 			)}
 		>
@@ -236,9 +259,11 @@ function BoardColumn({
 					/>
 				))}
 				{issues.length === 0 && (
-					<p className="text-muted-foreground px-1 py-6 text-center text-xs">
-						{t("issues.boardEmpty")}
-					</p>
+					<div className="flex min-h-[96px] flex-1 items-center justify-center rounded-md border border-dashed border-muted-foreground/25 px-2">
+						<p className="text-muted-foreground text-center text-xs">
+							{t("issues.dropHere")}
+						</p>
+					</div>
 				)}
 			</div>
 		</div>

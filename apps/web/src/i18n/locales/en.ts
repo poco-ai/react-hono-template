@@ -266,7 +266,7 @@ const en = {
 		showingCap: "Showing the latest {{count}} issues.",
 		viewList: "List",
 		viewBoard: "Board",
-		boardEmpty: "No issues",
+		dropHere: "Drop issues here",
 	},
 	comments: {
 		title: "Comments",
