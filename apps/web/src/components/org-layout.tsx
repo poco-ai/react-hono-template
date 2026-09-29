@@ -22,10 +22,18 @@ import {
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
 import { cn } from "@workspace/ui/lib/utils";
-import { Check, ChevronsUpDown, Menu, Plus, Snowflake } from "lucide-react";
+import {
+	Check,
+	ChevronsUpDown,
+	Menu,
+	Plus,
+	Search,
+	Snowflake,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CommandPalette } from "@/components/command-palette";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -69,7 +77,13 @@ function SidebarLink({
 	);
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({
+	onNavigate,
+	onOpenCommand,
+}: {
+	onNavigate?: () => void;
+	onOpenCommand?: () => void;
+}) {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
 	const navigate = useNavigate();
@@ -79,6 +93,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 	const members = useQuery(membersQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
+
+	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 	const myMember = members.data?.find((m) => m.userId === session?.user.id);
@@ -141,6 +157,19 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 				</DropdownMenu>
 			</div>
 			<nav className="flex flex-col gap-0.5 px-2">
+				<Button
+					variant="ghost"
+					onClick={onOpenCommand}
+					className="text-muted-foreground hover:text-foreground mb-1 h-8 w-full justify-between px-2 text-sm font-normal"
+				>
+					<span className="flex items-center gap-2">
+						<Search className="size-4" />
+						{t("command.trigger")}
+					</span>
+					<kbd className="bg-muted pointer-events-none inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] font-medium">
+						{isMac ? "⌘K" : "Ctrl K"}
+					</kbd>
+				</Button>
 				<SidebarLink to="/orgs/$orgId/projects" exact onNavigate={onNavigate}>
 					{t("nav.projects")}
 				</SidebarLink>
@@ -224,6 +253,7 @@ export function OrgLayout() {
 	const orgs = useQuery(orgsQuery());
 	const frozen = useOrgFrozen(orgId);
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [paletteOpen, setPaletteOpen] = useState(false);
 
 	useEffect(() => {
 		if (location.pathname) {
@@ -236,7 +266,7 @@ export function OrgLayout() {
 	return (
 		<div className="bg-background flex min-h-svh flex-col lg:flex-row">
 			<aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r lg:flex">
-				<SidebarContent />
+				<SidebarContent onOpenCommand={() => setPaletteOpen(true)} />
 			</aside>
 			<header className="bg-background sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 lg:hidden">
 				<Button
@@ -261,9 +291,13 @@ export function OrgLayout() {
 					<SheetTitle className="sr-only">
 						{currentOrg?.name ?? t("common.loading")}
 					</SheetTitle>
-					<SidebarContent onNavigate={() => setMenuOpen(false)} />
+					<SidebarContent
+						onNavigate={() => setMenuOpen(false)}
+						onOpenCommand={() => setPaletteOpen(true)}
+					/>
 				</SheetContent>
 			</Sheet>
+			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 			<div className="flex min-w-0 flex-1 flex-col">
 				{frozen && (
 					<div
