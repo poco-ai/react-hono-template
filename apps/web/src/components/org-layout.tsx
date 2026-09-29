@@ -22,7 +22,7 @@ import {
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
 import { cn } from "@workspace/ui/lib/utils";
-import { Check, ChevronsUpDown, Menu, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Menu, Plus, Snowflake } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,6 +34,7 @@ import { membersQuery, type OrgRole } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 function SidebarLink({
 	to,
@@ -76,6 +77,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
@@ -164,6 +166,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 						variant="ghost"
 						size="icon-sm"
 						aria-label={t("projects.create")}
+						title={frozen ? t("org.frozenBanner") : undefined}
+						disabled={frozen}
 						onClick={() => setCreateOpen(true)}
 					>
 						<Plus />
@@ -218,6 +222,7 @@ export function OrgLayout() {
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
 	const location = useLocation();
 	const orgs = useQuery(orgsQuery());
+	const frozen = useOrgFrozen(orgId);
 	const [menuOpen, setMenuOpen] = useState(false);
 
 	useEffect(() => {
@@ -259,9 +264,22 @@ export function OrgLayout() {
 					<SidebarContent onNavigate={() => setMenuOpen(false)} />
 				</SheetContent>
 			</Sheet>
-			<main className="min-w-0 flex-1">
-				<Outlet />
-			</main>
+			<div className="flex min-w-0 flex-1 flex-col">
+				{frozen && (
+					<div
+						className="border-b border-amber-500/30 bg-amber-500/10 text-amber-700 sticky top-12 z-30 lg:top-0 dark:text-amber-400"
+						role="alert"
+					>
+						<p className="flex items-center gap-2 px-4 py-2 text-sm font-medium">
+							<Snowflake className="size-4 shrink-0" />
+							{t("org.frozenBanner")}
+						</p>
+					</div>
+				)}
+				<main className="min-w-0 flex-1">
+					<Outlet />
+				</main>
+			</div>
 		</div>
 	);
 }

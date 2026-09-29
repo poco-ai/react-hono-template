@@ -38,10 +38,12 @@ export function IssueComments({
 	orgId,
 	projectId,
 	issueNumber,
+	frozen,
 }: {
 	orgId: string;
 	projectId: string;
 	issueNumber: number;
+	frozen: boolean;
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
@@ -197,6 +199,7 @@ export function IssueComments({
 												variant="ghost"
 												size="icon-sm"
 												aria-label={t("common.edit")}
+												disabled={frozen}
 												onClick={() => {
 													setEditingId(comment.id);
 													setEditBody(comment.body);
@@ -209,6 +212,7 @@ export function IssueComments({
 												size="icon-sm"
 												aria-label={t("common.delete")}
 												className="text-destructive hover:text-destructive"
+												disabled={frozen}
 												onClick={() => setDeleting(comment)}
 											>
 												<Trash2 />
@@ -229,6 +233,7 @@ export function IssueComments({
 											<Button
 												size="sm"
 												disabled={
+													frozen ||
 													updateMutation.isPending ||
 													editBody.trim().length === 0
 												}
@@ -309,6 +314,7 @@ export function IssueComments({
 						onChange={(e) => setBody(e.target.value)}
 						rows={4}
 						maxLength={COMMENT_MAX_LENGTH}
+						disabled={frozen}
 						className="resize-y border-0 focus-visible:ring-0"
 					/>
 				) : (
@@ -331,7 +337,7 @@ export function IssueComments({
 					</span>
 					<Button
 						size="sm"
-						disabled={!canSubmit || createMutation.isPending}
+						disabled={frozen || !canSubmit || createMutation.isPending}
 						onClick={() => createMutation.mutate(body.trim())}
 					>
 						{createMutation.isPending && <Loader2 className="animate-spin" />}

@@ -74,6 +74,7 @@ import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
 import { projectQuery } from "@/lib/queries/projects";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export interface IssuesSearch {
 	page: number;
@@ -109,6 +110,7 @@ export function ProjectIssuesPage({
 	useDocumentTitle(project.data?.name);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createStatus, setCreateStatus] = useState<IssueStatus>("backlog");
 	const [searchInput, setSearchInput] = useState(search.search ?? "");
@@ -277,7 +279,7 @@ export function ProjectIssuesPage({
 								{t("issues.viewBoard")}
 							</Button>
 						</div>
-						<Button onClick={() => openCreate()}>
+						<Button onClick={() => openCreate()} disabled={frozen}>
 							<Plus />
 							{t("issues.newIssue")}
 						</Button>
@@ -409,6 +411,7 @@ export function ProjectIssuesPage({
 						orgId={orgId}
 						projectId={projectId}
 						projectKey={project.data?.key ?? ""}
+						frozen={frozen}
 						filters={{
 							status: statusFilter,
 							priority: priorityFilter,
@@ -433,6 +436,7 @@ export function ProjectIssuesPage({
 											aria-label={t("bulk.selectAll")}
 											checked={allOnPageSelected}
 											indeterminate={selected.size > 0 && !allOnPageSelected}
+											disabled={frozen}
 											onCheckedChange={(checked) => toggleAllOnPage(checked)}
 										/>
 									</TableHead>
@@ -473,6 +477,7 @@ export function ProjectIssuesPage({
 												<Checkbox
 													aria-label={issue.title}
 													checked={selected.has(issue.id)}
+													disabled={frozen}
 													onCheckedChange={(checked) =>
 														toggleOne(issue.id, checked)
 													}
@@ -569,6 +574,7 @@ export function ProjectIssuesPage({
 													<Button
 														variant="outline"
 														size="sm"
+														disabled={frozen}
 														onClick={() => openCreate()}
 													>
 														{t("issues.emptyCta")}
@@ -621,6 +627,7 @@ export function ProjectIssuesPage({
 					orgId={orgId}
 					projectId={projectId}
 					numbers={selectedNumbers}
+					frozen={frozen}
 					onDone={() => setSelected(new Set())}
 				/>
 			)}

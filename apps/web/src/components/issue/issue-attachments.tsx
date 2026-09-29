@@ -92,10 +92,12 @@ export function IssueAttachments({
 	orgId,
 	projectId,
 	issueNumber,
+	frozen,
 }: {
 	orgId: string;
 	projectId: string;
 	issueNumber: number;
+	frozen: boolean;
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
@@ -267,9 +269,10 @@ export function IssueAttachments({
 			<button
 				type="button"
 				className={cn(
-					"flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-5 text-center transition-colors",
+					"flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60",
 					dragOver && "border-primary bg-accent",
 				)}
+				disabled={frozen}
 				onClick={() => inputRef.current?.click()}
 				onDragOver={(e) => {
 					e.preventDefault();
@@ -409,6 +412,7 @@ export function IssueAttachments({
 										size="icon-sm"
 										aria-label={t("common.delete")}
 										className="text-destructive hover:text-destructive"
+										disabled={frozen}
 										onClick={() => setDeleting(attachment)}
 									>
 										<Trash2 />

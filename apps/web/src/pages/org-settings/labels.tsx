@@ -29,6 +29,7 @@ import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
 import { labelsQuery } from "@/lib/queries/labels";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 import { useOrgRole } from "@/lib/use-org-role";
 
 const DEFAULT_COLOR = "#94a3b8";
@@ -39,6 +40,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 	const queryClient = useQueryClient();
 	const labels = useQuery(labelsQuery(orgId));
 	const { canManage } = useOrgRole(orgId);
+	const frozen = useOrgFrozen(orgId);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<LabelDto | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<LabelDto | null>(null);
@@ -90,6 +92,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 							setEditing(null);
 							setDialogOpen(true);
 						}}
+						disabled={frozen}
 					>
 						<Plus />
 						{t("labels.create")}
@@ -126,6 +129,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 										variant="ghost"
 										size="icon-sm"
 										aria-label={t("labels.edit")}
+										disabled={frozen}
 										onClick={() => {
 											setEditing(label);
 											setDialogOpen(true);
@@ -138,6 +142,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 										size="icon-sm"
 										className="text-destructive hover:text-destructive"
 										aria-label={t("common.delete")}
+										disabled={frozen}
 										onClick={() => setDeleteTarget(label)}
 									>
 										<Trash2 />

@@ -52,6 +52,7 @@ import {
 } from "@/lib/queries/members";
 import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 const INVITABLE_ROLES: OrgRole[] = ["admin", "member"];
 
@@ -70,6 +71,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
 	const invitations = useQuery(invitationsQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 	const [inviteOpen, setInviteOpen] = useState(false);
 	const [removeTarget, setRemoveTarget] = useState<OrgMember | null>(null);
 	const [revokeTarget, setRevokeTarget] = useState<OrgInvitation | null>(null);
@@ -147,7 +149,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				<div className="flex items-center justify-between">
 					<h2 className="text-lg font-medium">{t("settings.members")}</h2>
 					{canManage && (
-						<Button onClick={() => setInviteOpen(true)}>
+						<Button onClick={() => setInviteOpen(true)} disabled={frozen}>
 							<Plus />
 							{t("members.invite")}
 						</Button>
@@ -193,6 +195,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 										<Select
 											value={member.role}
 											disabled={
+												frozen ||
 												!canManage ||
 												isSelf ||
 												isLastOwner ||
@@ -243,7 +246,10 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 												size="sm"
 												className="text-destructive hover:text-destructive"
 												disabled={
-													!canManage || isSelf || member.role === "owner"
+													frozen ||
+													!canManage ||
+													isSelf ||
+													member.role === "owner"
 												}
 												onClick={() => setRemoveTarget(member)}
 											>
@@ -317,7 +323,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 												variant="ghost"
 												size="sm"
 												className="text-destructive hover:text-destructive"
-												disabled={revokeMutation.isPending}
+												disabled={frozen || revokeMutation.isPending}
 												onClick={() => setRevokeTarget(invitation)}
 											>
 												{t("members.revoke")}

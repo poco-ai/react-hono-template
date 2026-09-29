@@ -41,6 +41,7 @@ import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
 import { apiKeysQuery, apiKeysRootKey } from "@/lib/queries/apikeys";
 import { membersQuery } from "@/lib/queries/members";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -52,6 +53,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 
 	const keys = useQuery(apiKeysQuery(orgId, page));
 	const members = useQuery(membersQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 
 	const creatorOf = (createdById: string | null) => {
 		if (!createdById) {
@@ -101,7 +103,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 						<ExternalLink />
 						{t("apiKeys.viewDocs")}
 					</Link>
-					<Button onClick={() => setCreateOpen(true)}>
+					<Button onClick={() => setCreateOpen(true)} disabled={frozen}>
 						<Plus />
 						{t("apiKeys.create")}
 					</Button>
@@ -164,7 +166,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 											variant="ghost"
 											size="sm"
 											className="text-destructive hover:text-destructive"
-											disabled={revokeMutation.isPending}
+											disabled={frozen || revokeMutation.isPending}
 											onClick={() => setRevokeTarget(apiKey)}
 										>
 											{t("apiKeys.revoke")}

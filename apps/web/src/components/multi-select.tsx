@@ -19,17 +19,22 @@ export function MultiSelect({
 	onChange,
 	placeholder,
 	className,
+	disabled,
 }: {
 	value: string[];
 	options: MultiSelectOption[];
 	onChange: (next: string[]) => void;
 	placeholder: string;
 	className?: string;
+	disabled?: boolean;
 }) {
 	const { t } = useTranslation();
 	const selected = options.filter((option) => value.includes(option.value));
 
 	const toggle = (option: MultiSelectOption) => {
+		if (disabled) {
+			return;
+		}
 		onChange(
 			value.includes(option.value)
 				? value.filter((v) => v !== option.value)
@@ -41,7 +46,12 @@ export function MultiSelect({
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				render={
-					<Button variant="outline" size="sm" className={className}>
+					<Button
+						variant="outline"
+						size="sm"
+						className={className}
+						disabled={disabled}
+					>
 						<span className="max-w-48 truncate">
 							{selected.length > 0
 								? selected.map((option) => option.label).join(", ")

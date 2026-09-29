@@ -35,6 +35,7 @@ import { membersQuery } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function GeneralSettingsPage({
 	orgId,
@@ -50,6 +51,7 @@ export function GeneralSettingsPage({
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const members = useQuery(membersQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
 	const [saved, setSaved] = useState(false);
@@ -154,7 +156,7 @@ export function GeneralSettingsPage({
 								id="org-name"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
-								disabled={!canManage}
+								disabled={!canManage || frozen}
 							/>
 						</div>
 						<div className="flex flex-col gap-2">
@@ -164,14 +166,16 @@ export function GeneralSettingsPage({
 								value={slug}
 								onChange={(e) => setSlug(e.target.value)}
 								className="font-mono text-sm"
-								disabled={!canManage}
+								disabled={!canManage || frozen}
 							/>
 						</div>
 						{canManage ? (
 							<div className="flex items-center gap-3">
 								<Button
 									onClick={() => updateMutation.mutate()}
-									disabled={!dirty || !name.trim() || updateMutation.isPending}
+									disabled={
+										frozen || !dirty || !name.trim() || updateMutation.isPending
+									}
 								>
 									{t("settings.save")}
 								</Button>
@@ -226,7 +230,11 @@ export function GeneralSettingsPage({
 							<TooltipContent>{t("settings.soleOwnerHint")}</TooltipContent>
 						</Tooltip>
 					) : (
-						<Button variant="outline" onClick={() => setLeaveOpen(true)}>
+						<Button
+							variant="outline"
+							disabled={frozen}
+							onClick={() => setLeaveOpen(true)}
+						>
 							{t("settings.leaveButton")}
 						</Button>
 					)}
@@ -240,7 +248,11 @@ export function GeneralSettingsPage({
 								{t("settings.deleteDescription")}
 							</p>
 						</div>
-						<Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+						<Button
+							variant="destructive"
+							disabled={frozen}
+							onClick={() => setDeleteOpen(true)}
+						>
 							{t("settings.deleteButton")}
 						</Button>
 					</div>

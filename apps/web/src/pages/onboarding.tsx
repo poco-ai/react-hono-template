@@ -49,7 +49,7 @@ export function OnboardingPage() {
 			if (org) {
 				queryClient.setQueryData<Organization[]>(
 					orgsQuery().queryKey,
-					(prev) => [...(prev ?? []), org],
+					(prev) => [...(prev ?? []), { ...org, frozen: false }],
 				);
 				navigate({
 					to: "/orgs/$orgId/projects",

@@ -37,6 +37,7 @@ import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function ProjectsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -50,6 +51,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	const { data: session } = useSession();
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
 	const [editTarget, setEditTarget] = useState<ProjectDto | null>(null);
@@ -88,7 +90,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 					{t("projects.title")}
 				</h1>
 				{canManage && (
-					<Button onClick={() => setCreateOpen(true)}>
+					<Button onClick={() => setCreateOpen(true)} disabled={frozen}>
 						<Plus />
 						{t("projects.create")}
 					</Button>
@@ -128,7 +130,11 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 					<p className="text-muted-foreground">{t("projects.empty")}</p>
 					<div className="flex items-center gap-2">
 						{canManage && (
-							<Button variant="outline" onClick={() => setCreateOpen(true)}>
+							<Button
+								variant="outline"
+								onClick={() => setCreateOpen(true)}
+								disabled={frozen}
+							>
 								<Plus />
 								{t("projects.emptyCta")}
 							</Button>
@@ -181,6 +187,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 														variant="ghost"
 														size="icon-sm"
 														aria-label={t("common.actions")}
+														disabled={frozen}
 														onClick={(e) => e.stopPropagation()}
 													>
 														<MoreHorizontal />

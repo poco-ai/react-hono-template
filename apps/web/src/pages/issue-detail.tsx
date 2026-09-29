@@ -61,6 +61,7 @@ import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
 import { projectQuery } from "@/lib/queries/projects";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const UNASSIGNED = "__unassigned__";
@@ -84,6 +85,7 @@ export function IssueDetailPage({
 	);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 
 	const [title, setTitle] = useState("");
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -266,6 +268,8 @@ export function IssueDetailPage({
 					value={title}
 					onChange={(e) => setTitle(e.target.value)}
 					onBlur={commitTitle}
+					readOnly={frozen}
+					aria-disabled={frozen}
 					onKeyDown={(e) => {
 						if (e.key === "Enter") {
 							e.currentTarget.blur();
@@ -294,6 +298,7 @@ export function IssueDetailPage({
 				<div className="mt-6">
 					<IssueDescription
 						description={issue.data?.description ?? null}
+						disabled={frozen}
 						onSave={async (description) => {
 							try {
 								await updateMutation.mutateAsync({ description });
@@ -312,12 +317,14 @@ export function IssueDetailPage({
 						orgId={orgId}
 						projectId={projectId}
 						issueNumber={issueNumber}
+						frozen={frozen}
 					/>
 					<Separator />
 					<IssueAttachments
 						orgId={orgId}
 						projectId={projectId}
 						issueNumber={issueNumber}
+						frozen={frozen}
 					/>
 					<Separator />
 					<IssueActivityTimeline
@@ -334,6 +341,7 @@ export function IssueDetailPage({
 				<PropertyRow label={t("issues.status")}>
 					<Select
 						value={data.status as IssueStatus}
+						disabled={frozen}
 						onValueChange={(v) =>
 							v && update({ status: v as (typeof ISSUE_STATUSES)[number] })
 						}
@@ -356,6 +364,7 @@ export function IssueDetailPage({
 				<PropertyRow label={t("issues.priority")}>
 					<Select
 						value={priorityName(data.priority)}
+						disabled={frozen}
 						onValueChange={(v) =>
 							v &&
 							update({
@@ -381,6 +390,7 @@ export function IssueDetailPage({
 				<PropertyRow label={t("issues.assignee")}>
 					<Select
 						value={data.assigneeId ?? UNASSIGNED}
+						disabled={frozen}
 						onValueChange={(v) =>
 							update({ assigneeId: v === UNASSIGNED ? null : v })
 						}
@@ -406,6 +416,7 @@ export function IssueDetailPage({
 						className="w-full justify-between"
 						placeholder={t("issues.noLabels")}
 						value={data.labelIds}
+						disabled={frozen}
 						options={(labels.data ?? []).map((label) => ({
 							value: label.id,
 							label: label.name,
@@ -428,6 +439,7 @@ export function IssueDetailPage({
 					<Input
 						type="date"
 						value={toDateInputValue(data.dueDate)}
+						disabled={frozen}
 						onChange={(e) =>
 							update({ dueDate: fromDateInputValue(e.target.value) })
 						}
@@ -440,6 +452,7 @@ export function IssueDetailPage({
 						min={0}
 						max={100}
 						value={estimateDraft}
+						disabled={frozen}
 						onChange={(e) => setEstimateDraft(e.target.value)}
 						onBlur={() => {
 							if (estimateDraft === "") {
@@ -472,6 +485,7 @@ export function IssueDetailPage({
 					<Button
 						variant="outline"
 						className="w-full text-destructive hover:text-destructive"
+						disabled={frozen}
 						onClick={() => setDeleteOpen(true)}
 					>
 						<Trash2 />

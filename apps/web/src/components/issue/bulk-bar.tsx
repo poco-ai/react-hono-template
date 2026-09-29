@@ -29,11 +29,13 @@ export function BulkActionBar({
 	orgId,
 	projectId,
 	numbers,
+	frozen,
 	onDone,
 }: {
 	orgId: string;
 	projectId: string;
 	numbers: number[];
+	frozen: boolean;
 	onDone: () => void;
 }) {
 	const { t } = useTranslation();
@@ -77,6 +79,7 @@ export function BulkActionBar({
 			</span>
 			<Select
 				value={NO_ACTION}
+				disabled={frozen}
 				onValueChange={(v) =>
 					v && bulkMutation.mutate({ status: v as IssueStatus })
 				}
@@ -95,6 +98,7 @@ export function BulkActionBar({
 			</Select>
 			<Select
 				value={NO_ACTION}
+				disabled={frozen}
 				onValueChange={(v) =>
 					v &&
 					bulkMutation.mutate({

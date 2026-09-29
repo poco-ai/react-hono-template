@@ -7,9 +7,11 @@ import { MarkdownContent } from "@/components/markdown";
 
 export function IssueDescription({
 	description,
+	disabled,
 	onSave,
 }: {
 	description: string | null;
+	disabled?: boolean;
 	onSave: (description: string | null) => Promise<boolean>;
 }) {
 	const { t } = useTranslation();
@@ -68,6 +70,7 @@ export function IssueDescription({
 			<Button
 				variant="ghost"
 				className="text-muted-foreground hover:text-foreground min-h-16 h-auto w-full justify-start rounded-md border border-dashed p-3 text-left text-sm font-normal"
+				disabled={disabled}
 				onClick={() => setEditing(true)}
 			>
 				{t("issues.descriptionEmpty")}
@@ -80,15 +83,17 @@ export function IssueDescription({
 			<div className="pr-8">
 				<MarkdownContent>{description}</MarkdownContent>
 			</div>
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				aria-label={t("common.edit")}
-				className="text-muted-foreground hover:text-foreground absolute top-0 right-0 opacity-0 transition-opacity group-hover:opacity-100"
-				onClick={() => setEditing(true)}
-			>
-				<Pencil />
-			</Button>
+			{!disabled && (
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					aria-label={t("common.edit")}
+					className="text-muted-foreground hover:text-foreground absolute top-0 right-0 opacity-0 transition-opacity group-hover:opacity-100"
+					onClick={() => setEditing(true)}
+				>
+					<Pencil />
+				</Button>
+			)}
 		</div>
 	);
 }

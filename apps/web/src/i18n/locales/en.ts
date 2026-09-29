@@ -107,6 +107,8 @@ const en = {
 	org: {
 		switcherLabel: "Organizations",
 		create: "Create organization",
+		frozenBanner:
+			"This organization has been frozen by a platform admin and is read-only.",
 		roles: {
 			owner: "Owner",
 			admin: "Admin",

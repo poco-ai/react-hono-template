@@ -59,6 +59,7 @@ import {
 } from "@/lib/queries/webhooks";
 import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 type WebhookEventLabel = WebhookEventName | "ping";
 
@@ -93,6 +94,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 	useDocumentTitle(t("settings.webhooks"));
 	const queryClient = useQueryClient();
 	const webhooks = useQuery(webhooksQuery(orgId));
+	const frozen = useOrgFrozen(orgId);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<WebhookDto | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<WebhookDto | null>(null);
@@ -157,6 +159,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 						setEditing(null);
 						setDialogOpen(true);
 					}}
+					disabled={frozen}
 				>
 					<Plus />
 					{t("webhooks.create")}
@@ -204,7 +207,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 								<Switch
 									aria-label={t("webhooks.activeLabel", { url: webhook.url })}
 									checked={webhook.active}
-									disabled={toggleMutation.isPending}
+									disabled={frozen || toggleMutation.isPending}
 									onCheckedChange={(active) =>
 										toggleMutation.mutate({ id: webhook.id, active })
 									}
@@ -219,7 +222,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 										variant="ghost"
 										size="icon-sm"
 										aria-label={t("webhooks.ping")}
-										disabled={pingMutation.isPending}
+										disabled={frozen || pingMutation.isPending}
 										onClick={() => pingMutation.mutate(webhook.id)}
 									>
 										<Zap />
@@ -236,6 +239,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 										variant="ghost"
 										size="icon-sm"
 										aria-label={t("common.edit")}
+										disabled={frozen}
 										onClick={() => {
 											setEditing(webhook);
 											setDialogOpen(true);
@@ -248,6 +252,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 										size="icon-sm"
 										className="text-destructive hover:text-destructive"
 										aria-label={t("common.delete")}
+										disabled={frozen}
 										onClick={() => setDeleteTarget(webhook)}
 									>
 										<Trash2 />
@@ -551,6 +556,7 @@ function DeliveriesDialog({
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
+	const frozen = useOrgFrozen(orgId);
 	const [page, setPage] = useState(1);
 	const [redelivering, setRedelivering] = useState<string | null>(null);
 
@@ -639,7 +645,7 @@ function DeliveriesDialog({
 										variant="ghost"
 										size="icon-sm"
 										aria-label={t("webhooks.redeliver")}
-										disabled={redelivering !== null}
+										disabled={frozen || redelivering !== null}
 										onClick={() => redeliverMutation.mutate(delivery.id)}
 									>
 										{redelivering === delivery.id ? (

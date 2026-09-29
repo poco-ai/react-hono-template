@@ -32,6 +32,7 @@ export function BoardView({
 	projectId,
 	projectKey,
 	filters,
+	frozen,
 	members,
 	labels,
 	onNewIssue,
@@ -40,6 +41,7 @@ export function BoardView({
 	projectId: string;
 	projectKey: string;
 	filters: Omit<IssueFilters, "page" | "pageSize">;
+	frozen: boolean;
 	members: OrgMember[];
 	labels: LabelDto[];
 	onNewIssue: (status: IssueStatus) => void;
@@ -158,6 +160,7 @@ export function BoardView({
 							status={status}
 							issues={grouped.get(status) ?? []}
 							projectKey={projectKey}
+							frozen={frozen}
 							memberById={memberById}
 							labelById={labelById}
 							onNewIssue={onNewIssue}
@@ -174,6 +177,7 @@ function BoardColumn({
 	status,
 	issues,
 	projectKey,
+	frozen,
 	memberById,
 	labelById,
 	onNewIssue,
@@ -182,6 +186,7 @@ function BoardColumn({
 	status: IssueStatus;
 	issues: IssueDetailDto[];
 	projectKey: string;
+	frozen: boolean;
 	memberById: Map<string, OrgMember>;
 	labelById: Map<string, LabelDto>;
 	onNewIssue: (status: IssueStatus) => void;
@@ -207,6 +212,7 @@ function BoardColumn({
 					variant="ghost"
 					size="icon-sm"
 					aria-label={t("issues.newIssue")}
+					disabled={frozen}
 					onClick={() => onNewIssue(status)}
 				>
 					<Plus />
@@ -218,6 +224,7 @@ function BoardColumn({
 						key={issue.id}
 						issue={issue}
 						projectKey={projectKey}
+						frozen={frozen}
 						memberById={memberById}
 						labelById={labelById}
 						onOpen={onOpen}
@@ -236,18 +243,20 @@ function BoardColumn({
 function BoardCard({
 	issue,
 	projectKey,
+	frozen,
 	memberById,
 	labelById,
 	onOpen,
 }: {
 	issue: IssueDetailDto;
 	projectKey: string;
+	frozen: boolean;
 	memberById: Map<string, OrgMember>;
 	labelById: Map<string, LabelDto>;
 	onOpen: (issueNumber: number) => void;
 }) {
 	const { attributes, listeners, setNodeRef, transform, isDragging } =
-		useDraggable({ id: issue.id });
+		useDraggable({ id: issue.id, disabled: frozen });
 	const assignee = issue.assigneeId
 		? memberById.get(issue.assigneeId)
 		: undefined;
@@ -262,7 +271,7 @@ function BoardCard({
 					: undefined
 			}
 			{...attributes}
-			{...listeners}
+			{...(frozen ? {} : listeners)}
 			onClick={() => onOpen(issue.number)}
 			className={cn(
 				"bg-card flex w-full touch-none flex-col gap-2 rounded-md border p-2.5 text-left shadow-xs transition-shadow hover:shadow-md",
