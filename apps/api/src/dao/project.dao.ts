@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ProjectDto } from "../dto/project.dto";
@@ -25,6 +25,7 @@ export const createProjectDao = (db: Database) => ({
 					? eq(projects.orgId, orgId)
 					: and(eq(projects.orgId, orgId), eq(projects.archived, false)),
 			)
+			.orderBy(desc(projects.createdAt), desc(projects.id))
 			.all();
 		return rows.map(toProjectDto);
 	},
