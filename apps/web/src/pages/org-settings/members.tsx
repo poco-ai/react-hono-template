@@ -41,6 +41,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { QuotaError } from "@/components/quota-error";
+import { SecretReveal } from "@/components/secret-reveal";
 import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/errors";
@@ -444,7 +445,6 @@ function InviteDialog({
 	const [email, setEmail] = useState("");
 	const [role, setRole] = useState<OrgRole>("member");
 	const [inviteLink, setInviteLink] = useState<string | null>(null);
-	const [copied, setCopied] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
@@ -452,7 +452,6 @@ function InviteDialog({
 			setEmail("");
 			setRole("member");
 			setInviteLink(null);
-			setCopied(false);
 			setFieldErrors({});
 		}
 	}, [open]);
@@ -473,18 +472,9 @@ function InviteDialog({
 		},
 		onSuccess: (link) => {
 			setInviteLink(link);
-			setCopied(false);
 			onInvited();
 		},
 	});
-
-	const copyLink = async () => {
-		if (!inviteLink) {
-			return;
-		}
-		await navigator.clipboard.writeText(inviteLink);
-		setCopied(true);
-	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -501,16 +491,7 @@ function InviteDialog({
 				</DialogHeader>
 				{inviteLink ? (
 					<div className="flex flex-col gap-3">
-						<div className="flex gap-2">
-							<Input
-								readOnly
-								value={inviteLink}
-								className="font-mono text-xs"
-							/>
-							<Button type="button" variant="outline" onClick={copyLink}>
-								{copied ? t("common.copied") : t("common.copy")}
-							</Button>
-						</div>
+						<SecretReveal value={inviteLink} />
 						<DialogFooter>
 							<Button type="button" onClick={() => onOpenChange(false)}>
 								{t("common.done")}

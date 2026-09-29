@@ -36,6 +36,7 @@ import {
 import { CircleAlert, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
@@ -289,14 +290,12 @@ function CreateApiKeyDialog({
 	const { t } = useTranslation();
 	const [name, setName] = useState("");
 	const [createdKey, setCreatedKey] = useState<string | null>(null);
-	const [copied, setCopied] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
 		if (open) {
 			setName("");
 			setCreatedKey(null);
-			setCopied(false);
 			setFieldErrors({});
 		}
 	}, [open]);
@@ -311,18 +310,9 @@ function CreateApiKeyDialog({
 			),
 		onSuccess: (apiKey) => {
 			setCreatedKey(apiKey.key);
-			setCopied(false);
 			onCreated();
 		},
 	});
-
-	const copyKey = async () => {
-		if (!createdKey) {
-			return;
-		}
-		await navigator.clipboard.writeText(createdKey);
-		setCopied(true);
-	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -339,16 +329,7 @@ function CreateApiKeyDialog({
 				</DialogHeader>
 				{createdKey ? (
 					<div className="flex flex-col gap-3">
-						<div className="flex gap-2">
-							<Input
-								readOnly
-								value={createdKey}
-								className="font-mono text-xs"
-							/>
-							<Button type="button" variant="outline" onClick={copyKey}>
-								{copied ? t("common.copied") : t("common.copy")}
-							</Button>
-						</div>
+						<SecretReveal value={createdKey} />
 						<DialogFooter>
 							<Button type="button" onClick={() => onOpenChange(false)}>
 								{t("common.done")}

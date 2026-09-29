@@ -48,6 +48,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
+import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
 import {
@@ -373,7 +374,6 @@ function WebhookDialog({
 	const [events, setEvents] = useState<string[]>([]);
 	const [active, setActive] = useState(true);
 	const [createdSecret, setCreatedSecret] = useState<string | null>(null);
-	const [copied, setCopied] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
@@ -382,7 +382,6 @@ function WebhookDialog({
 			setEvents(webhook?.events ?? []);
 			setActive(webhook?.active ?? true);
 			setCreatedSecret(null);
-			setCopied(false);
 			setFieldErrors({});
 		}
 	}, [open, webhook]);
@@ -410,7 +409,6 @@ function WebhookDialog({
 			onSaved();
 			if (!webhook && "secret" in saved) {
 				setCreatedSecret(saved.secret as string);
-				setCopied(false);
 			} else {
 				onOpenChange(false);
 			}
@@ -422,14 +420,6 @@ function WebhookDialog({
 			checked ? [...prev, event] : prev.filter((e) => e !== event),
 		);
 		setFieldErrors((prev) => withoutFieldError(prev, "events"));
-	};
-
-	const copySecret = async () => {
-		if (!createdSecret) {
-			return;
-		}
-		await navigator.clipboard.writeText(createdSecret);
-		setCopied(true);
 	};
 
 	const onUrlChange = (next: string) => {
@@ -481,16 +471,7 @@ function WebhookDialog({
 				</DialogHeader>
 				{createdSecret ? (
 					<div className="flex flex-col gap-3">
-						<div className="flex gap-2">
-							<Input
-								readOnly
-								value={createdSecret}
-								className="font-mono text-xs"
-							/>
-							<Button type="button" variant="outline" onClick={copySecret}>
-								{copied ? t("common.copied") : t("common.copy")}
-							</Button>
-						</div>
+						<SecretReveal value={createdSecret} />
 						<DialogFooter>
 							<Button type="button" onClick={() => onOpenChange(false)}>
 								{t("common.done")}
