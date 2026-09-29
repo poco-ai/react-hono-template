@@ -306,7 +306,6 @@ const zh: typeof en = {
 	},
 	settings: {
 		noPermission: "你没有权限访问该设置页。",
-		title: "设置",
 		general: "常规",
 		members: "成员",
 		labels: "标签",

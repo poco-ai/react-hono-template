@@ -36,15 +36,15 @@ function SettingsLayout() {
 	];
 
 	return (
-		<div className="mx-auto flex max-w-4xl gap-10 p-8">
-			<nav className="flex w-40 shrink-0 flex-col gap-0.5">
+		<div className="mx-auto max-w-4xl p-8">
+			<nav className="flex gap-1 overflow-x-auto pb-8">
 				{links.map((link) => (
 					<Link
 						key={link.to}
 						to={link.to}
 						params={{ orgId }}
 						activeOptions={{ exact: link.exact ?? false }}
-						className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md px-3 py-1.5 text-sm"
+						className="text-muted-foreground hover:bg-accent hover:text-foreground shrink-0 rounded-md px-3 py-1.5 text-sm whitespace-nowrap"
 						activeProps={{
 							className: "bg-accent text-foreground font-medium",
 						}}
@@ -53,12 +53,7 @@ function SettingsLayout() {
 					</Link>
 				))}
 			</nav>
-			<div className="min-w-0 flex-1">
-				<h1 className="text-2xl font-semibold tracking-tight pb-8">
-					{t("settings.title")}
-				</h1>
-				<Outlet />
-			</div>
+			<Outlet />
 		</div>
 	);
 }
