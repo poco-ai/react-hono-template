@@ -335,6 +335,10 @@ const en = {
 		clear: "Clear selection",
 		partialFailure: "{{failed}} of {{total}} updates failed",
 	},
+	markdown: {
+		copyCode: "Copy code",
+		hint: "Markdown supported: **bold**, *italic*, `code`, lists, links",
+	},
 	members: {
 		member: "Member",
 		invite: "Invite member",

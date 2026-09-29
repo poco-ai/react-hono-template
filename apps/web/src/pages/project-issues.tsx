@@ -813,24 +813,29 @@ function CreateIssueDialog({
 								))}
 							</div>
 							{descTab === "write" ? (
-								<Textarea
-									id="issue-description"
-									value={description}
-									placeholder={t("issues.descriptionPlaceholder")}
-									onChange={(e) => {
-										setDescription(e.target.value);
-										setFieldErrors((prev) =>
-											withoutFieldError(prev, "description"),
-										);
-									}}
-									className="resize-y border-0 focus-visible:ring-0"
-									aria-invalid={fieldErrors.description ? true : undefined}
-									aria-describedby={
-										fieldErrors.description
-											? "issue-description-error"
-											: undefined
-									}
-								/>
+								<>
+									<Textarea
+										id="issue-description"
+										value={description}
+										placeholder={t("issues.descriptionPlaceholder")}
+										onChange={(e) => {
+											setDescription(e.target.value);
+											setFieldErrors((prev) =>
+												withoutFieldError(prev, "description"),
+											);
+										}}
+										className="resize-y border-0 focus-visible:ring-0"
+										aria-invalid={fieldErrors.description ? true : undefined}
+										aria-describedby={
+											fieldErrors.description
+												? "issue-description-error"
+												: undefined
+										}
+									/>
+									<p className="text-muted-foreground px-3 pb-2 text-xs">
+										{t("markdown.hint")}
+									</p>
+								</>
 							) : (
 								<div className="min-h-24 px-3 py-2">
 									{description.trim() ? (

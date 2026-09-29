@@ -1,6 +1,61 @@
+import { cn } from "@workspace/ui/lib/utils";
+import { Check, Copy } from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+function CodeBlock({
+	children,
+	language,
+}: {
+	children?: ReactNode;
+	language?: string;
+}) {
+	const { t } = useTranslation();
+	const preRef = useRef<HTMLPreElement>(null);
+	const [copied, setCopied] = useState(false);
+
+	const onCopy = async () => {
+		const text = preRef.current?.querySelector("code")?.textContent ?? "";
+		try {
+			await navigator.clipboard.writeText(text);
+			setCopied(true);
+			window.setTimeout(() => setCopied(false), 1600);
+		} catch {
+			setCopied(false);
+		}
+	};
+
+	return (
+		<div className="group/code bg-muted relative mb-2 w-fit max-w-full overflow-hidden rounded-lg border last:mb-0">
+			<pre ref={preRef} className="overflow-x-auto p-3 text-xs">
+				{children}
+			</pre>
+			<div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+				{language && (
+					<span className="bg-background/80 text-muted-foreground rounded border px-1 py-0.5 font-mono text-[10px] uppercase">
+						{language}
+					</span>
+				)}
+				<button
+					type="button"
+					onClick={() => void onCopy()}
+					className={cn(
+						"bg-background flex items-center gap-1 rounded-md border px-1.5 py-1 font-mono text-[10px] font-medium opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100",
+						copied
+							? "text-primary"
+							: "text-muted-foreground hover:text-foreground",
+					)}
+				>
+					{copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+					{copied ? t("common.copied") : t("markdown.copyCode")}
+				</button>
+			</div>
+		</div>
+	);
+}
 
 const components: Components = {
 	h1: ({ children }) => (
@@ -44,11 +99,23 @@ const components: Components = {
 				{children}
 			</code>
 		),
-	pre: ({ children }) => (
-		<pre className="bg-muted mb-2 overflow-x-auto rounded-md p-3 text-xs last:mb-0">
-			{children}
-		</pre>
-	),
+	pre: ({ children, node }) => {
+		const first = node?.children[0];
+		let language: string | undefined;
+		if (first?.type === "element") {
+			const classes = first.properties?.className;
+			const langClass = Array.isArray(classes)
+				? classes.find(
+						(c): c is string =>
+							typeof c === "string" && c.startsWith("language-"),
+					)
+				: undefined;
+			if (langClass) {
+				language = langClass.slice("language-".length);
+			}
+		}
+		return <CodeBlock language={language}>{children}</CodeBlock>;
+	},
 	hr: () => <hr className="my-4" />,
 	table: ({ children }) => (
 		<div className="mb-2 overflow-x-auto last:mb-0">

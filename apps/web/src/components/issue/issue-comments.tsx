@@ -313,15 +313,20 @@ export function IssueComments({
 					))}
 				</div>
 				{tab === "write" ? (
-					<Textarea
-						value={body}
-						placeholder={t("comments.placeholder")}
-						onChange={(e) => setBody(e.target.value)}
-						rows={4}
-						maxLength={COMMENT_MAX_LENGTH}
-						disabled={frozen}
-						className="resize-y border-0 focus-visible:ring-0"
-					/>
+					<>
+						<Textarea
+							value={body}
+							placeholder={t("comments.placeholder")}
+							onChange={(e) => setBody(e.target.value)}
+							rows={4}
+							maxLength={COMMENT_MAX_LENGTH}
+							disabled={frozen}
+							className="resize-y border-0 focus-visible:ring-0"
+						/>
+						<p className="text-muted-foreground px-3 pb-2 text-xs">
+							{t("markdown.hint")}
+						</p>
+					</>
 				) : (
 					<div className="min-h-24 px-3 py-2">
 						{body.trim() ? (

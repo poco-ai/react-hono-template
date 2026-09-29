@@ -325,6 +325,10 @@ const zh: typeof en = {
 		clear: "清除选择",
 		partialFailure: "{{total}} 项更新中有 {{failed}} 项失败",
 	},
+	markdown: {
+		copyCode: "复制代码",
+		hint: "支持 Markdown：**粗体**、*斜体*、`代码`、列表、链接",
+	},
 	members: {
 		member: "成员",
 		invite: "邀请成员",
