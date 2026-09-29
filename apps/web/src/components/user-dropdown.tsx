@@ -31,6 +31,11 @@ export function UserDropdown({
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 
+	const platformRoleLabel: Record<"admin" | "user", string> = {
+		admin: t("adminUsers.roles.admin"),
+		user: t("adminUsers.roles.user"),
+	};
+
 	const signOut = async () => {
 		await authClient.signOut();
 		queryClient.setQueryData(sessionOptions.queryKey, null);
@@ -55,7 +60,11 @@ export function UserDropdown({
 						{orgRole ? (
 							<Badge variant="secondary">{t(`org.roles.${orgRole}`)}</Badge>
 						) : (
-							user.role === "admin" && <Badge variant="secondary">admin</Badge>
+							user.role === "admin" && (
+								<Badge variant="secondary">
+									{platformRoleLabel[user.role as "admin" | "user"]}
+								</Badge>
+							)
 						)}
 					</Button>
 				}

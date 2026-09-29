@@ -77,6 +77,11 @@ export function AdminUsersPage() {
 		return () => clearTimeout(timer);
 	}, [searchInput, search, navigate]);
 
+	const platformRoleLabel: Record<"admin" | "user", string> = {
+		admin: t("adminUsers.roles.admin"),
+		user: t("adminUsers.roles.user"),
+	};
+
 	const usersQuery = useQuery({
 		queryKey: ["admin-users", page, search],
 		queryFn: () =>
@@ -217,7 +222,9 @@ export function AdminUsersPage() {
 											}}
 										>
 											<SelectTrigger className="w-28">
-												<SelectValue />
+												<SelectValue>
+													{platformRoleLabel[user.role as "admin" | "user"]}
+												</SelectValue>
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="admin">
