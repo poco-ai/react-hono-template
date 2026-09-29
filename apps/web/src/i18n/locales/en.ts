@@ -262,6 +262,7 @@ const en = {
 		deleteAction: "Delete issue",
 		myIssuesTitle: "My Issues",
 		myIssuesEmpty: "Nothing is assigned to you. Enjoy!",
+		browseProjects: "Browse projects",
 		showingCap: "Showing the latest {{count}} issues.",
 		viewList: "List",
 		viewBoard: "Board",
@@ -551,7 +552,6 @@ const en = {
 		pageIndicator: "Page {{page}} / {{total}}",
 		prev: "Prev",
 		next: "Next",
-		noUsers: "No users found.",
 	},
 	adminOrgs: {
 		title: "Organizations",
@@ -574,7 +574,6 @@ const en = {
 		freezeDescription:
 			"{{name}} will be frozen and its members will be unable to make changes until it is unfrozen.",
 		orgCount: "{{total}} organization(s)",
-		noOrgs: "No organizations found.",
 	},
 	adminHome: {
 		title: "Admin",
@@ -589,6 +588,7 @@ const en = {
 	admin: {
 		forbiddenTitle: "Access denied",
 		forbiddenDescription: "This area is only available to platform admins.",
+		noResults: "No matching results",
 	},
 	notFound: {
 		title: "Page not found",

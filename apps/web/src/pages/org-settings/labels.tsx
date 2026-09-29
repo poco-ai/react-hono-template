@@ -27,6 +27,7 @@ import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
@@ -121,11 +122,7 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 					{apiErrorMessage(t, labels.error)}
 				</p>
 			)}
-			{labels.data?.length === 0 && (
-				<div className="border-muted-foreground/25 rounded-xl border border-dashed py-12 text-center">
-					<p className="text-muted-foreground">{t("labels.empty")}</p>
-				</div>
-			)}
+			{labels.data?.length === 0 && <EmptyState title={t("labels.empty")} />}
 			{labels.data && labels.data.length > 0 && (
 				<div className="overflow-hidden rounded-lg border">
 					{labels.data.map((label) => (

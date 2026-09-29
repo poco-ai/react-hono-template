@@ -32,6 +32,7 @@ import {
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
@@ -94,6 +95,7 @@ export function AdminOrgsPage() {
 	const totalPages = result
 		? Math.max(1, Math.ceil(result.total / result.pageSize))
 		: 1;
+	const listEmpty = !orgsQuery.isPending && result?.items.length === 0;
 
 	useEffect(() => {
 		if (result && page > totalPages) {
@@ -130,19 +132,21 @@ export function AdminOrgsPage() {
 				)}
 
 				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>{t("adminOrgs.org")}</TableHead>
-							<TableHead>{t("adminOrgs.plan")}</TableHead>
-							<TableHead>{t("adminOrgs.members")}</TableHead>
-							<TableHead>{t("adminOrgs.issues")}</TableHead>
-							<TableHead>{t("adminOrgs.created")}</TableHead>
-							<TableHead>{t("adminOrgs.status")}</TableHead>
-							<TableHead className="text-right">
-								{t("adminOrgs.actions")}
-							</TableHead>
-						</TableRow>
-					</TableHeader>
+					{!listEmpty && (
+						<TableHeader>
+							<TableRow>
+								<TableHead>{t("adminOrgs.org")}</TableHead>
+								<TableHead>{t("adminOrgs.plan")}</TableHead>
+								<TableHead>{t("adminOrgs.members")}</TableHead>
+								<TableHead>{t("adminOrgs.issues")}</TableHead>
+								<TableHead>{t("adminOrgs.created")}</TableHead>
+								<TableHead>{t("adminOrgs.status")}</TableHead>
+								<TableHead className="text-right">
+									{t("adminOrgs.actions")}
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+					)}
 					<TableBody>
 						{result?.items.map((org) => (
 							<TableRow key={org.id}>
@@ -213,13 +217,10 @@ export function AdminOrgsPage() {
 								</TableCell>
 							</TableRow>
 						)}
-						{!orgsQuery.isPending && result?.items.length === 0 && (
+						{listEmpty && (
 							<TableRow>
-								<TableCell
-									colSpan={7}
-									className="text-muted-foreground h-16 text-center"
-								>
-									{t("adminOrgs.noOrgs")}
+								<TableCell colSpan={7} className="p-0">
+									<EmptyState title={t("admin.noResults")} />
 								</TableCell>
 							</TableRow>
 						)}

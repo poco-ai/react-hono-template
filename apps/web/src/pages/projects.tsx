@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
+import { EmptyState } from "@/components/empty-state";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/issue-utils";
@@ -136,40 +137,44 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 			)}
 
 			{projects.data?.length === 0 && (
-				<div className="border-muted-foreground/25 flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center">
-					<p className="text-muted-foreground">{t("projects.empty")}</p>
-					<div className="flex items-center gap-2">
-						{canManage && (
+				<EmptyState
+					title={t("projects.empty")}
+					action={
+						<>
+							{canManage && (
+								<Button
+									variant="outline"
+									onClick={() => setCreateOpen(true)}
+									disabled={frozen}
+								>
+									<Plus />
+									{t("projects.emptyCta")}
+								</Button>
+							)}
 							<Button
 								variant="outline"
-								onClick={() => setCreateOpen(true)}
-								disabled={frozen}
+								onClick={() =>
+									navigate({
+										to: "/orgs/$orgId/settings/members",
+										params: { orgId },
+									})
+								}
 							>
-								<Plus />
-								{t("projects.emptyCta")}
+								{t("projects.inviteTeammates")}
 							</Button>
-						)}
-						<Button
-							variant="outline"
-							onClick={() =>
-								navigate({
-									to: "/orgs/$orgId/settings/members",
-									params: { orgId },
-								})
-							}
-						>
-							{t("projects.inviteTeammates")}
-						</Button>
-					</div>
-				</div>
+						</>
+					}
+				/>
 			)}
 
 			{projects.data &&
 				projects.data.length > 0 &&
 				visibleProjects.length === 0 && (
-					<p className="text-muted-foreground py-16 text-center text-sm">
-						{archived ? t("projects.archivedEmpty") : t("projects.activeEmpty")}
-					</p>
+					<EmptyState
+						title={
+							archived ? t("projects.archivedEmpty") : t("projects.activeEmpty")
+						}
+					/>
 				)}
 
 			{visibleProjects.length > 0 && (

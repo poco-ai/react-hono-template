@@ -39,6 +39,7 @@ import {
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
@@ -114,6 +115,7 @@ export function AdminUsersPage() {
 	const totalPages = result
 		? Math.max(1, Math.ceil(result.total / result.pageSize))
 		: 1;
+	const listEmpty = !usersQuery.isPending && result?.items.length === 0;
 	const mutating =
 		roleMutation.isPending || banMutation.isPending || unbanMutation.isPending;
 	const mutationError =
@@ -145,17 +147,19 @@ export function AdminUsersPage() {
 				)}
 
 				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>{t("adminUsers.user")}</TableHead>
-							<TableHead>{t("common.role")}</TableHead>
-							<TableHead>{t("adminUsers.status")}</TableHead>
-							<TableHead>{t("adminUsers.created")}</TableHead>
-							<TableHead className="text-right">
-								{t("adminUsers.actions")}
-							</TableHead>
-						</TableRow>
-					</TableHeader>
+					{!listEmpty && (
+						<TableHeader>
+							<TableRow>
+								<TableHead>{t("adminUsers.user")}</TableHead>
+								<TableHead>{t("common.role")}</TableHead>
+								<TableHead>{t("adminUsers.status")}</TableHead>
+								<TableHead>{t("adminUsers.created")}</TableHead>
+								<TableHead className="text-right">
+									{t("adminUsers.actions")}
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+					)}
 					<TableBody>
 						{result?.items.map((user) => {
 							const isSelf = user.id === session?.user.id;
@@ -259,13 +263,10 @@ export function AdminUsersPage() {
 								</TableCell>
 							</TableRow>
 						)}
-						{!usersQuery.isPending && result?.items.length === 0 && (
+						{listEmpty && (
 							<TableRow>
-								<TableCell
-									colSpan={5}
-									className="text-muted-foreground h-16 text-center"
-								>
-									{t("adminUsers.noUsers")}
+								<TableCell colSpan={5} className="p-0">
+									<EmptyState title={t("admin.noResults")} />
 								</TableCell>
 							</TableRow>
 						)}

@@ -37,6 +37,7 @@ import { CircleAlert, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
@@ -102,6 +103,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 	const totalPages = keys.data
 		? Math.max(1, Math.ceil(keys.data.total / keys.data.pageSize))
 		: 1;
+	const listEmpty = !keys.isPending && keys.data?.items.length === 0;
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -123,16 +125,18 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 			</div>
 
 			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead>{t("apiKeys.name")}</TableHead>
-						<TableHead className="w-40">{t("apiKeys.key")}</TableHead>
-						<TableHead className="w-24">{t("members.status")}</TableHead>
-						<TableHead className="w-24 text-right">
-							{t("common.actions")}
-						</TableHead>
-					</TableRow>
-				</TableHeader>
+				{!listEmpty && (
+					<TableHeader>
+						<TableRow>
+							<TableHead>{t("apiKeys.name")}</TableHead>
+							<TableHead className="w-40">{t("apiKeys.key")}</TableHead>
+							<TableHead className="w-24">{t("members.status")}</TableHead>
+							<TableHead className="w-24 text-right">
+								{t("common.actions")}
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+				)}
 				<TableBody>
 					{keys.data?.items.map((apiKey) => {
 						const revoked = apiKey.revokedAt !== null;
@@ -205,13 +209,10 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 							</TableCell>
 						</TableRow>
 					)}
-					{!keys.isPending && keys.data?.items.length === 0 && (
+					{listEmpty && (
 						<TableRow>
-							<TableCell
-								colSpan={4}
-								className="text-muted-foreground h-16 text-center"
-							>
-								{t("apiKeys.empty")}
+							<TableCell colSpan={4} className="p-0">
+								<EmptyState title={t("apiKeys.empty")} />
 							</TableCell>
 						</TableRow>
 					)}

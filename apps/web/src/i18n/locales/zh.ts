@@ -252,6 +252,7 @@ const zh: typeof en = {
 		deleteAction: "删除事项",
 		myIssuesTitle: "我的事项",
 		myIssuesEmpty: "没有分配给你的事项，好好享受吧！",
+		browseProjects: "浏览项目",
 		showingCap: "仅显示最近 {{count}} 条事项。",
 		viewList: "列表",
 		viewBoard: "看板",
@@ -531,7 +532,6 @@ const zh: typeof en = {
 		pageIndicator: "第 {{page}} / {{total}} 页",
 		prev: "上一页",
 		next: "下一页",
-		noUsers: "未找到用户。",
 	},
 	adminOrgs: {
 		title: "组织管理",
@@ -553,7 +553,6 @@ const zh: typeof en = {
 		freezeTitle: "冻结组织？",
 		freezeDescription: "{{name}} 将被冻结，在解冻之前其成员无法进行任何更改。",
 		orgCount: "{{total}} 个组织",
-		noOrgs: "未找到组织。",
 	},
 	adminHome: {
 		title: "管理后台",
@@ -568,6 +567,7 @@ const zh: typeof en = {
 	admin: {
 		forbiddenTitle: "无权访问",
 		forbiddenDescription: "此区域仅限平台管理员。",
+		noResults: "无匹配结果",
 	},
 	notFound: {
 		title: "页面不存在",

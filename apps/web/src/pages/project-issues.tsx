@@ -59,6 +59,7 @@ import type { FormEvent, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { BoardView } from "@/components/issue/board-view";
 import { BulkActionBar } from "@/components/issue/bulk-bar";
 import { DateField } from "@/components/issue/date-field";
@@ -170,6 +171,7 @@ export function ProjectIssuesPage({
 	const totalPages = result
 		? Math.max(1, Math.ceil(result.total / result.pageSize))
 		: 1;
+	const listEmpty = !issues.isPending && result?.items.length === 0;
 	const hasFilters =
 		statusFilter.length > 0 ||
 		priorityFilter.length > 0 ||
@@ -446,27 +448,37 @@ export function ProjectIssuesPage({
 				<>
 					<div className="flex-1 overflow-auto px-4 py-4 lg:px-6">
 						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead className="hidden w-10 md:table-cell">
-										<Checkbox
-											aria-label={t("bulk.selectAll")}
-											checked={allOnPageSelected}
-											indeterminate={selected.size > 0 && !allOnPageSelected}
-											disabled={frozen}
-											onCheckedChange={(checked) => toggleAllOnPage(checked)}
-										/>
-									</TableHead>
-									<TableHead className="w-24">{t("issues.number")}</TableHead>
-									<TableHead>{t("issues.titleField")}</TableHead>
-									<TableHead className="w-28">{t("issues.status")}</TableHead>
-									<TableHead className="w-28">{t("issues.priority")}</TableHead>
-									<TableHead className="w-36">{t("issues.assignee")}</TableHead>
-									<TableHead className="w-48">{t("issues.labels")}</TableHead>
-									<TableHead className="w-28">{t("issues.dueDate")}</TableHead>
-									<TableHead className="w-44">{t("issues.updated")}</TableHead>
-								</TableRow>
-							</TableHeader>
+							{!listEmpty && (
+								<TableHeader>
+									<TableRow>
+										<TableHead className="hidden w-10 md:table-cell">
+											<Checkbox
+												aria-label={t("bulk.selectAll")}
+												checked={allOnPageSelected}
+												indeterminate={selected.size > 0 && !allOnPageSelected}
+												disabled={frozen}
+												onCheckedChange={(checked) => toggleAllOnPage(checked)}
+											/>
+										</TableHead>
+										<TableHead className="w-24">{t("issues.number")}</TableHead>
+										<TableHead>{t("issues.titleField")}</TableHead>
+										<TableHead className="w-28">{t("issues.status")}</TableHead>
+										<TableHead className="w-28">
+											{t("issues.priority")}
+										</TableHead>
+										<TableHead className="w-36">
+											{t("issues.assignee")}
+										</TableHead>
+										<TableHead className="w-48">{t("issues.labels")}</TableHead>
+										<TableHead className="w-28">
+											{t("issues.dueDate")}
+										</TableHead>
+										<TableHead className="w-44">
+											{t("issues.updated")}
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+							)}
 							<TableBody>
 								{result?.items.map((issue) => {
 									const assignee = issue.assigneeId
@@ -580,26 +592,45 @@ export function ProjectIssuesPage({
 										</TableCell>
 									</TableRow>
 								)}
-								{!issues.isPending && result?.items.length === 0 && (
+								{listEmpty && (
 									<TableRow>
-										<TableCell
-											colSpan={9}
-											className="text-muted-foreground h-16 text-center"
-										>
+										<TableCell colSpan={9} className="p-0">
 											{hasFilters ? (
-												t("issues.noResults")
+												<EmptyState
+													title={t("issues.noResults")}
+													action={
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() =>
+																updateSearch({
+																	status: "",
+																	priority: "",
+																	assigneeId: "",
+																	labelId: "",
+																	search: "",
+																	page: 1,
+																})
+															}
+														>
+															{t("issues.clearFilters")}
+														</Button>
+													}
+												/>
 											) : (
-												<span className="flex items-center justify-center gap-2">
-													{t("issues.empty")}
-													<Button
-														variant="outline"
-														size="sm"
-														disabled={frozen}
-														onClick={() => openCreate()}
-													>
-														{t("issues.emptyCta")}
-													</Button>
-												</span>
+												<EmptyState
+													title={t("issues.empty")}
+													action={
+														<Button
+															variant="outline"
+															size="sm"
+															disabled={frozen}
+															onClick={() => openCreate()}
+														>
+															{t("issues.emptyCta")}
+														</Button>
+													}
+												/>
 											)}
 										</TableCell>
 									</TableRow>

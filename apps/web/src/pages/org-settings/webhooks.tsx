@@ -48,6 +48,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
@@ -176,15 +177,19 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 			)}
 
 			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead>{t("webhooks.url")}</TableHead>
-						<TableHead>{t("webhooks.eventsLabel")}</TableHead>
-						<TableHead className="w-20">{t("webhooks.active")}</TableHead>
-						<TableHead>{t("apiKeys.created")}</TableHead>
-						<TableHead className="text-right">{t("common.actions")}</TableHead>
-					</TableRow>
-				</TableHeader>
+				{!(webhooks.data?.length === 0 && !webhooks.isPending) && (
+					<TableHeader>
+						<TableRow>
+							<TableHead>{t("webhooks.url")}</TableHead>
+							<TableHead>{t("webhooks.eventsLabel")}</TableHead>
+							<TableHead className="w-20">{t("webhooks.active")}</TableHead>
+							<TableHead>{t("apiKeys.created")}</TableHead>
+							<TableHead className="text-right">
+								{t("common.actions")}
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+				)}
 				<TableBody>
 					{webhooks.data?.map((webhook) => (
 						<TableRow key={webhook.id}>
@@ -275,13 +280,10 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 							</TableCell>
 						</TableRow>
 					)}
-					{!webhooks.isPending && webhooks.data?.length === 0 && (
+					{webhooks.data?.length === 0 && !webhooks.isPending && (
 						<TableRow>
-							<TableCell
-								colSpan={5}
-								className="text-muted-foreground h-16 text-center"
-							>
-								{t("webhooks.empty")}
+							<TableCell colSpan={5} className="p-0">
+								<EmptyState title={t("webhooks.empty")} />
 							</TableCell>
 						</TableRow>
 					)}

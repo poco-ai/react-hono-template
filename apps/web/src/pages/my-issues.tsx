@@ -1,8 +1,10 @@
 import type { IssueDetailDto } from "@api/dto/issue.dto";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
+import { Button } from "@workspace/ui/components/button";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "@/components/empty-state";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
@@ -15,6 +17,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function MyIssuesPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 	useDocumentTitle(t("issues.myIssuesTitle"));
 	const { data: session } = useSession();
 	const userId = session?.user.id;
@@ -111,9 +114,19 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 					</section>
 				))}
 				{!issues.isPending && grouped.size === 0 && !issues.isError && (
-					<div className="border-muted-foreground/25 rounded-xl border border-dashed py-16 text-center">
-						<p className="text-muted-foreground">{t("issues.myIssuesEmpty")}</p>
-					</div>
+					<EmptyState
+						title={t("issues.myIssuesEmpty")}
+						action={
+							<Button
+								variant="outline"
+								onClick={() =>
+									navigate({ to: "/orgs/$orgId/projects", params: { orgId } })
+								}
+							>
+								{t("issues.browseProjects")}
+							</Button>
+						}
+					/>
 				)}
 				{issues.data && issues.data.total > issues.data.items.length && (
 					<p className="text-muted-foreground text-sm">
