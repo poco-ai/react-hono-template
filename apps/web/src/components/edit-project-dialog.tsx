@@ -142,7 +142,7 @@ export function EditProjectDialog({
 							id="edit-project-key"
 							value={project?.key ?? ""}
 							disabled
-							className="w-28 font-mono uppercase"
+							className="w-full font-mono uppercase"
 						/>
 						<p className="text-muted-foreground text-xs">
 							{t("projects.keyLockedHint")}
@@ -195,7 +195,7 @@ export function EditProjectDialog({
 							type="color"
 							value={color}
 							onChange={(e) => setColor(e.target.value)}
-							className="h-9 w-16 p-1"
+							className="h-8 w-full p-1"
 						/>
 					</div>
 					{updateMutation.isError && (

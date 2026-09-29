@@ -172,7 +172,7 @@ export function CreateProjectDialog({
 							value={key}
 							placeholder={t("projects.keyPlaceholder")}
 							onChange={(e) => onKeyChange(e.target.value)}
-							className="w-28 font-mono uppercase"
+							className="w-full font-mono uppercase"
 							aria-invalid={fieldErrors.key ? true : undefined}
 							aria-describedby={
 								fieldErrors.key
@@ -231,7 +231,7 @@ export function CreateProjectDialog({
 							type="color"
 							value={color}
 							onChange={(e) => setColor(e.target.value)}
-							className="h-9 w-16 p-1"
+							className="h-8 w-full p-1"
 						/>
 					</div>
 					{createMutation.isError && (

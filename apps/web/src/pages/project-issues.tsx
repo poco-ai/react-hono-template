@@ -915,17 +915,20 @@ function CreateIssueDialog({
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>{t("issues.estimate")}</Label>
-							<Input
-								type="number"
-								min={0}
-								max={100}
-								step={1}
-								value={estimate}
-								onChange={(e) => setEstimate(e.target.value)}
-							/>
-							<p className="text-muted-foreground text-xs">
-								{t("issues.estimateUnit")}
-							</p>
+							<div className="relative">
+								<Input
+									type="number"
+									min={0}
+									max={100}
+									step={1}
+									value={estimate}
+									onChange={(e) => setEstimate(e.target.value)}
+									className="pr-16"
+								/>
+								<span className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs">
+									{t("issues.estimateUnit")}
+								</span>
+							</div>
 							{!estimateValid && (
 								<p className="text-destructive text-xs">
 									{t("issues.estimateInvalid")}
