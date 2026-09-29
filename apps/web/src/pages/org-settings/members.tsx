@@ -36,11 +36,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { CircleAlert, Plus } from "lucide-react";
+import { CircleAlert, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
+import { EmptyState } from "@/components/empty-state";
 import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
 import { UserAvatar } from "@/components/user-avatar";
@@ -86,6 +87,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const invitations = useQuery(invitationsQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 	const [inviteOpen, setInviteOpen] = useState(false);
+	const [search, setSearch] = useState("");
 	const [removeTarget, setRemoveTarget] = useState<OrgMember | null>(null);
 	const [revokeTarget, setRevokeTarget] = useState<OrgInvitation | null>(null);
 
@@ -99,6 +101,21 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const pendingInvitations = (invitations.data ?? []).filter(
 		(invitation) => invitation.status === "pending",
 	);
+	const query = search.trim().toLowerCase();
+	const filteredMembers = query
+		? (members.data ?? []).filter(
+				(member) =>
+					member.user.name.toLowerCase().includes(query) ||
+					member.user.email.toLowerCase().includes(query),
+			)
+		: (members.data ?? []);
+	const filteredInvitations = query
+		? pendingInvitations.filter((invitation) =>
+				invitation.email.toLowerCase().includes(query),
+			)
+		: pendingInvitations;
+
+	const clearSearch = () => setSearch("");
 
 	const invalidateMembers = () => {
 		queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "members"] });
@@ -173,6 +190,31 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						</Button>
 					)}
 				</div>
+				<div className="relative max-w-xs">
+					<Input
+						placeholder={t("members.searchPlaceholder")}
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Escape") {
+								clearSearch();
+							}
+						}}
+						className="pr-8"
+					/>
+					{search && (
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon"
+							className="absolute top-1/2 right-1 size-6 -translate-y-1/2"
+							aria-label={t("common.clear")}
+							onClick={clearSearch}
+						>
+							<X />
+						</Button>
+					)}
+				</div>
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -184,7 +226,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{members.data?.map((member) => {
+						{filteredMembers.map((member) => {
 							const isSelf = member.userId === session?.user.id;
 							const isLastOwner = member.role === "owner" && ownerCount <= 1;
 							return (
@@ -295,6 +337,15 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 								</TableCell>
 							</TableRow>
 						)}
+						{!members.isPending &&
+							!members.isError &&
+							filteredMembers.length === 0 && (
+								<TableRow>
+									<TableCell colSpan={3} className="p-0">
+										<EmptyState title={t("members.noResults")} />
+									</TableCell>
+								</TableRow>
+							)}
 					</TableBody>
 				</Table>
 				{(roleMutation.isError || removeMutation.isError) && (
@@ -310,10 +361,14 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 			{canManage && (
 				<section className="flex flex-col gap-4">
 					<h2 className="text-lg font-medium">{t("members.pendingTitle")}</h2>
-					{pendingInvitations.length === 0 ? (
-						<p className="text-muted-foreground text-sm">
-							{t("members.noPending")}
-						</p>
+					{filteredInvitations.length === 0 ? (
+						pendingInvitations.length === 0 ? (
+							<p className="text-muted-foreground text-sm">
+								{t("members.noPending")}
+							</p>
+						) : (
+							<EmptyState title={t("members.noResults")} />
+						)
 					) : (
 						<Table>
 							<TableHeader>
@@ -327,7 +382,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{pendingInvitations.map((invitation: OrgInvitation) => (
+								{filteredInvitations.map((invitation: OrgInvitation) => (
 									<TableRow key={invitation.id}>
 										<TableCell>{invitation.email}</TableCell>
 										<TableCell>

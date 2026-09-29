@@ -335,12 +335,14 @@ const zh: typeof en = {
 	},
 	members: {
 		member: "成员",
+		searchPlaceholder: "搜索成员…",
+		noResults: "无匹配成员",
 		invite: "邀请成员",
 		inviteDescription: "创建邀请后，把链接分享给你的队友。",
 		inviteFailed: "发送邀请失败",
 		inviteLinkTitle: "邀请已创建",
 		inviteLinkDescription:
-			"把这个链接发给 {{email}} —— 对方登录后即可加入，链接 7 天内有效。",
+			"把这个链接发给 {{email}} —— 对方登录后即可加入，链接 2 天内有效。",
 		roles: {
 			owner: "所有者",
 			admin: "管理员",

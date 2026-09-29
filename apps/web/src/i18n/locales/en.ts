@@ -345,13 +345,15 @@ const en = {
 	},
 	members: {
 		member: "Member",
+		searchPlaceholder: "Search members…",
+		noResults: "No matching members",
 		invite: "Invite member",
 		inviteDescription:
 			"Create an invitation, then share the link with your teammate.",
 		inviteFailed: "Failed to send invitation",
 		inviteLinkTitle: "Invitation created",
 		inviteLinkDescription:
-			"Share this link with {{email}} — it opens after they sign in and expires in 7 days.",
+			"Share this link with {{email}} — it opens after they sign in and expires in 2 days.",
 		roles: {
 			owner: "Owner",
 			admin: "Admin",
