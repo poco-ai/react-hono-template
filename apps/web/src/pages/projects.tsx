@@ -42,7 +42,10 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("projects.title"));
 	const navigate = useNavigate({ from: "/orgs/$orgId/projects/" });
-	const { archived } = useSearch({ from: "/_auth/orgs/$orgId/projects/" });
+	const { archived: archivedParam } = useSearch({
+		from: "/_auth/orgs/$orgId/projects/",
+	});
+	const archived = archivedParam ?? false;
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();
 	const projects = useQuery(projectsQuery(orgId));
