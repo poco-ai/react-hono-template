@@ -132,7 +132,7 @@ export function OrgActivityPage({
 												params={{
 													orgId,
 													projectId: activity.project.id,
-													issueNumber: activity.issue.number,
+													issueNumber: String(activity.issue.number),
 												}}
 												className="text-muted-foreground hover:text-foreground truncate font-mono text-xs hover:underline"
 											>

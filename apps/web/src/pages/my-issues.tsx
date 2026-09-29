@@ -81,7 +81,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 										params={{
 											orgId,
 											projectId: issue.projectId,
-											issueNumber: issue.number,
+											issueNumber: String(issue.number),
 										}}
 										className="hover:bg-accent/40 flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
 									>

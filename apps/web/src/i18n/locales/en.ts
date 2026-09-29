@@ -535,6 +535,11 @@ const en = {
 		title: "Page not found",
 		backHome: "Back home",
 	},
+	error: {
+		title: "Something went wrong",
+		description: "An unexpected error occurred. Please try again.",
+		retry: "Retry",
+	},
 	theme: {
 		toggle: "Toggle theme",
 		light: "Light",

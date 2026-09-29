@@ -518,6 +518,11 @@ const zh: typeof en = {
 		title: "页面不存在",
 		backHome: "返回首页",
 	},
+	error: {
+		title: "出错了",
+		description: "发生了意外错误，请重试。",
+		retry: "重试",
+	},
 	theme: {
 		toggle: "切换主题",
 		light: "浅色",

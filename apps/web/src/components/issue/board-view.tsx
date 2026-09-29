@@ -123,7 +123,7 @@ export function BoardView({
 	const openIssue = (issueNumber: number) =>
 		navigate({
 			to: "/orgs/$orgId/projects/$projectId/$issueNumber",
-			params: { orgId, projectId, issueNumber },
+			params: { orgId, projectId, issueNumber: String(issueNumber) },
 		});
 
 	return (

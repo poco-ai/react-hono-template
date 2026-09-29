@@ -464,7 +464,7 @@ export function ProjectIssuesPage({
 													params: {
 														orgId,
 														projectId,
-														issueNumber: issue.number,
+														issueNumber: String(issue.number),
 													},
 												})
 											}
@@ -487,7 +487,7 @@ export function ProjectIssuesPage({
 													params={{
 														orgId,
 														projectId,
-														issueNumber: issue.number,
+														issueNumber: String(issue.number),
 													}}
 													className="hover:underline"
 												>
