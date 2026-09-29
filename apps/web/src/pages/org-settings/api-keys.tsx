@@ -35,6 +35,7 @@ import {
 import { CircleAlert, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
@@ -210,25 +211,13 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 				<span>
 					{keys.data ? t("apiKeys.keyCount", { count: keys.data.total }) : ""}
 				</span>
-				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={page <= 1 || keys.isPending}
-						onClick={() => setPage((p) => p - 1)}
-					>
-						{t("common.prev")}
-					</Button>
-					<span>{t("issues.pageIndicator", { page, total: totalPages })}</span>
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={page >= totalPages || keys.isPending}
-						onClick={() => setPage((p) => p + 1)}
-					>
-						{t("common.next")}
-					</Button>
-				</div>
+				<TablePagination
+					page={page}
+					total={keys.data?.total}
+					totalPages={totalPages}
+					onPageChange={setPage}
+					disabled={keys.isPending}
+				/>
 			</div>
 
 			{revokeMutation.isError && (

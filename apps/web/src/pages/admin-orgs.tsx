@@ -32,6 +32,7 @@ import {
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
 import { formatDate } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
@@ -226,27 +227,13 @@ export function AdminOrgsPage() {
 					<span>
 						{result ? t("adminOrgs.orgCount", { total: result.total }) : ""}
 					</span>
-					<div className="flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={page <= 1 || orgsQuery.isPending}
-							onClick={() => gotoPage(page - 1)}
-						>
-							{t("common.prev")}
-						</Button>
-						<span>
-							{t("issues.pageIndicator", { page, total: totalPages })}
-						</span>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={page >= totalPages || orgsQuery.isPending}
-							onClick={() => gotoPage(page + 1)}
-						>
-							{t("common.next")}
-						</Button>
-					</div>
+					<TablePagination
+						page={page}
+						total={result?.total}
+						totalPages={totalPages}
+						onPageChange={gotoPage}
+						disabled={orgsQuery.isPending}
+					/>
 				</div>
 			</CardContent>
 

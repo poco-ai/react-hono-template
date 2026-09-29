@@ -39,6 +39,7 @@ import {
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { useSession } from "@/lib/session";
@@ -273,27 +274,13 @@ export function AdminUsersPage() {
 					<span>
 						{result ? t("adminUsers.userCount", { total: result.total }) : ""}
 					</span>
-					<div className="flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={page <= 1 || usersQuery.isPending}
-							onClick={() => gotoPage(page - 1)}
-						>
-							{t("adminUsers.prev")}
-						</Button>
-						<span>
-							{t("adminUsers.pageIndicator", { page, total: totalPages })}
-						</span>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={page >= totalPages || usersQuery.isPending}
-							onClick={() => gotoPage(page + 1)}
-						>
-							{t("adminUsers.next")}
-						</Button>
-					</div>
+					<TablePagination
+						page={page}
+						total={result?.total}
+						totalPages={totalPages}
+						onPageChange={gotoPage}
+						disabled={usersQuery.isPending}
+					/>
 				</div>
 			</CardContent>
 

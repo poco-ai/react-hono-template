@@ -57,6 +57,7 @@ import { StatusBadge } from "@/components/issue/status-badge";
 import { MarkdownContent } from "@/components/markdown";
 import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
+import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
 import { isNotFoundError } from "@/lib/errors";
@@ -593,30 +594,13 @@ export function ProjectIssuesPage({
 							{result ? t("issues.count", { count: result.total }) : ""}
 						</span>
 						{totalPages > 1 && (
-							<div className="flex flex-wrap items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={search.page <= 1 || issues.isPending}
-									onClick={() => gotoPage(search.page - 1)}
-								>
-									{t("common.prev")}
-								</Button>
-								<span>
-									{t("issues.pageIndicator", {
-										page: search.page,
-										total: totalPages,
-									})}
-								</span>
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={search.page >= totalPages || issues.isPending}
-									onClick={() => gotoPage(search.page + 1)}
-								>
-									{t("common.next")}
-								</Button>
-							</div>
+							<TablePagination
+								page={search.page}
+								total={result?.total}
+								totalPages={totalPages}
+								onPageChange={gotoPage}
+								disabled={issues.isPending}
+							/>
 						)}
 					</footer>
 				</>

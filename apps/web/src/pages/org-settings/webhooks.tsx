@@ -48,6 +48,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
+import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
@@ -694,26 +695,14 @@ function DeliveriesDialog({
 						</AlertDescription>
 					</Alert>
 				)}
-				<div className="flex items-center justify-end gap-2 text-sm">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={page <= 1 || deliveries.isPending}
-						onClick={() => setPage((p) => p - 1)}
-					>
-						{t("common.prev")}
-					</Button>
-					<span className="text-muted-foreground">
-						{t("issues.pageIndicator", { page, total: totalPages })}
-					</span>
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={page >= totalPages || deliveries.isPending}
-						onClick={() => setPage((p) => p + 1)}
-					>
-						{t("common.next")}
-					</Button>
+				<div className="flex items-center justify-end text-sm">
+					<TablePagination
+						page={page}
+						total={deliveries.data?.total}
+						totalPages={totalPages}
+						onPageChange={setPage}
+						disabled={deliveries.isPending}
+					/>
 				</div>
 			</DialogContent>
 		</Dialog>
