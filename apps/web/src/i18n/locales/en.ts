@@ -57,6 +57,17 @@ const en = {
 		invalidEmailOrPassword: "Invalid email or password.",
 		userAlreadyExists: "An account with this email already exists.",
 	},
+	form: {
+		errors: {
+			required: "This field is required.",
+			email: "Enter a valid email address.",
+			passwordMin: "Password must be at least {{count}} characters.",
+			slugPattern: "Use only lowercase letters, numbers and hyphens.",
+			identifierPattern: "Key must be 2–6 uppercase letters.",
+			url: "Enter a valid URL (https, or http for localhost).",
+			maxLength: "Must be at most {{count}} characters.",
+		},
+	},
 	login: {
 		title: "Sign in",
 		description: "Enter your email and password to continue.",
@@ -433,7 +444,7 @@ const en = {
 		url: "Payload URL",
 		urlPlaceholder: "https://example.com/webhook",
 		eventsLabel: "Events",
-		eventsMinError: "Select at least 2 events.",
+		eventsMinError: "Select at least one event.",
 		active: "Active",
 		secretTitle: "Webhook created",
 		secretWarning: "Copy this signing secret now — it won't be shown again.",

@@ -1,5 +1,6 @@
 import type { LabelDto } from "@api/dto/label.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createLabelSchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -27,6 +28,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import { labelsQuery } from "@/lib/queries/labels";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
@@ -222,11 +229,13 @@ function LabelDialog({
 	const { t } = useTranslation();
 	const [name, setName] = useState("");
 	const [color, setColor] = useState(DEFAULT_COLOR);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
 		if (open) {
 			setName(label?.name ?? "");
 			setColor(label?.color ?? DEFAULT_COLOR);
+			setFieldErrors({});
 		}
 	}, [open, label]);
 
@@ -240,12 +249,21 @@ function LabelDialog({
 					<DialogDescription>{t("labels.createDescription")}</DialogDescription>
 				</DialogHeader>
 				<form
+					noValidate
 					className="flex flex-col gap-4"
 					onSubmit={(e) => {
 						e.preventDefault();
-						if (name.trim()) {
-							onSubmit({ name: name.trim(), color });
+						const parsed = createLabelSchema.safeParse({
+							name: name.trim(),
+							color,
+						});
+						if (!parsed.success) {
+							const errors = fieldErrorsFromZod(parsed.error, t);
+							setFieldErrors(errors);
+							focusFirstInvalidField(errors, { name: "label-name" });
+							return;
 						}
+						onSubmit(parsed.data);
 					}}
 				>
 					<div className="flex flex-col gap-2">
@@ -254,10 +272,21 @@ function LabelDialog({
 							id="label-name"
 							value={name}
 							placeholder={t("labels.namePlaceholder")}
-							onChange={(e) => setName(e.target.value)}
-							required
+							onChange={(e) => {
+								setName(e.target.value);
+								setFieldErrors((prev) => withoutFieldError(prev, "name"));
+							}}
 							maxLength={30}
+							aria-invalid={fieldErrors.name ? true : undefined}
+							aria-describedby={
+								fieldErrors.name ? "label-name-error" : undefined
+							}
 						/>
+						{fieldErrors.name && (
+							<p id="label-name-error" className="text-destructive text-sm">
+								{fieldErrors.name}
+							</p>
+						)}
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="label-color">{t("labels.color")}</Label>

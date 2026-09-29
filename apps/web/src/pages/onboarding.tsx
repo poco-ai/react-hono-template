@@ -15,13 +15,32 @@ import { CircleAlert } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import { slugify } from "@/lib/issue-utils";
 import { type Organization, orgsQuery } from "@/lib/queries/org";
 import { useDocumentTitle } from "@/lib/use-document-title";
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const orgSchema = z.object({
+	name: z.string().trim().min(1),
+	slug: z.string().min(1).regex(SLUG_PATTERN),
+});
+
+const INPUT_IDS = {
+	name: "org-name",
+	slug: "org-slug",
+};
 
 export function OnboardingPage() {
 	const { t } = useTranslation();
@@ -31,6 +50,7 @@ export function OnboardingPage() {
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
 	const [slugTouched, setSlugTouched] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	const createMutation = useMutation({
 		mutationFn: async () => {
@@ -63,14 +83,30 @@ export function OnboardingPage() {
 
 	const onNameChange = (next: string) => {
 		setName(next);
+		setFieldErrors((prev) => withoutFieldError(prev, "name"));
 		if (!slugTouched) {
 			setSlug(slugify(next));
 		}
 	};
 
+	const onSlugChange = (next: string) => {
+		setSlugTouched(true);
+		setSlug(next);
+		setFieldErrors((prev) => withoutFieldError(prev, "slug"));
+	};
+
 	const onSubmit = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		if (!name.trim()) {
+		const parsed = orgSchema.safeParse({
+			name,
+			slug: slug || slugify(name),
+		});
+		if (!parsed.success) {
+			const errors = fieldErrorsFromZod(parsed.error, t, {
+				slug: "form.errors.slugPattern",
+			});
+			setFieldErrors(errors);
+			focusFirstInvalidField(errors, INPUT_IDS);
 			return;
 		}
 		createMutation.mutate();
@@ -89,7 +125,7 @@ export function OnboardingPage() {
 					<CardDescription>{t("onboarding.description")}</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+					<form noValidate className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="org-name">{t("onboarding.orgName")}</Label>
 							<Input
@@ -97,8 +133,16 @@ export function OnboardingPage() {
 								value={name}
 								placeholder={t("onboarding.orgNamePlaceholder")}
 								onChange={(e) => onNameChange(e.target.value)}
-								required
+								aria-invalid={fieldErrors.name ? true : undefined}
+								aria-describedby={
+									fieldErrors.name ? "org-name-error" : undefined
+								}
 							/>
+							{fieldErrors.name && (
+								<p id="org-name-error" className="text-destructive text-sm">
+									{fieldErrors.name}
+								</p>
+							)}
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="org-slug">{t("onboarding.slug")}</Label>
@@ -106,15 +150,23 @@ export function OnboardingPage() {
 								id="org-slug"
 								value={slug}
 								placeholder={t("onboarding.slugPlaceholder")}
-								onChange={(e) => {
-									setSlugTouched(true);
-									setSlug(slugify(e.target.value));
-								}}
+								onChange={(e) => onSlugChange(e.target.value)}
 								className="font-mono text-sm"
+								aria-invalid={fieldErrors.slug ? true : undefined}
+								aria-describedby={
+									fieldErrors.slug
+										? "org-slug-error org-slug-hint"
+										: "org-slug-hint"
+								}
 							/>
-							<p className="text-muted-foreground text-xs">
+							<p id="org-slug-hint" className="text-muted-foreground text-xs">
 								{t("onboarding.slugHint")}
 							</p>
+							{fieldErrors.slug && (
+								<p id="org-slug-error" className="text-destructive text-sm">
+									{fieldErrors.slug}
+								</p>
+							)}
 						</div>
 						{createMutation.isError && (
 							<Alert variant="destructive">

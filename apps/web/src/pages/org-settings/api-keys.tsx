@@ -1,6 +1,7 @@
 import type { ApiKeyDto } from "@api/dto/apikey.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { createApiKeySchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -38,6 +39,12 @@ import { useTranslation } from "react-i18next";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
 import { apiKeysQuery, apiKeysRootKey } from "@/lib/queries/apikeys";
 import { membersQuery } from "@/lib/queries/members";
@@ -283,12 +290,14 @@ function CreateApiKeyDialog({
 	const [name, setName] = useState("");
 	const [createdKey, setCreatedKey] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
 		if (open) {
 			setName("");
 			setCreatedKey(null);
 			setCopied(false);
+			setFieldErrors({});
 		}
 	}, [open]);
 
@@ -348,12 +357,20 @@ function CreateApiKeyDialog({
 					</div>
 				) : (
 					<form
+						noValidate
 						className="flex flex-col gap-4"
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (name.trim()) {
-								createMutation.mutate({ name: name.trim() });
+							const parsed = createApiKeySchema.safeParse({
+								name: name.trim(),
+							});
+							if (!parsed.success) {
+								const errors = fieldErrorsFromZod(parsed.error, t);
+								setFieldErrors(errors);
+								focusFirstInvalidField(errors, { name: "api-key-name" });
+								return;
 							}
+							createMutation.mutate(parsed.data);
 						}}
 					>
 						<div className="flex flex-col gap-2">
@@ -362,10 +379,21 @@ function CreateApiKeyDialog({
 								id="api-key-name"
 								value={name}
 								placeholder={t("apiKeys.namePlaceholder")}
-								onChange={(e) => setName(e.target.value)}
-								required
+								onChange={(e) => {
+									setName(e.target.value);
+									setFieldErrors((prev) => withoutFieldError(prev, "name"));
+								}}
 								maxLength={50}
+								aria-invalid={fieldErrors.name ? true : undefined}
+								aria-describedby={
+									fieldErrors.name ? "api-key-name-error" : undefined
+								}
 							/>
+							{fieldErrors.name && (
+								<p id="api-key-name-error" className="text-destructive text-sm">
+									{fieldErrors.name}
+								</p>
+							)}
 						</div>
 						{createMutation.isError && (
 							<Alert variant="destructive">

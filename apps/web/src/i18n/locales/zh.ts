@@ -56,6 +56,17 @@ const zh: typeof en = {
 		invalidEmailOrPassword: "邮箱或密码错误。",
 		userAlreadyExists: "该邮箱已注册过账号。",
 	},
+	form: {
+		errors: {
+			required: "必填项",
+			email: "请输入有效的邮箱地址",
+			passwordMin: "密码至少需要 {{count}} 个字符",
+			slugPattern: "只能使用小写字母、数字和连字符",
+			identifierPattern: "Key 必须为 2–6 个大写字母",
+			url: "请输入有效的 URL（https，localhost 可用 http）",
+			maxLength: "最多不超过 {{count}} 个字符",
+		},
+	},
 	login: {
 		title: "登录",
 		description: "输入邮箱和密码继续。",
@@ -418,7 +429,7 @@ const zh: typeof en = {
 		url: "接收地址",
 		urlPlaceholder: "https://example.com/webhook",
 		eventsLabel: "事件",
-		eventsMinError: "请至少选择 2 个事件。",
+		eventsMinError: "请至少选择一个事件。",
 		active: "启用",
 		secretTitle: "Webhook 已创建",
 		secretWarning: "请立即复制该签名密钥——它不会再次显示。",

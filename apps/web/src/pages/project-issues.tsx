@@ -2,6 +2,8 @@ import type { ListIssuesDto } from "@api/dto/issue.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+	type CreateIssueInput,
+	createIssueSchema,
 	ISSUE_PRIORITIES,
 	ISSUE_STATUSES,
 	type IssuePriorityName,
@@ -61,6 +63,12 @@ import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
 import { client, unwrap } from "@/lib/api";
 import { isNotFoundError } from "@/lib/errors";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import {
 	formatDateTime,
 	formatDueDate,
@@ -663,6 +671,7 @@ function CreateIssueDialog({
 	const [labelIds, setLabelIds] = useState<string[]>([]);
 	const [dueDate, setDueDate] = useState("");
 	const [estimate, setEstimate] = useState("");
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	const estimateNumber = estimate === "" ? undefined : Number(estimate);
 	const estimateValid =
@@ -682,38 +691,52 @@ function CreateIssueDialog({
 			setLabelIds([]);
 			setDueDate("");
 			setEstimate("");
+			setFieldErrors({});
 		}
 	}, [open, defaultStatus]);
 
 	const createMutation = useMutation({
-		mutationFn: () => {
-			const parsedEstimate = estimate === "" ? undefined : Number(estimate);
-			return unwrap(
+		mutationFn: (json: CreateIssueInput) =>
+			unwrap(
 				client.api.orgs[":orgId"].projects[":projectId"].issues.$post({
 					param: { orgId, projectId },
-					json: {
-						title: title.trim(),
-						description: description.trim() || undefined,
-						status,
-						priority: priorityValue(priority),
-						assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
-						labelIds: labelIds.length > 0 ? labelIds : undefined,
-						dueDate: fromDateInputValue(dueDate) ?? undefined,
-						estimate:
-							parsedEstimate !== undefined &&
-							Number.isInteger(parsedEstimate) &&
-							parsedEstimate >= 0
-								? parsedEstimate
-								: undefined,
-					},
+					json,
 				}),
-			);
-		},
+			),
 		onSuccess: () => {
 			onCreated();
 			onOpenChange(false);
 		},
 	});
+
+	const onSubmit = () => {
+		const parsedEstimate = estimate === "" ? undefined : Number(estimate);
+		const parsed = createIssueSchema.safeParse({
+			title: title.trim(),
+			description: description.trim() || undefined,
+			status,
+			priority: priorityValue(priority),
+			assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
+			labelIds: labelIds.length > 0 ? labelIds : undefined,
+			dueDate: fromDateInputValue(dueDate) ?? undefined,
+			estimate:
+				parsedEstimate !== undefined &&
+				Number.isInteger(parsedEstimate) &&
+				parsedEstimate >= 0
+					? parsedEstimate
+					: undefined,
+		});
+		if (!parsed.success) {
+			const errors = fieldErrorsFromZod(parsed.error, t);
+			setFieldErrors(errors);
+			focusFirstInvalidField(errors, {
+				title: "issue-title",
+				description: "issue-description",
+			});
+			return;
+		}
+		createMutation.mutate(parsed.data);
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -723,12 +746,11 @@ function CreateIssueDialog({
 					<DialogDescription>{t("issues.createDescription")}</DialogDescription>
 				</DialogHeader>
 				<form
+					noValidate
 					className="flex flex-col gap-4"
 					onSubmit={(e) => {
 						e.preventDefault();
-						if (title.trim()) {
-							createMutation.mutate();
-						}
+						onSubmit();
 					}}
 				>
 					<div className="flex flex-col gap-2">
@@ -737,9 +759,20 @@ function CreateIssueDialog({
 							id="issue-title"
 							value={title}
 							placeholder={t("issues.titlePlaceholder")}
-							onChange={(e) => setTitle(e.target.value)}
-							required
+							onChange={(e) => {
+								setTitle(e.target.value);
+								setFieldErrors((prev) => withoutFieldError(prev, "title"));
+							}}
+							aria-invalid={fieldErrors.title ? true : undefined}
+							aria-describedby={
+								fieldErrors.title ? "issue-title-error" : undefined
+							}
 						/>
+						{fieldErrors.title && (
+							<p id="issue-title-error" className="text-destructive text-sm">
+								{fieldErrors.title}
+							</p>
+						)}
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="issue-description">
@@ -772,8 +805,19 @@ function CreateIssueDialog({
 									id="issue-description"
 									value={description}
 									placeholder={t("issues.descriptionPlaceholder")}
-									onChange={(e) => setDescription(e.target.value)}
+									onChange={(e) => {
+										setDescription(e.target.value);
+										setFieldErrors((prev) =>
+											withoutFieldError(prev, "description"),
+										);
+									}}
 									className="resize-y border-0 focus-visible:ring-0"
+									aria-invalid={fieldErrors.description ? true : undefined}
+									aria-describedby={
+										fieldErrors.description
+											? "issue-description-error"
+											: undefined
+									}
 								/>
 							) : (
 								<div className="min-h-24 px-3 py-2">
@@ -787,6 +831,14 @@ function CreateIssueDialog({
 								</div>
 							)}
 						</div>
+						{fieldErrors.description && (
+							<p
+								id="issue-description-error"
+								className="text-destructive text-sm"
+							>
+								{fieldErrors.description}
+							</p>
+						)}
 					</div>
 					<div className="grid grid-cols-2 gap-4">
 						<div className="flex flex-col gap-2">

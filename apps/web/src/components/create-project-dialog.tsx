@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createProjectSchema } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -15,12 +16,23 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
 import { client, unwrap } from "@/lib/api";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import { projectKeyFromName } from "@/lib/issue-utils";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import { useSession } from "@/lib/session";
 
-const KEY_PATTERN = /^[A-Z]{2,6}$/;
 const DEFAULT_COLOR = "#6366f1";
+
+const INPUT_IDS = {
+	name: "project-name",
+	key: "project-key",
+	description: "project-description",
+};
 
 export function CreateProjectDialog({
 	orgId,
@@ -40,6 +52,7 @@ export function CreateProjectDialog({
 	const [keyTouched, setKeyTouched] = useState(false);
 	const [description, setDescription] = useState("");
 	const [color, setColor] = useState(DEFAULT_COLOR);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
 		if (open) {
@@ -48,6 +61,7 @@ export function CreateProjectDialog({
 			setKeyTouched(false);
 			setDescription("");
 			setColor(DEFAULT_COLOR);
+			setFieldErrors({});
 		}
 	}, [open]);
 
@@ -72,19 +86,45 @@ export function CreateProjectDialog({
 
 	const onNameChange = (next: string) => {
 		setName(next);
+		setFieldErrors((prev) => withoutFieldError(prev, "name"));
 		if (!keyTouched) {
 			setKey(projectKeyFromName(next));
 		}
 	};
 
-	const keyInvalid = key.length > 0 && !KEY_PATTERN.test(key);
+	const onKeyChange = (next: string) => {
+		setKeyTouched(true);
+		setKey(
+			next
+				.toUpperCase()
+				.replace(/[^A-Z]/g, "")
+				.slice(0, 6),
+		);
+		setFieldErrors((prev) => withoutFieldError(prev, "key"));
+	};
+
+	const onDescriptionChange = (next: string) => {
+		setDescription(next);
+		setFieldErrors((prev) => withoutFieldError(prev, "description"));
+	};
 
 	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
 	const canManage =
 		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
 
 	const onSubmit = () => {
-		if (!name.trim() || !KEY_PATTERN.test(key)) {
+		const parsed = createProjectSchema.safeParse({
+			name: name.trim(),
+			key,
+			description: description.trim() || undefined,
+			color,
+		});
+		if (!parsed.success) {
+			const errors = fieldErrorsFromZod(parsed.error, t, {
+				key: "form.errors.identifierPattern",
+			});
+			setFieldErrors(errors);
+			focusFirstInvalidField(errors, INPUT_IDS);
 			return;
 		}
 		createMutation.mutate();
@@ -100,6 +140,7 @@ export function CreateProjectDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<form
+					noValidate
 					className="flex flex-col gap-4"
 					onSubmit={(e) => {
 						e.preventDefault();
@@ -113,8 +154,16 @@ export function CreateProjectDialog({
 							value={name}
 							placeholder={t("projects.namePlaceholder")}
 							onChange={(e) => onNameChange(e.target.value)}
-							required
+							aria-invalid={fieldErrors.name ? true : undefined}
+							aria-describedby={
+								fieldErrors.name ? "project-name-error" : undefined
+							}
 						/>
+						{fieldErrors.name && (
+							<p id="project-name-error" className="text-destructive text-sm">
+								{fieldErrors.name}
+							</p>
+						)}
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="project-key">{t("projects.key")}</Label>
@@ -122,23 +171,21 @@ export function CreateProjectDialog({
 							id="project-key"
 							value={key}
 							placeholder={t("projects.keyPlaceholder")}
-							onChange={(e) => {
-								setKeyTouched(true);
-								setKey(
-									e.target.value
-										.toUpperCase()
-										.replace(/[^A-Z]/g, "")
-										.slice(0, 6),
-								);
-							}}
+							onChange={(e) => onKeyChange(e.target.value)}
 							className="w-28 font-mono uppercase"
+							aria-invalid={fieldErrors.key ? true : undefined}
+							aria-describedby={
+								fieldErrors.key
+									? "project-key-error project-key-hint"
+									: "project-key-hint"
+							}
 						/>
-						<p className="text-muted-foreground text-xs">
+						<p id="project-key-hint" className="text-muted-foreground text-xs">
 							{t("projects.keyHint")}
 						</p>
-						{keyInvalid && (
-							<p className="text-destructive text-xs">
-								{t("projects.keyInvalid")}
+						{fieldErrors.key && (
+							<p id="project-key-error" className="text-destructive text-sm">
+								{fieldErrors.key}
 							</p>
 						)}
 					</div>
@@ -154,8 +201,22 @@ export function CreateProjectDialog({
 							id="project-description"
 							value={description}
 							placeholder={t("projects.descriptionPlaceholder")}
-							onChange={(e) => setDescription(e.target.value)}
+							onChange={(e) => onDescriptionChange(e.target.value)}
+							aria-invalid={fieldErrors.description ? true : undefined}
+							aria-describedby={
+								fieldErrors.description
+									? "project-description-error"
+									: undefined
+							}
 						/>
+						{fieldErrors.description && (
+							<p
+								id="project-description-error"
+								className="text-destructive text-sm"
+							>
+								{fieldErrors.description}
+							</p>
+						)}
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="project-color">

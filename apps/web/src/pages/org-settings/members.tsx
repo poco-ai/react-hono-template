@@ -39,10 +39,17 @@ import {
 import { CircleAlert, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
 import { QuotaError } from "@/components/quota-error";
 import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/errors";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import type { OrgInvitation, OrgMember, OrgRole } from "@/lib/queries/members";
 import {
 	invitationsQuery,
@@ -55,6 +62,10 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 const INVITABLE_ROLES: OrgRole[] = ["admin", "member"];
+
+const inviteSchema = z.object({
+	email: z.string().trim().min(1).email(),
+});
 
 class MemberActionError extends Error {
 	code?: string;
@@ -434,6 +445,7 @@ function InviteDialog({
 	const [role, setRole] = useState<OrgRole>("member");
 	const [inviteLink, setInviteLink] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
 		if (open) {
@@ -441,6 +453,7 @@ function InviteDialog({
 			setRole("member");
 			setInviteLink(null);
 			setCopied(false);
+			setFieldErrors({});
 		}
 	}, [open]);
 
@@ -506,12 +519,18 @@ function InviteDialog({
 					</div>
 				) : (
 					<form
+						noValidate
 						className="flex flex-col gap-4"
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (email.trim()) {
-								inviteMutation.mutate();
+							const parsed = inviteSchema.safeParse({ email });
+							if (!parsed.success) {
+								const errors = fieldErrorsFromZod(parsed.error, t);
+								setFieldErrors(errors);
+								focusFirstInvalidField(errors, { email: "invite-email" });
+								return;
 							}
+							inviteMutation.mutate();
 						}}
 					>
 						<div className="flex flex-col gap-2">
@@ -521,9 +540,20 @@ function InviteDialog({
 								type="email"
 								value={email}
 								placeholder={t("common.emailPlaceholder")}
-								onChange={(e) => setEmail(e.target.value)}
-								required
+								onChange={(e) => {
+									setEmail(e.target.value);
+									setFieldErrors((prev) => withoutFieldError(prev, "email"));
+								}}
+								aria-invalid={fieldErrors.email ? true : undefined}
+								aria-describedby={
+									fieldErrors.email ? "invite-email-error" : undefined
+								}
 							/>
+							{fieldErrors.email && (
+								<p id="invite-email-error" className="text-destructive text-sm">
+									{fieldErrors.email}
+								</p>
+							)}
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>{t("common.role")}</Label>

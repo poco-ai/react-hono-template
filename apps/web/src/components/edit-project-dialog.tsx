@@ -1,5 +1,6 @@
 import type { ProjectDto } from "@api/dto/project.dto";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateProjectSchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -17,8 +18,19 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 
 const DEFAULT_COLOR = "#6366f1";
+
+const INPUT_IDS = {
+	name: "edit-project-name",
+	description: "edit-project-description",
+};
 
 export function EditProjectDialog({
 	orgId,
@@ -36,6 +48,7 @@ export function EditProjectDialog({
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [color, setColor] = useState(DEFAULT_COLOR);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	const updateMutation = useMutation({
 		mutationFn: (target: ProjectDto) =>
@@ -61,11 +74,23 @@ export function EditProjectDialog({
 			setName(project.name);
 			setDescription(project.description ?? "");
 			setColor(project.color ?? DEFAULT_COLOR);
+			setFieldErrors({});
 		}
 	}, [open, project, updateMutation.reset]);
 
 	const onSubmit = () => {
-		if (!project || !name.trim()) {
+		if (!project) {
+			return;
+		}
+		const parsed = updateProjectSchema.safeParse({
+			name: name.trim(),
+			description: description.trim() || null,
+			color,
+		});
+		if (!parsed.success) {
+			const errors = fieldErrorsFromZod(parsed.error, t);
+			setFieldErrors(errors);
+			focusFirstInvalidField(errors, INPUT_IDS);
 			return;
 		}
 		updateMutation.mutate(project);
@@ -79,6 +104,7 @@ export function EditProjectDialog({
 					<DialogDescription>{t("projects.editDescription")}</DialogDescription>
 				</DialogHeader>
 				<form
+					noValidate
 					className="flex flex-col gap-4"
 					onSubmit={(e) => {
 						e.preventDefault();
@@ -91,9 +117,23 @@ export function EditProjectDialog({
 							id="edit-project-name"
 							value={name}
 							placeholder={t("projects.namePlaceholder")}
-							onChange={(e) => setName(e.target.value)}
-							required
+							onChange={(e) => {
+								setName(e.target.value);
+								setFieldErrors((prev) => withoutFieldError(prev, "name"));
+							}}
+							aria-invalid={fieldErrors.name ? true : undefined}
+							aria-describedby={
+								fieldErrors.name ? "edit-project-name-error" : undefined
+							}
 						/>
+						{fieldErrors.name && (
+							<p
+								id="edit-project-name-error"
+								className="text-destructive text-sm"
+							>
+								{fieldErrors.name}
+							</p>
+						)}
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="edit-project-key">{t("projects.key")}</Label>
@@ -119,8 +159,27 @@ export function EditProjectDialog({
 							id="edit-project-description"
 							value={description}
 							placeholder={t("projects.descriptionPlaceholder")}
-							onChange={(e) => setDescription(e.target.value)}
+							onChange={(e) => {
+								setDescription(e.target.value);
+								setFieldErrors((prev) =>
+									withoutFieldError(prev, "description"),
+								);
+							}}
+							aria-invalid={fieldErrors.description ? true : undefined}
+							aria-describedby={
+								fieldErrors.description
+									? "edit-project-description-error"
+									: undefined
+							}
 						/>
+						{fieldErrors.description && (
+							<p
+								id="edit-project-description-error"
+								className="text-destructive text-sm"
+							>
+								{fieldErrors.description}
+							</p>
+						)}
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="edit-project-color">

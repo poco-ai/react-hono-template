@@ -15,14 +15,33 @@ import { CircleAlert } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/errors";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import { bootstrapQuery } from "@/lib/queries/bootstrap";
 import { sessionOptions } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
+
+const registerSchema = z.object({
+	name: z.string().trim().min(1),
+	email: z.string().trim().min(1).email(),
+	password: z.string().min(8),
+});
+
+const INPUT_IDS = {
+	name: "name",
+	email: "email",
+	password: "password",
+};
 
 export function RegisterPage() {
 	const { t } = useTranslation();
@@ -30,17 +49,25 @@ export function RegisterPage() {
 	const navigate = useNavigate({ from: "/register" });
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 	const { data: bootstrap } = useQuery(bootstrapQuery());
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError(null);
-		const form = new FormData(e.currentTarget);
-		const { error } = await authClient.signUp.email({
-			name: String(form.get("name") ?? ""),
-			email: String(form.get("email") ?? ""),
-			password: String(form.get("password") ?? ""),
+		const data = new FormData(e.currentTarget);
+		const parsed = registerSchema.safeParse({
+			name: String(data.get("name") ?? ""),
+			email: String(data.get("email") ?? ""),
+			password: String(data.get("password") ?? ""),
 		});
+		if (!parsed.success) {
+			const errors = fieldErrorsFromZod(parsed.error, t);
+			setFieldErrors(errors);
+			focusFirstInvalidField(errors, INPUT_IDS);
+			return;
+		}
+		const { error } = await authClient.signUp.email(parsed.data);
 		if (error) {
 			setError(
 				errorMessage({
@@ -69,15 +96,24 @@ export function RegisterPage() {
 					)}
 				</CardHeader>
 				<CardContent>
-					<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+					<form noValidate className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="name">{t("common.name")}</Label>
 							<Input
 								id="name"
 								name="name"
 								placeholder={t("register.namePlaceholder")}
-								required
+								aria-invalid={fieldErrors.name ? true : undefined}
+								aria-describedby={fieldErrors.name ? "name-error" : undefined}
+								onChange={() =>
+									setFieldErrors((prev) => withoutFieldError(prev, "name"))
+								}
 							/>
+							{fieldErrors.name && (
+								<p id="name-error" className="text-destructive text-sm">
+									{fieldErrors.name}
+								</p>
+							)}
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="email">{t("common.email")}</Label>
@@ -86,8 +122,17 @@ export function RegisterPage() {
 								name="email"
 								type="email"
 								placeholder={t("common.emailPlaceholder")}
-								required
+								aria-invalid={fieldErrors.email ? true : undefined}
+								aria-describedby={fieldErrors.email ? "email-error" : undefined}
+								onChange={() =>
+									setFieldErrors((prev) => withoutFieldError(prev, "email"))
+								}
 							/>
+							{fieldErrors.email && (
+								<p id="email-error" className="text-destructive text-sm">
+									{fieldErrors.email}
+								</p>
+							)}
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="password">{t("common.password")}</Label>
@@ -96,9 +141,19 @@ export function RegisterPage() {
 								name="password"
 								type="password"
 								placeholder={t("register.passwordPlaceholder")}
-								minLength={8}
-								required
+								aria-invalid={fieldErrors.password ? true : undefined}
+								aria-describedby={
+									fieldErrors.password ? "password-error" : undefined
+								}
+								onChange={() =>
+									setFieldErrors((prev) => withoutFieldError(prev, "password"))
+								}
 							/>
+							{fieldErrors.password && (
+								<p id="password-error" className="text-destructive text-sm">
+									{fieldErrors.password}
+								</p>
+							)}
 						</div>
 						{error && (
 							<Alert variant="destructive">

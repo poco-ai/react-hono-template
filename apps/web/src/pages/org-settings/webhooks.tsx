@@ -1,7 +1,7 @@
 import type { WebhookDeliveryDto, WebhookDto } from "@api/dto/webhook.dto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WebhookEventName } from "@workspace/shared";
-import { WEBHOOK_EVENTS } from "@workspace/shared";
+import { createWebhookSchema, WEBHOOK_EVENTS } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -50,6 +50,12 @@ import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
 import { TablePagination } from "@/components/table-pagination";
 import { client, unwrap } from "@/lib/api";
+import {
+	type FieldErrors,
+	fieldErrorsFromZod,
+	focusFirstInvalidField,
+	withoutFieldError,
+} from "@/lib/form";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import {
@@ -63,8 +69,6 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 type WebhookEventLabel = WebhookEventName | "ping";
-
-const MIN_EVENTS = 1;
 
 function DeliveryStatusBadge({ status }: { status: string }) {
 	const { t } = useTranslation();
@@ -370,6 +374,7 @@ function WebhookDialog({
 	const [active, setActive] = useState(true);
 	const [createdSecret, setCreatedSecret] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	useEffect(() => {
 		if (open) {
@@ -378,6 +383,7 @@ function WebhookDialog({
 			setActive(webhook?.active ?? true);
 			setCreatedSecret(null);
 			setCopied(false);
+			setFieldErrors({});
 		}
 	}, [open, webhook]);
 
@@ -415,6 +421,7 @@ function WebhookDialog({
 		setEvents((prev) =>
 			checked ? [...prev, event] : prev.filter((e) => e !== event),
 		);
+		setFieldErrors((prev) => withoutFieldError(prev, "events"));
 	};
 
 	const copySecret = async () => {
@@ -425,11 +432,35 @@ function WebhookDialog({
 		setCopied(true);
 	};
 
-	const canSubmit = url.trim().length > 0 && events.length >= MIN_EVENTS;
+	const onUrlChange = (next: string) => {
+		setUrl(next);
+		setFieldErrors((prev) => withoutFieldError(prev, "url"));
+	};
 
 	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
 	const canManage =
 		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
+
+	const onSubmit = () => {
+		const parsed = createWebhookSchema.safeParse({
+			url: url.trim(),
+			events,
+		});
+		if (!parsed.success) {
+			const errors = fieldErrorsFromZod(parsed.error, t, {
+				url: "form.errors.url",
+				events: "webhooks.eventsMinError",
+			});
+			setFieldErrors(errors);
+			focusFirstInvalidField(errors, { url: "webhook-url" });
+			return;
+		}
+		saveMutation.mutate({
+			url: parsed.data.url,
+			events: parsed.data.events,
+			active,
+		});
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -468,16 +499,11 @@ function WebhookDialog({
 					</div>
 				) : (
 					<form
+						noValidate
 						className="flex flex-col gap-4"
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (canSubmit) {
-								saveMutation.mutate({
-									url: url.trim(),
-									events: events as WebhookEventName[],
-									active,
-								});
-							}
+							onSubmit();
 						}}
 					>
 						<div className="flex flex-col gap-2">
@@ -487,13 +513,26 @@ function WebhookDialog({
 								type="url"
 								value={url}
 								placeholder={t("webhooks.urlPlaceholder")}
-								onChange={(e) => setUrl(e.target.value)}
-								required
+								onChange={(e) => onUrlChange(e.target.value)}
+								aria-invalid={fieldErrors.url ? true : undefined}
+								aria-describedby={
+									fieldErrors.url ? "webhook-url-error" : undefined
+								}
 							/>
+							{fieldErrors.url && (
+								<p id="webhook-url-error" className="text-destructive text-sm">
+									{fieldErrors.url}
+								</p>
+							)}
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>{t("webhooks.eventsLabel")}</Label>
-							<div className="grid grid-cols-1 gap-2">
+							<div
+								className="grid grid-cols-1 gap-2"
+								aria-describedby={
+									fieldErrors.events ? "webhook-events-error" : undefined
+								}
+							>
 								{WEBHOOK_EVENTS.map((event) => (
 									<label
 										key={event}
@@ -511,9 +550,12 @@ function WebhookDialog({
 									</label>
 								))}
 							</div>
-							{events.length > 0 && events.length < MIN_EVENTS && (
-								<p className="text-destructive text-xs">
-									{t("webhooks.eventsMinError")}
+							{fieldErrors.events && (
+								<p
+									id="webhook-events-error"
+									className="text-destructive text-sm"
+								>
+									{fieldErrors.events}
 								</p>
 							)}
 						</div>
