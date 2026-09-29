@@ -23,7 +23,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 							to="/"
 							className="text-muted-foreground hover:text-foreground"
 						>
-							{t("nav.home")}
+							{t("nav.backToApp")}
 						</Link>
 						{user?.role === "admin" && (
 							<Link

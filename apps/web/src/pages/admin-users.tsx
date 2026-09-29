@@ -179,8 +179,12 @@ export function AdminUsersPage() {
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="admin">admin</SelectItem>
-												<SelectItem value="user">user</SelectItem>
+												<SelectItem value="admin">
+													{t("adminUsers.roles.admin")}
+												</SelectItem>
+												<SelectItem value="user">
+													{t("adminUsers.roles.user")}
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</TableCell>

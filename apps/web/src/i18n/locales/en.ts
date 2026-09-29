@@ -32,7 +32,7 @@ const en = {
 		justNow: "Just now",
 	},
 	nav: {
-		home: "Home",
+		backToApp: "Back to app",
 		users: "Users",
 		orgs: "Orgs",
 		signOut: "Sign out",
@@ -456,6 +456,10 @@ const en = {
 	},
 	adminUsers: {
 		title: "User management",
+		roles: {
+			admin: "Admin",
+			user: "User",
+		},
 		banTitle: "Ban this user?",
 		banDescription:
 			"{{name}} will immediately lose access and can no longer sign in.",
@@ -511,9 +515,6 @@ const en = {
 			issues: "Issues",
 			proOrgs: "Pro organizations",
 		},
-		quickLinks: "Quick links",
-		manageUsers: "Manage users",
-		manageOrgs: "Manage organizations",
 	},
 	notFound: {
 		title: "Page not found",

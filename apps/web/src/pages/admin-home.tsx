@@ -1,10 +1,7 @@
 import type { AdminStatsDto } from "@api/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { buttonVariants } from "@workspace/ui/components/button";
 import {
 	Card,
-	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
@@ -72,26 +69,6 @@ export function AdminHomePage() {
 					))}
 				</div>
 			)}
-
-			<Card>
-				<CardHeader>
-					<CardTitle>{t("adminHome.quickLinks")}</CardTitle>
-				</CardHeader>
-				<CardContent className="flex gap-2">
-					<Link
-						to="/admin/users"
-						className={buttonVariants({ variant: "outline" })}
-					>
-						{t("adminHome.manageUsers")}
-					</Link>
-					<Link
-						to="/admin/orgs"
-						className={buttonVariants({ variant: "outline" })}
-					>
-						{t("adminHome.manageOrgs")}
-					</Link>
-				</CardContent>
-			</Card>
 		</div>
 	);
 }

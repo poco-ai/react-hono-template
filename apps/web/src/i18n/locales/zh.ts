@@ -34,7 +34,7 @@ const zh: typeof en = {
 		justNow: "刚刚",
 	},
 	nav: {
-		home: "首页",
+		backToApp: "返回应用",
 		users: "用户",
 		orgs: "组织",
 		signOut: "退出登录",
@@ -442,6 +442,10 @@ const zh: typeof en = {
 	},
 	adminUsers: {
 		title: "用户管理",
+		roles: {
+			admin: "管理员",
+			user: "用户",
+		},
 		banTitle: "封禁该用户？",
 		banDescription: "{{name}} 将立即失去访问权限且无法再登录。",
 		description:
@@ -495,9 +499,6 @@ const zh: typeof en = {
 			issues: "事项",
 			proOrgs: "Pro 组织",
 		},
-		quickLinks: "快捷入口",
-		manageUsers: "管理用户",
-		manageOrgs: "管理组织",
 	},
 	notFound: {
 		title: "页面不存在",
