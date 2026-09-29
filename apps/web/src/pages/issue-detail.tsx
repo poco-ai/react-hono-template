@@ -49,6 +49,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { DateField } from "@/components/issue/date-field";
 import { IssueActivityTimeline } from "@/components/issue/issue-activity";
 import { IssueAttachments } from "@/components/issue/issue-attachments";
 import { IssueComments } from "@/components/issue/issue-comments";
@@ -517,13 +518,10 @@ export function IssueDetailPage({
 				</PropertyRow>
 
 				<PropertyRow label={t("issues.dueDate")}>
-					<Input
-						type="date"
+					<DateField
 						value={toDateInputValue(data.dueDate)}
 						disabled={frozen}
-						onChange={(e) =>
-							update({ dueDate: fromDateInputValue(e.target.value) })
-						}
+						onChange={(v) => update({ dueDate: fromDateInputValue(v) })}
 					/>
 				</PropertyRow>
 

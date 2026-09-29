@@ -61,6 +61,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BoardView } from "@/components/issue/board-view";
 import { BulkActionBar } from "@/components/issue/bulk-bar";
+import { DateField } from "@/components/issue/date-field";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { PriorityBadge } from "@/components/issue/priority-badge";
 import { StatusBadge } from "@/components/issue/status-badge";
@@ -918,11 +919,7 @@ function CreateIssueDialog({
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>{t("issues.dueDate")}</Label>
-							<Input
-								type="date"
-								value={dueDate}
-								onChange={(e) => setDueDate(e.target.value)}
-							/>
+							<DateField value={dueDate} onChange={setDueDate} />
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>{t("issues.estimate")}</Label>
