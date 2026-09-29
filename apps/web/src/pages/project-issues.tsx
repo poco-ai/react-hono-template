@@ -31,6 +31,12 @@ import {
 	SelectValue,
 } from "@workspace/ui/components/select";
 import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+} from "@workspace/ui/components/sheet";
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -47,8 +53,9 @@ import {
 	List,
 	Plus,
 	Search,
+	SlidersHorizontal,
 } from "lucide-react";
-import type { FormEvent } from "react";
+import type { FormEvent, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -85,6 +92,7 @@ import { membersQuery } from "@/lib/queries/members";
 import { projectQuery } from "@/lib/queries/projects";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export interface IssuesSearch {
@@ -167,6 +175,12 @@ export function ProjectIssuesPage({
 		search.assigneeId !== undefined ||
 		search.labelId !== undefined ||
 		(search.search ?? "") !== "";
+	const activeFilterCount =
+		statusFilter.length +
+		priorityFilter.length +
+		(search.assigneeId !== undefined ? 1 : 0) +
+		(search.labelId !== undefined ? 1 : 0) +
+		((search.search ?? "") !== "" ? 1 : 0);
 
 	const memberById = new Map(
 		(members.data ?? []).map((member) => [member.userId, member]),
@@ -199,6 +213,26 @@ export function ProjectIssuesPage({
 	};
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
+	const isDesktop = useMediaQuery("(min-width: 640px)");
+	const [filterOpen, setFilterOpen] = useState(false);
+	const focusSearchOnOpenRef = useRef(false);
+
+	useEffect(() => {
+		if (isDesktop) {
+			setFilterOpen(false);
+			focusSearchOnOpenRef.current = false;
+		}
+	}, [isDesktop]);
+
+	useEffect(() => {
+		if (!filterOpen || !focusSearchOnOpenRef.current) {
+			return;
+		}
+		focusSearchOnOpenRef.current = false;
+		const frame = requestAnimationFrame(() => searchInputRef.current?.focus());
+		return () => cancelAnimationFrame(frame);
+	}, [filterOpen]);
+
 	useHotkeys({
 		c: () => {
 			if (!frozen) {
@@ -206,7 +240,12 @@ export function ProjectIssuesPage({
 			}
 		},
 		"/": () => {
-			searchInputRef.current?.focus();
+			if (searchInputRef.current) {
+				searchInputRef.current.focus();
+			} else {
+				focusSearchOnOpenRef.current = true;
+				setFilterOpen(true);
+			}
 		},
 	});
 
@@ -312,169 +351,75 @@ export function ProjectIssuesPage({
 				</div>
 			</header>
 
-			<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
-				<MultiSelect
-					placeholder={t("issues.filterStatus")}
-					triggerLabel={
-						statusFilter.length > 0
-							? `${t("issues.filterStatus")} · ${statusFilter.length}`
-							: undefined
-					}
-					active={statusFilter.length > 0}
-					value={statusFilter}
-					options={ISSUE_STATUSES.map((status) => ({
-						value: status,
-						label: t(`issues.statuses.${status}`),
-					}))}
-					onChange={(next) =>
-						updateSearch({ status: serializeCsv(next), page: 1 })
-					}
-				/>
-				<MultiSelect
-					placeholder={t("issues.filterPriority")}
-					triggerLabel={
-						priorityFilter.length > 0
-							? `${t("issues.filterPriority")} · ${priorityFilter.length}`
-							: undefined
-					}
-					active={priorityFilter.length > 0}
-					value={priorityFilter}
-					options={PRIORITY_NAMES.map((name) => ({
-						value: name,
-						label: t(`issues.priorities.${name}`),
-					}))}
-					onChange={(next) =>
-						updateSearch({ priority: serializeCsv(next), page: 1 })
-					}
-				/>
-				<Select
-					value={search.assigneeId ?? ASSIGNEE_ALL}
-					onValueChange={(value) =>
-						updateSearch({
-							assigneeId: value && value !== ASSIGNEE_ALL ? value : undefined,
-							page: 1,
-						})
-					}
-				>
-					<SelectTrigger
-						className={cn(
-							"w-44",
-							assigneeFilterActive && "bg-secondary dark:bg-secondary",
-						)}
-					>
-						<SelectValue>
-							<span className="text-muted-foreground">
-								{t("issues.filterAssignee")}:
-							</span>
-							<span
-								className={cn(!assigneeFilterActive && "text-muted-foreground")}
-							>
-								{assigneeFilterLabel}
-							</span>
-						</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value={ASSIGNEE_ALL}>{t("common.all")}</SelectItem>
-						<SelectItem value="none">{t("common.unassigned")}</SelectItem>
-						{(members.data ?? []).map((member) => (
-							<SelectItem key={member.userId} value={member.userId}>
-								{member.user.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Select
-					value={search.labelId ?? LABEL_ALL}
-					onValueChange={(value) =>
-						updateSearch({
-							labelId: value && value !== LABEL_ALL ? value : undefined,
-							page: 1,
-						})
-					}
-				>
-					<SelectTrigger
-						className={cn(
-							"w-40",
-							labelFilterActive && "bg-secondary dark:bg-secondary",
-						)}
-					>
-						<SelectValue>
-							<span className="text-muted-foreground">
-								{t("issues.filterLabel")}:
-							</span>
-							<span
-								className={cn(!labelFilterActive && "text-muted-foreground")}
-							>
-								{labelFilterLabel}
-							</span>
-						</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value={LABEL_ALL}>{t("common.all")}</SelectItem>
-						{(labels.data ?? []).map((label) => (
-							<SelectItem key={label.id} value={label.id}>
-								{label.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<form className="flex items-center gap-2" onSubmit={onSearch}>
-					<div className="relative">
-						<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
-						<Input
-							ref={searchInputRef}
-							value={searchInput}
-							placeholder={t("issues.searchPlaceholder")}
-							onChange={(e) => setSearchInput(e.target.value)}
-							className="h-8 w-56 pl-8"
-							title="/"
-						/>
-					</div>
-				</form>
-				{view === "list" && (
-					<Select
-						value={search.sort}
-						onValueChange={(value) =>
-							updateSearch({ sort: value as IssuesSearch["sort"] })
-						}
-					>
-						<SelectTrigger className="w-40">
-							<SelectValue>
-								{t(`issues.sortOptions.${search.sort}`)}
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="updated">
-								{t("issues.sortOptions.updated")}
-							</SelectItem>
-							<SelectItem value="created">
-								{t("issues.sortOptions.created")}
-							</SelectItem>
-							<SelectItem value="priority">
-								{t("issues.sortOptions.priority")}
-							</SelectItem>
-						</SelectContent>
-					</Select>
-				)}
-				{hasFilters && (
+			{isDesktop ? (
+				<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
+					<IssueFilterControls
+						variant="inline"
+						statusFilter={statusFilter}
+						priorityFilter={priorityFilter}
+						assigneeId={search.assigneeId}
+						assigneeFilterActive={assigneeFilterActive}
+						assigneeFilterLabel={assigneeFilterLabel}
+						labelId={search.labelId}
+						labelFilterActive={labelFilterActive}
+						labelFilterLabel={labelFilterLabel}
+						members={members.data ?? []}
+						labels={labels.data ?? []}
+						showSort={view === "list"}
+						sort={search.sort}
+						searchInput={searchInput}
+						searchInputRef={searchInputRef}
+						hasFilters={hasFilters}
+						onSearchInput={setSearchInput}
+						onSearchSubmit={onSearch}
+						onUpdateSearch={updateSearch}
+					/>
+				</div>
+			) : (
+				<div className="border-b flex items-center gap-2 px-4 py-3 lg:px-6">
 					<Button
-						variant="ghost"
+						variant="outline"
 						size="sm"
-						onClick={() =>
-							updateSearch({
-								status: "",
-								priority: "",
-								assigneeId: "",
-								labelId: "",
-								search: "",
-								page: 1,
-							})
-						}
+						className="gap-1.5"
+						onClick={() => setFilterOpen(true)}
 					>
-						{t("issues.clearFilters")}
+						<SlidersHorizontal className="size-4" />
+						{activeFilterCount > 0
+							? `${t("issues.filterButton")} · ${activeFilterCount}`
+							: t("issues.filterButton")}
 					</Button>
-				)}
-			</div>
+					<Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+						<SheetContent side="bottom" className="max-h-[85svh] gap-0">
+							<SheetHeader className="border-b">
+								<SheetTitle>{t("issues.filterButton")}</SheetTitle>
+							</SheetHeader>
+							<div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
+								<IssueFilterControls
+									variant="sheet"
+									statusFilter={statusFilter}
+									priorityFilter={priorityFilter}
+									assigneeId={search.assigneeId}
+									assigneeFilterActive={assigneeFilterActive}
+									assigneeFilterLabel={assigneeFilterLabel}
+									labelId={search.labelId}
+									labelFilterActive={labelFilterActive}
+									labelFilterLabel={labelFilterLabel}
+									members={members.data ?? []}
+									labels={labels.data ?? []}
+									showSort={view === "list"}
+									sort={search.sort}
+									searchInput={searchInput}
+									searchInputRef={searchInputRef}
+									hasFilters={hasFilters}
+									onSearchInput={setSearchInput}
+									onSearchSubmit={onSearch}
+									onUpdateSearch={updateSearch}
+								/>
+							</div>
+						</SheetContent>
+					</Sheet>
+				</div>
+			)}
 
 			{view === "board" ? (
 				<div className="flex-1 overflow-x-auto px-4 py-4 lg:px-6">
@@ -502,7 +447,7 @@ export function ProjectIssuesPage({
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead className="w-10">
+									<TableHead className="hidden w-10 md:table-cell">
 										<Checkbox
 											aria-label={t("bulk.selectAll")}
 											checked={allOnPageSelected}
@@ -544,7 +489,10 @@ export function ProjectIssuesPage({
 												})
 											}
 										>
-											<TableCell onClick={(e) => e.stopPropagation()}>
+											<TableCell
+												className="hidden md:table-cell"
+												onClick={(e) => e.stopPropagation()}
+											>
 												<Checkbox
 													aria-label={issue.title}
 													checked={selected.has(issue.id)}
@@ -1030,5 +978,218 @@ function CreateIssueDialog({
 				</form>
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+function IssueFilterControls({
+	variant,
+	statusFilter,
+	priorityFilter,
+	assigneeId,
+	assigneeFilterActive,
+	assigneeFilterLabel,
+	labelId,
+	labelFilterActive,
+	labelFilterLabel,
+	members,
+	labels,
+	showSort,
+	sort,
+	searchInput,
+	searchInputRef,
+	hasFilters,
+	onSearchInput,
+	onSearchSubmit,
+	onUpdateSearch,
+}: {
+	variant: "inline" | "sheet";
+	statusFilter: IssueStatus[];
+	priorityFilter: IssuePriorityName[];
+	assigneeId?: string;
+	assigneeFilterActive: boolean;
+	assigneeFilterLabel: string;
+	labelId?: string;
+	labelFilterActive: boolean;
+	labelFilterLabel: string;
+	members: { userId: string; user: { name: string } }[];
+	labels: { id: string; name: string }[];
+	showSort: boolean;
+	sort: IssuesSearch["sort"];
+	searchInput: string;
+	searchInputRef: RefObject<HTMLInputElement | null>;
+	hasFilters: boolean;
+	onSearchInput: (value: string) => void;
+	onSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
+	onUpdateSearch: (next: Partial<IssuesSearch>) => void;
+}) {
+	const { t } = useTranslation();
+	const stacked = variant === "sheet";
+
+	return (
+		<>
+			<MultiSelect
+				className={stacked ? "w-full" : undefined}
+				placeholder={t("issues.filterStatus")}
+				triggerLabel={
+					statusFilter.length > 0
+						? `${t("issues.filterStatus")} · ${statusFilter.length}`
+						: undefined
+				}
+				active={statusFilter.length > 0}
+				value={statusFilter}
+				options={ISSUE_STATUSES.map((status) => ({
+					value: status,
+					label: t(`issues.statuses.${status}`),
+				}))}
+				onChange={(next) =>
+					onUpdateSearch({ status: serializeCsv(next), page: 1 })
+				}
+			/>
+			<MultiSelect
+				className={stacked ? "w-full" : undefined}
+				placeholder={t("issues.filterPriority")}
+				triggerLabel={
+					priorityFilter.length > 0
+						? `${t("issues.filterPriority")} · ${priorityFilter.length}`
+						: undefined
+				}
+				active={priorityFilter.length > 0}
+				value={priorityFilter}
+				options={PRIORITY_NAMES.map((name) => ({
+					value: name,
+					label: t(`issues.priorities.${name}`),
+				}))}
+				onChange={(next) =>
+					onUpdateSearch({ priority: serializeCsv(next), page: 1 })
+				}
+			/>
+			<Select
+				value={assigneeId ?? ASSIGNEE_ALL}
+				onValueChange={(value) =>
+					onUpdateSearch({
+						assigneeId: value && value !== ASSIGNEE_ALL ? value : undefined,
+						page: 1,
+					})
+				}
+			>
+				<SelectTrigger
+					className={cn(
+						stacked ? "w-full" : "w-44",
+						assigneeFilterActive && "bg-secondary dark:bg-secondary",
+					)}
+				>
+					<SelectValue>
+						<span className="text-muted-foreground">
+							{t("issues.filterAssignee")}:
+						</span>
+						<span
+							className={cn(!assigneeFilterActive && "text-muted-foreground")}
+						>
+							{assigneeFilterLabel}
+						</span>
+					</SelectValue>
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value={ASSIGNEE_ALL}>{t("common.all")}</SelectItem>
+					<SelectItem value="none">{t("common.unassigned")}</SelectItem>
+					{members.map((member) => (
+						<SelectItem key={member.userId} value={member.userId}>
+							{member.user.name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			<Select
+				value={labelId ?? LABEL_ALL}
+				onValueChange={(value) =>
+					onUpdateSearch({
+						labelId: value && value !== LABEL_ALL ? value : undefined,
+						page: 1,
+					})
+				}
+			>
+				<SelectTrigger
+					className={cn(
+						stacked ? "w-full" : "w-40",
+						labelFilterActive && "bg-secondary dark:bg-secondary",
+					)}
+				>
+					<SelectValue>
+						<span className="text-muted-foreground">
+							{t("issues.filterLabel")}:
+						</span>
+						<span className={cn(!labelFilterActive && "text-muted-foreground")}>
+							{labelFilterLabel}
+						</span>
+					</SelectValue>
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value={LABEL_ALL}>{t("common.all")}</SelectItem>
+					{labels.map((label) => (
+						<SelectItem key={label.id} value={label.id}>
+							{label.name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			<form
+				className={cn("flex items-center gap-2", stacked && "w-full")}
+				onSubmit={onSearchSubmit}
+			>
+				<div className={cn("relative", stacked && "w-full")}>
+					<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
+					<Input
+						ref={searchInputRef}
+						value={searchInput}
+						placeholder={t("issues.searchPlaceholder")}
+						onChange={(e) => onSearchInput(e.target.value)}
+						className={cn("pl-8", stacked ? "h-9 w-full" : "h-8 w-56")}
+						title="/"
+					/>
+				</div>
+			</form>
+			{showSort && (
+				<Select
+					value={sort}
+					onValueChange={(value) =>
+						onUpdateSearch({ sort: value as IssuesSearch["sort"] })
+					}
+				>
+					<SelectTrigger className={stacked ? "w-full" : "w-40"}>
+						<SelectValue>{t(`issues.sortOptions.${sort}`)}</SelectValue>
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="updated">
+							{t("issues.sortOptions.updated")}
+						</SelectItem>
+						<SelectItem value="created">
+							{t("issues.sortOptions.created")}
+						</SelectItem>
+						<SelectItem value="priority">
+							{t("issues.sortOptions.priority")}
+						</SelectItem>
+					</SelectContent>
+				</Select>
+			)}
+			{hasFilters && (
+				<Button
+					variant="ghost"
+					size="sm"
+					className={cn(stacked && "justify-center")}
+					onClick={() =>
+						onUpdateSearch({
+							status: "",
+							priority: "",
+							assigneeId: "",
+							labelId: "",
+							search: "",
+							page: 1,
+						})
+					}
+				>
+					{t("issues.clearFilters")}
+				</Button>
+			)}
+		</>
 	);
 }

@@ -224,6 +224,7 @@ const zh: typeof en = {
 		filterPriority: "优先级",
 		filterAssignee: "经办人",
 		filterLabel: "标签",
+		filterButton: "筛选",
 		searchPlaceholder: "按标题筛选…",
 		clearFilters: "清除筛选",
 		updated: "更新时间",

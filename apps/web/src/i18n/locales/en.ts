@@ -233,6 +233,7 @@ const en = {
 		filterPriority: "Priority",
 		filterAssignee: "Assignee",
 		filterLabel: "Labels",
+		filterButton: "Filter",
 		searchPlaceholder: "Filter by title…",
 		clearFilters: "Clear filters",
 		updated: "Updated",
