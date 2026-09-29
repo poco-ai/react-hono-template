@@ -526,6 +526,10 @@ const zh: typeof en = {
 			proOrgs: "Pro 组织",
 		},
 	},
+	admin: {
+		forbiddenTitle: "无权访问",
+		forbiddenDescription: "此区域仅限平台管理员。",
+	},
 	notFound: {
 		title: "页面不存在",
 		backHome: "返回首页",

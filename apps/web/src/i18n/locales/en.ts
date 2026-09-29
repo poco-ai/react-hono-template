@@ -544,6 +544,10 @@ const en = {
 			proOrgs: "Pro organizations",
 		},
 	},
+	admin: {
+		forbiddenTitle: "Access denied",
+		forbiddenDescription: "This area is only available to platform admins.",
+	},
 	notFound: {
 		title: "Page not found",
 		backHome: "Back home",
