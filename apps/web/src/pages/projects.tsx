@@ -27,7 +27,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import { CircleAlert, MoreHorizontal, Plus } from "lucide-react";
+import { CircleAlert, CircleDot, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { client, unwrap } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/errors";
+import { formatRelativeTime } from "@/lib/issue-utils";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
@@ -227,15 +228,32 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 									{project.description ?? ""}
 								</CardDescription>
 							</CardHeader>
-							<CardContent className="flex items-center gap-2">
-								<Badge variant="outline" className="font-mono">
-									{project.key}
-								</Badge>
-								{project.archived && (
-									<Badge variant="secondary">
-										{t("projects.archivedBadge")}
+							<CardContent className="flex flex-col gap-2">
+								<div className="flex items-center gap-2">
+									<Badge variant="outline" className="font-mono">
+										{project.key}
 									</Badge>
-								)}
+									{project.archived && (
+										<Badge variant="secondary">
+											{t("projects.archivedBadge")}
+										</Badge>
+									)}
+								</div>
+								<div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+									<span className="flex items-center gap-1 whitespace-nowrap">
+										<CircleDot className="size-3.5 shrink-0" />
+										{t("projects.openIssues", {
+											count: project.openIssueCount,
+										})}{" "}
+										·{" "}
+										{t("projects.totalIssues", {
+											count: project.totalIssueCount,
+										})}
+									</span>
+									<span className="shrink-0">
+										{formatRelativeTime(project.updatedAt)}
+									</span>
+								</div>
 							</CardContent>
 						</Card>
 					))}

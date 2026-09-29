@@ -183,6 +183,8 @@ const zh: typeof en = {
 		backToProjects: "返回项目列表",
 		emptyCta: "创建第一个项目",
 		inviteTeammates: "邀请同事",
+		openIssues: "{{count}} 个进行中",
+		totalIssues: "共 {{count}} 项",
 	},
 	issues: {
 		newIssue: "新建事项",

@@ -9,6 +9,8 @@ export const ISSUE_STATUSES = [
 
 export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 
+export const TERMINAL_ISSUE_STATUSES = ["done", "canceled"] as const;
+
 export const ISSUE_PRIORITY = {
 	none: 0,
 	urgent: 1,

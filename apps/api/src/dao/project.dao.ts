@@ -1,7 +1,8 @@
-import { and, count, desc, eq } from "drizzle-orm";
-import { projects } from "../db/schema";
+import { TERMINAL_ISSUE_STATUSES } from "@workspace/shared";
+import { and, count, desc, eq, isNull, notInArray } from "drizzle-orm";
+import { issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
-import type { ProjectDto } from "../dto/project.dto";
+import type { ProjectDto, ProjectIssueStats } from "../dto/project.dto";
 
 type ProjectRow = typeof projects.$inferSelect;
 
@@ -54,6 +55,43 @@ export const createProjectDao = (db: Database) => ({
 			.from(projects)
 			.where(eq(projects.orgId, orgId));
 		return row?.value ?? 0;
+	},
+
+	listIssueCountsByOrg: async (
+		orgId: string,
+	): Promise<Map<string, ProjectIssueStats>> => {
+		const notDeleted = and(eq(issues.orgId, orgId), isNull(issues.deletedAt));
+		const totals = await db
+			.select({ projectId: issues.projectId, value: count() })
+			.from(issues)
+			.where(notDeleted)
+			.groupBy(issues.projectId)
+			.all();
+		const open = await db
+			.select({ projectId: issues.projectId, value: count() })
+			.from(issues)
+			.where(
+				and(
+					notDeleted,
+					notInArray(issues.status, [...TERMINAL_ISSUE_STATUSES]),
+				),
+			)
+			.groupBy(issues.projectId)
+			.all();
+		const counts = new Map<string, ProjectIssueStats>();
+		for (const row of totals) {
+			counts.set(row.projectId, {
+				openIssueCount: 0,
+				totalIssueCount: row.value,
+			});
+		}
+		for (const row of open) {
+			const entry = counts.get(row.projectId);
+			if (entry) {
+				entry.openIssueCount = row.value;
+			}
+		}
+		return counts;
 	},
 
 	create: async (data: {

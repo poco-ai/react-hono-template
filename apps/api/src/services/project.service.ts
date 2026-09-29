@@ -6,12 +6,24 @@ import {
 	type UpdateProjectInput,
 } from "@workspace/shared";
 import type { ProjectDao } from "../dao/project.dao";
-import type { ProjectDto } from "../dto/project.dto";
+import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
 import { assertWithinLimit, type PlanService } from "../lib/plan";
 
 export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
-	listProjects: (orgId: string, options?: { includeArchived?: boolean }) =>
-		dao.listByOrg(orgId, options),
+	listProjects: async (
+		orgId: string,
+		options?: { includeArchived?: boolean },
+	): Promise<ProjectWithStatsDto[]> => {
+		const [projects, counts] = await Promise.all([
+			dao.listByOrg(orgId, options),
+			dao.listIssueCountsByOrg(orgId),
+		]);
+		return projects.map((project) => ({
+			...project,
+			openIssueCount: counts.get(project.id)?.openIssueCount ?? 0,
+			totalIssueCount: counts.get(project.id)?.totalIssueCount ?? 0,
+		}));
+	},
 
 	getProject: async (orgId: string, projectId: string): Promise<ProjectDto> => {
 		const project = await dao.findById(orgId, projectId);

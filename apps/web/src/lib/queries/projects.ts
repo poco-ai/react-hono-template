@@ -17,7 +17,7 @@ export function projectQuery(orgId: string, projectId: string) {
 export function projectsQuery(orgId: string) {
 	return queryOptions({
 		queryKey: ["orgs", orgId, "projects"],
-		queryFn: async (): Promise<ProjectDto[]> =>
+		queryFn: () =>
 			unwrap(client.api.orgs[":orgId"].projects.$get({ param: { orgId } })),
 	});
 }

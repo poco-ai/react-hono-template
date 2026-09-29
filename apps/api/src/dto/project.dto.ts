@@ -6,3 +6,10 @@ export type ProjectDto = Omit<ProjectRow, "createdAt" | "updatedAt"> & {
 	createdAt: string;
 	updatedAt: string;
 };
+
+export type ProjectIssueStats = {
+	openIssueCount: number;
+	totalIssueCount: number;
+};
+
+export type ProjectWithStatsDto = ProjectDto & ProjectIssueStats;

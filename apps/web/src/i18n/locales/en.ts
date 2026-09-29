@@ -192,6 +192,8 @@ const en = {
 		backToProjects: "Back to projects",
 		emptyCta: "Create your first project",
 		inviteTeammates: "Invite teammates",
+		openIssues: "{{count}} open",
+		totalIssues: "{{count}} total",
 	},
 	issues: {
 		newIssue: "New issue",
