@@ -216,7 +216,7 @@ export function OrgLayout() {
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 
 	return (
-		<div className="bg-background flex min-h-svh">
+		<div className="bg-background flex min-h-svh flex-col lg:flex-row">
 			<aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r lg:flex">
 				<SidebarContent />
 			</aside>
