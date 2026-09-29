@@ -10,7 +10,11 @@ import type { IssueDao } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
-import type { IssueDetailDto, ListIssuesDto } from "../dto/issue.dto";
+import type {
+	IssueDetailDto,
+	IssueNavigationDto,
+	ListIssuesDto,
+} from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
 import type { WebhookDispatcher } from "./webhook.service";
 
@@ -157,7 +161,7 @@ export const createIssueService = ({
 		orgId: string,
 		projectId: string,
 		number: number,
-	): Promise<IssueDetailDto> => {
+	): Promise<IssueDetailDto & IssueNavigationDto> => {
 		const issue = await issueDao.findByProjectAndNumber(
 			orgId,
 			projectId,
@@ -171,7 +175,11 @@ export const createIssueService = ({
 			);
 		}
 		const labelIds = await issueDao.findLabelIds(issue.id);
-		return { ...issue, labelIds };
+		const [prevNumber, nextNumber] = await Promise.all([
+			issueDao.findPrevNumber(orgId, projectId, number),
+			issueDao.findNextNumber(orgId, projectId, number),
+		]);
+		return { ...issue, labelIds, prevNumber, nextNumber };
 	},
 
 	getIssueById: async (

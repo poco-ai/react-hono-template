@@ -16,6 +16,11 @@ export type IssueDetailDto = IssueDto & {
 	labelIds: string[];
 };
 
+export type IssueNavigationDto = {
+	prevNumber: number | null;
+	nextNumber: number | null;
+};
+
 export type ListIssuesQueryDto = {
 	page: number;
 	pageSize: number;

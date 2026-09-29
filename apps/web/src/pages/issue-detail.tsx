@@ -19,6 +19,12 @@ import {
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import {
@@ -29,7 +35,16 @@ import {
 	SelectValue,
 } from "@workspace/ui/components/select";
 import { Separator } from "@workspace/ui/components/separator";
-import { ArrowLeft, CircleAlert, Loader2, Trash2 } from "lucide-react";
+import {
+	ArrowLeft,
+	ChevronLeft,
+	ChevronRight,
+	CircleAlert,
+	Loader2,
+	MoreHorizontal,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -194,6 +209,16 @@ export function IssueDetailPage({
 
 	const update = (input: UpdateIssueInput) => updateMutation.mutate(input);
 
+	const navigateToIssue = (number: number | null) => {
+		if (number === null) {
+			return;
+		}
+		navigate({
+			to: "/orgs/$orgId/projects/$projectId/$issueNumber",
+			params: { orgId, projectId, issueNumber: String(number) },
+		});
+	};
+
 	const commitTitle = () => {
 		const next = title.trim();
 		if (!next || !issue.data || next === issue.data.title) {
@@ -254,32 +279,61 @@ export function IssueDetailPage({
 	return (
 		<div className="flex flex-col gap-8 px-4 py-8 lg:flex-row lg:px-6">
 			<div className="min-w-0 flex-1">
-				<Link
-					to="/orgs/$orgId/projects/$projectId"
-					params={{ orgId, projectId }}
-					search={{ page: 1, sort: "updated" }}
-					className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1 text-sm"
-				>
-					<ArrowLeft className="size-4" />
-					{t("issues.backToProject")}
-				</Link>
-				<p className="text-muted-foreground font-mono text-xs">
-					{project.data?.key}-{data.number}
-				</p>
-				<input
-					value={title}
-					onChange={(e) => setTitle(e.target.value)}
-					onBlur={commitTitle}
-					readOnly={frozen}
-					aria-disabled={frozen}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") {
-							e.currentTarget.blur();
-						}
-					}}
-					className="mt-1 w-full rounded-md border-none bg-transparent text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-					maxLength={500}
-				/>
+				<nav className="mb-4 flex items-center gap-1.5 text-sm">
+					<Link
+						to="/orgs/$orgId/projects/$projectId"
+						params={{ orgId, projectId }}
+						search={{ page: 1, sort: "updated" }}
+						className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-1"
+					>
+						<ArrowLeft className="size-4 shrink-0" />
+						<span className="truncate">{project.data?.name ?? projectId}</span>
+					</Link>
+					<span className="text-muted-foreground/50">/</span>
+					<span className="text-foreground shrink-0 font-mono text-xs">
+						{project.data?.key}-{data.number}
+					</span>
+					<div className="flex shrink-0 items-center">
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							className="size-7"
+							disabled={data.prevNumber === null}
+							aria-label={t("issues.prevIssue")}
+							onClick={() => navigateToIssue(data.prevNumber)}
+						>
+							<ChevronLeft />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							className="size-7"
+							disabled={data.nextNumber === null}
+							aria-label={t("issues.nextIssue")}
+							onClick={() => navigateToIssue(data.nextNumber)}
+						>
+							<ChevronRight />
+						</Button>
+					</div>
+				</nav>
+				<div className="group/title relative mt-1">
+					<input
+						value={title}
+						onChange={(e) => setTitle(e.target.value)}
+						onBlur={commitTitle}
+						readOnly={frozen}
+						aria-disabled={frozen}
+						aria-label={t("issues.titleLabel")}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								e.currentTarget.blur();
+							}
+						}}
+						className="w-full rounded-md border-none bg-transparent pr-8 text-2xl font-semibold tracking-tight outline-none hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/50"
+						maxLength={500}
+					/>
+					<Pencil className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 opacity-0 transition-opacity group-hover/title:opacity-50 group-focus-within/title:opacity-50" />
+				</div>
 				<p className="text-muted-foreground mt-2 text-xs">
 					{t("issues.created")}{" "}
 					<time
@@ -340,6 +394,31 @@ export function IssueDetailPage({
 			</div>
 
 			<aside className="flex w-full shrink-0 flex-col gap-4 lg:w-64">
+				<div className="flex justify-end">
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							render={
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label={t("common.actions")}
+								>
+									<MoreHorizontal />
+								</Button>
+							}
+						/>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								variant="destructive"
+								disabled={frozen}
+								onClick={() => setDeleteOpen(true)}
+							>
+								<Trash2 />
+								{t("issues.deleteAction")}
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
 				<PropertyRow label={t("issues.status")}>
 					<Select
 						value={data.status as IssueStatus}
@@ -484,15 +563,6 @@ export function IssueDetailPage({
 				</PropertyRow>
 
 				<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-					<Button
-						variant="outline"
-						className="w-full text-destructive hover:text-destructive"
-						disabled={frozen}
-						onClick={() => setDeleteOpen(true)}
-					>
-						<Trash2 />
-						{t("common.delete")}
-					</Button>
 					<AlertDialogContent>
 						<AlertDialogHeader>
 							<AlertDialogTitle>{t("issues.deleteTitle")}</AlertDialogTitle>

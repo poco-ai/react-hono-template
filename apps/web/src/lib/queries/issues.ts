@@ -1,4 +1,4 @@
-import type { IssueDetailDto, ListIssuesDto } from "@api/dto/issue.dto";
+import type { ListIssuesDto } from "@api/dto/issue.dto";
 import { queryOptions } from "@tanstack/react-query";
 import {
 	ISSUE_PRIORITY,
@@ -79,7 +79,7 @@ export function issueQuery(orgId: string, projectId: string, number: number) {
 			"detail",
 			number,
 		],
-		queryFn: (): Promise<IssueDetailDto> =>
+		queryFn: () =>
 			unwrap(
 				client.api.orgs[":orgId"].projects[":projectId"].issues[":number"].$get(
 					{

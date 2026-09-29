@@ -248,6 +248,10 @@ const en = {
 		deleteTitle: "Delete issue?",
 		deleteDescription:
 			"{{key}} will be deleted. You can restore it later from the database.",
+		prevIssue: "Previous issue",
+		nextIssue: "Next issue",
+		titleLabel: "Issue title",
+		deleteAction: "Delete issue",
 		myIssuesTitle: "My Issues",
 		myIssuesEmpty: "Nothing is assigned to you. Enjoy!",
 		showingCap: "Showing the latest {{count}} issues.",

@@ -4,8 +4,10 @@ import {
 	count,
 	desc,
 	eq,
+	gt,
 	inArray,
 	isNull,
+	lt,
 	type SQL,
 	sql,
 } from "drizzle-orm";
@@ -136,6 +138,50 @@ export const createIssueDao = (db: Database) => ({
 			)
 			.get();
 		return row ? toIssueDto(row) : null;
+	},
+
+	findPrevNumber: async (
+		orgId: string,
+		projectId: string,
+		number: number,
+	): Promise<number | null> => {
+		const row = await db
+			.select({ number: issues.number })
+			.from(issues)
+			.where(
+				and(
+					eq(issues.orgId, orgId),
+					eq(issues.projectId, projectId),
+					lt(issues.number, number),
+					isNull(issues.deletedAt),
+				),
+			)
+			.orderBy(desc(issues.number))
+			.limit(1)
+			.get();
+		return row?.number ?? null;
+	},
+
+	findNextNumber: async (
+		orgId: string,
+		projectId: string,
+		number: number,
+	): Promise<number | null> => {
+		const row = await db
+			.select({ number: issues.number })
+			.from(issues)
+			.where(
+				and(
+					eq(issues.orgId, orgId),
+					eq(issues.projectId, projectId),
+					gt(issues.number, number),
+					isNull(issues.deletedAt),
+				),
+			)
+			.orderBy(asc(issues.number))
+			.limit(1)
+			.get();
+		return row?.number ?? null;
 	},
 
 	list: async (
