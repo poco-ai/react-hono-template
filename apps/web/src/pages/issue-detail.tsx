@@ -36,6 +36,11 @@ import {
 } from "@workspace/ui/components/select";
 import { Separator } from "@workspace/ui/components/separator";
 import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@workspace/ui/components/tooltip";
+import {
 	ArrowLeft,
 	ChevronLeft,
 	ChevronRight,
@@ -397,17 +402,24 @@ export function IssueDetailPage({
 			<aside className="flex w-full shrink-0 flex-col gap-4 lg:w-64">
 				<div className="flex justify-end">
 					<DropdownMenu>
-						<DropdownMenuTrigger
-							render={
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									aria-label={t("common.actions")}
-								>
-									<MoreHorizontal />
-								</Button>
-							}
-						/>
+						<Tooltip>
+							<TooltipTrigger
+								render={
+									<DropdownMenuTrigger
+										render={
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												aria-label={t("common.actions")}
+											>
+												<MoreHorizontal />
+											</Button>
+										}
+									/>
+								}
+							/>
+							<TooltipContent>{t("common.actions")}</TooltipContent>
+						</Tooltip>
 						<DropdownMenuContent align="end">
 							<DropdownMenuItem
 								variant="destructive"

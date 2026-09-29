@@ -33,6 +33,7 @@ const zh: typeof en = {
 		loadMore: "加载更多",
 		justNow: "刚刚",
 		clear: "清除",
+		skipToContent: "跳到主要内容",
 	},
 	nav: {
 		openMenu: "打开菜单",

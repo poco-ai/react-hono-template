@@ -36,6 +36,11 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@workspace/ui/components/tooltip";
+import {
 	CircleAlert,
 	Inbox,
 	Loader2,
@@ -220,45 +225,73 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 							</TableCell>
 							<TableCell className="text-right">
 								<div className="flex items-center justify-end gap-1">
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={t("webhooks.ping")}
-										disabled={frozen || pingMutation.isPending}
-										onClick={() => pingMutation.mutate(webhook.id)}
-									>
-										<Zap />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={t("webhooks.deliveries")}
-										onClick={() => setDeliveriesTarget(webhook)}
-									>
-										<Inbox />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={t("common.edit")}
-										disabled={frozen}
-										onClick={() => {
-											setEditing(webhook);
-											setDialogOpen(true);
-										}}
-									>
-										<Pencil />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										className="text-destructive hover:text-destructive"
-										aria-label={t("common.delete")}
-										disabled={frozen}
-										onClick={() => setDeleteTarget(webhook)}
-									>
-										<Trash2 />
-									</Button>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t("webhooks.ping")}
+													disabled={frozen || pingMutation.isPending}
+													onClick={() => pingMutation.mutate(webhook.id)}
+												>
+													<Zap />
+												</Button>
+											}
+										/>
+										<TooltipContent>{t("webhooks.ping")}</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t("webhooks.deliveries")}
+													onClick={() => setDeliveriesTarget(webhook)}
+												>
+													<Inbox />
+												</Button>
+											}
+										/>
+										<TooltipContent>{t("webhooks.deliveries")}</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t("common.edit")}
+													disabled={frozen}
+													onClick={() => {
+														setEditing(webhook);
+														setDialogOpen(true);
+													}}
+												>
+													<Pencil />
+												</Button>
+											}
+										/>
+										<TooltipContent>{t("common.edit")}</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													className="text-destructive hover:text-destructive"
+													aria-label={t("common.delete")}
+													disabled={frozen}
+													onClick={() => setDeleteTarget(webhook)}
+												>
+													<Trash2 />
+												</Button>
+											}
+										/>
+										<TooltipContent>{t("common.delete")}</TooltipContent>
+									</Tooltip>
 								</div>
 							</TableCell>
 						</TableRow>

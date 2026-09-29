@@ -27,6 +27,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@workspace/ui/components/tooltip";
 import { CircleAlert, CircleDot, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -196,19 +201,26 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 									<CardTitle className="text-base">{project.name}</CardTitle>
 									{canManage && (
 										<DropdownMenu>
-											<DropdownMenuTrigger
-												render={
-													<Button
-														variant="ghost"
-														size="icon-sm"
-														aria-label={t("common.actions")}
-														disabled={frozen}
-														onClick={(e) => e.stopPropagation()}
-													>
-														<MoreHorizontal />
-													</Button>
-												}
-											/>
+											<Tooltip>
+												<TooltipTrigger
+													render={
+														<DropdownMenuTrigger
+															render={
+																<Button
+																	variant="ghost"
+																	size="icon-sm"
+																	aria-label={t("common.actions")}
+																	disabled={frozen}
+																	onClick={(e) => e.stopPropagation()}
+																>
+																	<MoreHorizontal />
+																</Button>
+															}
+														/>
+													}
+												/>
+												<TooltipContent>{t("common.actions")}</TooltipContent>
+											</Tooltip>
 											<DropdownMenuContent
 												align="end"
 												onClick={(e) => e.stopPropagation()}

@@ -31,6 +31,7 @@ const en = {
 		loadMore: "Load more",
 		justNow: "Just now",
 		clear: "Clear",
+		skipToContent: "Skip to content",
 	},
 	nav: {
 		openMenu: "Open menu",

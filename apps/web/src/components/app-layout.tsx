@@ -13,6 +13,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
 	return (
 		<div className="bg-background min-h-svh">
+			<a
+				href="#main-content"
+				className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-md focus:border focus:bg-background focus:p-3 focus:shadow-md"
+			>
+				{t("common.skipToContent")}
+			</a>
 			<header className="border-b">
 				<div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
 					<nav className="flex min-w-0 items-center gap-4 overflow-x-auto text-sm lg:gap-6">
@@ -49,7 +55,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 					</div>
 				</div>
 			</header>
-			<main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+			<main id="main-content" className="mx-auto max-w-5xl px-6 py-8">
+				{children}
+			</main>
 		</div>
 	);
 }

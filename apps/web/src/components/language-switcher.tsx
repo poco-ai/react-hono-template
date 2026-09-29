@@ -5,6 +5,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
 import { Check, Languages } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -20,17 +25,24 @@ export function LanguageSwitcher() {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={
-					<Button
-						variant="ghost"
-						size="icon-lg"
-						aria-label={t("language.toggle")}
-					>
-						<Languages />
-					</Button>
-				}
-			/>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<DropdownMenuTrigger
+							render={
+								<Button
+									variant="ghost"
+									size="icon-lg"
+									aria-label={t("language.toggle")}
+								>
+									<Languages />
+								</Button>
+							}
+						/>
+					}
+				/>
+				<TooltipContent>{t("language.toggle")}</TooltipContent>
+			</Tooltip>
 			<DropdownMenuContent align="end">
 				{SUPPORTED_LANGUAGES.map((language) => (
 					<DropdownMenuItem

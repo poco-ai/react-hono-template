@@ -21,6 +21,11 @@ import {
 	SheetContent,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
 import {
 	Check,
@@ -192,16 +197,23 @@ function SidebarContent({
 					<span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
 						{t("projects.sidebarTitle")}
 					</span>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						aria-label={t("projects.create")}
-						title={frozen ? t("org.frozenBanner") : undefined}
-						disabled={frozen}
-						onClick={() => setCreateOpen(true)}
-					>
-						<Plus />
-					</Button>
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label={t("projects.create")}
+									title={frozen ? t("org.frozenBanner") : undefined}
+									disabled={frozen}
+									onClick={() => setCreateOpen(true)}
+								>
+									<Plus />
+								</Button>
+							}
+						/>
+						<TooltipContent>{t("projects.create")}</TooltipContent>
+					</Tooltip>
 				</div>
 				<div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2">
 					{activeProjects.map((project) => (
@@ -274,6 +286,12 @@ export function OrgLayout() {
 
 	return (
 		<div className="bg-background flex min-h-svh flex-col lg:flex-row">
+			<a
+				href="#main-content"
+				className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-md focus:border focus:bg-background focus:p-3 focus:shadow-md"
+			>
+				{t("common.skipToContent")}
+			</a>
 			<aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r lg:flex">
 				<SidebarContent onOpenCommand={() => setPaletteOpen(true)} />
 			</aside>
@@ -319,7 +337,7 @@ export function OrgLayout() {
 						</p>
 					</div>
 				)}
-				<main className="min-w-0 flex-1">
+				<main id="main-content" className="min-w-0 flex-1">
 					<Outlet />
 				</main>
 			</div>

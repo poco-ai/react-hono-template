@@ -23,6 +23,11 @@ import {
 } from "@workspace/ui/components/dialog";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@workspace/ui/components/tooltip";
 import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -133,28 +138,42 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 							<LabelBadge label={label} className="text-sm" />
 							{canManage && (
 								<div className="flex items-center gap-1">
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={t("labels.edit")}
-										disabled={frozen}
-										onClick={() => {
-											setEditing(label);
-											setDialogOpen(true);
-										}}
-									>
-										<Pencil />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										className="text-destructive hover:text-destructive"
-										aria-label={t("common.delete")}
-										disabled={frozen}
-										onClick={() => setDeleteTarget(label)}
-									>
-										<Trash2 />
-									</Button>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t("labels.edit")}
+													disabled={frozen}
+													onClick={() => {
+														setEditing(label);
+														setDialogOpen(true);
+													}}
+												>
+													<Pencil />
+												</Button>
+											}
+										/>
+										<TooltipContent>{t("labels.edit")}</TooltipContent>
+									</Tooltip>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													className="text-destructive hover:text-destructive"
+													aria-label={t("common.delete")}
+													disabled={frozen}
+													onClick={() => setDeleteTarget(label)}
+												>
+													<Trash2 />
+												</Button>
+											}
+										/>
+										<TooltipContent>{t("common.delete")}</TooltipContent>
+									</Tooltip>
 								</div>
 							)}
 						</div>
