@@ -36,7 +36,7 @@ function SettingsLayout() {
 	];
 
 	return (
-		<div className="mx-auto max-w-4xl p-8">
+		<div className="mx-auto w-full max-w-4xl px-6 py-8">
 			<nav className="flex gap-1 overflow-x-auto pb-8">
 				{links.map((link) => (
 					<Link

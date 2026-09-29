@@ -48,7 +48,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 	}
 
 	return (
-		<div className="mx-auto max-w-4xl p-8">
+		<div className="mx-auto w-full max-w-5xl px-6 py-8">
 			<h1 className="text-2xl font-semibold tracking-tight">
 				{t("issues.myIssuesTitle")}
 			</h1>

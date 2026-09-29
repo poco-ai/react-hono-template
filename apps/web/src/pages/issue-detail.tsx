@@ -248,7 +248,7 @@ export function IssueDetailPage({
 		: t("common.unassigned");
 
 	return (
-		<div className="mx-auto flex max-w-5xl gap-8 p-8">
+		<div className="flex gap-8 px-6 py-8">
 			<div className="min-w-0 flex-1">
 				<Link
 					to="/orgs/$orgId/projects/$projectId"
