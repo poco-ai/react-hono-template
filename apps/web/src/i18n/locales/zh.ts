@@ -407,7 +407,9 @@ const zh: typeof en = {
 		planFree: "Free",
 		planPro: "Pro",
 		usageOf: "{{current}} / {{cap}}",
-		notAvailable: "当前套餐不可用",
+		webhooksNotInPlan: "Free 计划不含 Webhooks",
+		upgradeToUnlock: "升级解锁",
+		recommended: "推荐",
 		renewsOn: "{{date}} 续期",
 		limits: {
 			members: "成员",

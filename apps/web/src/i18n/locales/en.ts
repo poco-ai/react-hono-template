@@ -422,7 +422,9 @@ const en = {
 		planFree: "Free",
 		planPro: "Pro",
 		usageOf: "{{current}} / {{cap}}",
-		notAvailable: "Not available on this plan",
+		webhooksNotInPlan: "Webhooks aren't included in Free",
+		upgradeToUnlock: "Upgrade to unlock",
+		recommended: "Recommended",
 		renewsOn: "Renews on {{date}}",
 		limits: {
 			members: "Members",

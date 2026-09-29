@@ -42,11 +42,20 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 const MB = 1024 * 1024;
 
 function UsageBar({ usage, cap }: { usage: number; cap: number }) {
-	const pct = cap > 0 ? Math.min(100, (usage / cap) * 100) : 0;
+	if (cap === 0) {
+		return <div className="bg-muted/50 h-1.5 w-full rounded-full" />;
+	}
+	const pct = Math.min(100, (usage / cap) * 100);
 	return (
-		<div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+		<div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
 			<div
-				className={pct >= 100 ? "bg-destructive h-full" : "bg-primary h-full"}
+				className={`h-full rounded-full ${
+					pct >= 100
+						? "bg-destructive"
+						: pct >= 80
+							? "bg-amber-500 dark:bg-amber-400"
+							: "bg-primary"
+				}`}
 				style={{ width: `${pct}%` }}
 			/>
 		</div>
@@ -57,10 +66,14 @@ function UsageRow({
 	label,
 	usage,
 	cap,
+	unavailableNote,
+	onUnlock,
 }: {
 	label: string;
 	usage: number;
 	cap: number;
+	unavailableNote?: string;
+	onUnlock?: () => void;
 }) {
 	const { t } = useTranslation();
 	return (
@@ -68,12 +81,27 @@ function UsageRow({
 			<div className="flex items-center justify-between text-sm">
 				<span>{label}</span>
 				<span className="text-muted-foreground">
-					{cap === 0
-						? t("billing.notAvailable")
-						: t("billing.usageOf", { current: usage, cap })}
+					{cap === 0 ? "—" : t("billing.usageOf", { current: usage, cap })}
 				</span>
 			</div>
 			<UsageBar usage={usage} cap={cap} />
+			{cap === 0 && unavailableNote && (
+				<p className="text-muted-foreground text-xs">
+					{unavailableNote}
+					{onUnlock && (
+						<>
+							{" "}
+							<button
+								type="button"
+								onClick={onUnlock}
+								className="text-foreground font-medium underline-offset-2 hover:underline"
+							>
+								{t("billing.upgradeToUnlock")}
+							</button>
+						</>
+					)}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -151,6 +179,13 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 
 	const data = billing.data;
 	const isPro = data.plan === "pro";
+	const startUpgrade = () => {
+		if (data.stripeEnabled || !data.mockMode) {
+			checkoutMutation.mutate();
+		} else {
+			setUpgradeOpen(true);
+		}
+	};
 	const rows: {
 		key:
 			| "billing.limits.members"
@@ -238,6 +273,10 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 							label={t("billing.limits.webhooks")}
 							usage={data.usage.webhooks}
 							cap={data.limits.webhooks}
+							unavailableNote={
+								isPro ? undefined : t("billing.webhooksNotInPlan")
+							}
+							onUnlock={isPro ? undefined : startUpgrade}
 						/>
 					</div>
 					<div className="flex items-center gap-2">
@@ -261,13 +300,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 						) : (
 							<Button
 								disabled={checkoutMutation.isPending}
-								onClick={() => {
-									if (data.stripeEnabled || !data.mockMode) {
-										checkoutMutation.mutate();
-									} else {
-										setUpgradeOpen(true);
-									}
-								}}
+								onClick={startUpgrade}
 							>
 								{t("billing.upgrade")}
 							</Button>
@@ -304,9 +337,14 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 										)}
 									</span>
 								</TableHead>
-								<TableHead>
+								<TableHead className="bg-muted/40">
 									<span className="flex items-center gap-1.5">
 										{t("billing.planPro")}
+										{!isPro && (
+											<Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+												{t("billing.recommended")}
+											</Badge>
+										)}
 										{isPro && (
 											<Badge
 												variant="default"
@@ -325,7 +363,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 								<TableCell>
 									<PlanValue>{`$${PLANS.free.price}`}</PlanValue>
 								</TableCell>
-								<TableCell>
+								<TableCell className="bg-muted/40">
 									<PlanValue>
 										{t("billing.pricePerMember", {
 											price: `$${PLANS.pro.price}`,
@@ -339,11 +377,30 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 									<TableCell>
 										<PlanValue>{row.render(PLANS.free)}</PlanValue>
 									</TableCell>
-									<TableCell>
+									<TableCell className="bg-muted/40">
 										<PlanValue>{row.render(PLANS.pro)}</PlanValue>
 									</TableCell>
 								</TableRow>
 							))}
+							<TableRow>
+								<TableCell />
+								<TableCell />
+								<TableCell className="bg-muted/40">
+									{isPro ? (
+										<span className="text-muted-foreground text-sm">
+											{t("billing.currentPlan")}
+										</span>
+									) : (
+										<Button
+											size="sm"
+											disabled={checkoutMutation.isPending}
+											onClick={startUpgrade}
+										>
+											{t("billing.upgrade")}
+										</Button>
+									)}
+								</TableCell>
+							</TableRow>
 						</TableBody>
 					</Table>
 				</CardContent>
