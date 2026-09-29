@@ -248,7 +248,7 @@ export function IssueDetailPage({
 		: t("common.unassigned");
 
 	return (
-		<div className="flex gap-8 px-6 py-8">
+		<div className="flex flex-col gap-8 px-4 py-8 lg:flex-row lg:px-6">
 			<div className="min-w-0 flex-1">
 				<Link
 					to="/orgs/$orgId/projects/$projectId"
@@ -330,7 +330,7 @@ export function IssueDetailPage({
 				</div>
 			</div>
 
-			<aside className="flex w-64 shrink-0 flex-col gap-4">
+			<aside className="flex w-full shrink-0 flex-col gap-4 lg:w-64">
 				<PropertyRow label={t("issues.status")}>
 					<Select
 						value={data.status as IssueStatus}

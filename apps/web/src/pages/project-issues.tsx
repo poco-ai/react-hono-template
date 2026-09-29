@@ -237,8 +237,8 @@ export function ProjectIssuesPage({
 
 	return (
 		<div className="flex min-h-svh flex-col">
-			<header className="border-b px-6 py-6">
-				<div className="flex items-start justify-between gap-4">
+			<header className="border-b px-4 py-6 lg:px-6">
+				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div className="min-w-0">
 						<div className="flex items-center gap-3">
 							<h1 className="truncate text-2xl font-semibold tracking-tight">
@@ -285,7 +285,7 @@ export function ProjectIssuesPage({
 				</div>
 			</header>
 
-			<div className="border-b flex flex-wrap items-center gap-2 px-6 py-3">
+			<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
 				<MultiSelect
 					placeholder={t("issues.filterStatus")}
 					value={statusFilter}
@@ -404,7 +404,7 @@ export function ProjectIssuesPage({
 			</div>
 
 			{view === "board" ? (
-				<div className="flex-1 overflow-x-auto px-6 py-4">
+				<div className="flex-1 overflow-x-auto px-4 py-4 lg:px-6">
 					<BoardView
 						orgId={orgId}
 						projectId={projectId}
@@ -424,7 +424,7 @@ export function ProjectIssuesPage({
 				</div>
 			) : (
 				<>
-					<div className="flex-1 overflow-auto px-6 py-4">
+					<div className="flex-1 overflow-auto px-4 py-4 lg:px-6">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -582,12 +582,12 @@ export function ProjectIssuesPage({
 						</Table>
 					</div>
 
-					<footer className="text-muted-foreground flex items-center justify-between border-t px-6 py-3 text-sm">
+					<footer className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-sm lg:px-6">
 						<span>
 							{result ? t("issues.count", { count: result.total }) : ""}
 						</span>
 						{totalPages > 1 && (
-							<div className="flex items-center gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								<Button
 									variant="outline"
 									size="sm"

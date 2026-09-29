@@ -74,7 +74,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	});
 
 	return (
-		<div className="mx-auto w-full max-w-5xl px-6 py-8">
+		<div className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6">
 			<div className="flex items-center justify-between pb-6">
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("projects.title")}

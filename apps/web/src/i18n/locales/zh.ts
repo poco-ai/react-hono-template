@@ -34,6 +34,7 @@ const zh: typeof en = {
 		justNow: "刚刚",
 	},
 	nav: {
+		openMenu: "打开菜单",
 		backToApp: "返回应用",
 		users: "用户",
 		orgs: "组织",

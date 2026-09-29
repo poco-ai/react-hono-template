@@ -32,6 +32,7 @@ const en = {
 		justNow: "Just now",
 	},
 	nav: {
+		openMenu: "Open menu",
 		backToApp: "Back to app",
 		users: "Users",
 		orgs: "Orgs",

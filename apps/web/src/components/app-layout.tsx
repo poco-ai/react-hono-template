@@ -15,20 +15,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
 		<div className="bg-background min-h-svh">
 			<header className="border-b">
 				<div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-					<nav className="flex items-center gap-6 text-sm">
-						<Link to="/" className="font-medium">
+					<nav className="flex min-w-0 items-center gap-4 overflow-x-auto text-sm lg:gap-6">
+						<Link to="/" className="font-medium shrink-0 whitespace-nowrap">
 							React Hono Template
 						</Link>
 						<Link
 							to="/"
-							className="text-muted-foreground hover:text-foreground"
+							className="text-muted-foreground hover:text-foreground shrink-0 whitespace-nowrap"
 						>
 							{t("nav.backToApp")}
 						</Link>
 						{user?.role === "admin" && (
 							<Link
 								to="/admin/users"
-								className="text-muted-foreground hover:text-foreground"
+								className="text-muted-foreground hover:text-foreground shrink-0 whitespace-nowrap"
 							>
 								{t("nav.users")}
 							</Link>
@@ -36,13 +36,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 						{user?.role === "admin" && (
 							<Link
 								to="/admin/orgs"
-								className="text-muted-foreground hover:text-foreground"
+								className="text-muted-foreground hover:text-foreground shrink-0 whitespace-nowrap"
 							>
 								{t("nav.orgs")}
 							</Link>
 						)}
 					</nav>
-					<div className="flex items-center gap-1">
+					<div className="flex shrink-0 items-center gap-1">
 						<LanguageSwitcher />
 						<ThemeToggle />
 						{user && <UserDropdown user={user} />}
