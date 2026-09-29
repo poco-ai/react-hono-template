@@ -144,6 +144,7 @@ const en = {
 		notFoundTitle: "Project not found",
 		backToProjects: "Back to projects",
 		emptyCta: "Create your first project",
+		inviteTeammates: "Invite teammates",
 	},
 	issues: {
 		newIssue: "New issue",

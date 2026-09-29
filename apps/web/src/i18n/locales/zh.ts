@@ -140,6 +140,7 @@ const zh: typeof en = {
 		notFoundTitle: "项目不存在",
 		backToProjects: "返回项目列表",
 		emptyCta: "创建第一个项目",
+		inviteTeammates: "邀请同事",
 	},
 	issues: {
 		newIssue: "新建事项",
