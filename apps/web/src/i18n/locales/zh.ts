@@ -351,12 +351,14 @@ const zh: typeof en = {
 		compareTitle: "方案对比",
 		compareDescription: "各方案包含的额度。",
 		feature: "功能",
+		price: "价格",
+		pricePerMember: "每成员 {{price}} / 月",
 		upgrade: "升级到 Pro",
 		manageBilling: "管理账单",
 		downgrade: "降级到 Free",
 		mockUpgradeTitle: "升级到 Pro？",
 		mockUpgradeDescription:
-			"本实例未配置 Stripe，升级为模拟操作。你的组织将立即切换为 Pro 方案。",
+			"Pro 方案价格为每成员 {{price}} / 月。本实例未配置 Stripe，升级为模拟操作。你的组织将立即切换为 Pro 方案。",
 		mockDowngradeTitle: "降级到 Free？",
 		mockDowngradeDescription:
 			"本实例未配置 Stripe，降级为模拟操作。如果组织用量超过 Free 方案的限制，超出限制的成员、项目和 Webhooks 将无法继续使用。",

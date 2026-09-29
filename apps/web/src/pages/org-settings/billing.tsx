@@ -255,19 +255,28 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 					</div>
 					<div className="flex items-center gap-2">
 						{isPro ? (
-							<Button
-								disabled={portalMutation.isPending}
-								onClick={() => {
-									setNotice(null);
-									if (data.stripeEnabled || !data.mockMode) {
+							data.stripeEnabled || !data.mockMode ? (
+								<Button
+									disabled={portalMutation.isPending}
+									onClick={() => {
+										setNotice(null);
 										portalMutation.mutate();
-									} else {
+									}}
+								>
+									{t("billing.manageBilling")}
+								</Button>
+							) : (
+								<Button
+									variant="destructive"
+									disabled={portalMutation.isPending}
+									onClick={() => {
+										setNotice(null);
 										setPortalOpen(true);
-									}
-								}}
-							>
-								{t("billing.manageBilling")}
-							</Button>
+									}}
+								>
+									{t("billing.downgrade")}
+								</Button>
+							)
 						) : (
 							<Button
 								disabled={checkoutMutation.isPending}
@@ -295,38 +304,70 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 				</CardContent>
 			</Card>
 
-			{!isPro && (
-				<Card>
-					<CardHeader>
-						<CardTitle>{t("billing.compareTitle")}</CardTitle>
-						<CardDescription>{t("billing.compareDescription")}</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>{t("billing.feature")}</TableHead>
-									<TableHead>{t("billing.planFree")}</TableHead>
-									<TableHead>{t("billing.planPro")}</TableHead>
+			<Card>
+				<CardHeader>
+					<CardTitle>{t("billing.compareTitle")}</CardTitle>
+					<CardDescription>{t("billing.compareDescription")}</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>{t("billing.feature")}</TableHead>
+								<TableHead>
+									<span className="flex items-center gap-1.5">
+										{t("billing.planFree")}
+										{!isPro && (
+											<Badge variant="outline">
+												{t("billing.currentPlan")}
+											</Badge>
+										)}
+									</span>
+								</TableHead>
+								<TableHead>
+									<span className="flex items-center gap-1.5">
+										{t("billing.planPro")}
+										{isPro && (
+											<Badge
+												variant="default"
+												className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+											>
+												{t("billing.currentPlan")}
+											</Badge>
+										)}
+									</span>
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							<TableRow>
+								<TableCell>{t("billing.price")}</TableCell>
+								<TableCell>
+									<PlanValue>{`$${PLANS.free.price}`}</PlanValue>
+								</TableCell>
+								<TableCell>
+									<PlanValue>
+										{t("billing.pricePerMember", {
+											price: `$${PLANS.pro.price}`,
+										})}
+									</PlanValue>
+								</TableCell>
+							</TableRow>
+							{rows.map((row) => (
+								<TableRow key={row.key}>
+									<TableCell>{t(row.key)}</TableCell>
+									<TableCell>
+										<PlanValue>{row.render(PLANS.free)}</PlanValue>
+									</TableCell>
+									<TableCell>
+										<PlanValue>{row.render(PLANS.pro)}</PlanValue>
+									</TableCell>
 								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{rows.map((row) => (
-									<TableRow key={row.key}>
-										<TableCell>{t(row.key)}</TableCell>
-										<TableCell>
-											<PlanValue>{row.render(PLANS.free)}</PlanValue>
-										</TableCell>
-										<TableCell>
-											<PlanValue>{row.render(PLANS.pro)}</PlanValue>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-			)}
+							))}
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
 
 			<AlertDialog
 				open={upgradeOpen}
@@ -336,7 +377,9 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("billing.mockUpgradeTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							{t("billing.mockUpgradeDescription")}
+							{t("billing.mockUpgradeDescription", {
+								price: `$${PLANS.pro.price}`,
+							})}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

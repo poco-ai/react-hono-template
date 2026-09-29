@@ -361,12 +361,14 @@ const en = {
 		compareTitle: "Compare plans",
 		compareDescription: "What you get on each plan.",
 		feature: "Feature",
+		price: "Price",
+		pricePerMember: "{{price}} per member / mo",
 		upgrade: "Upgrade to Pro",
 		manageBilling: "Manage billing",
 		downgrade: "Downgrade to Free",
 		mockUpgradeTitle: "Upgrade to Pro?",
 		mockUpgradeDescription:
-			"This instance has no Stripe configured, so the upgrade is simulated. Your organization switches to Pro immediately.",
+			"Pro is {{price}} per member / mo. This instance has no Stripe configured, so the upgrade is simulated. Your organization switches to Pro immediately.",
 		mockDowngradeTitle: "Downgrade to Free?",
 		mockDowngradeDescription:
 			"This instance has no Stripe configured, so the downgrade is simulated. If your organization is over the Free plan limits, you will lose access to members, projects and webhooks above those limits.",

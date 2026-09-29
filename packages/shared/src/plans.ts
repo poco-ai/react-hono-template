@@ -1,5 +1,6 @@
 export const PLANS = {
 	free: {
+		price: 0,
 		orgs: 1,
 		members: 3,
 		projects: 3,
@@ -8,6 +9,7 @@ export const PLANS = {
 		webhooks: 0,
 	},
 	pro: {
+		price: 12,
 		orgs: 10,
 		members: 50,
 		projects: 50,
