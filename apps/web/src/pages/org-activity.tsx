@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { badgeVariants } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Select,
@@ -8,6 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@workspace/ui/components/select";
+import { cn } from "@workspace/ui/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -114,38 +116,55 @@ export function OrgActivityPage({
 								className="mt-0.5 size-6 shrink-0"
 							/>
 							<div className="flex min-w-0 flex-1 flex-col gap-1">
-								<div className="flex flex-wrap items-baseline gap-x-2">
-									<ActivitySentence
-										activity={activity}
-										members={members.data ?? []}
-										labels={labels.data ?? []}
-									/>
-									{activity.issue &&
-										activity.project &&
-										(activity.action === "issue.deleted" ? (
-											<span className="text-muted-foreground truncate font-mono text-xs">
-												{activity.project.key}-{activity.issue.number}{" "}
-												{activity.issue.title}
-											</span>
-										) : (
-											<Link
-												to="/orgs/$orgId/projects/$projectId/$issueNumber"
-												params={{
-													orgId,
-													projectId: activity.project.id,
-													issueNumber: String(activity.issue.number),
-												}}
-												className="text-muted-foreground hover:text-foreground truncate font-mono text-xs hover:underline"
-											>
-												{activity.project.key}-{activity.issue.number}{" "}
-												{activity.issue.title}
-											</Link>
-										))}
+								<div className="flex items-start justify-between gap-4">
+									<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+										<ActivitySentence
+											activity={activity}
+											members={members.data ?? []}
+											labels={labels.data ?? []}
+										/>
+										{activity.issue &&
+											activity.project &&
+											(activity.action === "issue.deleted" ? (
+												<span
+													className={cn(
+														badgeVariants({ variant: "secondary" }),
+														"max-w-full rounded-md font-mono",
+													)}
+												>
+													{activity.project.key}-{activity.issue.number}{" "}
+													{activity.issue.title}
+												</span>
+											) : (
+												<Link
+													to="/orgs/$orgId/projects/$projectId/$issueNumber"
+													params={{
+														orgId,
+														projectId: activity.project.id,
+														issueNumber: String(activity.issue.number),
+													}}
+													className={cn(
+														badgeVariants({ variant: "secondary" }),
+														"max-w-full rounded-md font-mono hover:bg-secondary/80",
+													)}
+												>
+													{activity.project.key}-{activity.issue.number}{" "}
+													{activity.issue.title}
+												</Link>
+											))}
+									</div>
+									<time
+										dateTime={activity.createdAt}
+										title={formatDateTime(activity.createdAt)}
+										className="text-muted-foreground hidden shrink-0 text-xs sm:block"
+									>
+										{formatRelativeTime(activity.createdAt)}
+									</time>
 								</div>
 								<time
 									dateTime={activity.createdAt}
 									title={formatDateTime(activity.createdAt)}
-									className="text-muted-foreground text-xs"
+									className="text-muted-foreground text-xs sm:hidden"
 								>
 									{formatRelativeTime(activity.createdAt)}
 								</time>

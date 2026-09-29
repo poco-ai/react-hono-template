@@ -23,7 +23,11 @@ export function StatusBadge({
 	return (
 		<Badge
 			variant="outline"
-			className={cn("border-transparent", STATUS_CLASS[status], className)}
+			className={cn(
+				"rounded-md border-transparent",
+				STATUS_CLASS[status],
+				className,
+			)}
 		>
 			{t(`issues.statuses.${status}`)}
 		</Badge>

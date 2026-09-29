@@ -279,7 +279,7 @@ function BoardCard({
 			{...(frozen ? {} : listeners)}
 			onClick={() => onOpen(issue.number)}
 			className={cn(
-				"bg-card flex w-full touch-none flex-col gap-2 rounded-md border p-2.5 text-left shadow-xs transition-shadow hover:shadow-md",
+				"bg-card flex w-full touch-none flex-col gap-2 rounded-md border p-2.5 text-left shadow-xs transition-shadow hover:shadow-sm",
 				isDragging && "opacity-50 ring-2 ring-primary/40",
 			)}
 		>

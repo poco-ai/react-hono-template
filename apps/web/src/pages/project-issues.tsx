@@ -314,7 +314,7 @@ export function ProjectIssuesPage({
 								{project.data?.name ?? t("common.loading")}
 							</h1>
 							{project.data && (
-								<Badge variant="outline" className="font-mono">
+								<Badge variant="outline" className="rounded-md font-mono">
 									{project.data.key}
 								</Badge>
 							)}
@@ -488,7 +488,7 @@ export function ProjectIssuesPage({
 										<TableRow
 											key={issue.id}
 											className={cn(
-												"cursor-pointer",
+												"cursor-pointer hover:bg-accent/40",
 												selected.has(issue.id) && "bg-accent/40",
 											)}
 											onClick={() =>
@@ -539,14 +539,14 @@ export function ProjectIssuesPage({
 											</TableCell>
 											<TableCell>
 												{assignee ? (
-													<span className="flex items-center gap-2 text-sm">
+													<span
+														title={assignee.user.name}
+														className="inline-flex"
+													>
 														<UserAvatar name={assignee.user.name} />
-														<span className="truncate">
-															{assignee.user.name}
-														</span>
 													</span>
 												) : (
-													<span className="text-muted-foreground">—</span>
+													<span className="text-muted-foreground/50">—</span>
 												)}
 											</TableCell>
 											<TableCell>
@@ -560,11 +560,13 @@ export function ProjectIssuesPage({
 														})}
 													</span>
 												) : (
-													<span className="text-muted-foreground">—</span>
+													<span className="text-muted-foreground/50">—</span>
 												)}
 											</TableCell>
 											<TableCell className="text-muted-foreground text-xs">
-												{formatDueDate(issue.dueDate) || "—"}
+												{formatDueDate(issue.dueDate) || (
+													<span className="text-muted-foreground/50">—</span>
+												)}
 											</TableCell>
 											<TableCell
 												title={formatDateTime(issue.updatedAt)}

@@ -24,7 +24,11 @@ export function PriorityBadge({
 	return (
 		<Badge
 			variant="outline"
-			className={cn("border-transparent", PRIORITY_CLASS[name], className)}
+			className={cn(
+				"rounded-md border-transparent",
+				PRIORITY_CLASS[name],
+				className,
+			)}
 		>
 			{t(`issues.priorities.${name}`)}
 		</Badge>

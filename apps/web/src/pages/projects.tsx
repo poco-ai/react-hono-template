@@ -182,7 +182,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 					{visibleProjects.map((project) => (
 						<Card
 							key={project.id}
-							className="group cursor-pointer py-0 transition-colors hover:bg-accent/40"
+							className="group cursor-pointer py-0 transition-all hover:bg-accent/40 hover:shadow-sm hover:ring-foreground/20"
 							onClick={() =>
 								navigate({
 									to: "/orgs/$orgId/projects/$projectId",
@@ -235,11 +235,11 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 							</CardHeader>
 							<CardContent className="flex flex-col gap-2">
 								<div className="flex items-center gap-2">
-									<Badge variant="outline" className="font-mono">
+									<Badge variant="outline" className="rounded-md font-mono">
 										{project.key}
 									</Badge>
 									{project.archived && (
-										<Badge variant="secondary">
+										<Badge variant="secondary" className="rounded-md">
 											{t("projects.archivedBadge")}
 										</Badge>
 									)}
