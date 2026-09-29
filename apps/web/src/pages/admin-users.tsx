@@ -36,8 +36,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
@@ -60,6 +60,22 @@ export function AdminUsersPage() {
 		id: string;
 		name: string;
 	} | null>(null);
+
+	useEffect(() => {
+		setSearchInput(search);
+	}, [search]);
+
+	useEffect(() => {
+		const trimmed = searchInput.trim();
+		if (trimmed === search) return;
+		const timer = setTimeout(() => {
+			navigate({
+				search: { page: 1, search: trimmed || undefined },
+				replace: true,
+			});
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchInput, search, navigate]);
 
 	const usersQuery = useQuery({
 		queryKey: ["admin-users", page, search],
@@ -103,9 +119,11 @@ export function AdminUsersPage() {
 			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
 	});
 
-	const onSearch = (e: FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		navigate({ search: { page: 1, search: searchInput.trim() } });
+	const clearSearch = () => {
+		setSearchInput("");
+		if (search) {
+			navigate({ search: { page: 1, search: undefined }, replace: true });
+		}
 	};
 
 	const gotoPage = (next: number) =>
@@ -128,17 +146,31 @@ export function AdminUsersPage() {
 				<CardDescription>{t("adminUsers.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
-				<form className="flex gap-2" onSubmit={onSearch}>
+				<div className="relative max-w-xs">
 					<Input
 						placeholder={t("adminUsers.searchPlaceholder")}
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
-						className="max-w-xs"
+						onKeyDown={(e) => {
+							if (e.key === "Escape") {
+								clearSearch();
+							}
+						}}
+						className="pr-8"
 					/>
-					<Button type="submit" variant="outline">
-						{t("adminUsers.search")}
-					</Button>
-				</form>
+					{searchInput && (
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon"
+							className="absolute top-1/2 right-1 size-6 -translate-y-1/2"
+							aria-label={t("common.clear")}
+							onClick={clearSearch}
+						>
+							<X />
+						</Button>
+					)}
+				</div>
 
 				{mutationError && (
 					<p className="text-sm text-red-500">

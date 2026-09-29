@@ -32,6 +32,7 @@ const zh: typeof en = {
 		edit: "编辑",
 		loadMore: "加载更多",
 		justNow: "刚刚",
+		clear: "清除",
 	},
 	nav: {
 		openMenu: "打开菜单",
@@ -516,10 +517,8 @@ const zh: typeof en = {
 		},
 		banTitle: "封禁该用户？",
 		banDescription: "{{name}} 将立即失去访问权限且无法再登录。",
-		description:
-			"仅管理员可访问，由 RBAC 权限保护。分页与搜索状态保存在 URL 中。",
+		description: "管理平台上的所有用户账号。",
 		searchPlaceholder: "按姓名或邮箱搜索…",
-		search: "搜索",
 		user: "用户",
 		status: "状态",
 		created: "创建时间",
@@ -537,10 +536,8 @@ const zh: typeof en = {
 	},
 	adminOrgs: {
 		title: "组织管理",
-		description:
-			"实例中的所有组织。冻结组织后其成员将无法进行写操作，但数据仍可查看。",
+		description: "管理实例中的所有组织；冻结后成员无法写入，数据仍可查看。",
 		searchPlaceholder: "按名称或 Slug 搜索…",
-		search: "搜索",
 		org: "组织",
 		plan: "方案",
 		members: "成员",

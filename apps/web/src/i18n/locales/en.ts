@@ -30,6 +30,7 @@ const en = {
 		edit: "Edit",
 		loadMore: "Load more",
 		justNow: "Just now",
+		clear: "Clear",
 	},
 	nav: {
 		openMenu: "Open menu",
@@ -536,10 +537,8 @@ const en = {
 		banTitle: "Ban this user?",
 		banDescription:
 			"{{name}} will immediately lose access and can no longer sign in.",
-		description:
-			"Admin-only area, guarded by RBAC permissions. Page and search live in the URL.",
+		description: "Manage all user accounts on this platform.",
 		searchPlaceholder: "Search by name or email...",
-		search: "Search",
 		user: "User",
 		status: "Status",
 		created: "Created",
@@ -558,9 +557,8 @@ const en = {
 	adminOrgs: {
 		title: "Organizations",
 		description:
-			"All organizations on this instance. Freeze an organization to block writes while keeping it readable.",
+			"Manage all organizations on this instance; freezing blocks member writes while data stays viewable.",
 		searchPlaceholder: "Search by name or slug...",
-		search: "Search",
 		org: "Organization",
 		plan: "Plan",
 		members: "Members",

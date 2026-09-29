@@ -1,5 +1,6 @@
 import type { AdminStatsDto } from "@api/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
 	Card,
 	CardDescription,
@@ -25,10 +26,22 @@ export function AdminHomePage() {
 	const cards: {
 		key: "users" | "orgs" | "issues" | "proOrgs";
 		value: number;
+		to?: "/admin/users" | "/admin/orgs";
+		ariaLabelKey?: "nav.users" | "nav.orgs";
 	}[] = stats
 		? [
-				{ key: "users", value: stats.users },
-				{ key: "orgs", value: stats.orgs },
+				{
+					key: "users",
+					value: stats.users,
+					to: "/admin/users",
+					ariaLabelKey: "nav.users",
+				},
+				{
+					key: "orgs",
+					value: stats.orgs,
+					to: "/admin/orgs",
+					ariaLabelKey: "nav.orgs",
+				},
 				{ key: "issues", value: stats.issues },
 				{ key: "proOrgs", value: stats.proOrgs },
 			]
@@ -58,18 +71,38 @@ export function AdminHomePage() {
 
 			{stats && (
 				<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-					{cards.map((card) => (
-						<Card key={card.key}>
-							<CardHeader>
-								<CardDescription>
-									{t(`adminHome.stats.${card.key}`)}
-								</CardDescription>
-								<CardTitle className="text-3xl font-semibold tabular-nums">
-									{card.value}
-								</CardTitle>
-							</CardHeader>
-						</Card>
-					))}
+					{cards.map((card) =>
+						card.to && card.ariaLabelKey ? (
+							<Link
+								key={card.key}
+								to={card.to}
+								aria-label={t(card.ariaLabelKey)}
+								className="rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+							>
+								<Card className="h-full cursor-pointer transition-colors hover:bg-accent/40">
+									<CardHeader>
+										<CardDescription>
+											{t(`adminHome.stats.${card.key}`)}
+										</CardDescription>
+										<CardTitle className="text-3xl font-semibold tabular-nums">
+											{card.value}
+										</CardTitle>
+									</CardHeader>
+								</Card>
+							</Link>
+						) : (
+							<Card key={card.key} className="h-full">
+								<CardHeader>
+									<CardDescription>
+										{t(`adminHome.stats.${card.key}`)}
+									</CardDescription>
+									<CardTitle className="text-3xl font-semibold tabular-nums">
+										{card.value}
+									</CardTitle>
+								</CardHeader>
+							</Card>
+						),
+					)}
 				</div>
 			)}
 		</div>
