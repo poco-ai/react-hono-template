@@ -231,6 +231,8 @@ const en = {
 		},
 		filterStatus: "Status",
 		filterPriority: "Priority",
+		filterAssignee: "Assignee",
+		filterLabel: "Labels",
 		searchPlaceholder: "Filter by title…",
 		clearFilters: "Clear filters",
 		updated: "Updated",

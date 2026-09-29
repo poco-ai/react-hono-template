@@ -174,15 +174,17 @@ export function ProjectIssuesPage({
 	const labelById = new Map(
 		(labels.data ?? []).map((label) => [label.id, label]),
 	);
+	const assigneeFilterActive = Boolean(search.assigneeId);
 	const assigneeFilterLabel =
 		search.assigneeId === undefined || search.assigneeId === ""
 			? t("common.all")
 			: search.assigneeId === "none"
 				? t("common.unassigned")
 				: (memberById.get(search.assigneeId)?.user.name ?? t("common.all"));
+	const labelFilterActive = Boolean(search.labelId);
 	const labelFilterLabel = search.labelId
-		? (labelById.get(search.labelId)?.name ?? t("issues.labels"))
-		: t("issues.labels");
+		? (labelById.get(search.labelId)?.name ?? t("common.all"))
+		: t("common.all");
 
 	const onSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -313,6 +315,12 @@ export function ProjectIssuesPage({
 			<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
 				<MultiSelect
 					placeholder={t("issues.filterStatus")}
+					triggerLabel={
+						statusFilter.length > 0
+							? `${t("issues.filterStatus")} · ${statusFilter.length}`
+							: undefined
+					}
+					active={statusFilter.length > 0}
 					value={statusFilter}
 					options={ISSUE_STATUSES.map((status) => ({
 						value: status,
@@ -324,6 +332,12 @@ export function ProjectIssuesPage({
 				/>
 				<MultiSelect
 					placeholder={t("issues.filterPriority")}
+					triggerLabel={
+						priorityFilter.length > 0
+							? `${t("issues.filterPriority")} · ${priorityFilter.length}`
+							: undefined
+					}
+					active={priorityFilter.length > 0}
 					value={priorityFilter}
 					options={PRIORITY_NAMES.map((name) => ({
 						value: name,
@@ -342,8 +356,22 @@ export function ProjectIssuesPage({
 						})
 					}
 				>
-					<SelectTrigger className="w-40">
-						<SelectValue>{assigneeFilterLabel}</SelectValue>
+					<SelectTrigger
+						className={cn(
+							"w-44",
+							assigneeFilterActive && "bg-secondary dark:bg-secondary",
+						)}
+					>
+						<SelectValue>
+							<span className="text-muted-foreground">
+								{t("issues.filterAssignee")}:
+							</span>
+							<span
+								className={cn(!assigneeFilterActive && "text-muted-foreground")}
+							>
+								{assigneeFilterLabel}
+							</span>
+						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value={ASSIGNEE_ALL}>{t("common.all")}</SelectItem>
@@ -364,11 +392,25 @@ export function ProjectIssuesPage({
 						})
 					}
 				>
-					<SelectTrigger className="w-36">
-						<SelectValue>{labelFilterLabel}</SelectValue>
+					<SelectTrigger
+						className={cn(
+							"w-40",
+							labelFilterActive && "bg-secondary dark:bg-secondary",
+						)}
+					>
+						<SelectValue>
+							<span className="text-muted-foreground">
+								{t("issues.filterLabel")}:
+							</span>
+							<span
+								className={cn(!labelFilterActive && "text-muted-foreground")}
+							>
+								{labelFilterLabel}
+							</span>
+						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value={LABEL_ALL}>{t("issues.labels")}</SelectItem>
+						<SelectItem value={LABEL_ALL}>{t("common.all")}</SelectItem>
 						{(labels.data ?? []).map((label) => (
 							<SelectItem key={label.id} value={label.id}>
 								{label.name}
@@ -389,27 +431,31 @@ export function ProjectIssuesPage({
 						/>
 					</div>
 				</form>
-				<Select
-					value={search.sort}
-					onValueChange={(value) =>
-						updateSearch({ sort: value as IssuesSearch["sort"] })
-					}
-				>
-					<SelectTrigger className="w-40">
-						<SelectValue>{t(`issues.sortOptions.${search.sort}`)}</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="updated">
-							{t("issues.sortOptions.updated")}
-						</SelectItem>
-						<SelectItem value="created">
-							{t("issues.sortOptions.created")}
-						</SelectItem>
-						<SelectItem value="priority">
-							{t("issues.sortOptions.priority")}
-						</SelectItem>
-					</SelectContent>
-				</Select>
+				{view === "list" && (
+					<Select
+						value={search.sort}
+						onValueChange={(value) =>
+							updateSearch({ sort: value as IssuesSearch["sort"] })
+						}
+					>
+						<SelectTrigger className="w-40">
+							<SelectValue>
+								{t(`issues.sortOptions.${search.sort}`)}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="updated">
+								{t("issues.sortOptions.updated")}
+							</SelectItem>
+							<SelectItem value="created">
+								{t("issues.sortOptions.created")}
+							</SelectItem>
+							<SelectItem value="priority">
+								{t("issues.sortOptions.priority")}
+							</SelectItem>
+						</SelectContent>
+					</Select>
+				)}
 				{hasFilters && (
 					<Button
 						variant="ghost"

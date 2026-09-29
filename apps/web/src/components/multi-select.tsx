@@ -5,6 +5,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import { cn } from "@workspace/ui/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -20,6 +21,8 @@ export function MultiSelect({
 	placeholder,
 	className,
 	disabled,
+	active,
+	triggerLabel,
 }: {
 	value: string[];
 	options: MultiSelectOption[];
@@ -27,6 +30,8 @@ export function MultiSelect({
 	placeholder: string;
 	className?: string;
 	disabled?: boolean;
+	active?: boolean;
+	triggerLabel?: string;
 }) {
 	const { t } = useTranslation();
 	const selected = options.filter((option) => value.includes(option.value));
@@ -47,15 +52,21 @@ export function MultiSelect({
 			<DropdownMenuTrigger
 				render={
 					<Button
-						variant="outline"
+						variant={active ? "secondary" : "outline"}
 						size="sm"
 						className={className}
 						disabled={disabled}
 					>
-						<span className="max-w-48 truncate">
-							{selected.length > 0
-								? selected.map((option) => option.label).join(", ")
-								: placeholder}
+						<span
+							className={cn(
+								"max-w-48 truncate",
+								selected.length === 0 && "text-muted-foreground",
+							)}
+						>
+							{triggerLabel ??
+								(selected.length > 0
+									? selected.map((option) => option.label).join(", ")
+									: placeholder)}
 						</span>
 						<ChevronDown className="text-muted-foreground size-4" />
 					</Button>
