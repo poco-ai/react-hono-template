@@ -324,48 +324,6 @@ export function IssueDetailPage({
 						labels={labels.data ?? []}
 					/>
 				</div>
-
-				<Separator className="my-8" />
-
-				<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-					<Button
-						variant="outline"
-						className="text-destructive hover:text-destructive"
-						onClick={() => setDeleteOpen(true)}
-					>
-						<Trash2 />
-						{t("common.delete")}
-					</Button>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>{t("issues.deleteTitle")}</AlertDialogTitle>
-							<AlertDialogDescription>
-								{t("issues.deleteDescription", {
-									key: `${project.data?.key ?? ""}-${data.number}`,
-								})}
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-							<AlertDialogAction
-								variant="destructive"
-								disabled={deleteMutation.isPending}
-								onClick={(e) => {
-									e.preventDefault();
-									deleteMutation.mutate();
-								}}
-							>
-								{t("common.delete")}
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
-				{deleteMutation.isError && (
-					<Alert variant="destructive" className="mt-2">
-						<CircleAlert />
-						<AlertDescription>{deleteMutation.error.message}</AlertDescription>
-					</Alert>
-				)}
 			</div>
 
 			<aside className="flex w-64 shrink-0 flex-col gap-4">
@@ -501,7 +459,50 @@ export function IssueDetailPage({
 							}
 						}}
 					/>
+					<p className="text-muted-foreground text-xs">
+						{t("issues.estimateUnit")}
+					</p>
 				</PropertyRow>
+
+				<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+					<Button
+						variant="outline"
+						className="w-full text-destructive hover:text-destructive"
+						onClick={() => setDeleteOpen(true)}
+					>
+						<Trash2 />
+						{t("common.delete")}
+					</Button>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>{t("issues.deleteTitle")}</AlertDialogTitle>
+							<AlertDialogDescription>
+								{t("issues.deleteDescription", {
+									key: `${project.data?.key ?? ""}-${data.number}`,
+								})}
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+							<AlertDialogAction
+								variant="destructive"
+								disabled={deleteMutation.isPending}
+								onClick={(e) => {
+									e.preventDefault();
+									deleteMutation.mutate();
+								}}
+							>
+								{t("common.delete")}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+				{deleteMutation.isError && (
+					<Alert variant="destructive">
+						<CircleAlert />
+						<AlertDescription>{deleteMutation.error.message}</AlertDescription>
+					</Alert>
+				)}
 
 				{updateMutation.isError && (
 					<Alert variant="destructive">

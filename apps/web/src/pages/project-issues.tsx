@@ -871,6 +871,9 @@ function CreateIssueDialog({
 								value={estimate}
 								onChange={(e) => setEstimate(e.target.value)}
 							/>
+							<p className="text-muted-foreground text-xs">
+								{t("issues.estimateUnit")}
+							</p>
 						</div>
 					</div>
 					<div className="flex flex-col gap-2">

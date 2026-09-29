@@ -152,6 +152,7 @@ const en = {
 		noLabels: "No labels",
 		dueDate: "Due date",
 		estimate: "Estimate",
+		estimateUnit: "points",
 		statuses: {
 			backlog: "Backlog",
 			todo: "Todo",

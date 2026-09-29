@@ -148,6 +148,7 @@ const zh: typeof en = {
 		noLabels: "暂无标签",
 		dueDate: "截止日期",
 		estimate: "预估",
+		estimateUnit: "点",
 		statuses: {
 			backlog: "待办池",
 			todo: "待处理",
