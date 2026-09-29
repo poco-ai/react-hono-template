@@ -10,9 +10,11 @@ import { formatDueDate } from "@/lib/issue-utils";
 import { orgIssuesQuery } from "@/lib/queries/issues";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function MyIssuesPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("issues.myIssuesTitle"));
 	const { data: session } = useSession();
 	const userId = session?.user.id;
 	const projects = useQuery(projectsQuery(orgId));

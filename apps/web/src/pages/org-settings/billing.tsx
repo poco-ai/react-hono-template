@@ -35,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
 import { formatDate } from "@/lib/issue-utils";
 import { billingQuery, billingRootKey } from "@/lib/queries/billing";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const MB = 1024 * 1024;
 
@@ -81,6 +82,7 @@ function PlanValue({ children }: { children: string }) {
 
 export function BillingSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("settings.billing"));
 	const queryClient = useQueryClient();
 	const { checkout } = useSearch({
 		from: "/_auth/orgs/$orgId/settings/billing",

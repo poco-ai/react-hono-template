@@ -42,11 +42,13 @@ import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { useSession } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const PAGE_SIZE = 10;
 
 export function AdminUsersPage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("adminUsers.title"));
 	const { data: session } = useSession();
 	const { page = 1, search = "" } = useSearch({ from: "/_auth/admin/users" });
 	const navigate = useNavigate({ from: "/admin/users" });

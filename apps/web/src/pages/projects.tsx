@@ -36,9 +36,11 @@ import { client, unwrap } from "@/lib/api";
 import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
 import { projectsQuery } from "@/lib/queries/projects";
 import { useSession } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function ProjectsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("projects.title"));
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();

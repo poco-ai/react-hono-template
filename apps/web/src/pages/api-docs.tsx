@@ -7,6 +7,7 @@ import { ArrowLeft, KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { orgsQuery } from "@/lib/queries/org";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 function useDarkMode() {
 	const [dark, setDark] = useState(
@@ -28,6 +29,7 @@ function useDarkMode() {
 
 export function ApiDocsPage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("apiDocs.title"));
 	const dark = useDarkMode();
 	const orgs = useQuery(orgsQuery());
 	const firstOrgId = orgs.data?.[0]?.id;

@@ -21,13 +21,16 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/errors";
 import { sessionOptions } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function LoginPage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("login.title"));
 	const navigate = useNavigate({ from: "/login" });
 	const router = useRouter();
 	const queryClient = useQueryClient();
@@ -67,6 +70,7 @@ export function LoginPage() {
 			</div>
 			<Card className="w-full max-w-sm">
 				<CardHeader>
+					<Logo className="pb-2" />
 					<CardTitle>{t("login.title")}</CardTitle>
 					<CardDescription>{t("login.description")}</CardDescription>
 				</CardHeader>

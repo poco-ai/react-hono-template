@@ -28,12 +28,14 @@ import { useTranslation } from "react-i18next";
 import { LabelBadge } from "@/components/issue/label-badge";
 import { client, unwrap } from "@/lib/api";
 import { labelsQuery } from "@/lib/queries/labels";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgRole } from "@/lib/use-org-role";
 
 const DEFAULT_COLOR = "#94a3b8";
 
 export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("settings.labels"));
 	const queryClient = useQueryClient();
 	const labels = useQuery(labelsQuery(orgId));
 	const { canManage } = useOrgRole(orgId);

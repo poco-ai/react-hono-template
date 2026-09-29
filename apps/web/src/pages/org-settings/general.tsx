@@ -34,6 +34,7 @@ import { authClient } from "@/lib/auth-client";
 import { membersQuery } from "@/lib/queries/members";
 import { orgsQuery } from "@/lib/queries/org";
 import { useSession } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function GeneralSettingsPage({
 	orgId,
@@ -43,6 +44,7 @@ export function GeneralSettingsPage({
 	denied?: boolean;
 }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("settings.general"));
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();

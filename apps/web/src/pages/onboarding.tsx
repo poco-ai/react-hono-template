@@ -16,13 +16,16 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/lib/issue-utils";
 import { type Organization, orgsQuery } from "@/lib/queries/org";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function OnboardingPage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("onboarding.title"));
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [name, setName] = useState("");
@@ -81,6 +84,7 @@ export function OnboardingPage() {
 			</div>
 			<Card className="w-full max-w-sm">
 				<CardHeader>
+					<Logo className="pb-2" />
 					<CardTitle>{t("onboarding.title")}</CardTitle>
 					<CardDescription>{t("onboarding.description")}</CardDescription>
 				</CardHeader>

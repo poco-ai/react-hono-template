@@ -73,6 +73,7 @@ import { projectIssuesQuery } from "@/lib/queries/issues";
 import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
 import { projectQuery } from "@/lib/queries/projects";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export interface IssuesSearch {
 	page: number;
@@ -105,6 +106,7 @@ export function ProjectIssuesPage({
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const project = useQuery(projectQuery(orgId, projectId));
+	useDocumentTitle(project.data?.name);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
 	const [createOpen, setCreateOpen] = useState(false);

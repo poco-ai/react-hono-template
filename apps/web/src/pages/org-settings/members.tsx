@@ -50,11 +50,13 @@ import {
 	ORG_ROLES,
 } from "@/lib/queries/members";
 import { useSession } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const INVITABLE_ROLES: OrgRole[] = ["admin", "member"];
 
 export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("settings.members"));
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));

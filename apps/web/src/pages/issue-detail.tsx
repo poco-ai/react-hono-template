@@ -60,6 +60,7 @@ import { issueQuery } from "@/lib/queries/issues";
 import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
 import { projectQuery } from "@/lib/queries/projects";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const UNASSIGNED = "__unassigned__";
@@ -78,6 +79,9 @@ export function IssueDetailPage({
 	const queryClient = useQueryClient();
 	const issue = useQuery(issueQuery(orgId, projectId, issueNumber));
 	const project = useQuery(projectQuery(orgId, projectId));
+	useDocumentTitle(
+		project.data?.key ? `${project.data.key}-${issueNumber}` : undefined,
+	);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
 

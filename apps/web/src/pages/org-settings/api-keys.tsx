@@ -40,9 +40,11 @@ import { client, unwrap } from "@/lib/api";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
 import { apiKeysQuery, apiKeysRootKey } from "@/lib/queries/apikeys";
 import { membersQuery } from "@/lib/queries/members";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("settings.apiKeys"));
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
 	const [createOpen, setCreateOpen] = useState(false);

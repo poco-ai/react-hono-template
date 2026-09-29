@@ -22,6 +22,7 @@ import {
 import { labelsQuery } from "@/lib/queries/labels";
 import { membersQuery } from "@/lib/queries/members";
 import { projectsQuery } from "@/lib/queries/projects";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const ALL_PROJECTS = "__all__";
 
@@ -35,6 +36,7 @@ export function OrgActivityPage({
 	onProjectChange: (projectId: string) => void;
 }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("activityFeed.title"));
 	const [limit, setLimit] = useState(ORG_ACTIVITY_PAGE_SIZE);
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));

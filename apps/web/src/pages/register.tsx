@@ -16,14 +16,17 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/errors";
 import { bootstrapQuery } from "@/lib/queries/bootstrap";
 import { sessionOptions } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function RegisterPage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("register.title"));
 	const navigate = useNavigate({ from: "/register" });
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export function RegisterPage() {
 			</div>
 			<Card className="w-full max-w-sm">
 				<CardHeader>
+					<Logo className="pb-2" />
 					<CardTitle>{t("register.title")}</CardTitle>
 					{bootstrap?.hasAdmin === false && (
 						<CardDescription>{t("register.description")}</CardDescription>

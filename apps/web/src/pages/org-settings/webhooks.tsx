@@ -58,6 +58,7 @@ import {
 	webhooksQuery,
 } from "@/lib/queries/webhooks";
 import { useSession } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 type WebhookEventLabel = WebhookEventName | "ping";
 
@@ -89,6 +90,7 @@ function EventBadge({ event }: { event: string }) {
 
 export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
+	useDocumentTitle(t("settings.webhooks"));
 	const queryClient = useQueryClient();
 	const webhooks = useQuery(webhooksQuery(orgId));
 	const [dialogOpen, setDialogOpen] = useState(false);

@@ -16,6 +16,7 @@ import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
 import { orgsQuery } from "@/lib/queries/org";
 import { sessionOptions } from "@/lib/session";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const searchSchema = z.object({
 	invitationId: z.string().min(1),
@@ -87,6 +88,14 @@ function InvitePage() {
 	});
 
 	const { mutate: accept } = acceptMutation;
+
+	useDocumentTitle(
+		acceptMutation.isSuccess
+			? t("invite.successTitle")
+			: acceptMutation.isError
+				? t("invite.errorTitle")
+				: t("invite.title"),
+	);
 
 	useEffect(() => {
 		if (!started.current) {

@@ -8,9 +8,11 @@ import {
 } from "@workspace/ui/components/card";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AdminHomePage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("adminHome.title"));
 
 	const statsQuery = useQuery({
 		queryKey: ["admin-stats"],

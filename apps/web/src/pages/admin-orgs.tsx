@@ -34,11 +34,13 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { client, unwrap } from "@/lib/api";
 import { formatDate } from "@/lib/issue-utils";
+import { useDocumentTitle } from "@/lib/use-document-title";
 
 const PAGE_SIZE = 10;
 
 export function AdminOrgsPage() {
 	const { t } = useTranslation();
+	useDocumentTitle(t("adminOrgs.title"));
 	const { page = 1, search = "" } = useSearch({ from: "/_auth/admin/orgs" });
 	const navigate = useNavigate({ from: "/admin/orgs" });
 	const queryClient = useQueryClient();
