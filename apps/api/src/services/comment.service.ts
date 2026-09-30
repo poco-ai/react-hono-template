@@ -11,7 +11,7 @@ import type { ProjectDao } from "../dao/project.dao";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
-import type { WebhookDispatcher } from "./webhook.service";
+import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const assertIssueCommentable = async (
 	issueDao: IssueDao,

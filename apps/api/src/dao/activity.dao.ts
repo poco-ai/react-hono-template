@@ -1,4 +1,5 @@
 import { and, desc, eq, type SQL } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
 import { activities, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
@@ -15,6 +16,16 @@ export type ActivityInsert = {
 	oldValue: string | null;
 	newValue: string | null;
 };
+
+/**
+ * Composable insert statement for callers that must keep the activity rows in
+ * the same `db.batch` as their primary write (D1 batches are transactions).
+ * This module stays the only place that touches the activities table.
+ */
+export const activityInsertStatement = (
+	db: Database,
+	rows: ActivityInsert[],
+): BatchItem<"sqlite"> => db.insert(activities).values(rows);
 
 const ACTIVITY_SELECT = {
 	id: activities.id,
@@ -57,13 +68,6 @@ const toActivityDto = (row: {
 });
 
 export const createActivityDao = (db: Database) => ({
-	insert: async (rows: ActivityInsert[]): Promise<void> => {
-		if (rows.length === 0) {
-			return;
-		}
-		await db.insert(activities).values(rows);
-	},
-
 	listByIssue: async (
 		orgId: string,
 		issueId: string,

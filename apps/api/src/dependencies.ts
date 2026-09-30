@@ -2,13 +2,13 @@ import { createActivityDao } from "./dao/activity.dao";
 import { createAdminUserDao } from "./dao/admin-user.dao";
 import { createApiKeyDao } from "./dao/api-key.dao";
 import { createAttachmentDao } from "./dao/attachment.dao";
+import { createBillingDao } from "./dao/billing.dao";
 import { createCommentDao } from "./dao/comment.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createLabelDao } from "./dao/label.dao";
 import { createMemberDao } from "./dao/member.dao";
 import { createOrganizationDao } from "./dao/organization.dao";
 import { createProjectDao } from "./dao/project.dao";
-import { createSubscriptionDao } from "./dao/subscription.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
@@ -28,6 +28,7 @@ import { createLabelService } from "./services/label.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
 import { createWebhookService } from "./services/webhook.service";
+import { createWebhookDeliveryService } from "./services/webhook-delivery.service";
 
 export const createDependencies = ({
 	db,
@@ -56,13 +57,18 @@ export const createDependencies = ({
 	const apiKeyDao = createApiKeyDao(db);
 	const webhookDao = createWebhookDao(db);
 	const webhookDeliveryDao = createWebhookDeliveryDao(db);
-	const subscriptionDao = createSubscriptionDao(db);
-	const planService = createPlanService(subscriptionDao);
+	const billingDao = createBillingDao(db);
+	const planService = createPlanService(billingDao);
 
+	const webhookDeliveryService = createWebhookDeliveryService({
+		webhookDao,
+		deliveryDao: webhookDeliveryDao,
+	});
 	const webhookService = createWebhookService({
 		webhookDao,
 		deliveryDao: webhookDeliveryDao,
 		plans: planService,
+		deliveries: webhookDeliveryService,
 	});
 
 	const projectService = createProjectService(projectDao, planService);
@@ -71,32 +77,33 @@ export const createDependencies = ({
 		labelDao,
 		projectDao,
 		memberDao,
-		webhooks: webhookService,
+		webhooks: webhookDeliveryService,
 	});
 	const labelService = createLabelService(labelDao);
 	const commentService = createCommentService({
 		commentDao,
 		issueDao,
 		projectDao,
-		webhooks: webhookService,
+		webhooks: webhookDeliveryService,
 	});
 	const attachmentService = createAttachmentService({
 		attachmentDao,
 		issueDao,
 		projectDao,
 		storage,
-		webhooks: webhookService,
+		webhooks: webhookDeliveryService,
 		plans: planService,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
 	const apiKeyService = createApiKeyService(apiKeyDao);
 	const billingService = createBillingService({
-		subscriptionDao,
+		billingDao,
 		memberDao,
 		projectDao,
 		webhookDao,
 		stripeSetup,
 		mockEnabled: billingMockEnabled,
+		plans: planService,
 	});
 
 	const bootstrapService = createBootstrapService(adminUserDao);

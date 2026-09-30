@@ -18,7 +18,7 @@ import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
 import type { StorageAdapter } from "../lib/storage/types";
 import type { PlanService } from "./plan.service";
-import type { WebhookDispatcher } from "./webhook.service";
+import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 export const ATTACHMENT_UPLOAD_URL_EXPIRES_IN = 600;
 export const ATTACHMENT_DOWNLOAD_URL_EXPIRES_IN = 300;

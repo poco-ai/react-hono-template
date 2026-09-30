@@ -7,7 +7,7 @@ import {
 } from "@workspace/shared";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
-import { assertWithinLimit, type PlanService } from "./plan.service";
+import type { PlanService } from "./plan.service";
 
 export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
 	listProjects: async (
@@ -42,7 +42,7 @@ export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
 		input: CreateProjectInput,
 	): Promise<ProjectDto> => {
 		const plan = await plans.getPlanForOrg(orgId);
-		assertWithinLimit(
+		plans.assertWithinLimit(
 			"projects",
 			await dao.countByOrg(orgId),
 			PLANS[plan].projects,

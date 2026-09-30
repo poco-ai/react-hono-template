@@ -1,10 +1,10 @@
 import { and, asc, count, eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
-import { activities, comments } from "../db/schema";
+import { comments } from "../db/schema";
 import type { Database } from "../db/types";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
-import type { ActivityInsert } from "./activity.dao";
+import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 
 // D1 batch rows are keyed by column name, so joined columns colliding with
 // comments columns (e.g. both tables have "id") shift values. Alias the user
@@ -85,7 +85,7 @@ export const createCommentDao = (db: Database) => ({
 			...BatchItem<"sqlite">[],
 		];
 		if (activity) {
-			statements.push(db.insert(activities).values(activity));
+			statements.push(activityInsertStatement(db, [activity]));
 		}
 		await db.batch(statements);
 		const created = await db

@@ -26,7 +26,6 @@ const stripeSetup = setupStripe({
 	priceId: env.STRIPE_PRICE_ID,
 	webhookSecret: env.STRIPE_WEBHOOK_SECRET,
 });
-const stripe = stripeSetup.context;
 
 const dependencies = createDependencies({
 	db,
@@ -49,7 +48,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 const stripeController = createStripeController({
 	service: dependencies.services.billingService,
-	stripe,
+	stripeSetup,
 });
 app.post("/api/stripe/webhook", (c) => stripeController.webhook(c));
 

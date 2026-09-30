@@ -16,7 +16,7 @@ import type {
 	ListIssuesDto,
 } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
-import type { WebhookDispatcher } from "./webhook.service";
+import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const toDueDate = (
 	value: string | null | undefined,

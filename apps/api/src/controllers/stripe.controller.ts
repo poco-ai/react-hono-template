@@ -2,22 +2,26 @@ import { ApiErrorCode } from "@workspace/shared";
 import type { Context } from "hono";
 import type Stripe from "stripe";
 import { fail, ok } from "../lib/response";
-import type { StripeContext } from "../lib/stripe";
+import {
+	isStripeConfigured,
+	type StripeSetup,
+	stripeUnavailableMessage,
+} from "../lib/stripe";
 import type { BillingService } from "../services/billing.service";
 
 export const createStripeController = ({
 	service,
-	stripe,
+	stripeSetup,
 }: {
 	service: BillingService;
-	stripe: StripeContext | null;
+	stripeSetup: StripeSetup;
 }) => ({
 	webhook: async (c: Context) => {
-		if (!stripe?.webhookSecret) {
+		if (!isStripeConfigured(stripeSetup)) {
 			return fail(
 				c,
 				ApiErrorCode.SERVICE_UNAVAILABLE,
-				"Stripe is not configured",
+				stripeUnavailableMessage(stripeSetup),
 				503,
 			);
 		}
@@ -25,10 +29,10 @@ export const createStripeController = ({
 		const signature = c.req.header("stripe-signature") ?? "";
 		let event: Stripe.Event;
 		try {
-			event = await stripe.client.webhooks.constructEventAsync(
+			event = await stripeSetup.context.client.webhooks.constructEventAsync(
 				payload,
 				signature,
-				stripe.webhookSecret,
+				stripeSetup.context.webhookSecret,
 			);
 		} catch (err) {
 			console.error("[stripe] webhook signature verification failed:", err);
@@ -43,5 +47,3 @@ export const createStripeController = ({
 		return ok(c, { received: true });
 	},
 });
-
-export type StripeController = ReturnType<typeof createStripeController>;

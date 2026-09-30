@@ -26,7 +26,6 @@ const policyFor = ({
 		},
 		plans: {
 			getPlanForOrg: async () => plan,
-			getLimitsForOrg: async () => PLANS[plan],
 		},
 	});
 

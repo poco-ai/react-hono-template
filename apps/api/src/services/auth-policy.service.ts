@@ -16,7 +16,7 @@ export const createAuthPolicyService = ({
 		| "countByOrg"
 		| "countPendingInvitationsByOrg"
 	>;
-	plans: PlanService;
+	plans: Pick<PlanService, "getPlanForOrg">;
 }) => ({
 	initialUserRole: async () =>
 		(await adminUserDao.countUsers()) === 0 ? "admin" : "user",

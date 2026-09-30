@@ -12,14 +12,14 @@ import {
 	sql,
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import { activities, issueLabels, issues, projects } from "../db/schema";
+import { issueLabels, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
 	IssueDto,
 	ListIssuesDto,
 	ListIssuesQueryDto,
 } from "../dto/issue.dto";
-import type { ActivityInsert } from "./activity.dao";
+import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 
 type IssueRow = typeof issues.$inferSelect;
 
@@ -92,7 +92,7 @@ export const createIssueDao = (db: Database) => ({
 								),
 							]
 						: []),
-					...(activity ? [db.insert(activities).values(activity)] : []),
+					...(activity ? [activityInsertStatement(db, [activity])] : []),
 				]);
 				return toIssueDto(inserted[0]);
 			} catch (err) {
@@ -328,7 +328,7 @@ export const createIssueDao = (db: Database) => ({
 			);
 		}
 		if (activityRows.length > 0) {
-			statements.push(db.insert(activities).values(activityRows));
+			statements.push(activityInsertStatement(db, activityRows));
 		}
 		const [baseRows] = await db.batch(statements);
 		const row = baseRows[0] as IssueRow | undefined;
@@ -354,7 +354,7 @@ export const createIssueDao = (db: Database) => ({
 				.returning({ id: issues.id }),
 		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 		if (activity) {
-			statements.push(db.insert(activities).values(activity));
+			statements.push(activityInsertStatement(db, [activity]));
 		}
 		const [rows] = await db.batch(statements);
 		return rows.length > 0;

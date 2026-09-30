@@ -35,7 +35,7 @@ const freeDefault = (orgId: string): SubscriptionDto => ({
 	updatedAt: new Date(0).toISOString(),
 });
 
-export const createSubscriptionDao = (db: Database) => ({
+export const createBillingDao = (db: Database) => ({
 	ensure: async (orgId: string): Promise<void> => {
 		await db
 			.insert(subscriptions)
@@ -88,4 +88,4 @@ export const createSubscriptionDao = (db: Database) => ({
 	},
 });
 
-export type SubscriptionDao = ReturnType<typeof createSubscriptionDao>;
+export type BillingDao = ReturnType<typeof createBillingDao>;

@@ -1,10 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
-import { activities, attachments } from "../db/schema";
+import { attachments } from "../db/schema";
 import type { Database } from "../db/types";
 import type { AttachmentDto } from "../dto/attachment.dto";
-import type { ActivityInsert } from "./activity.dao";
+import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 
 const ATTACHMENT_SELECT = {
 	id: attachments.id,
@@ -93,7 +93,7 @@ export const createAttachmentDao = (db: Database) => ({
 			...BatchItem<"sqlite">[],
 		];
 		if (activity) {
-			statements.push(db.insert(activities).values(activity));
+			statements.push(activityInsertStatement(db, [activity]));
 		}
 		await db.batch(statements);
 		const row = await db
@@ -145,7 +145,7 @@ export const createAttachmentDao = (db: Database) => ({
 				.returning({ id: attachments.id }),
 		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 		if (activity) {
-			statements.push(db.insert(activities).values(activity));
+			statements.push(activityInsertStatement(db, [activity]));
 		}
 		const [rows] = await db.batch(statements);
 		return rows.length > 0;
