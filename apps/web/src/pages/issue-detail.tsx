@@ -1,69 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-	ISSUE_PRIORITIES,
-	ISSUE_STATUSES,
-	type IssuePriorityName,
-	type IssueStatus,
-	type UpdateIssueInput,
-} from "@workspace/shared";
+import type { UpdateIssueInput } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@workspace/ui/components/select";
 import { Separator } from "@workspace/ui/components/separator";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@workspace/ui/components/tooltip";
 import {
 	ArrowLeft,
 	ChevronLeft,
 	ChevronRight,
 	CircleAlert,
 	Loader2,
-	MoreHorizontal,
 	Pencil,
-	Trash2,
 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
-
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
-import { DateField } from "@/features/issues/components/date-field";
 import { IssueActivityTimeline } from "@/features/issues/components/issue-activity";
 import { IssueAttachments } from "@/features/issues/components/issue-attachments";
 import { IssueComments } from "@/features/issues/components/issue-comments";
+import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
-import { LabelBadge } from "@/features/issues/components/label-badge";
-import { PriorityBadge } from "@/features/issues/components/priority-badge";
-import { StatusBadge } from "@/features/issues/components/status-badge";
+import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
 import {
 	issueQuery,
 	useDeleteIssue,
@@ -73,19 +31,9 @@ import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { projectQuery } from "@/features/projects/data";
 import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
-import {
-	formatDateTime,
-	formatRelativeTime,
-	fromDateInputValue,
-	priorityName,
-	priorityValue,
-	toDateInputValue,
-} from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
-
-const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
-const UNASSIGNED = "__unassigned__";
 
 export function IssueDetailPage({
 	orgId,
@@ -109,19 +57,10 @@ export function IssueDetailPage({
 
 	const [title, setTitle] = useState("");
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const [estimateDraft, setEstimateDraft] = useState("");
 
 	useEffect(() => {
 		setTitle(issue.data?.title ?? "");
 	}, [issue.data?.title]);
-
-	useEffect(() => {
-		setEstimateDraft(
-			issue.data?.estimate === null || issue.data?.estimate === undefined
-				? ""
-				: String(issue.data.estimate),
-		);
-	}, [issue.data?.estimate]);
 
 	const updateMutation = useUpdateIssue(orgId, projectId, issueNumber);
 	const deleteMutation = useDeleteIssue(orgId, projectId, issueNumber);
@@ -199,12 +138,6 @@ export function IssueDetailPage({
 	}
 
 	const data = issue.data;
-	const memberById = new Map(
-		(members.data ?? []).map((member) => [member.userId, member]),
-	);
-	const assigneeLabel = data.assigneeId
-		? (memberById.get(data.assigneeId)?.user.name ?? t("common.unassigned"))
-		: t("common.unassigned");
 
 	return (
 		<div className="flex flex-col gap-8 px-4 py-8 lg:flex-row lg:px-6">
@@ -324,203 +257,21 @@ export function IssueDetailPage({
 			</div>
 
 			<aside className="flex w-full shrink-0 flex-col gap-4 lg:w-64">
-				<div className="flex justify-end">
-					<DropdownMenu>
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<DropdownMenuTrigger
-										render={
-											<Button
-												variant="ghost"
-												size="icon-sm"
-												aria-label={t("common.actions")}
-											>
-												<MoreHorizontal />
-											</Button>
-										}
-									/>
-								}
-							/>
-							<TooltipContent>{t("common.actions")}</TooltipContent>
-						</Tooltip>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem
-								variant="destructive"
-								disabled={frozen}
-								onClick={() => setDeleteOpen(true)}
-							>
-								<Trash2 />
-								{t("issues.deleteAction")}
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-				<PropertyRow label={t("issues.status")}>
-					<Select
-						value={data.status as IssueStatus}
-						disabled={frozen}
-						onValueChange={(v) =>
-							v && update({ status: v as (typeof ISSUE_STATUSES)[number] })
-						}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue>
-								{t(`issues.statuses.${data.status as IssueStatus}`)}
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							{ISSUE_STATUSES.map((status) => (
-								<SelectItem key={status} value={status}>
-									<StatusBadge status={status} />
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</PropertyRow>
-
-				<PropertyRow label={t("issues.priority")}>
-					<Select
-						value={priorityName(data.priority)}
-						disabled={frozen}
-						onValueChange={(v) =>
-							v &&
-							update({
-								priority: priorityValue(v as IssuePriorityName),
-							})
-						}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue>
-								{t(`issues.priorities.${priorityName(data.priority)}`)}
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							{PRIORITY_NAMES.map((name) => (
-								<SelectItem key={name} value={name}>
-									<PriorityBadge value={priorityValue(name)} />
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</PropertyRow>
-
-				<PropertyRow label={t("issues.assignee")}>
-					<Select
-						value={data.assigneeId ?? UNASSIGNED}
-						disabled={frozen}
-						onValueChange={(v) =>
-							update({ assigneeId: v === UNASSIGNED ? null : v })
-						}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue>{assigneeLabel}</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={UNASSIGNED}>
-								{t("common.unassigned")}
-							</SelectItem>
-							{(members.data ?? []).map((member) => (
-								<SelectItem key={member.userId} value={member.userId}>
-									{member.user.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</PropertyRow>
-
-				<PropertyRow label={t("issues.labels")}>
-					<MultiSelect
-						className="w-full justify-between"
-						placeholder={t("issues.noLabels")}
-						value={data.labelIds}
-						disabled={frozen}
-						options={(labels.data ?? []).map((label) => ({
-							value: label.id,
-							label: label.name,
-						}))}
-						onChange={(next) => update({ labelIds: next })}
-					/>
-					{data.labelIds.length > 0 && (
-						<span className="mt-2 flex flex-wrap gap-1">
-							{data.labelIds.map((labelId) => {
-								const label = labels.data?.find((l) => l.id === labelId);
-								return label ? (
-									<LabelBadge key={labelId} label={label} />
-								) : null;
-							})}
-						</span>
-					)}
-				</PropertyRow>
-
-				<PropertyRow label={t("issues.dueDate")}>
-					<DateField
-						value={toDateInputValue(data.dueDate)}
-						disabled={frozen}
-						onChange={(v) => update({ dueDate: fromDateInputValue(v) })}
-					/>
-				</PropertyRow>
-
-				<PropertyRow label={t("issues.estimate")}>
-					<Input
-						type="number"
-						min={0}
-						max={100}
-						value={estimateDraft}
-						disabled={frozen}
-						onChange={(e) => setEstimateDraft(e.target.value)}
-						onBlur={() => {
-							if (estimateDraft === "") {
-								if (data.estimate !== null) {
-									update({ estimate: null });
-								}
-								return;
-							}
-							const parsed = Number(estimateDraft);
-							if (
-								Number.isInteger(parsed) &&
-								parsed >= 0 &&
-								parsed <= 100 &&
-								parsed !== data.estimate
-							) {
-								update({ estimate: parsed });
-							} else {
-								setEstimateDraft(
-									data.estimate === null ? "" : String(data.estimate),
-								);
-							}
-						}}
-					/>
-					<p className="text-muted-foreground text-xs">
-						{t("issues.estimateUnit")}
-					</p>
-				</PropertyRow>
-
-				<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>{t("issues.deleteTitle")}</AlertDialogTitle>
-							<AlertDialogDescription>
-								{t("issues.deleteDescription", {
-									key: `${project.data?.key ?? ""}-${data.number}`,
-								})}
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-							<AlertDialogAction
-								variant="destructive"
-								disabled={deleteMutation.isPending}
-								onClick={(e) => {
-									e.preventDefault();
-									remove();
-								}}
-							>
-								{t("common.delete")}
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
+				<IssuePropertiesPanel
+					issue={data}
+					members={members.data ?? []}
+					labels={labels.data ?? []}
+					frozen={frozen}
+					onUpdate={update}
+					onDelete={() => setDeleteOpen(true)}
+				/>
+				<IssueDeleteDialog
+					open={deleteOpen}
+					onOpenChange={setDeleteOpen}
+					issueKey={`${project.data?.key ?? ""}-${data.number}`}
+					pending={deleteMutation.isPending}
+					onConfirm={remove}
+				/>
 				{deleteMutation.isError && (
 					<Alert variant="destructive">
 						<CircleAlert />
@@ -539,21 +290,6 @@ export function IssueDetailPage({
 					</Alert>
 				)}
 			</aside>
-		</div>
-	);
-}
-
-function PropertyRow({
-	label,
-	children,
-}: {
-	label: string;
-	children: ReactNode;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<Label className="text-muted-foreground text-xs">{label}</Label>
-			{children}
 		</div>
 	);
 }

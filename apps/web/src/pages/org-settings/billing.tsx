@@ -2,16 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { PLANS, type PlanLimits } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -33,6 +23,10 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { DowngradeDialog } from "@/features/billing/components/downgrade-dialog";
+import { PlanValue } from "@/features/billing/components/plan-value";
+import { UpgradeDialog } from "@/features/billing/components/upgrade-dialog";
+import { UsageRow } from "@/features/billing/components/usage-row";
 import {
 	billingQuery,
 	useCreateBillingPortal,
@@ -45,75 +39,6 @@ import { formatDate } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const MB = 1024 * 1024;
-
-function UsageBar({ usage, cap }: { usage: number; cap: number }) {
-	if (cap === 0) {
-		return <div className="bg-muted/50 h-1.5 w-full rounded-full" />;
-	}
-	const pct = Math.min(100, (usage / cap) * 100);
-	return (
-		<div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-			<div
-				className={`h-full rounded-full ${
-					pct >= 100
-						? "bg-destructive"
-						: pct >= 80
-							? "bg-amber-500 dark:bg-amber-400"
-							: "bg-primary"
-				}`}
-				style={{ width: `${pct}%` }}
-			/>
-		</div>
-	);
-}
-
-function UsageRow({
-	label,
-	usage,
-	cap,
-	unavailableNote,
-	onUnlock,
-}: {
-	label: string;
-	usage: number;
-	cap: number;
-	unavailableNote?: string;
-	onUnlock?: () => void;
-}) {
-	const { t } = useTranslation();
-	return (
-		<div className="flex flex-col gap-1.5">
-			<div className="flex items-center justify-between text-sm">
-				<span>{label}</span>
-				<span className="text-muted-foreground">
-					{cap === 0 ? "—" : t("billing.usageOf", { current: usage, cap })}
-				</span>
-			</div>
-			<UsageBar usage={usage} cap={cap} />
-			{cap === 0 && unavailableNote && (
-				<p className="text-muted-foreground text-xs">
-					{unavailableNote}
-					{onUnlock && (
-						<>
-							{" "}
-							<button
-								type="button"
-								onClick={onUnlock}
-								className="text-foreground font-medium underline-offset-2 hover:underline"
-							>
-								{t("billing.upgradeToUnlock")}
-							</button>
-						</>
-					)}
-				</p>
-			)}
-		</div>
-	);
-}
-
-function PlanValue({ children }: { children: string }) {
-	return <span className="text-sm font-medium">{children}</span>;
-}
 
 export function BillingSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -401,62 +326,19 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 				</CardContent>
 			</Card>
 
-			<AlertDialog
+			<UpgradeDialog
 				open={upgradeOpen}
 				onOpenChange={(open) => !open && setUpgradeOpen(false)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("billing.mockUpgradeTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("billing.mockUpgradeDescription", {
-								price: `$${PLANS.pro.price}`,
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							disabled={checkoutMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								checkoutMutation.mutate();
-							}}
-						>
-							{t("billing.upgrade")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				pending={checkoutMutation.isPending}
+				onConfirm={() => checkoutMutation.mutate()}
+			/>
 
-			<AlertDialog
+			<DowngradeDialog
 				open={portalOpen}
 				onOpenChange={(open) => !open && setPortalOpen(false)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							{t("billing.mockDowngradeTitle")}
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("billing.mockDowngradeDescription")}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={portalMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								portalMutation.mutate();
-							}}
-						>
-							{t("billing.downgrade")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				pending={portalMutation.isPending}
+				onConfirm={() => portalMutation.mutate()}
+			/>
 		</div>
 	);
 }

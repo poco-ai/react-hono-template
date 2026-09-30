@@ -1,15 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import {
@@ -35,6 +25,8 @@ import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { useSession } from "@/features/auth/data";
 import { InviteDialog } from "@/features/members/components/invite-dialog";
+import { RemoveMemberDialog } from "@/features/members/components/remove-member-dialog";
+import { RevokeInvitationDialog } from "@/features/members/components/revoke-invitation-dialog";
 import {
 	invitationsQuery,
 	MANAGE_ROLES,
@@ -359,65 +351,21 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				canUpgrade={canManage}
 			/>
 
-			<AlertDialog
+			<RemoveMemberDialog
 				open={removeTarget !== null}
 				onOpenChange={(open) => !open && setRemoveTarget(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("members.removeTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("members.removeDescription", {
-								name: removeTarget?.user.name ?? "",
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={removeMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								if (removeTarget) {
-									removeMutation.mutate(removeTarget.id);
-								}
-							}}
-						>
-							{t("common.remove")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				member={removeTarget}
+				pending={removeMutation.isPending}
+				onConfirm={(memberId) => removeMutation.mutate(memberId)}
+			/>
 
-			<AlertDialog
+			<RevokeInvitationDialog
 				open={revokeTarget !== null}
 				onOpenChange={(open) => !open && setRevokeTarget(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("members.revokeTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("members.revokeDescription")}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={revokeMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								if (revokeTarget) {
-									revokeMutation.mutate(revokeTarget.id);
-								}
-							}}
-						>
-							{t("members.revoke")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				invitation={revokeTarget}
+				pending={revokeMutation.isPending}
+				onConfirm={(invitationId) => revokeMutation.mutate(invitationId)}
+			/>
 		</div>
 	);
 }
