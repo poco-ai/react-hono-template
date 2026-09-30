@@ -4,6 +4,7 @@
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"cf-typegen": "wrangler types",
+		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:local": "wrangler d1 migrations apply react-hono-db --local",
