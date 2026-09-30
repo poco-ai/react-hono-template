@@ -1,7 +1,8 @@
 import type { AppType } from "@api/routes";
 import type { ApiOk, ApiResult } from "@workspace/shared";
 import { type ClientResponse, hc } from "hono/client";
-import { errorMessage } from "@/lib/errors";
+import { i18n } from "@/i18n";
+import { apiErrorMessage, errorCode } from "@/lib/errors";
 
 export const client = hc<AppType>(import.meta.env?.VITE_API_URL ?? "", {
 	init: { credentials: "include" },
@@ -16,18 +17,14 @@ export async function unwrap<T>(
 		return body.data;
 	}
 	const { code } = body.error;
-	throw Object.assign(new Error(errorMessage(body.error)), {
+	throw Object.assign(new Error(apiErrorMessage(i18n.t, body.error)), {
 		code: code as string,
 		status: response.status,
 	});
 }
 
 export function isPlanLimitError(err: unknown): boolean {
-	if (
-		typeof err === "object" &&
-		err !== null &&
-		(err as { code?: unknown }).code === "PLAN_LIMIT_EXCEEDED"
-	) {
+	if (errorCode(err) === "PLAN_LIMIT_EXCEEDED") {
 		return true;
 	}
 	return (

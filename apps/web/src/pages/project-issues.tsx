@@ -6,6 +6,7 @@ import {
 	ISSUE_STATUSES,
 	type IssuePriorityName,
 	type IssueStatus,
+	parseCsv,
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
@@ -33,7 +34,6 @@ import { IssueFilterControls } from "@/features/issues/components/issue-filter-c
 import { IssueList } from "@/features/issues/components/issue-list";
 import { projectIssuesQuery } from "@/features/issues/data";
 import type { IssuesSearch } from "@/features/issues/search";
-import { parseCsv } from "@/features/issues/utils";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
@@ -42,8 +42,6 @@ import { isNotFoundError } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
 import { useMediaQuery } from "@/lib/use-media-query";
-
-const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 
 export function ProjectIssuesPage({
 	orgId,
@@ -82,7 +80,7 @@ export function ProjectIssuesPage({
 		(ISSUE_STATUSES as readonly string[]).includes(value),
 	) as IssueStatus[];
 	const priorityFilter = parseCsv(search.priority).filter((value) =>
-		(PRIORITY_NAMES as readonly string[]).includes(value),
+		ISSUE_PRIORITIES.some((priority) => priority.name === value),
 	) as IssuePriorityName[];
 
 	const issues = useQuery(

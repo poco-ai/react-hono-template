@@ -1,13 +1,11 @@
 import { z } from "zod";
 import { ISSUE_PRIORITY, ISSUE_STATUSES } from "../constants";
+import { parseCsv } from "../csv";
 import { paginationQueryShape } from "./pagination";
 
 const toArray = (value: unknown) => {
 	if (typeof value === "string") {
-		return value
-			.split(",")
-			.map((part) => part.trim())
-			.filter(Boolean);
+		return parseCsv(value);
 	}
 	return value;
 };

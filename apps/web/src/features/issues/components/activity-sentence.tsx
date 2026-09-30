@@ -3,6 +3,7 @@ import type { LabelDto } from "@api/dto/label.dto";
 import {
 	ISSUE_STATUSES,
 	type IssueStatus,
+	parseCsv,
 	priorityName,
 } from "@workspace/shared";
 import type { ReactNode } from "react";
@@ -68,8 +69,7 @@ export function ActivitySentence({
 				if (!value) {
 					return t("activity.emptyValue");
 				}
-				const names = value
-					.split(",")
+				const names = parseCsv(value)
 					.map((id) => labelById.get(id)?.name)
 					.filter(Boolean);
 				return names.length > 0 ? names.join(", ") : t("activity.emptyValue");

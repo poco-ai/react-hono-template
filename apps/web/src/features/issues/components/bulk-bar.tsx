@@ -22,7 +22,6 @@ import { StatusBadge } from "@/features/issues/components/status-badge";
 import { apiErrorMessage } from "@/lib/errors";
 import { bulkPartialFailure, useBulkUpdateIssues } from "../data";
 
-const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const NO_ACTION = "__action__";
 
 export function BulkActionBar({
@@ -90,9 +89,9 @@ export function BulkActionBar({
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value={NO_ACTION}>{t("bulk.changePriority")}</SelectItem>
-					{PRIORITY_NAMES.map((name) => (
+					{ISSUE_PRIORITIES.map(({ name, value }) => (
 						<SelectItem key={name} value={name}>
-							<PriorityBadge value={priorityValue(name)} />
+							<PriorityBadge value={value} />
 						</SelectItem>
 					))}
 				</SelectContent>

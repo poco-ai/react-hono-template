@@ -3,6 +3,7 @@ import {
 	ISSUE_STATUSES,
 	type IssuePriorityName,
 	type IssueStatus,
+	serializeCsv,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -18,10 +19,8 @@ import { Search } from "lucide-react";
 import type { FormEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
-import { serializeCsv } from "@/features/issues/utils";
 import type { IssuesSearch } from "../search";
 
-const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const ASSIGNEE_ALL = "__all__";
 const LABEL_ALL = "__all__";
 
@@ -99,7 +98,7 @@ export function IssueFilterControls({
 				}
 				active={priorityFilter.length > 0}
 				value={priorityFilter}
-				options={PRIORITY_NAMES.map((name) => ({
+				options={ISSUE_PRIORITIES.map(({ name }) => ({
 					value: name,
 					label: t(`issues.priorities.${name}`),
 				}))}

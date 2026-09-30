@@ -49,6 +49,7 @@ import {
 } from "@/features/admin/data";
 import { useSession } from "@/features/auth/data";
 import { apiErrorMessage } from "@/lib/errors";
+import { formatDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AdminUsersPage() {
@@ -221,7 +222,7 @@ export function AdminUsersPage() {
 										)}
 									</TableCell>
 									<TableCell className="text-muted-foreground text-xs">
-										{new Date(user.createdAt).toLocaleDateString()}
+										{formatDate(user.createdAt)}
 									</TableCell>
 									<TableCell className="text-right">
 										{user.banned ? (

@@ -124,7 +124,6 @@ const zh: typeof en = {
 		continue: "继续",
 		errors: {
 			invitationNotFound: "邀请不存在或已被撤销。",
-			invitationExpired: "邀请已过期。",
 			emailMismatch: "该邀请与当前邮箱不符。",
 			alreadyMember: "你已是该组织成员。",
 			orgFull: "当前方案的组织成员名额已满。",
@@ -165,7 +164,6 @@ const zh: typeof en = {
 		key: "标识",
 		keyPlaceholder: "例如：WEB",
 		keyHint: "2–6 个大写字母，作为事项编号前缀。",
-		keyInvalid: "标识必须是 2–6 个大写字母。",
 		keyLockedHint: "项目标识创建后不可修改。",
 		descriptionPlaceholder: "这个项目是做什么的？",
 		color: "颜色",
@@ -340,7 +338,6 @@ const zh: typeof en = {
 		noResults: "无匹配成员",
 		invite: "邀请成员",
 		inviteDescription: "创建邀请后，把链接分享给你的队友。",
-		inviteFailed: "发送邀请失败",
 		inviteLinkTitle: "邀请已创建",
 		inviteLinkDescription:
 			"把这个链接发给 {{email}} —— 对方登录后即可加入，链接 2 天内有效。",
@@ -351,11 +348,9 @@ const zh: typeof en = {
 		},
 		removeTitle: "移除成员？",
 		removeDescription: "{{name}} 将失去该组织的访问权限。之后可以重新邀请。",
-		removeFailed: "移除成员失败。",
 		selfRemoveTooltip: "不能移除自己",
 		selfRoleTooltip: "不能修改自己的角色",
 		lastOwnerTooltip: "组织必须保留至少一名所有者",
-		roleUpdateFailed: "更新角色失败。",
 		pendingTitle: "待处理邀请",
 		noPending: "没有待处理的邀请。",
 		status: "状态",
@@ -363,7 +358,6 @@ const zh: typeof en = {
 		revoke: "撤销",
 		revokeTitle: "撤销邀请？",
 		revokeDescription: "对方将无法再通过此链接加入。",
-		revokeFailed: "撤销邀请失败。",
 	},
 	labels: {
 		create: "新建标签",
@@ -533,9 +527,6 @@ const zh: typeof en = {
 		unban: "解封",
 		selfBanTooltip: "不能封禁自己",
 		userCount: "{{total}} 个用户",
-		pageIndicator: "第 {{page}} / {{total}} 页",
-		prev: "上一页",
-		next: "下一页",
 	},
 	adminOrgs: {
 		title: "组织管理",

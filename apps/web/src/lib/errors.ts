@@ -1,6 +1,5 @@
 import type { ApiErrorCode } from "@workspace/shared";
 import type { TFunction } from "i18next";
-import { i18n } from "@/i18n";
 import type en from "@/i18n/locales/en";
 
 type Join<P extends string, K extends string> = P extends "" ? K : `${P}.${K}`;
@@ -90,20 +89,4 @@ export const apiErrorMessage = (
 		}
 	}
 	return t(fallbackKey);
-};
-
-const translateCode = (code: string, fallback: string): string => {
-	const key = CODE_MESSAGE_KEYS[code];
-	return key ? i18n.t(key, { defaultValue: fallback }) : fallback;
-};
-
-export const errorMessage = (err: unknown): string => {
-	const code = errorCode(err);
-	const raw =
-		err instanceof Error && err.message
-			? err.message
-			: ((err as { message?: string } | null)?.message ?? "");
-	const fallback =
-		raw.replace(/^\[[A-Z0-9_]+\]\s*/, "") || i18n.t("errors.generic");
-	return code ? translateCode(code, fallback) : fallback;
 };

@@ -129,7 +129,6 @@ const en = {
 		continue: "Continue",
 		errors: {
 			invitationNotFound: "This invitation doesn't exist or has been revoked.",
-			invitationExpired: "This invitation has expired.",
 			emailMismatch: "This invitation was sent to a different email address.",
 			alreadyMember: "You're already a member of this organization.",
 			orgFull:
@@ -173,7 +172,6 @@ const en = {
 		key: "Key",
 		keyPlaceholder: "e.g. WEB",
 		keyHint: "2–6 uppercase letters, used as the issue prefix.",
-		keyInvalid: "Key must be 2–6 uppercase letters.",
 		keyLockedHint: "The project key cannot be changed after creation.",
 		descriptionPlaceholder: "What is this project about?",
 		color: "Color",
@@ -351,7 +349,6 @@ const en = {
 		invite: "Invite member",
 		inviteDescription:
 			"Create an invitation, then share the link with your teammate.",
-		inviteFailed: "Failed to send invitation",
 		inviteLinkTitle: "Invitation created",
 		inviteLinkDescription:
 			"Share this link with {{email}} — it opens after they sign in and expires in 2 days.",
@@ -363,11 +360,9 @@ const en = {
 		removeTitle: "Remove member?",
 		removeDescription:
 			"{{name}} will lose access to this organization. They can be invited again later.",
-		removeFailed: "Failed to remove member.",
 		selfRemoveTooltip: "You cannot remove yourself",
 		selfRoleTooltip: "You cannot change your own role",
 		lastOwnerTooltip: "An organization must keep at least one owner",
-		roleUpdateFailed: "Failed to update role.",
 		pendingTitle: "Pending invitations",
 		noPending: "No pending invitations.",
 		status: "Status",
@@ -375,7 +370,6 @@ const en = {
 		revoke: "Revoke",
 		revokeTitle: "Revoke invitation?",
 		revokeDescription: "They will not be able to join with this link.",
-		revokeFailed: "Failed to revoke invitation.",
 	},
 	labels: {
 		create: "New label",
@@ -553,9 +547,6 @@ const en = {
 		unban: "Unban",
 		selfBanTooltip: "You cannot ban yourself",
 		userCount: "{{total}} user(s)",
-		pageIndicator: "Page {{page}} / {{total}}",
-		prev: "Prev",
-		next: "Next",
 	},
 	adminOrgs: {
 		title: "Organizations",

@@ -219,4 +219,4 @@ export const webhookDeliveriesKey = (
 	orgId: string,
 	webhookId: string,
 	page: number,
-) => ["orgs", orgId, "webhooks", webhookId, "deliveries", page] as const;
+) => [...webhookDeliveriesRootKey(orgId, webhookId), page] as const;

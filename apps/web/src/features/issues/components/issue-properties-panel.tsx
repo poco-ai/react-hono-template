@@ -40,7 +40,6 @@ import { StatusBadge } from "@/features/issues/components/status-badge";
 import { LabelBadge } from "@/features/labels/components/label-badge";
 import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 
-const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const UNASSIGNED = "__unassigned__";
 
 export function IssuePropertiesPanel({
@@ -149,9 +148,9 @@ export function IssuePropertiesPanel({
 						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
-						{PRIORITY_NAMES.map((name) => (
+						{ISSUE_PRIORITIES.map(({ name, value }) => (
 							<SelectItem key={name} value={name}>
-								<PriorityBadge value={priorityValue(name)} />
+								<PriorityBadge value={value} />
 							</SelectItem>
 						))}
 					</SelectContent>

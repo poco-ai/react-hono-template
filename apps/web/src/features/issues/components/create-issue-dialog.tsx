@@ -46,7 +46,6 @@ import {
 import { fromDateInputValue } from "@/lib/format";
 import { useCreateIssue } from "../data";
 
-const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const UNASSIGNED = "__unassigned__";
 
 export function CreateIssueDialog({
@@ -274,9 +273,9 @@ export function CreateIssueDialog({
 									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
-									{PRIORITY_NAMES.map((name) => (
+									{ISSUE_PRIORITIES.map(({ name, value }) => (
 										<SelectItem key={name} value={name}>
-											<PriorityBadge value={priorityValue(name)} />
+											<PriorityBadge value={value} />
 										</SelectItem>
 									))}
 								</SelectContent>
