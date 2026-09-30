@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ISSUE_PRIORITY, ISSUE_STATUSES } from "../constants";
+import { paginationQueryShape } from "./pagination";
 
 const toArray = (value: unknown) => {
 	if (typeof value === "string") {
@@ -44,8 +45,7 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
 });
 
 export const issueListQuerySchema = z.object({
-	page: z.coerce.number().int().min(1).max(10000).default(1),
-	pageSize: z.coerce.number().int().min(1).max(100).default(20),
+	...paginationQueryShape(20),
 	status: z.preprocess(toArray, z.array(z.enum(ISSUE_STATUSES)).optional()),
 	priority: z.preprocess(
 		toNumberArray,

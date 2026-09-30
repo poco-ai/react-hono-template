@@ -1,3 +1,4 @@
+import type { Paginated } from "@workspace/shared";
 import type { apiKeys } from "../db/schema";
 
 type ApiKeyRow = typeof apiKeys.$inferSelect;
@@ -16,9 +17,4 @@ export type ApiKeyWithSecretDto = ApiKeyDto & {
 	key: string;
 };
 
-export type ListApiKeysDto = {
-	items: ApiKeyDto[];
-	total: number;
-	page: number;
-	pageSize: number;
-};
+export type ListApiKeysDto = Paginated<ApiKeyDto>;

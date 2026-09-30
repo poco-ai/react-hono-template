@@ -1,4 +1,4 @@
-import type { PlanName } from "@workspace/shared";
+import type { Paginated, PlanName } from "@workspace/shared";
 
 export type AdminOrgDto = {
 	id: string;
@@ -12,12 +12,7 @@ export type AdminOrgDto = {
 	issues: number;
 };
 
-export type ListAdminOrgsDto = {
-	items: AdminOrgDto[];
-	total: number;
-	page: number;
-	pageSize: number;
-};
+export type ListAdminOrgsDto = Paginated<AdminOrgDto>;
 
 export type AdminStatsDto = {
 	users: number;

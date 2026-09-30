@@ -1,3 +1,5 @@
+import type { Paginated } from "@workspace/shared";
+
 export type CommentAuthorDto = {
 	id: string;
 	name: string;
@@ -15,9 +17,4 @@ export type CommentDto = {
 	updatedAt: string;
 };
 
-export type ListCommentsDto = {
-	items: CommentDto[];
-	total: number;
-	page: number;
-	pageSize: number;
-};
+export type ListCommentsDto = Paginated<CommentDto>;

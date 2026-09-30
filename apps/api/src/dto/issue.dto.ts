@@ -1,3 +1,4 @@
+import type { Paginated } from "@workspace/shared";
 import type { issues } from "../db/schema";
 
 type IssueRow = typeof issues.$inferSelect;
@@ -33,9 +34,4 @@ export type ListIssuesQueryDto = {
 	projectId?: string;
 };
 
-export type ListIssuesDto = {
-	items: IssueDetailDto[];
-	total: number;
-	page: number;
-	pageSize: number;
-};
+export type ListIssuesDto = Paginated<IssueDetailDto>;

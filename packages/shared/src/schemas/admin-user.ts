@@ -1,8 +1,8 @@
 import { z } from "zod";
+import { paginationQueryShape } from "./pagination";
 
 export const adminUserListQuerySchema = z.object({
-	page: z.coerce.number().int().min(1).max(10000).default(1),
-	pageSize: z.coerce.number().int().min(1).max(100).default(10),
+	...paginationQueryShape(10),
 	search: z.string().trim().max(100).optional(),
 });
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { WEBHOOK_EVENTS } from "../constants";
+import { paginationQueryShape } from "./pagination";
 
 export const isAllowedWebhookUrl = (value: string) => {
 	try {
@@ -37,8 +38,7 @@ export const updateWebhookSchema = z.object({
 });
 
 export const webhookDeliveryListQuerySchema = z.object({
-	page: z.coerce.number().int().min(1).max(10000).default(1),
-	pageSize: z.coerce.number().int().min(1).max(100).default(50),
+	...paginationQueryShape(50),
 });
 
 export type CreateWebhookInput = z.infer<typeof createWebhookSchema>;

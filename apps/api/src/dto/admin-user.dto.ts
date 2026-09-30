@@ -1,3 +1,5 @@
+import type { Paginated } from "@workspace/shared";
+
 export type AdminUserRole = "admin" | "user";
 
 export type AdminUserDto = {
@@ -20,9 +22,4 @@ export type ListAdminUsersQueryDto = {
 	search: string;
 };
 
-export type ListAdminUsersDto = {
-	items: AdminUserDto[];
-	total: number;
-	page: number;
-	pageSize: number;
-};
+export type ListAdminUsersDto = Paginated<AdminUserDto>;

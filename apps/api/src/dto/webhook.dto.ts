@@ -1,3 +1,4 @@
+import type { Paginated } from "@workspace/shared";
 import type { webhookDeliveries, webhooks } from "../db/schema";
 
 type WebhookRow = typeof webhooks.$inferSelect;
@@ -24,9 +25,4 @@ export type WebhookDeliveryDto = Omit<
 	updatedAt: string;
 };
 
-export type ListWebhookDeliveriesDto = {
-	items: WebhookDeliveryDto[];
-	total: number;
-	page: number;
-	pageSize: number;
-};
+export type ListWebhookDeliveriesDto = Paginated<WebhookDeliveryDto>;
