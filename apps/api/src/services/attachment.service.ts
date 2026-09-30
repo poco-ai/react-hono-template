@@ -16,8 +16,8 @@ import type {
 } from "../dto/attachment.dto";
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
-import type { PlanService } from "../lib/plan";
 import type { StorageAdapter } from "../lib/storage/types";
+import type { PlanService } from "./plan.service";
 import type { WebhookDispatcher } from "./webhook.service";
 
 export const ATTACHMENT_UPLOAD_URL_EXPIRES_IN = 600;

@@ -1,7 +1,5 @@
-import type { WebhookDeliveryDto, WebhookDto } from "@api/dto/webhook.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { WebhookEventName } from "@workspace/shared";
-import { createWebhookSchema, WEBHOOK_EVENTS } from "@workspace/shared";
+import type { WebhookDto } from "@api/dto/webhook.dto";
+import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -13,19 +11,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
-import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
-import { Checkbox } from "@workspace/ui/components/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import { Switch } from "@workspace/ui/components/switch";
 import {
 	Table,
@@ -40,73 +26,32 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import {
-	CircleAlert,
-	Inbox,
-	Loader2,
-	Pencil,
-	Plus,
-	RefreshCw,
-	Trash2,
-	Zap,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { CircleAlert, Inbox, Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
-import { QuotaError } from "@/components/quota-error";
-import { SecretReveal } from "@/components/secret-reveal";
-import { TablePagination } from "@/components/table-pagination";
-import { client, unwrap } from "@/lib/api";
-import { apiErrorMessage } from "@/lib/errors";
+import { DeliveriesDialog } from "@/features/webhooks/components/deliveries-dialog";
+import { EventBadge } from "@/features/webhooks/components/delivery-badges";
+import { WebhookDialog } from "@/features/webhooks/components/webhook-dialog";
 import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
-import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
-import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
-import {
-	webhookDeliveriesQuery,
-	webhookDeliveriesRootKey,
-	webhooksKey,
+	useDeleteWebhook,
+	usePingWebhook,
+	useToggleWebhook,
 	webhooksQuery,
-} from "@/lib/queries/webhooks";
-import { useSession } from "@/lib/session";
+} from "@/features/webhooks/data";
+
+import { apiErrorMessage } from "@/lib/errors";
+
+import { formatDate } from "@/lib/issue-utils";
+
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
-
-type WebhookEventLabel = WebhookEventName | "ping";
-
-function DeliveryStatusBadge({ status }: { status: string }) {
-	const { t } = useTranslation();
-	if (status === "success") {
-		return (
-			<Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-				{t("webhooks.statusSuccess")}
-			</Badge>
-		);
-	}
-	if (status === "failed") {
-		return <Badge variant="destructive">{t("webhooks.statusFailed")}</Badge>;
-	}
-	return <Badge variant="secondary">{t("webhooks.statusPending")}</Badge>;
-}
-
-function EventBadge({ event }: { event: string }) {
-	const { t } = useTranslation();
-	return (
-		<Badge variant="outline">
-			{t(`webhooks.events.${event as WebhookEventLabel}`)}
-		</Badge>
-	);
-}
 
 export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("settings.webhooks"));
-	const queryClient = useQueryClient();
+
 	const webhooks = useQuery(webhooksQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -116,41 +61,17 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 		null,
 	);
 
-	const invalidate = () =>
-		queryClient.invalidateQueries({ queryKey: webhooksKey(orgId) });
+	const toggleMutation = useToggleWebhook(orgId, {});
 
-	const toggleMutation = useMutation({
-		mutationFn: ({ id, active }: { id: string; active: boolean }) =>
-			unwrap(
-				client.api.orgs[":orgId"].webhooks[":webhookId"].$patch({
-					param: { orgId, webhookId: id },
-					json: { active },
-				}),
-			),
-		onSuccess: invalidate,
-	});
-
-	const deleteMutation = useMutation({
-		mutationFn: (webhookId: string) =>
-			unwrap(
-				client.api.orgs[":orgId"].webhooks[":webhookId"].$delete({
-					param: { orgId, webhookId },
-				}),
-			),
+	const deleteMutation = useDeleteWebhook(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.webhookDeleted"));
-			invalidate();
+
 			setDeleteTarget(null);
 		},
 	});
 
-	const pingMutation = useMutation({
-		mutationFn: (webhookId: string) =>
-			unwrap(
-				client.api.orgs[":orgId"].webhooks[":webhookId"].ping.$post({
-					param: { orgId, webhookId },
-				}),
-			),
+	const pingMutation = usePingWebhook(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.webhookPinged"));
 		},
@@ -337,7 +258,6 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
 				webhook={editing}
-				onSaved={invalidate}
 			/>
 
 			<DeliveriesDialog
@@ -377,386 +297,5 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				</AlertDialogContent>
 			</AlertDialog>
 		</div>
-	);
-}
-
-function WebhookDialog({
-	orgId,
-	open,
-	onOpenChange,
-	webhook,
-	onSaved,
-}: {
-	orgId: string;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	webhook: WebhookDto | null;
-	onSaved: () => void;
-}) {
-	const { t } = useTranslation();
-	const { data: session } = useSession();
-	const members = useQuery(membersQuery(orgId));
-	const [url, setUrl] = useState("");
-	const [events, setEvents] = useState<string[]>([]);
-	const [active, setActive] = useState(true);
-	const [createdSecret, setCreatedSecret] = useState<string | null>(null);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-
-	useEffect(() => {
-		if (open) {
-			setUrl(webhook?.url ?? "");
-			setEvents(webhook?.events ?? []);
-			setActive(webhook?.active ?? true);
-			setCreatedSecret(null);
-			setFieldErrors({});
-		}
-	}, [open, webhook]);
-
-	const saveMutation = useMutation({
-		mutationFn: (input: {
-			url: string;
-			events: WebhookEventName[];
-			active?: boolean;
-		}) =>
-			webhook
-				? unwrap(
-						client.api.orgs[":orgId"].webhooks[":webhookId"].$patch({
-							param: { orgId, webhookId: webhook.id },
-							json: input,
-						}),
-					)
-				: unwrap(
-						client.api.orgs[":orgId"].webhooks.$post({
-							param: { orgId },
-							json: { url: input.url, events: input.events },
-						}),
-					),
-		onSuccess: (saved) => {
-			toast.success(
-				t(webhook ? "toast.webhookUpdated" : "toast.webhookCreated"),
-			);
-			onSaved();
-			if (!webhook && "secret" in saved) {
-				setCreatedSecret(saved.secret as string);
-			} else {
-				onOpenChange(false);
-			}
-		},
-	});
-
-	const toggleEvent = (event: WebhookEventName, checked: boolean) => {
-		setEvents((prev) =>
-			checked ? [...prev, event] : prev.filter((e) => e !== event),
-		);
-		setFieldErrors((prev) => withoutFieldError(prev, "events"));
-	};
-
-	const onUrlChange = (next: string) => {
-		setUrl(next);
-		setFieldErrors((prev) => withoutFieldError(prev, "url"));
-	};
-
-	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
-	const canManage =
-		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
-
-	const onSubmit = () => {
-		const parsed = createWebhookSchema.safeParse({
-			url: url.trim(),
-			events,
-		});
-		if (!parsed.success) {
-			const errors = fieldErrorsFromZod(parsed.error, t, {
-				url: "form.errors.url",
-				events: "webhooks.eventsMinError",
-			});
-			setFieldErrors(errors);
-			focusFirstInvalidField(errors, { url: "webhook-url" });
-			return;
-		}
-		saveMutation.mutate({
-			url: parsed.data.url,
-			events: parsed.data.events,
-			active,
-		});
-	};
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>
-						{createdSecret
-							? t("webhooks.secretTitle")
-							: webhook
-								? t("webhooks.editTitle")
-								: t("webhooks.createTitle")}
-					</DialogTitle>
-					<DialogDescription>
-						{createdSecret
-							? t("webhooks.secretWarning")
-							: t("webhooks.createDescription")}
-					</DialogDescription>
-				</DialogHeader>
-				{createdSecret ? (
-					<div className="flex flex-col gap-3">
-						<SecretReveal value={createdSecret} />
-						<DialogFooter>
-							<Button type="button" onClick={() => onOpenChange(false)}>
-								{t("common.done")}
-							</Button>
-						</DialogFooter>
-					</div>
-				) : (
-					<form
-						noValidate
-						className="flex flex-col gap-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							onSubmit();
-						}}
-					>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="webhook-url">{t("webhooks.url")}</Label>
-							<Input
-								id="webhook-url"
-								type="url"
-								value={url}
-								placeholder={t("webhooks.urlPlaceholder")}
-								onChange={(e) => onUrlChange(e.target.value)}
-								aria-invalid={fieldErrors.url ? true : undefined}
-								aria-describedby={
-									fieldErrors.url ? "webhook-url-error" : undefined
-								}
-							/>
-							{fieldErrors.url && (
-								<p id="webhook-url-error" className="text-destructive text-sm">
-									{fieldErrors.url}
-								</p>
-							)}
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("webhooks.eventsLabel")}</Label>
-							<div
-								className="grid grid-cols-1 gap-2"
-								aria-describedby={
-									fieldErrors.events ? "webhook-events-error" : undefined
-								}
-							>
-								{WEBHOOK_EVENTS.map((event) => (
-									<label
-										key={event}
-										htmlFor={`webhook-event-${event}`}
-										className="flex cursor-pointer items-center gap-2 text-sm"
-									>
-										<Checkbox
-											id={`webhook-event-${event}`}
-											checked={events.includes(event)}
-											onCheckedChange={(checked) =>
-												toggleEvent(event, checked === true)
-											}
-										/>
-										{t(`webhooks.events.${event}`)}
-									</label>
-								))}
-							</div>
-							{fieldErrors.events && (
-								<p
-									id="webhook-events-error"
-									className="text-destructive text-sm"
-								>
-									{fieldErrors.events}
-								</p>
-							)}
-						</div>
-						{webhook && (
-							<div className="flex items-center justify-between">
-								<Label htmlFor="webhook-active">{t("webhooks.active")}</Label>
-								<Switch
-									id="webhook-active"
-									checked={active}
-									onCheckedChange={(v) => setActive(v === true)}
-								/>
-							</div>
-						)}
-						{saveMutation.isError && (
-							<QuotaError
-								error={saveMutation.error}
-								orgId={orgId}
-								canUpgrade={canManage}
-							/>
-						)}
-						<DialogFooter>
-							<Button type="submit" disabled={saveMutation.isPending}>
-								{webhook ? t("common.save") : t("common.create")}
-							</Button>
-						</DialogFooter>
-					</form>
-				)}
-			</DialogContent>
-		</Dialog>
-	);
-}
-
-function DeliveriesDialog({
-	orgId,
-	webhook,
-	onOpenChange,
-}: {
-	orgId: string;
-	webhook: WebhookDto | null;
-	onOpenChange: (open: boolean) => void;
-}) {
-	const { t } = useTranslation();
-	const queryClient = useQueryClient();
-	const frozen = useOrgFrozen(orgId);
-	const [page, setPage] = useState(1);
-	const [redelivering, setRedelivering] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (webhook) {
-			setPage(1);
-			setRedelivering(null);
-		}
-	}, [webhook]);
-
-	const deliveries = useQuery({
-		...webhookDeliveriesQuery(orgId, webhook?.id ?? "", page),
-		enabled: webhook !== null,
-		refetchInterval: (query) =>
-			query.state.data?.items.some((item) => item.status === "pending")
-				? 3000
-				: false,
-	});
-
-	const redeliverMutation = useMutation({
-		mutationFn: (deliveryId: string) =>
-			unwrap(
-				client.api.orgs[":orgId"]["webhook-deliveries"][
-					":deliveryId"
-				].redeliver.$post({
-					param: { orgId, deliveryId },
-				}),
-			),
-		onMutate: (deliveryId) => setRedelivering(deliveryId),
-		onSettled: () => setRedelivering(null),
-		onSuccess: () => {
-			if (webhook) {
-				queryClient.invalidateQueries({
-					queryKey: webhookDeliveriesRootKey(orgId, webhook.id),
-				});
-			}
-		},
-	});
-
-	const totalPages = deliveries.data
-		? Math.max(1, Math.ceil(deliveries.data.total / deliveries.data.pageSize))
-		: 1;
-
-	return (
-		<Dialog open={webhook !== null} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-2xl">
-				<DialogHeader>
-					<DialogTitle>{t("webhooks.deliveriesTitle")}</DialogTitle>
-					<DialogDescription className="truncate font-mono text-xs">
-						{webhook?.url}
-					</DialogDescription>
-				</DialogHeader>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>{t("webhooks.event")}</TableHead>
-							<TableHead>{t("webhooks.status")}</TableHead>
-							<TableHead>{t("webhooks.responseStatus")}</TableHead>
-							<TableHead>{t("webhooks.attempts")}</TableHead>
-							<TableHead>{t("webhooks.time")}</TableHead>
-							<TableHead className="text-right">
-								{t("common.actions")}
-							</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{deliveries.data?.items.map((delivery: WebhookDeliveryDto) => (
-							<TableRow key={delivery.id}>
-								<TableCell>
-									<EventBadge event={delivery.event} />
-								</TableCell>
-								<TableCell>
-									<DeliveryStatusBadge status={delivery.status} />
-								</TableCell>
-								<TableCell className="font-mono text-xs">
-									{delivery.responseStatus ?? "—"}
-								</TableCell>
-								<TableCell>{delivery.attempts}</TableCell>
-								<TableCell className="text-muted-foreground text-xs">
-									{formatRelativeTime(
-										delivery.lastAttemptAt ?? delivery.createdAt,
-									)}
-								</TableCell>
-								<TableCell className="text-right">
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={t("webhooks.redeliver")}
-										disabled={frozen || redelivering !== null}
-										onClick={() => redeliverMutation.mutate(delivery.id)}
-									>
-										{redelivering === delivery.id ? (
-											<Loader2 className="animate-spin" />
-										) : (
-											<RefreshCw />
-										)}
-									</Button>
-								</TableCell>
-							</TableRow>
-						))}
-						{deliveries.isPending && (
-							<TableRow>
-								<TableCell
-									colSpan={6}
-									className="text-muted-foreground h-16 text-center"
-								>
-									{t("common.loading")}
-								</TableCell>
-							</TableRow>
-						)}
-						{deliveries.isError && (
-							<TableRow>
-								<TableCell colSpan={6} className="text-center text-red-500">
-									{apiErrorMessage(t, deliveries.error)}
-								</TableCell>
-							</TableRow>
-						)}
-						{!deliveries.isPending && deliveries.data?.items.length === 0 && (
-							<TableRow>
-								<TableCell
-									colSpan={6}
-									className="text-muted-foreground h-16 text-center"
-								>
-									{t("webhooks.deliveriesEmpty")}
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
-				{redeliverMutation.isError && (
-					<Alert variant="destructive">
-						<CircleAlert />
-						<AlertDescription>
-							{apiErrorMessage(t, redeliverMutation.error)}
-						</AlertDescription>
-					</Alert>
-				)}
-				<div className="flex items-center justify-end text-sm">
-					<TablePagination
-						page={page}
-						total={deliveries.data?.total}
-						totalPages={totalPages}
-						onPageChange={setPage}
-						disabled={deliveries.isPending}
-					/>
-				</div>
-			</DialogContent>
-		</Dialog>
 	);
 }

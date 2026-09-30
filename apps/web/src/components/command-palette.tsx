@@ -22,10 +22,10 @@ import {
 	UsersIcon,
 	WebhookIcon,
 } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
-import { useEffect } from "react";
+import { type Dispatch, type SetStateAction, useEffect } from "react";
+
 import { useTranslation } from "react-i18next";
-import { projectsQuery } from "@/lib/queries/projects";
+import { projectsQuery } from "@/features/projects/data";
 import { useOrgRole } from "@/lib/use-org-role";
 
 export function CommandPalette({

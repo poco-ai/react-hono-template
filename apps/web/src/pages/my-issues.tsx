@@ -6,14 +6,14 @@ import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
-import { PriorityBadge } from "@/components/issue/priority-badge";
-import { StatusBadge } from "@/components/issue/status-badge";
 import { UserAvatar } from "@/components/user-avatar";
+import { useSession } from "@/features/auth/data";
+import { PriorityBadge } from "@/features/issues/components/priority-badge";
+import { StatusBadge } from "@/features/issues/components/status-badge";
+import { orgIssuesQuery } from "@/features/issues/data";
+import { projectsQuery } from "@/features/projects/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDueDate } from "@/lib/issue-utils";
-import { orgIssuesQuery } from "@/lib/queries/issues";
-import { projectsQuery } from "@/lib/queries/projects";
-import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function MyIssuesPage({ orgId }: { orgId: string }) {

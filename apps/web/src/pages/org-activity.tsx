@@ -14,18 +14,18 @@ import { cn } from "@workspace/ui/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivitySentence } from "@/components/issue/activity-sentence";
 import { UserAvatar } from "@/components/user-avatar";
-import { apiErrorMessage } from "@/lib/errors";
-import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import {
 	ORG_ACTIVITY_MAX_LIMIT,
 	ORG_ACTIVITY_PAGE_SIZE,
 	orgActivitiesQuery,
-} from "@/lib/queries/activities";
-import { labelsQuery } from "@/lib/queries/labels";
-import { membersQuery } from "@/lib/queries/members";
-import { projectsQuery } from "@/lib/queries/projects";
+} from "@/features/activities/data";
+import { ActivitySentence } from "@/features/issues/components/activity-sentence";
+import { labelsQuery } from "@/features/labels/data";
+import { membersQuery } from "@/features/members/data";
+import { projectsQuery } from "@/features/projects/data";
+import { apiErrorMessage } from "@/lib/errors";
+import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const ALL_PROJECTS = "__all__";

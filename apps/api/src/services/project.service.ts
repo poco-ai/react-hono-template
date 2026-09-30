@@ -7,7 +7,7 @@ import {
 } from "@workspace/shared";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
-import { assertWithinLimit, type PlanService } from "../lib/plan";
+import { assertWithinLimit, type PlanService } from "./plan.service";
 
 export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
 	listProjects: async (

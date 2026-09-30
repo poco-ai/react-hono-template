@@ -1,5 +1,5 @@
 import type { ProjectDto } from "@api/dto/project.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
@@ -37,15 +37,14 @@ import { CircleAlert, CircleDot, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { CreateProjectDialog } from "@/components/create-project-dialog";
-import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { EmptyState } from "@/components/empty-state";
-import { client, unwrap } from "@/lib/api";
+import { useSession } from "@/features/auth/data";
+import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
+import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
+import { EditProjectDialog } from "@/features/projects/components/edit-project-dialog";
+import { projectsQuery, useArchiveProject } from "@/features/projects/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/issue-utils";
-import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
-import { projectsQuery } from "@/lib/queries/projects";
-import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
@@ -57,7 +56,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 		from: "/_auth/orgs/$orgId/projects/",
 	});
 	const archived = archivedParam ?? false;
-	const queryClient = useQueryClient();
+
 	const { data: session } = useSession();
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));
@@ -79,14 +78,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 		(project) => project.archived === archived,
 	);
 
-	const archiveMutation = useMutation({
-		mutationFn: (project: ProjectDto) =>
-			unwrap(
-				client.api.orgs[":orgId"].projects[":projectId"].$patch({
-					param: { orgId, projectId: project.id },
-					json: { archived: !project.archived },
-				}),
-			),
+	const archiveMutation = useArchiveProject(orgId, {
 		onSuccess: (_data, project) => {
 			toast.success(
 				t(
@@ -95,7 +87,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 						: "toast.projectArchived",
 				),
 			);
-			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
+
 			setArchiveTarget(null);
 		},
 	});

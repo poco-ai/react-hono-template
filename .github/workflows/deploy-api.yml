@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "apps/api/**"
+      - "packages/shared/**"
       - "bun.lock"
   workflow_dispatch:
 

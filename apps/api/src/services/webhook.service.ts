@@ -17,7 +17,7 @@ import type {
 } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
 import { randomHex } from "../lib/crypto";
-import { assertWithinLimit, type PlanService } from "../lib/plan";
+import { assertWithinLimit, type PlanService } from "./plan.service";
 
 const WEBHOOK_TIMEOUT_MS = 5_000;
 const WEBHOOK_MAX_ATTEMPTS = 2;

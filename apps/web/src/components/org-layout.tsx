@@ -35,18 +35,18 @@ import {
 	Search,
 	Snowflake,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "@/components/command-palette";
-import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
-import { membersQuery, type OrgRole } from "@/lib/queries/members";
-import { orgsQuery } from "@/lib/queries/org";
-import { projectsQuery } from "@/lib/queries/projects";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/features/auth/data";
+import { membersQuery, type OrgRole } from "@/features/members/data";
+import { orgsQuery } from "@/features/organizations/data";
+import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
+import { projectsQuery } from "@/features/projects/data";
 import { useHotkeys } from "@/lib/use-hotkeys";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 

@@ -1,5 +1,5 @@
 import type { AdminOrgDto, ListAdminOrgsDto } from "@api/dto/admin-org.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
 	AlertDialog,
@@ -34,19 +34,22 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
-import { client, unwrap } from "@/lib/api";
+import {
+	adminOrganizationsQuery,
+	useFreezeOrganization,
+	useUnfreezeOrganization,
+} from "@/features/admin/data";
+
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
-
-const PAGE_SIZE = 10;
 
 export function AdminOrgsPage() {
 	const { t } = useTranslation();
 	useDocumentTitle(t("adminOrgs.title"));
 	const { page = 1, search = "" } = useSearch({ from: "/_auth/admin/orgs" });
 	const navigate = useNavigate({ from: "/admin/orgs" });
-	const queryClient = useQueryClient();
+
 	const [searchInput, setSearchInput] = useState(search);
 	const [freezeTarget, setFreezeTarget] = useState<AdminOrgDto | null>(null);
 
@@ -66,38 +69,14 @@ export function AdminOrgsPage() {
 		return () => clearTimeout(timer);
 	}, [searchInput, search, navigate]);
 
-	const orgsQuery = useQuery({
-		queryKey: ["admin-orgs", page, search],
-		queryFn: () =>
-			unwrap(
-				client.api.admin.orgs.$get({
-					query: {
-						page: String(page),
-						pageSize: String(PAGE_SIZE),
-						search,
-					},
-				}),
-			),
-	});
+	const orgsQuery = useQuery(adminOrganizationsQuery(page, search));
 
-	const freezeMutation = useMutation({
-		mutationFn: (orgId: string) =>
-			unwrap(
-				client.api.admin.orgs[":orgId"].freeze.$post({ param: { orgId } }),
-			),
+	const freezeMutation = useFreezeOrganization({
 		onSuccess: () => {
 			setFreezeTarget(null);
-			queryClient.invalidateQueries({ queryKey: ["admin-orgs"] });
 		},
 	});
-	const unfreezeMutation = useMutation({
-		mutationFn: (orgId: string) =>
-			unwrap(
-				client.api.admin.orgs[":orgId"].freeze.$delete({ param: { orgId } }),
-			),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["admin-orgs"] }),
-	});
+	const unfreezeMutation = useUnfreezeOrganization({});
 
 	const clearSearch = () => {
 		setSearchInput("");

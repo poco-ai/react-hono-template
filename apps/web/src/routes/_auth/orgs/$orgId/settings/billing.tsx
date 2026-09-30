@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
-import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
+import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
 import { BillingSettingsPage } from "@/pages/org-settings/billing";
 
 const searchSchema = z.object({

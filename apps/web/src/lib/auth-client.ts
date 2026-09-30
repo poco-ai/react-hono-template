@@ -2,7 +2,7 @@ import { adminClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
-	baseURL: import.meta.env.VITE_API_URL || undefined,
+	baseURL: import.meta.env?.VITE_API_URL || undefined,
 	fetchOptions: { credentials: "include" },
 	plugins: [adminClient(), organizationClient()],
 });

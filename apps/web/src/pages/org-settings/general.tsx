@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
@@ -31,11 +31,15 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth-client";
-import { apiErrorMessage, errorCode } from "@/lib/errors";
-import { membersQuery } from "@/lib/queries/members";
-import { orgsQuery } from "@/lib/queries/org";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/features/auth/data";
+import { membersQuery } from "@/features/members/data";
+import {
+	orgsQuery,
+	useDeleteOrganization,
+	useLeaveOrganization,
+	useUpdateOrganization,
+} from "@/features/organizations/data";
+import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
@@ -49,7 +53,7 @@ export function GeneralSettingsPage({
 	const { t } = useTranslation();
 	useDocumentTitle(t("settings.general"));
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
+
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const members = useQuery(membersQuery(orgId));
@@ -78,55 +82,20 @@ export function GeneralSettingsPage({
 		isOwner &&
 		(members.data ?? []).filter((m) => m.role === "owner").length === 1;
 
-	const updateMutation = useMutation({
-		mutationFn: async () => {
-			const { error } = await authClient.organization.update({
-				organizationId: orgId,
-				data: { name: name.trim(), slug },
-			});
-			if (error) {
-				throw Object.assign(
-					new Error(error.message ?? t("settings.updateFailed")),
-					{ code: errorCode(error) },
-				);
-			}
-		},
+	const updateMutation = useUpdateOrganization(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.settingsSaved"));
-			queryClient.invalidateQueries({ queryKey: orgsQuery().queryKey });
 		},
 	});
 
-	const leaveMutation = useMutation({
-		mutationFn: async () => {
-			const { error } = await authClient.organization.leave({
-				organizationId: orgId,
-			});
-			if (error) {
-				throw Object.assign(new Error(error.message ?? ""), {
-					code: errorCode(error),
-				});
-			}
-		},
+	const leaveMutation = useLeaveOrganization(orgId, {
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["orgs"] });
 			navigate({ to: "/", replace: true });
 		},
 	});
 
-	const deleteMutation = useMutation({
-		mutationFn: async () => {
-			const { error } = await authClient.organization.delete({
-				organizationId: orgId,
-			});
-			if (error) {
-				throw Object.assign(new Error(error.message ?? ""), {
-					code: errorCode(error),
-				});
-			}
-		},
+	const deleteMutation = useDeleteOrganization(orgId, {
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["orgs"] });
 			navigate({ to: "/", replace: true });
 		},
 	});
@@ -176,7 +145,9 @@ export function GeneralSettingsPage({
 						</div>
 						{canManage ? (
 							<Button
-								onClick={() => updateMutation.mutate()}
+								onClick={() =>
+									updateMutation.mutate({ name: name.trim(), slug })
+								}
 								disabled={
 									frozen || !dirty || !name.trim() || updateMutation.isPending
 								}

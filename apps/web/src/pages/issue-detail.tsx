@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	ISSUE_PRIORITIES,
@@ -50,21 +50,28 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { DateField } from "@/components/issue/date-field";
-import { IssueActivityTimeline } from "@/components/issue/issue-activity";
-import { IssueAttachments } from "@/components/issue/issue-attachments";
-import { IssueComments } from "@/components/issue/issue-comments";
-import { IssueDescription } from "@/components/issue/issue-description";
-import { LabelBadge } from "@/components/issue/label-badge";
-import { PriorityBadge } from "@/components/issue/priority-badge";
-import { StatusBadge } from "@/components/issue/status-badge";
 import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
-import { client, unwrap } from "@/lib/api";
+import { DateField } from "@/features/issues/components/date-field";
+import { IssueActivityTimeline } from "@/features/issues/components/issue-activity";
+import { IssueAttachments } from "@/features/issues/components/issue-attachments";
+import { IssueComments } from "@/features/issues/components/issue-comments";
+import { IssueDescription } from "@/features/issues/components/issue-description";
+import { LabelBadge } from "@/features/issues/components/label-badge";
+import { PriorityBadge } from "@/features/issues/components/priority-badge";
+import { StatusBadge } from "@/features/issues/components/status-badge";
+import {
+	issueQuery,
+	useDeleteIssue,
+	useUpdateIssue,
+} from "@/features/issues/data";
+import { labelsQuery } from "@/features/labels/data";
+import { membersQuery } from "@/features/members/data";
+import { projectQuery } from "@/features/projects/data";
 import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import {
 	formatDateTime,
@@ -74,14 +81,6 @@ import {
 	priorityValue,
 	toDateInputValue,
 } from "@/lib/issue-utils";
-import {
-	issueActivitiesKey,
-	orgActivitiesRootKey,
-} from "@/lib/queries/activities";
-import { issueQuery } from "@/lib/queries/issues";
-import { labelsQuery } from "@/lib/queries/labels";
-import { membersQuery } from "@/lib/queries/members";
-import { projectQuery } from "@/lib/queries/projects";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
@@ -99,7 +98,6 @@ export function IssueDetailPage({
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
 	const issue = useQuery(issueQuery(orgId, projectId, issueNumber));
 	const project = useQuery(projectQuery(orgId, projectId));
 	useDocumentTitle(
@@ -125,93 +123,19 @@ export function IssueDetailPage({
 		);
 	}, [issue.data?.estimate]);
 
-	const detailKey = issueQuery(orgId, projectId, issueNumber).queryKey;
-
-	const updateMutation = useMutation({
-		mutationFn: (input: UpdateIssueInput) =>
-			unwrap(
-				client.api.orgs[":orgId"].projects[":projectId"].issues[
-					":number"
-				].$patch({
-					param: { orgId, projectId, number: String(issueNumber) },
-					json: input,
-				}),
-			),
-		onMutate: async (input) => {
-			await queryClient.cancelQueries({ queryKey: detailKey });
-			const previous = queryClient.getQueryData(detailKey);
-			queryClient.setQueryData(detailKey, (old) => {
-				if (!old) {
-					return old;
-				}
-				const next = { ...old };
-				if (input.title !== undefined) {
-					next.title = input.title;
-				}
-				if (input.description !== undefined) {
-					next.description = input.description;
-				}
-				if (input.status !== undefined) {
-					next.status = input.status;
-				}
-				if (input.priority !== undefined) {
-					next.priority = input.priority ?? 0;
-				}
-				if (input.assigneeId !== undefined) {
-					next.assigneeId = input.assigneeId;
-				}
-				if (input.dueDate !== undefined) {
-					next.dueDate = input.dueDate;
-				}
-				if (input.estimate !== undefined) {
-					next.estimate = input.estimate;
-				}
-				if (input.labelIds !== undefined) {
-					next.labelIds = input.labelIds;
-				}
-				return next;
-			});
-			return { previous };
-		},
-		onError: (_error, _input, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(detailKey, context.previous);
-			}
-		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: detailKey });
-			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
-			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "issues"] });
-			queryClient.invalidateQueries({
-				queryKey: orgActivitiesRootKey(orgId),
-			});
-			queryClient.invalidateQueries({
-				queryKey: issueActivitiesKey(orgId, projectId, issueNumber),
-			});
-		},
-	});
-
-	const deleteMutation = useMutation({
-		mutationFn: () =>
-			unwrap(
-				client.api.orgs[":orgId"].projects[":projectId"].issues[
-					":number"
-				].$delete({ param: { orgId, projectId, number: String(issueNumber) } }),
-			),
-		onSuccess: () => {
-			toast.success(t("toast.issueDeleted"));
-			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "projects"] });
-			queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "issues"] });
-			queryClient.invalidateQueries({
-				queryKey: orgActivitiesRootKey(orgId),
-			});
-			navigate({
-				to: "/orgs/$orgId/projects/$projectId",
-				params: { orgId, projectId },
-				search: { page: 1, sort: "updated" },
-			});
-		},
-	});
+	const updateMutation = useUpdateIssue(orgId, projectId, issueNumber);
+	const deleteMutation = useDeleteIssue(orgId, projectId, issueNumber);
+	const remove = () =>
+		deleteMutation.mutate(undefined, {
+			onSuccess: () => {
+				toast.success(t("toast.issueDeleted"));
+				navigate({
+					to: "/orgs/$orgId/projects/$projectId",
+					params: { orgId, projectId },
+					search: { page: 1, sort: "updated" },
+				});
+			},
+		});
 
 	const update = (input: UpdateIssueInput) => updateMutation.mutate(input);
 
@@ -589,7 +513,7 @@ export function IssueDetailPage({
 								disabled={deleteMutation.isPending}
 								onClick={(e) => {
 									e.preventDefault();
-									deleteMutation.mutate();
+									remove();
 								}}
 							>
 								{t("common.delete")}

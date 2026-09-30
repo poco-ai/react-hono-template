@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { PLANS, type PlanLimits } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
@@ -33,10 +33,15 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { client, unwrap } from "@/lib/api";
+import {
+	billingQuery,
+	useCreateBillingPortal,
+	useCreateCheckout,
+} from "@/features/billing/data";
+
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/issue-utils";
-import { billingQuery, billingRootKey } from "@/lib/queries/billing";
+
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const MB = 1024 * 1024;
@@ -113,7 +118,7 @@ function PlanValue({ children }: { children: string }) {
 export function BillingSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("settings.billing"));
-	const queryClient = useQueryClient();
+
 	const { checkout } = useSearch({
 		from: "/_auth/orgs/$orgId/settings/billing",
 	});
@@ -129,11 +134,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 		}
 	}, [checkout, t]);
 
-	const checkoutMutation = useMutation({
-		mutationFn: () =>
-			unwrap(
-				client.api.orgs[":orgId"].billing.checkout.$post({ param: { orgId } }),
-			),
+	const checkoutMutation = useCreateCheckout(orgId, {
 		onSuccess: (res) => {
 			if (res.url) {
 				window.location.href = res.url;
@@ -141,15 +142,10 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 			}
 			setUpgradeOpen(false);
 			toast.success(t("toast.billingUpgraded"));
-			queryClient.invalidateQueries({ queryKey: billingRootKey(orgId) });
 		},
 	});
 
-	const portalMutation = useMutation({
-		mutationFn: () =>
-			unwrap(
-				client.api.orgs[":orgId"].billing.portal.$post({ param: { orgId } }),
-			),
+	const portalMutation = useCreateBillingPortal(orgId, {
 		onSuccess: (res) => {
 			if (res.url) {
 				window.location.href = res.url;
@@ -157,7 +153,6 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 			}
 			setPortalOpen(false);
 			toast.success(t("toast.billingDowngraded"));
-			queryClient.invalidateQueries({ queryKey: billingRootKey(orgId) });
 		},
 	});
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -11,16 +11,7 @@ import {
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@workspace/ui/components/dialog";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import {
 	Select,
 	SelectContent,
@@ -37,51 +28,33 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { CircleAlert, Plus, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { z } from "zod";
 import { EmptyState } from "@/components/empty-state";
-import { QuotaError } from "@/components/quota-error";
-import { SecretReveal } from "@/components/secret-reveal";
 import { UserAvatar } from "@/components/user-avatar";
-import { authClient } from "@/lib/auth-client";
-import { apiErrorMessage } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
-import type { OrgInvitation, OrgMember, OrgRole } from "@/lib/queries/members";
+import { useSession } from "@/features/auth/data";
+import { InviteDialog } from "@/features/members/components/invite-dialog";
 import {
 	invitationsQuery,
 	MANAGE_ROLES,
 	membersQuery,
 	ORG_ROLES,
-} from "@/lib/queries/members";
-import { useSession } from "@/lib/session";
+	type OrgInvitation,
+	type OrgMember,
+	type OrgRole,
+	useRemoveMember,
+	useRevokeInvitation,
+	useUpdateMemberRole,
+} from "@/features/members/data";
+import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
-
-const INVITABLE_ROLES: OrgRole[] = ["admin", "member"];
-
-const inviteSchema = z.object({
-	email: z.string().trim().min(1).email(),
-});
-
-class MemberActionError extends Error {
-	code?: string;
-	constructor(code: string | null | undefined, message: string) {
-		super(message);
-		this.code = code ?? undefined;
-	}
-}
 
 export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("settings.members"));
-	const queryClient = useQueryClient();
+
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
 	const invitations = useQuery(invitationsQuery(orgId));
@@ -117,63 +90,24 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 
 	const clearSearch = () => setSearch("");
 
-	const invalidateMembers = () => {
-		queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "members"] });
-		queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "invitations"] });
-	};
-
-	const roleMutation = useMutation({
-		mutationFn: async ({
-			memberId,
-			role,
-		}: {
-			memberId: string;
-			role: OrgRole;
-		}) => {
-			const { error } = await authClient.organization.updateMemberRole({
-				organizationId: orgId,
-				memberId,
-				role,
-			});
-			if (error) {
-				throw new MemberActionError(error.code, t("members.roleUpdateFailed"));
-			}
-		},
+	const roleMutation = useUpdateMemberRole(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.memberRoleUpdated"));
-			invalidateMembers();
 		},
 	});
 
-	const removeMutation = useMutation({
-		mutationFn: async (memberId: string) => {
-			const { error } = await authClient.organization.removeMember({
-				organizationId: orgId,
-				memberIdOrEmail: memberId,
-			});
-			if (error) {
-				throw new MemberActionError(error.code, t("members.removeFailed"));
-			}
-		},
+	const removeMutation = useRemoveMember(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.memberRemoved"));
-			invalidateMembers();
+
 			setRemoveTarget(null);
 		},
 	});
 
-	const revokeMutation = useMutation({
-		mutationFn: async (invitationId: string) => {
-			const { error } = await authClient.organization.cancelInvitation({
-				invitationId,
-			});
-			if (error) {
-				throw new MemberActionError(error.code, t("members.revokeFailed"));
-			}
-		},
+	const revokeMutation = useRevokeInvitation(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.invitationRevoked"));
-			invalidateMembers();
+
 			setRevokeTarget(null);
 		},
 	});
@@ -422,7 +356,6 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				orgId={orgId}
 				open={inviteOpen}
 				onOpenChange={setInviteOpen}
-				onInvited={invalidateMembers}
 				canUpgrade={canManage}
 			/>
 
@@ -486,150 +419,5 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 				</AlertDialogContent>
 			</AlertDialog>
 		</div>
-	);
-}
-
-function InviteDialog({
-	orgId,
-	open,
-	onOpenChange,
-	onInvited,
-	canUpgrade,
-}: {
-	orgId: string;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	onInvited: () => void;
-	canUpgrade: boolean;
-}) {
-	const { t } = useTranslation();
-	const [email, setEmail] = useState("");
-	const [role, setRole] = useState<OrgRole>("member");
-	const [inviteLink, setInviteLink] = useState<string | null>(null);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-
-	useEffect(() => {
-		if (open) {
-			setEmail("");
-			setRole("member");
-			setInviteLink(null);
-			setFieldErrors({});
-		}
-	}, [open]);
-
-	const inviteMutation = useMutation({
-		mutationFn: async (): Promise<string> => {
-			const { data, error } = await authClient.organization.inviteMember({
-				organizationId: orgId,
-				email: email.trim(),
-				role,
-			});
-			if (error || !data) {
-				throw new Error(
-					`[${error?.code ?? "error"}] ${error?.message ?? t("members.inviteFailed")}`,
-				);
-			}
-			return `${window.location.origin}/invite?invitationId=${data.id}`;
-		},
-		onSuccess: (link) => {
-			setInviteLink(link);
-			onInvited();
-		},
-	});
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>
-						{inviteLink ? t("members.inviteLinkTitle") : t("members.invite")}
-					</DialogTitle>
-					<DialogDescription>
-						{inviteLink
-							? t("members.inviteLinkDescription", { email: email.trim() })
-							: t("members.inviteDescription")}
-					</DialogDescription>
-				</DialogHeader>
-				{inviteLink ? (
-					<div className="flex flex-col gap-3">
-						<SecretReveal value={inviteLink} />
-						<DialogFooter>
-							<Button type="button" onClick={() => onOpenChange(false)}>
-								{t("common.done")}
-							</Button>
-						</DialogFooter>
-					</div>
-				) : (
-					<form
-						noValidate
-						className="flex flex-col gap-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							const parsed = inviteSchema.safeParse({ email });
-							if (!parsed.success) {
-								const errors = fieldErrorsFromZod(parsed.error, t);
-								setFieldErrors(errors);
-								focusFirstInvalidField(errors, { email: "invite-email" });
-								return;
-							}
-							inviteMutation.mutate();
-						}}
-					>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="invite-email">{t("common.email")}</Label>
-							<Input
-								id="invite-email"
-								type="email"
-								value={email}
-								placeholder={t("common.emailPlaceholder")}
-								onChange={(e) => {
-									setEmail(e.target.value);
-									setFieldErrors((prev) => withoutFieldError(prev, "email"));
-								}}
-								aria-invalid={fieldErrors.email ? true : undefined}
-								aria-describedby={
-									fieldErrors.email ? "invite-email-error" : undefined
-								}
-							/>
-							{fieldErrors.email && (
-								<p id="invite-email-error" className="text-destructive text-sm">
-									{fieldErrors.email}
-								</p>
-							)}
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("common.role")}</Label>
-							<Select
-								value={role}
-								onValueChange={(v) => v && setRole(v as OrgRole)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>{t(`members.roles.${role}`)}</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									{INVITABLE_ROLES.map((r) => (
-										<SelectItem key={r} value={r}>
-											{t(`members.roles.${r}`)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						{inviteMutation.isError && (
-							<QuotaError
-								error={inviteMutation.error}
-								orgId={orgId}
-								canUpgrade={canUpgrade}
-							/>
-						)}
-						<DialogFooter>
-							<Button type="submit" disabled={inviteMutation.isPending}>
-								{t("members.invite")}
-							</Button>
-						</DialogFooter>
-					</form>
-				)}
-			</DialogContent>
-		</Dialog>
 	);
 }

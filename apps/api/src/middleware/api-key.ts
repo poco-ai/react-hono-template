@@ -5,8 +5,8 @@ import type { ApiKeyDao } from "../dao/apiKey.dao";
 import type { MemberDao } from "../dao/member.dao";
 import { backgroundFromContext } from "../lib/background";
 import { sha256Hex } from "../lib/crypto";
-import type { PlanService } from "../lib/plan";
 import { fail } from "../lib/response";
+import type { PlanService } from "../services/plan.service";
 
 const TOUCH_THROTTLE_MS = 60_000;
 

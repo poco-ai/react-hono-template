@@ -6,7 +6,7 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { orgsQuery } from "@/lib/queries/org";
+import { orgsQuery } from "@/features/organizations/data";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 function useDarkMode() {

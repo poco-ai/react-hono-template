@@ -6,6 +6,7 @@
 		"build": "turbo build",
 		"dev": "turbo dev",
 		"lint": "biome lint .",
+		"test": "bun test apps/api/tests && bun run --cwd apps/web test",
 		"format": "biome format --write .",
 		"typecheck": "turbo typecheck",
 		"prepare": "husky"

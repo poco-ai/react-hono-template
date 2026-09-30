@@ -1,5 +1,5 @@
 import type { ListAdminUsersDto } from "@api/dto/admin-user.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
 	AlertDialog,
@@ -41,12 +41,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
-import { client, unwrap } from "@/lib/api";
+import {
+	adminUsersQuery,
+	useBanAdminUser,
+	useUnbanAdminUser,
+	useUpdateAdminUserRole,
+} from "@/features/admin/data";
+import { useSession } from "@/features/auth/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
-
-const PAGE_SIZE = 10;
 
 export function AdminUsersPage() {
 	const { t } = useTranslation();
@@ -54,7 +57,7 @@ export function AdminUsersPage() {
 	const { data: session } = useSession();
 	const { page = 1, search = "" } = useSearch({ from: "/_auth/admin/users" });
 	const navigate = useNavigate({ from: "/admin/users" });
-	const queryClient = useQueryClient();
+
 	const [searchInput, setSearchInput] = useState(search);
 	const [banTarget, setBanTarget] = useState<{
 		id: string;
@@ -82,47 +85,15 @@ export function AdminUsersPage() {
 		user: t("adminUsers.roles.user"),
 	};
 
-	const usersQuery = useQuery({
-		queryKey: ["admin-users", page, search],
-		queryFn: () =>
-			unwrap(
-				client.api.admin.users.$get({
-					query: {
-						page: String(page),
-						pageSize: String(PAGE_SIZE),
-						search,
-					},
-				}),
-			),
-	});
+	const usersQuery = useQuery(adminUsersQuery(page, search));
 
-	const roleMutation = useMutation({
-		mutationFn: ({ id, role }: { id: string; role: "admin" | "user" }) =>
-			unwrap(
-				client.api.admin.users[":id"].role.$patch({
-					param: { id },
-					json: { role },
-				}),
-			),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
-	});
-	const banMutation = useMutation({
-		mutationFn: (id: string) =>
-			unwrap(
-				client.api.admin.users[":id"].ban.$post({ param: { id }, json: {} }),
-			),
+	const roleMutation = useUpdateAdminUserRole({});
+	const banMutation = useBanAdminUser({
 		onSuccess: () => {
 			setBanTarget(null);
-			queryClient.invalidateQueries({ queryKey: ["admin-users"] });
 		},
 	});
-	const unbanMutation = useMutation({
-		mutationFn: (id: string) =>
-			unwrap(client.api.admin.users[":id"].ban.$delete({ param: { id } })),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
-	});
+	const unbanMutation = useUnbanAdminUser({});
 
 	const clearSearch = () => {
 		setSearchInput("");

@@ -1,4 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -12,15 +11,15 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { CircleAlert } from "lucide-react";
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { authClient } from "@/lib/auth-client";
-import { apiErrorMessage, errorCode } from "@/lib/errors";
+import { useCreateOrganization } from "@/features/organizations/data";
+
+import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -28,7 +27,7 @@ import {
 	withoutFieldError,
 } from "@/lib/form";
 import { slugify } from "@/lib/issue-utils";
-import { type Organization, orgsQuery } from "@/lib/queries/org";
+
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -47,39 +46,21 @@ export function OnboardingPage() {
 	const { t } = useTranslation();
 	useDocumentTitle(t("onboarding.title"));
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
+
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
 	const [slugTouched, setSlugTouched] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-	const createMutation = useMutation({
-		mutationFn: async () => {
-			const { data, error } = await authClient.organization.create({
-				name: name.trim(),
-				slug: slug || slugify(name),
-			});
-			if (error) {
-				throw Object.assign(
-					new Error(error.message ?? t("onboarding.failed")),
-					{ code: errorCode(error) },
-				);
-			}
-			return data;
-		},
+	const createMutation = useCreateOrganization({
 		onSuccess: (org) => {
 			if (org) {
-				queryClient.setQueryData<Organization[]>(
-					orgsQuery().queryKey,
-					(prev) => [...(prev ?? []), { ...org, frozen: false }],
-				);
 				navigate({
 					to: "/orgs/$orgId/projects",
 					params: { orgId: org.id },
 					replace: true,
 				});
 			}
-			queryClient.invalidateQueries({ queryKey: orgsQuery().queryKey });
 		},
 	});
 
@@ -111,7 +92,7 @@ export function OnboardingPage() {
 			focusFirstInvalidField(errors, INPUT_IDS);
 			return;
 		}
-		createMutation.mutate();
+		createMutation.mutate(parsed.data);
 	};
 
 	return (

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { MANAGE_ROLES, membersQuery } from "@/lib/queries/members";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/features/auth/data";
+import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
 
 export function useOrgRole(orgId: string) {
 	const { data: session } = useSession();

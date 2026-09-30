@@ -1,214 +1,48 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import type { ApiOk } from "@workspace/shared";
 import {
 	ApiError,
 	ApiErrorCode,
-	createIssueSchema,
-	createProjectSchema,
 	issueListQuerySchema,
-	updateIssueSchema,
 } from "@workspace/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import type { ZodError } from "zod";
 import { z } from "zod";
-import { createApiKeyDao } from "../dao/apiKey.dao";
-import { createIssueDao } from "../dao/issue.dao";
-import { createLabelDao } from "../dao/label.dao";
-import { createMemberDao } from "../dao/member.dao";
-import { createProjectDao } from "../dao/project.dao";
-import { createSubscriptionDao } from "../dao/subscription.dao";
-import { createWebhookDao } from "../dao/webhook.dao";
-import { createWebhookDeliveryDao } from "../dao/webhook-delivery.dao";
-import type { Database } from "../db/types";
+import type { Dependencies } from "../dependencies";
 import { backgroundFromContext } from "../lib/background";
-import { createPlanService } from "../lib/plan";
 import { fail } from "../lib/response";
+import { formatZodError } from "../lib/validation";
 import {
 	type ApiKeyEnv,
 	forbidFrozenOrg,
 	rateLimit,
 	requireApiKey,
 } from "../middleware/api-key";
-import { createIssueService } from "../services/issue.service";
-import { createLabelService } from "../services/label.service";
-import { createProjectService } from "../services/project.service";
-import { createWebhookService } from "../services/webhook.service";
 import {
-	deletedSchema,
-	issueListSchema,
-	issueQuerySchema,
-	issueSchema,
-	jsonError,
-	jsonOk,
-	labelSchema,
-	projectSchema,
-} from "./schemas";
+	createIssueRoute,
+	deleteIssueRoute,
+	getIssueRoute,
+	listIssuesRoute,
+	updateIssueRoute,
+} from "./issues.routes";
+import { listLabelsRoute } from "./labels.routes";
+import {
+	createProjectRoute,
+	getProjectRoute,
+	listProjectsRoute,
+} from "./projects.routes";
 
 type V1Env = {
 	Variables: ApiKeyEnv["Variables"];
 };
 
-const formatZodError = (error: ZodError) =>
-	error.issues
-		.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-		.join("; ");
-
 const okV1 = <T, S extends 200 | 201>(c: Context<V1Env>, data: T, status: S) =>
 	c.json<ApiOk<T>, S>({ ok: true, data }, status);
 
-const listProjectsRoute = createRoute({
-	method: "get",
-	path: "/projects",
-	responses: {
-		200: jsonOk(z.array(projectSchema)),
-		401: jsonError("Invalid API key"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const createProjectRoute = createRoute({
-	method: "post",
-	path: "/projects",
-	request: {
-		body: {
-			content: { "application/json": { schema: createProjectSchema } },
-		},
-	},
-	responses: {
-		201: jsonOk(projectSchema),
-		400: jsonError("Validation failed"),
-		401: jsonError("Invalid API key"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const getProjectRoute = createRoute({
-	method: "get",
-	path: "/projects/{projectId}",
-	request: {
-		params: z.object({ projectId: z.string() }),
-	},
-	responses: {
-		200: jsonOk(projectSchema),
-		401: jsonError("Invalid API key"),
-		404: jsonError("Project not found"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const createIssueRoute = createRoute({
-	method: "post",
-	path: "/projects/{projectId}/issues",
-	request: {
-		params: z.object({ projectId: z.string() }),
-		body: {
-			content: { "application/json": { schema: createIssueSchema } },
-		},
-	},
-	responses: {
-		201: jsonOk(issueSchema),
-		400: jsonError("Validation failed"),
-		401: jsonError("Invalid API key"),
-		404: jsonError("Project not found"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const listIssuesRoute = createRoute({
-	method: "get",
-	path: "/issues",
-	request: {
-		query: issueQuerySchema,
-	},
-	responses: {
-		200: jsonOk(issueListSchema),
-		400: jsonError("Validation failed"),
-		401: jsonError("Invalid API key"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const getIssueRoute = createRoute({
-	method: "get",
-	path: "/issues/{issueId}",
-	request: {
-		params: z.object({ issueId: z.string() }),
-	},
-	responses: {
-		200: jsonOk(issueSchema),
-		401: jsonError("Invalid API key"),
-		404: jsonError("Issue not found"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const updateIssueRoute = createRoute({
-	method: "patch",
-	path: "/issues/{issueId}",
-	request: {
-		params: z.object({ issueId: z.string() }),
-		body: {
-			content: { "application/json": { schema: updateIssueSchema } },
-		},
-	},
-	responses: {
-		200: jsonOk(issueSchema),
-		400: jsonError("Validation failed"),
-		401: jsonError("Invalid API key"),
-		404: jsonError("Issue not found"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const deleteIssueRoute = createRoute({
-	method: "delete",
-	path: "/issues/{issueId}",
-	request: {
-		params: z.object({ issueId: z.string() }),
-	},
-	responses: {
-		200: jsonOk(deletedSchema),
-		401: jsonError("Invalid API key"),
-		404: jsonError("Issue not found"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-const listLabelsRoute = createRoute({
-	method: "get",
-	path: "/labels",
-	responses: {
-		200: jsonOk(z.array(labelSchema)),
-		401: jsonError("Invalid API key"),
-		429: jsonError("Rate limited"),
-	},
-});
-
-export const createV1App = ({ db }: { db: Database }) => {
-	const apiKeyDao = createApiKeyDao(db);
-	const projectDao = createProjectDao(db);
-	const issueDao = createIssueDao(db);
-	const labelDao = createLabelDao(db);
-	const memberDao = createMemberDao(db);
-	const webhookDao = createWebhookDao(db);
-	const deliveryDao = createWebhookDeliveryDao(db);
-	const planService = createPlanService(createSubscriptionDao(db));
-
-	const webhookService = createWebhookService({
-		webhookDao,
-		deliveryDao,
-		plans: planService,
-	});
-	const projectService = createProjectService(projectDao, planService);
-	const issueService = createIssueService({
-		issueDao,
-		labelDao,
-		projectDao,
-		memberDao,
-		webhooks: webhookService,
-	});
-	const labelService = createLabelService(labelDao);
+export const createV1App = (dependencies: Dependencies) => {
+	const { apiKeyDao, memberDao } = dependencies.daos;
+	const { planService, projectService, issueService, labelService } =
+		dependencies.services;
 
 	const app = new OpenAPIHono<V1Env>();
 	const rateLimiter = rateLimit(planService);

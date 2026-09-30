@@ -1,5 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
-import { PLANS } from "@workspace/shared";
+import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { betterAuth } from "better-auth";
 import {
 	APIError,
@@ -7,27 +7,22 @@ import {
 	getSessionFromCtx,
 } from "better-auth/api";
 import { admin, organization } from "better-auth/plugins";
-import { count } from "drizzle-orm";
-import { createMemberDao } from "../dao/member.dao";
-import { createSubscriptionDao } from "../dao/subscription.dao";
 import * as authSchema from "../db/auth-schema";
-import { user as userTable } from "../db/auth-schema";
 import type { Database } from "../db/types";
+import type { AuthPolicyService } from "../services/auth-policy.service";
 import { ac, roles } from "./access";
-import { createPlanService } from "./plan";
 
 export const createAuth = ({
 	db,
 	secret,
 	trustedOrigins,
+	policy,
 }: {
 	db: Database;
 	secret: string;
 	trustedOrigins: string[];
+	policy: AuthPolicyService;
 }) => {
-	const memberDao = createMemberDao(db);
-	const planService = createPlanService(createSubscriptionDao(db));
-
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
@@ -65,13 +60,10 @@ export const createAuth = ({
 			user: {
 				create: {
 					before: async (userData) => {
-						const [{ value }] = await db
-							.select({ value: count() })
-							.from(userTable);
 						return {
 							data: {
 								...userData,
-								role: value === 0 ? "admin" : "user",
+								role: await policy.initialUserRole(),
 							},
 						};
 					},
@@ -95,45 +87,24 @@ export const createAuth = ({
 					typeof ctx.body === "object" && ctx.body !== null
 						? (ctx.body as { organizationId?: string; invitationId?: string })
 						: {};
-				if (ctx.path === "/organization/create") {
-					const orgPlans = await memberDao.listOrgPlansByUser(session.user.id);
-					const plan = orgPlans.includes("pro") ? "pro" : "free";
-					if (orgPlans.length >= PLANS[plan].orgs) {
-						throw new APIError("FORBIDDEN", {
-							message: `Plan limit reached: the ${plan} plan allows belonging to ${PLANS[plan].orgs} organization(s). Upgrade to create more organizations.`,
-						});
+				try {
+					if (ctx.path === "/organization/create") {
+						await policy.assertCanCreateOrganization(session.user.id);
+					} else if (ctx.path === "/organization/accept-invitation") {
+						await policy.assertCanAcceptInvitation(body.invitationId);
+					} else {
+						const orgId =
+							body.organizationId ?? session.session.activeOrganizationId;
+						if (orgId) await policy.assertCanInviteMember(orgId);
 					}
-					return { context: ctx };
-				}
-				if (ctx.path === "/organization/accept-invitation") {
-					const orgId = body.invitationId
-						? await memberDao.findInvitationOrgId(body.invitationId)
-						: null;
-					if (!orgId) {
-						return { context: ctx };
+				} catch (error) {
+					if (
+						error instanceof ApiError &&
+						error.code === ApiErrorCode.PLAN_LIMIT_EXCEEDED
+					) {
+						throw new APIError("FORBIDDEN", { message: error.message });
 					}
-					const plan = await planService.getPlanForOrg(orgId);
-					const memberCount = await memberDao.countByOrg(orgId);
-					if (memberCount >= PLANS[plan].members) {
-						throw new APIError("FORBIDDEN", {
-							message: `Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members and this organization is full.`,
-						});
-					}
-					return { context: ctx };
-				}
-				const orgId =
-					body.organizationId ?? session.session.activeOrganizationId;
-				if (!orgId) {
-					return { context: ctx };
-				}
-				const plan = await planService.getPlanForOrg(orgId);
-				const memberCount =
-					(await memberDao.countByOrg(orgId)) +
-					(await memberDao.countPendingInvitationsByOrg(orgId));
-				if (memberCount >= PLANS[plan].members) {
-					throw new APIError("FORBIDDEN", {
-						message: `Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members (including pending invitations). Upgrade to invite more members.`,
-					});
+					throw error;
 				}
 				return { context: ctx };
 			}),

@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/web/**"
       - "packages/ui/**"
+      - "packages/shared/**"
       - "bun.lock"
   workflow_dispatch:
 

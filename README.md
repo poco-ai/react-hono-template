@@ -42,6 +42,15 @@ bun run dev                                         # api :8787 + web :5173
 
 Open http://localhost:5173 — the first registered user becomes the platform admin. With no further config the app runs fully locally: attachments return 503 and billing runs in mock mode.
 
+## Validation
+
+```sh
+bun run test       # focused API and web regression tests
+bun run lint
+bun run typecheck
+bun run build
+```
+
 ## Environment variables
 
 All optional except `BETTER_AUTH_SECRET`. Local: `apps/api/.dev.vars`; production: `bunx wrangler secret put <NAME>`.
@@ -56,13 +65,15 @@ All optional except `BETTER_AUTH_SECRET`. Local: `apps/api/.dev.vars`; productio
 ## Layout
 
 ```
-apps/api          Hono API — src/{controllers,services,dao,dto,middleware,lib}, src/v1 (public API), drizzle/ migrations
-apps/web          React SPA — src/routes (file-based), src/pages, src/lib/queries, src/i18n
+apps/api          Hono API — src/routes (resource routers), src/dependencies.ts, src/{controllers,services,dao,dto,middleware,lib}, src/v1 (public API), drizzle/ migrations
+apps/web          React SPA — src/routes (file-based), src/pages, src/features/<domain>/{data.ts,components/}, src/lib (infrastructure), src/i18n
 packages/shared   zod schemas, plan limits, error codes, ApiResult envelope — imported by both apps
 packages/ui       shadcn/ui components (add via `bunx shadcn@latest add <name> -c apps/web`)
 ```
 
 Conventions, workflows and per-app notes live in [AGENTS.md](AGENTS.md), [apps/api/README.md](apps/api/README.md) and [apps/web/README.md](apps/web/README.md).
+
+Every frontend domain exposes its data layer through `features/<domain>/data.ts`: query keys/factories, requests, mutation hooks and cache policies live together. Pages and components consume that entry point and own forms, dialogs, navigation and translated feedback. This convention applies to all domains, without a separate location for simpler features.
 
 ## Production notes — honest simplifications
 

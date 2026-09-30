@@ -3,17 +3,13 @@ import { ApiErrorCode } from "@workspace/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createStripeController } from "./controllers/stripe.controller";
-import { createMemberDao } from "./dao/member.dao";
-import { createProjectDao } from "./dao/project.dao";
-import { createSubscriptionDao } from "./dao/subscription.dao";
-import { createWebhookDao } from "./dao/webhook.dao";
 import { db } from "./db";
+import { createDependencies } from "./dependencies";
 import { createAuth } from "./lib/auth";
 import { fail } from "./lib/response";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { setupStripe } from "./lib/stripe";
 import { createRoutes } from "./routes";
-import { createBillingService } from "./services/billing.service";
 import { createV1App } from "./v1";
 
 const trustedOrigins = [
@@ -32,37 +28,27 @@ const stripeSetup = setupStripe({
 });
 const stripe = stripeSetup.context;
 
+const dependencies = createDependencies({
+	db,
+	storage: s3ClientFromEnv(),
+	stripeSetup,
+	billingMockEnabled: env.BILLING_MOCK_MODE === "true",
+});
+
 const auth = createAuth({
 	db,
 	secret: env.BETTER_AUTH_SECRET,
 	trustedOrigins,
+	policy: dependencies.services.authPolicyService,
 });
 
-const billingMockEnabled = env.BILLING_MOCK_MODE === "true";
-
-app.route(
-	"/",
-	createRoutes({
-		db,
-		auth,
-		storage: s3ClientFromEnv(),
-		stripeSetup,
-		billingMockEnabled,
-	}),
-);
-app.route("/api/v1", createV1App({ db }));
+app.route("/", createRoutes({ auth, dependencies }));
+app.route("/api/v1", createV1App(dependencies));
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 const stripeController = createStripeController({
-	service: createBillingService({
-		subscriptionDao: createSubscriptionDao(db),
-		memberDao: createMemberDao(db),
-		projectDao: createProjectDao(db),
-		webhookDao: createWebhookDao(db),
-		stripeSetup,
-		mockEnabled: billingMockEnabled,
-	}),
+	service: dependencies.services.billingService,
 	stripe,
 });
 app.post("/api/stripe/webhook", (c) => stripeController.webhook(c));

@@ -9,8 +9,8 @@ import type {
 	CheckoutResponseDto,
 	PortalResponseDto,
 } from "../dto/billing.dto";
-import { invalidatePlanCache } from "../lib/plan";
 import type { StripeSetup } from "../lib/stripe";
+import { invalidatePlanCache } from "./plan.service";
 
 const subscriptionPlanFor = (status: string) =>
 	status === "active" || status === "trialing" || status === "past_due"
@@ -81,11 +81,11 @@ export const createBillingService = ({
 
 		createCheckout: async (
 			orgId: string,
-			ownerEmail: string | null,
 			origin: string,
 		): Promise<CheckoutResponseDto> => {
 			const stripe = requireCompleteStripe();
 			if (stripe) {
+				const ownerEmail = await memberDao.findOwnerEmail(orgId);
 				const session = await stripe.client.checkout.sessions.create({
 					mode: "subscription",
 					line_items: [{ price: stripe.priceId, quantity: 1 }],

@@ -1,118 +1,49 @@
 import type { ListIssuesDto } from "@api/dto/issue.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
-	type CreateIssueInput,
-	createIssueSchema,
 	ISSUE_PRIORITIES,
 	ISSUE_STATUSES,
 	type IssuePriorityName,
 	type IssueStatus,
 } from "@workspace/shared";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
-import { Checkbox } from "@workspace/ui/components/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@workspace/ui/components/select";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
-import { Skeleton } from "@workspace/ui/components/skeleton";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@workspace/ui/components/table";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { cn } from "@workspace/ui/lib/utils";
 import {
 	ArrowLeft,
-	CircleAlert,
 	Columns3,
 	List,
 	Plus,
-	Search,
 	SlidersHorizontal,
 } from "lucide-react";
-import type { FormEvent, RefObject } from "react";
-import { useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { EmptyState } from "@/components/empty-state";
-import { BoardView } from "@/components/issue/board-view";
-import { BulkActionBar } from "@/components/issue/bulk-bar";
-import { DateField } from "@/components/issue/date-field";
-import { LabelBadge } from "@/components/issue/label-badge";
-import { PriorityBadge } from "@/components/issue/priority-badge";
-import { StatusBadge } from "@/components/issue/status-badge";
-import { MarkdownContent } from "@/components/markdown";
-import { MultiSelect } from "@/components/multi-select";
 import { NotFoundState } from "@/components/not-found-state";
-import { TablePagination } from "@/components/table-pagination";
-import { UserAvatar } from "@/components/user-avatar";
-import { client, unwrap } from "@/lib/api";
-import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
-import {
-	formatDateTime,
-	formatDueDate,
-	formatRelativeTime,
-	fromDateInputValue,
-	parseCsv,
-	priorityValue,
-	serializeCsv,
-} from "@/lib/issue-utils";
-import { projectIssuesQuery } from "@/lib/queries/issues";
-import { labelsQuery } from "@/lib/queries/labels";
-import { membersQuery } from "@/lib/queries/members";
-import { projectQuery } from "@/lib/queries/projects";
+import { BoardView } from "@/features/issues/components/board-view";
+import { BulkActionBar } from "@/features/issues/components/bulk-bar";
+import { CreateIssueDialog } from "@/features/issues/components/create-issue-dialog";
+import { IssueFilterControls } from "@/features/issues/components/issue-filter-controls";
+import { IssueList } from "@/features/issues/components/issue-list";
+import { projectIssuesQuery } from "@/features/issues/data";
+import type { IssuesSearch } from "@/features/issues/search";
+import { labelsQuery } from "@/features/labels/data";
+import { membersQuery } from "@/features/members/data";
+import { projectQuery } from "@/features/projects/data";
+import { isNotFoundError } from "@/lib/errors";
+import { parseCsv } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
-export interface IssuesSearch {
-	page: number;
-	status?: string;
-	priority?: string;
-	assigneeId?: string;
-	labelId?: string;
-	search?: string;
-	sort: "updated" | "created" | "priority";
-	view?: "list" | "board";
-}
-
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
-const ASSIGNEE_ALL = "__all__";
-const LABEL_ALL = "__all__";
-const UNASSIGNED = "__unassigned__";
 
 export function ProjectIssuesPage({
 	orgId,
@@ -126,8 +57,6 @@ export function ProjectIssuesPage({
 	setSearch: (next: Partial<IssuesSearch>) => void;
 }) {
 	const { t } = useTranslation();
-	const navigate = useNavigate();
-	const queryClient = useQueryClient();
 	const project = useQuery(projectQuery(orgId, projectId));
 	useDocumentTitle(project.data?.name);
 	const members = useQuery(membersQuery(orgId));
@@ -169,10 +98,6 @@ export function ProjectIssuesPage({
 	);
 
 	const result: ListIssuesDto | undefined = issues.data;
-	const totalPages = result
-		? Math.max(1, Math.ceil(result.total / result.pageSize))
-		: 1;
-	const listEmpty = !issues.isPending && result?.items.length === 0;
 	const hasFilters =
 		statusFilter.length > 0 ||
 		priorityFilter.length > 0 ||
@@ -252,10 +177,6 @@ export function ProjectIssuesPage({
 			}
 		},
 	});
-
-	const allOnPageSelected =
-		(result?.items.length ?? 0) > 0 &&
-		result?.items.every((issue) => selected.has(issue.id));
 
 	const toggleAllOnPage = (checked: boolean) => {
 		setSelected((prev) => {
@@ -446,244 +367,32 @@ export function ProjectIssuesPage({
 					/>
 				</div>
 			) : (
-				<>
-					<div
-						className="flex-1 overflow-auto px-4 py-4 lg:px-6"
-						aria-busy={issues.isPending || undefined}
-					>
-						<Table>
-							{!listEmpty && (
-								<TableHeader>
-									<TableRow>
-										<TableHead className="hidden w-10 md:table-cell">
-											<Checkbox
-												aria-label={t("bulk.selectAll")}
-												checked={allOnPageSelected}
-												indeterminate={selected.size > 0 && !allOnPageSelected}
-												disabled={frozen}
-												onCheckedChange={(checked) => toggleAllOnPage(checked)}
-											/>
-										</TableHead>
-										<TableHead className="w-24">{t("issues.number")}</TableHead>
-										<TableHead>{t("issues.titleField")}</TableHead>
-										<TableHead className="w-28">{t("issues.status")}</TableHead>
-										<TableHead className="w-28">
-											{t("issues.priority")}
-										</TableHead>
-										<TableHead className="w-36">
-											{t("issues.assignee")}
-										</TableHead>
-										<TableHead className="w-48">{t("issues.labels")}</TableHead>
-										<TableHead className="w-28">
-											{t("issues.dueDate")}
-										</TableHead>
-										<TableHead className="w-44">
-											{t("issues.updated")}
-										</TableHead>
-									</TableRow>
-								</TableHeader>
-							)}
-							<TableBody>
-								{result?.items.map((issue) => {
-									const assignee = issue.assigneeId
-										? memberById.get(issue.assigneeId)
-										: undefined;
-									return (
-										<TableRow
-											key={issue.id}
-											className={cn(
-												"cursor-pointer hover:bg-accent/40",
-												selected.has(issue.id) && "bg-accent/40",
-											)}
-											onClick={() =>
-												navigate({
-													to: "/orgs/$orgId/projects/$projectId/$issueNumber",
-													params: {
-														orgId,
-														projectId,
-														issueNumber: String(issue.number),
-													},
-												})
-											}
-										>
-											<TableCell
-												className="hidden md:table-cell"
-												onClick={(e) => e.stopPropagation()}
-											>
-												<Checkbox
-													aria-label={issue.title}
-													checked={selected.has(issue.id)}
-													disabled={frozen}
-													onCheckedChange={(checked) =>
-														toggleOne(issue.id, checked)
-													}
-												/>
-											</TableCell>
-											<TableCell className="text-muted-foreground font-mono text-xs">
-												{project.data?.key}-{issue.number}
-											</TableCell>
-											<TableCell>
-												<Link
-													to="/orgs/$orgId/projects/$projectId/$issueNumber"
-													params={{
-														orgId,
-														projectId,
-														issueNumber: String(issue.number),
-													}}
-													className="hover:underline"
-												>
-													{issue.title}
-												</Link>
-											</TableCell>
-											<TableCell>
-												<StatusBadge status={issue.status as IssueStatus} />
-											</TableCell>
-											<TableCell>
-												<PriorityBadge value={issue.priority} />
-											</TableCell>
-											<TableCell>
-												{assignee ? (
-													<span
-														title={assignee.user.name}
-														className="inline-flex"
-													>
-														<UserAvatar name={assignee.user.name} />
-													</span>
-												) : (
-													<span className="text-muted-foreground/50">—</span>
-												)}
-											</TableCell>
-											<TableCell>
-												{issue.labelIds.length > 0 ? (
-													<span className="flex flex-wrap gap-1">
-														{issue.labelIds.map((labelId) => {
-															const label = labelById.get(labelId);
-															return label ? (
-																<LabelBadge key={labelId} label={label} />
-															) : null;
-														})}
-													</span>
-												) : (
-													<span className="text-muted-foreground/50">—</span>
-												)}
-											</TableCell>
-											<TableCell className="text-muted-foreground text-xs">
-												{formatDueDate(issue.dueDate) || (
-													<span className="text-muted-foreground/50">—</span>
-												)}
-											</TableCell>
-											<TableCell
-												title={formatDateTime(issue.updatedAt)}
-												className="text-muted-foreground text-xs"
-											>
-												{formatRelativeTime(issue.updatedAt)}
-											</TableCell>
-										</TableRow>
-									);
-								})}
-								{issues.isPending &&
-									["row-1", "row-2", "row-3", "row-4", "row-5"].map(
-										(rowKey) => (
-											<TableRow key={rowKey} aria-hidden="true">
-												<TableCell className="hidden md:table-cell">
-													<Skeleton className="size-4" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-3.5 w-14" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-4 w-3/4" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-5 w-20 rounded-md" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-5 w-16 rounded-full" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="size-6 rounded-full" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-5 w-16 rounded-md" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-3.5 w-16" />
-												</TableCell>
-												<TableCell>
-													<Skeleton className="h-3.5 w-20" />
-												</TableCell>
-											</TableRow>
-										),
-									)}
-								{issues.isError && (
-									<TableRow>
-										<TableCell colSpan={9} className="text-center text-red-500">
-											{apiErrorMessage(t, issues.error)}
-										</TableCell>
-									</TableRow>
-								)}
-								{listEmpty && (
-									<TableRow>
-										<TableCell colSpan={9} className="p-0">
-											{hasFilters ? (
-												<EmptyState
-													title={t("issues.noResults")}
-													action={
-														<Button
-															variant="outline"
-															size="sm"
-															onClick={() =>
-																updateSearch({
-																	status: "",
-																	priority: "",
-																	assigneeId: "",
-																	labelId: "",
-																	search: "",
-																	page: 1,
-																})
-															}
-														>
-															{t("issues.clearFilters")}
-														</Button>
-													}
-												/>
-											) : (
-												<EmptyState
-													title={t("issues.empty")}
-													action={
-														<Button
-															variant="outline"
-															size="sm"
-															disabled={frozen}
-															onClick={() => openCreate()}
-														>
-															{t("issues.emptyCta")}
-														</Button>
-													}
-												/>
-											)}
-										</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
-					</div>
-
-					<footer className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-sm lg:px-6">
-						<span>
-							{result ? t("issues.count", { count: result.total }) : ""}
-						</span>
-						{totalPages > 1 && (
-							<TablePagination
-								page={search.page}
-								total={result?.total}
-								totalPages={totalPages}
-								onPageChange={gotoPage}
-								disabled={issues.isPending}
-							/>
-						)}
-					</footer>
-				</>
+				<IssueList
+					orgId={orgId}
+					projectId={projectId}
+					projectKey={project.data?.key ?? ""}
+					issues={issues}
+					members={members.data ?? []}
+					labels={labels.data ?? []}
+					page={search.page}
+					selected={selected}
+					frozen={frozen}
+					hasFilters={hasFilters}
+					toggleAllOnPage={toggleAllOnPage}
+					toggleOne={toggleOne}
+					onPageChange={gotoPage}
+					onClearFilters={() =>
+						updateSearch({
+							status: "",
+							priority: "",
+							assigneeId: "",
+							labelId: "",
+							search: "",
+							page: 1,
+						})
+					}
+					onNewIssue={() => openCreate()}
+				/>
 			)}
 
 			{selectedNumbers.length > 0 && view === "list" && (
@@ -704,555 +413,7 @@ export function ProjectIssuesPage({
 				defaultStatus={createStatus}
 				members={members.data ?? []}
 				labels={labels.data ?? []}
-				onCreated={() =>
-					queryClient.invalidateQueries({
-						queryKey: ["orgs", orgId, "projects"],
-					})
-				}
 			/>
 		</div>
-	);
-}
-
-function CreateIssueDialog({
-	orgId,
-	projectId,
-	open,
-	onOpenChange,
-	defaultStatus,
-	members,
-	labels,
-	onCreated,
-}: {
-	orgId: string;
-	projectId: string;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	defaultStatus: IssueStatus;
-	members: { userId: string; user: { name: string } }[];
-	labels: { id: string; name: string }[];
-	onCreated: () => void;
-}) {
-	const { t } = useTranslation();
-	const [title, setTitle] = useState("");
-	const [description, setDescription] = useState("");
-	const [descTab, setDescTab] = useState<"write" | "preview">("write");
-	const [status, setStatus] = useState<IssueStatus>(defaultStatus);
-	const [priority, setPriority] = useState<IssuePriorityName>("none");
-	const [assigneeId, setAssigneeId] = useState(UNASSIGNED);
-	const [labelIds, setLabelIds] = useState<string[]>([]);
-	const [dueDate, setDueDate] = useState("");
-	const [estimate, setEstimate] = useState("");
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-
-	const estimateNumber = estimate === "" ? undefined : Number(estimate);
-	const estimateValid =
-		estimateNumber === undefined ||
-		(Number.isInteger(estimateNumber) &&
-			estimateNumber >= 0 &&
-			estimateNumber <= 100);
-
-	useEffect(() => {
-		if (open) {
-			setTitle("");
-			setDescription("");
-			setDescTab("write");
-			setStatus(defaultStatus);
-			setPriority("none");
-			setAssigneeId(UNASSIGNED);
-			setLabelIds([]);
-			setDueDate("");
-			setEstimate("");
-			setFieldErrors({});
-		}
-	}, [open, defaultStatus]);
-
-	const createMutation = useMutation({
-		mutationFn: (json: CreateIssueInput) =>
-			unwrap(
-				client.api.orgs[":orgId"].projects[":projectId"].issues.$post({
-					param: { orgId, projectId },
-					json,
-				}),
-			),
-		onSuccess: () => {
-			toast.success(t("toast.issueCreated"));
-			onCreated();
-			onOpenChange(false);
-		},
-	});
-
-	const onSubmit = () => {
-		const parsedEstimate = estimate === "" ? undefined : Number(estimate);
-		const parsed = createIssueSchema.safeParse({
-			title: title.trim(),
-			description: description.trim() || undefined,
-			status,
-			priority: priorityValue(priority),
-			assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
-			labelIds: labelIds.length > 0 ? labelIds : undefined,
-			dueDate: fromDateInputValue(dueDate) ?? undefined,
-			estimate:
-				parsedEstimate !== undefined &&
-				Number.isInteger(parsedEstimate) &&
-				parsedEstimate >= 0
-					? parsedEstimate
-					: undefined,
-		});
-		if (!parsed.success) {
-			const errors = fieldErrorsFromZod(parsed.error, t);
-			setFieldErrors(errors);
-			focusFirstInvalidField(errors, {
-				title: "issue-title",
-				description: "issue-description",
-			});
-			return;
-		}
-		createMutation.mutate(parsed.data);
-	};
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-lg">
-				<DialogHeader>
-					<DialogTitle>{t("issues.createTitle")}</DialogTitle>
-					<DialogDescription>{t("issues.createDescription")}</DialogDescription>
-				</DialogHeader>
-				<form
-					noValidate
-					className="flex flex-col gap-4"
-					onSubmit={(e) => {
-						e.preventDefault();
-						onSubmit();
-					}}
-				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="issue-title">{t("issues.titleField")}</Label>
-						<Input
-							id="issue-title"
-							value={title}
-							placeholder={t("issues.titlePlaceholder")}
-							onChange={(e) => {
-								setTitle(e.target.value);
-								setFieldErrors((prev) => withoutFieldError(prev, "title"));
-							}}
-							aria-invalid={fieldErrors.title ? true : undefined}
-							aria-describedby={
-								fieldErrors.title ? "issue-title-error" : undefined
-							}
-						/>
-						{fieldErrors.title && (
-							<p id="issue-title-error" className="text-destructive text-sm">
-								{fieldErrors.title}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="issue-description">
-							{t("common.description")}
-							<span className="text-muted-foreground">
-								{" "}
-								({t("common.optional")})
-							</span>
-						</Label>
-						<div className="rounded-lg border">
-							<div className="border-b flex items-center gap-1 px-2 pt-1.5">
-								{(["write", "preview"] as const).map((value) => (
-									<button
-										key={value}
-										type="button"
-										className={cn(
-											"rounded-md px-2 py-1 text-xs font-medium",
-											descTab === value
-												? "bg-accent text-accent-foreground"
-												: "text-muted-foreground hover:text-foreground",
-										)}
-										onClick={() => setDescTab(value)}
-									>
-										{t(`common.${value}`)}
-									</button>
-								))}
-							</div>
-							{descTab === "write" ? (
-								<>
-									<Textarea
-										id="issue-description"
-										value={description}
-										placeholder={t("issues.descriptionPlaceholder")}
-										onChange={(e) => {
-											setDescription(e.target.value);
-											setFieldErrors((prev) =>
-												withoutFieldError(prev, "description"),
-											);
-										}}
-										className="resize-y border-0 focus-visible:ring-0"
-										aria-invalid={fieldErrors.description ? true : undefined}
-										aria-describedby={
-											fieldErrors.description
-												? "issue-description-error"
-												: undefined
-										}
-									/>
-									<p className="text-muted-foreground px-3 pb-2 text-xs">
-										{t("markdown.hint")}
-									</p>
-								</>
-							) : (
-								<div className="min-h-24 px-3 py-2">
-									{description.trim() ? (
-										<MarkdownContent>{description}</MarkdownContent>
-									) : (
-										<p className="text-muted-foreground text-sm">
-											{t("comments.previewEmpty")}
-										</p>
-									)}
-								</div>
-							)}
-						</div>
-						{fieldErrors.description && (
-							<p
-								id="issue-description-error"
-								className="text-destructive text-sm"
-							>
-								{fieldErrors.description}
-							</p>
-						)}
-					</div>
-					<div className="grid grid-cols-2 gap-4">
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.status")}</Label>
-							<Select
-								value={status}
-								onValueChange={(v) => v && setStatus(v as IssueStatus)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>{t(`issues.statuses.${status}`)}</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									{ISSUE_STATUSES.map((s) => (
-										<SelectItem key={s} value={s}>
-											<StatusBadge status={s} />
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.priority")}</Label>
-							<Select
-								value={priority}
-								onValueChange={(v) => v && setPriority(v as IssuePriorityName)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{t(`issues.priorities.${priority}`)}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									{PRIORITY_NAMES.map((name) => (
-										<SelectItem key={name} value={name}>
-											<PriorityBadge value={priorityValue(name)} />
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.assignee")}</Label>
-							<Select
-								value={assigneeId}
-								onValueChange={(v) => v !== null && setAssigneeId(v)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{assigneeId === UNASSIGNED
-											? t("common.unassigned")
-											: (members.find((m) => m.userId === assigneeId)?.user
-													.name ?? t("common.unassigned"))}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value={UNASSIGNED}>
-										{t("common.unassigned")}
-									</SelectItem>
-									{members.map((member) => (
-										<SelectItem key={member.userId} value={member.userId}>
-											{member.user.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.dueDate")}</Label>
-							<DateField value={dueDate} onChange={setDueDate} />
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.estimate")}</Label>
-							<div className="relative">
-								<Input
-									type="number"
-									min={0}
-									max={100}
-									step={1}
-									value={estimate}
-									onChange={(e) => setEstimate(e.target.value)}
-									className="pr-16"
-								/>
-								<span className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs">
-									{t("issues.estimateUnit")}
-								</span>
-							</div>
-							{!estimateValid && (
-								<p className="text-destructive text-xs">
-									{t("issues.estimateInvalid")}
-								</p>
-							)}
-						</div>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("issues.labels")}</Label>
-						<MultiSelect
-							placeholder={t("issues.noLabels")}
-							value={labelIds}
-							options={labels.map((label) => ({
-								value: label.id,
-								label: label.name,
-							}))}
-							onChange={setLabelIds}
-						/>
-					</div>
-					{createMutation.isError && (
-						<Alert variant="destructive">
-							<CircleAlert />
-							<AlertDescription>
-								{apiErrorMessage(t, createMutation.error)}
-							</AlertDescription>
-						</Alert>
-					)}
-					<DialogFooter>
-						<Button
-							type="submit"
-							disabled={createMutation.isPending || !estimateValid}
-						>
-							{t("common.create")}
-						</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
-	);
-}
-
-function IssueFilterControls({
-	variant,
-	statusFilter,
-	priorityFilter,
-	assigneeId,
-	assigneeFilterActive,
-	assigneeFilterLabel,
-	labelId,
-	labelFilterActive,
-	labelFilterLabel,
-	members,
-	labels,
-	showSort,
-	sort,
-	searchInput,
-	searchInputRef,
-	hasFilters,
-	onSearchInput,
-	onSearchSubmit,
-	onUpdateSearch,
-}: {
-	variant: "inline" | "sheet";
-	statusFilter: IssueStatus[];
-	priorityFilter: IssuePriorityName[];
-	assigneeId?: string;
-	assigneeFilterActive: boolean;
-	assigneeFilterLabel: string;
-	labelId?: string;
-	labelFilterActive: boolean;
-	labelFilterLabel: string;
-	members: { userId: string; user: { name: string } }[];
-	labels: { id: string; name: string }[];
-	showSort: boolean;
-	sort: IssuesSearch["sort"];
-	searchInput: string;
-	searchInputRef: RefObject<HTMLInputElement | null>;
-	hasFilters: boolean;
-	onSearchInput: (value: string) => void;
-	onSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
-	onUpdateSearch: (next: Partial<IssuesSearch>) => void;
-}) {
-	const { t } = useTranslation();
-	const stacked = variant === "sheet";
-
-	return (
-		<>
-			<MultiSelect
-				className={stacked ? "w-full" : undefined}
-				placeholder={t("issues.filterStatus")}
-				triggerLabel={
-					statusFilter.length > 0
-						? `${t("issues.filterStatus")} · ${statusFilter.length}`
-						: undefined
-				}
-				active={statusFilter.length > 0}
-				value={statusFilter}
-				options={ISSUE_STATUSES.map((status) => ({
-					value: status,
-					label: t(`issues.statuses.${status}`),
-				}))}
-				onChange={(next) =>
-					onUpdateSearch({ status: serializeCsv(next), page: 1 })
-				}
-			/>
-			<MultiSelect
-				className={stacked ? "w-full" : undefined}
-				placeholder={t("issues.filterPriority")}
-				triggerLabel={
-					priorityFilter.length > 0
-						? `${t("issues.filterPriority")} · ${priorityFilter.length}`
-						: undefined
-				}
-				active={priorityFilter.length > 0}
-				value={priorityFilter}
-				options={PRIORITY_NAMES.map((name) => ({
-					value: name,
-					label: t(`issues.priorities.${name}`),
-				}))}
-				onChange={(next) =>
-					onUpdateSearch({ priority: serializeCsv(next), page: 1 })
-				}
-			/>
-			<Select
-				value={assigneeId ?? ASSIGNEE_ALL}
-				onValueChange={(value) =>
-					onUpdateSearch({
-						assigneeId: value && value !== ASSIGNEE_ALL ? value : undefined,
-						page: 1,
-					})
-				}
-			>
-				<SelectTrigger
-					className={cn(
-						stacked ? "w-full" : "w-44",
-						assigneeFilterActive && "bg-secondary dark:bg-secondary",
-					)}
-				>
-					<SelectValue>
-						<span className="text-muted-foreground">
-							{t("issues.filterAssignee")}:
-						</span>
-						<span
-							className={cn(!assigneeFilterActive && "text-muted-foreground")}
-						>
-							{assigneeFilterLabel}
-						</span>
-					</SelectValue>
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value={ASSIGNEE_ALL}>{t("common.all")}</SelectItem>
-					<SelectItem value="none">{t("common.unassigned")}</SelectItem>
-					{members.map((member) => (
-						<SelectItem key={member.userId} value={member.userId}>
-							{member.user.name}
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Select
-				value={labelId ?? LABEL_ALL}
-				onValueChange={(value) =>
-					onUpdateSearch({
-						labelId: value && value !== LABEL_ALL ? value : undefined,
-						page: 1,
-					})
-				}
-			>
-				<SelectTrigger
-					className={cn(
-						stacked ? "w-full" : "w-40",
-						labelFilterActive && "bg-secondary dark:bg-secondary",
-					)}
-				>
-					<SelectValue>
-						<span className="text-muted-foreground">
-							{t("issues.filterLabel")}:
-						</span>
-						<span className={cn(!labelFilterActive && "text-muted-foreground")}>
-							{labelFilterLabel}
-						</span>
-					</SelectValue>
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value={LABEL_ALL}>{t("common.all")}</SelectItem>
-					{labels.map((label) => (
-						<SelectItem key={label.id} value={label.id}>
-							{label.name}
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<form
-				className={cn("flex items-center gap-2", stacked && "w-full")}
-				onSubmit={onSearchSubmit}
-			>
-				<div className={cn("relative", stacked && "w-full")}>
-					<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
-					<Input
-						ref={searchInputRef}
-						value={searchInput}
-						placeholder={t("issues.searchPlaceholder")}
-						onChange={(e) => onSearchInput(e.target.value)}
-						className={cn("pl-8", stacked ? "h-9 w-full" : "h-8 w-56")}
-						title="/"
-					/>
-				</div>
-			</form>
-			{showSort && (
-				<Select
-					value={sort}
-					onValueChange={(value) =>
-						onUpdateSearch({ sort: value as IssuesSearch["sort"] })
-					}
-				>
-					<SelectTrigger className={stacked ? "w-full" : "w-40"}>
-						<SelectValue>{t(`issues.sortOptions.${sort}`)}</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="updated">
-							{t("issues.sortOptions.updated")}
-						</SelectItem>
-						<SelectItem value="created">
-							{t("issues.sortOptions.created")}
-						</SelectItem>
-						<SelectItem value="priority">
-							{t("issues.sortOptions.priority")}
-						</SelectItem>
-					</SelectContent>
-				</Select>
-			)}
-			{hasFilters && (
-				<Button
-					variant="ghost"
-					size="sm"
-					className={cn(stacked && "justify-center")}
-					onClick={() =>
-						onUpdateSearch({
-							status: "",
-							priority: "",
-							assigneeId: "",
-							labelId: "",
-							search: "",
-							page: 1,
-						})
-					}
-				>
-					{t("issues.clearFilters")}
-				</Button>
-			)}
-		</>
 	);
 }

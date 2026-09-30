@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -12,14 +12,15 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { CircleAlert } from "lucide-react";
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { authClient } from "@/lib/auth-client";
+import { bootstrapQuery, useSignUp } from "@/features/auth/data";
+
 import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
@@ -27,8 +28,7 @@ import {
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-import { bootstrapQuery } from "@/lib/queries/bootstrap";
-import { sessionOptions } from "@/lib/session";
+
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const registerSchema = z.object({
@@ -47,12 +47,15 @@ export function RegisterPage() {
 	const { t } = useTranslation();
 	useDocumentTitle(t("register.title"));
 	const navigate = useNavigate({ from: "/register" });
-	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 	const { data: bootstrap } = useQuery(bootstrapQuery());
+	const register = useSignUp({
+		onError: (error) => setError(apiErrorMessage(t, error, "register.failed")),
+		onSuccess: () => navigate({ to: "/", replace: true }),
+	});
 
-	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+	const onSubmit = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError(null);
 		const data = new FormData(e.currentTarget);
@@ -67,13 +70,7 @@ export function RegisterPage() {
 			focusFirstInvalidField(errors, INPUT_IDS);
 			return;
 		}
-		const { error } = await authClient.signUp.email(parsed.data);
-		if (error) {
-			setError(apiErrorMessage(t, error, "register.failed"));
-			return;
-		}
-		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
-		navigate({ to: "/", replace: true });
+		register.mutate(parsed.data);
 	};
 
 	return (
@@ -156,7 +153,9 @@ export function RegisterPage() {
 								<AlertDescription>{error}</AlertDescription>
 							</Alert>
 						)}
-						<Button type="submit">{t("register.submit")}</Button>
+						<Button type="submit" disabled={register.isPending}>
+							{t("register.submit")}
+						</Button>
 					</form>
 					<p className="text-muted-foreground mt-4 text-center text-sm">
 						{t("register.haveAccount")}{" "}

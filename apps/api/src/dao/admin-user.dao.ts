@@ -24,6 +24,11 @@ const toDto = (row: UserRow): AdminUserDto => ({
 });
 
 export const createAdminUserDao = (db: Database) => ({
+	countUsers: async (): Promise<number> => {
+		const [{ value }] = await db.select({ value: count() }).from(userTable);
+		return value;
+	},
+
 	list: async ({
 		page,
 		pageSize,

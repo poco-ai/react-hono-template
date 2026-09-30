@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
-import { useSession } from "@/lib/session";
+import { useSession } from "@/features/auth/data";
 
 export function AppLayout({ children }: { children: ReactNode }) {
 	const { t } = useTranslation();

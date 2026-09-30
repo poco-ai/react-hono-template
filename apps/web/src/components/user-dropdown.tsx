@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
@@ -14,9 +13,10 @@ import {
 } from "@workspace/ui/components/dropdown-menu";
 import { cn } from "@workspace/ui/lib/utils";
 import { useTranslation } from "react-i18next";
-import { authClient } from "@/lib/auth-client";
-import type { OrgRole } from "@/lib/queries/members";
-import { type SessionUser, sessionOptions } from "@/lib/session";
+import { toast } from "sonner";
+import { type SessionUser, useSignOut } from "@/features/auth/data";
+import type { OrgRole } from "@/features/members/data";
+import { apiErrorMessage } from "@/lib/errors";
 
 export function UserDropdown({
 	user,
@@ -29,19 +29,17 @@ export function UserDropdown({
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
+	const logout = useSignOut({
+		onSuccess: () => navigate({ to: "/login", replace: true }),
+		onError: (error) => toast.error(apiErrorMessage(t, error)),
+	});
 
 	const platformRoleLabel: Record<"admin" | "user", string> = {
 		admin: t("adminUsers.roles.admin"),
 		user: t("adminUsers.roles.user"),
 	};
 
-	const signOut = async () => {
-		await authClient.signOut();
-		queryClient.setQueryData(sessionOptions.queryKey, null);
-		queryClient.clear();
-		navigate({ to: "/login", replace: true });
-	};
+	const signOut = () => logout.mutate();
 
 	return (
 		<DropdownMenu>
@@ -79,7 +77,7 @@ export function UserDropdown({
 					</DropdownMenuLabel>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem onClick={signOut}>
+				<DropdownMenuItem onClick={signOut} disabled={logout.isPending}>
 					{t("nav.signOut")}
 				</DropdownMenuItem>
 			</DropdownMenuContent>

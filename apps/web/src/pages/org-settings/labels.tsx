@@ -1,5 +1,5 @@
 import type { LabelDto } from "@api/dto/label.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createLabelSchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
@@ -33,8 +33,13 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
-import { LabelBadge } from "@/components/issue/label-badge";
-import { client, unwrap } from "@/lib/api";
+import { LabelBadge } from "@/features/issues/components/label-badge";
+import {
+	labelsQuery,
+	useDeleteLabel,
+	useSaveLabel,
+} from "@/features/labels/data";
+
 import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
@@ -42,7 +47,7 @@ import {
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-import { labelsQuery } from "@/lib/queries/labels";
+
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 import { useOrgRole } from "@/lib/use-org-role";
@@ -52,7 +57,7 @@ const DEFAULT_COLOR = "#94a3b8";
 export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("settings.labels"));
-	const queryClient = useQueryClient();
+
 	const labels = useQuery(labelsQuery(orgId));
 	const { canManage } = useOrgRole(orgId);
 	const frozen = useOrgFrozen(orgId);
@@ -60,41 +65,18 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 	const [editing, setEditing] = useState<LabelDto | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<LabelDto | null>(null);
 
-	const invalidate = () =>
-		queryClient.invalidateQueries({ queryKey: ["orgs", orgId, "labels"] });
-
-	const saveMutation = useMutation({
-		mutationFn: (input: { name: string; color: string }) =>
-			editing
-				? unwrap(
-						client.api.orgs[":orgId"].labels[":labelId"].$patch({
-							param: { orgId, labelId: editing.id },
-							json: input,
-						}),
-					)
-				: unwrap(
-						client.api.orgs[":orgId"].labels.$post({
-							param: { orgId },
-							json: input,
-						}),
-					),
+	const saveMutation = useSaveLabel(orgId, editing?.id, {
 		onSuccess: () => {
 			toast.success(t(editing ? "toast.labelUpdated" : "toast.labelCreated"));
-			invalidate();
+
 			setDialogOpen(false);
 		},
 	});
 
-	const deleteMutation = useMutation({
-		mutationFn: (labelId: string) =>
-			unwrap(
-				client.api.orgs[":orgId"].labels[":labelId"].$delete({
-					param: { orgId, labelId },
-				}),
-			),
+	const deleteMutation = useDeleteLabel(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.labelDeleted"));
-			invalidate();
+
 			setDeleteTarget(null);
 		},
 	});

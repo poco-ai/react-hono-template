@@ -8,7 +8,8 @@ import {
 	CardTitle,
 } from "@workspace/ui/components/card";
 import { useTranslation } from "react-i18next";
-import { client, unwrap } from "@/lib/api";
+import { adminStatsQuery } from "@/features/admin/data";
+
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -16,10 +17,7 @@ export function AdminHomePage() {
 	const { t } = useTranslation();
 	useDocumentTitle(t("adminHome.title"));
 
-	const statsQuery = useQuery({
-		queryKey: ["admin-stats"],
-		queryFn: () => unwrap(client.api.admin.stats.$get()),
-	});
+	const statsQuery = useQuery(adminStatsQuery());
 
 	const stats: AdminStatsDto | undefined = statsQuery.data;
 

@@ -5,8 +5,8 @@ import { Button } from "@workspace/ui/components/button";
 import { CircleAlert, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { orgsQuery } from "@/features/organizations/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { orgsQuery } from "@/lib/queries/org";
 
 export const Route = createFileRoute("/_auth/")({
 	component: HomeRedirect,

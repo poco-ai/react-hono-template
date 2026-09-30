@@ -1,7 +1,6 @@
 import type { ApiKeyDto } from "@api/dto/apikey.dto";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { createApiKeySchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
@@ -16,16 +15,6 @@ import {
 import { Badge } from "@workspace/ui/components/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import {
 	Table,
 	TableBody,
 	TableCell,
@@ -34,31 +23,24 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { CircleAlert, ExternalLink, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
-import { SecretReveal } from "@/components/secret-reveal";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
-import { client, unwrap } from "@/lib/api";
+import { CreateApiKeyDialog } from "@/features/api-keys/components/create-api-key-dialog";
+import { apiKeysQuery, useRevokeApiKey } from "@/features/api-keys/data";
+import { membersQuery } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
 import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
-import { apiKeysQuery, apiKeysRootKey } from "@/lib/queries/apikeys";
-import { membersQuery } from "@/lib/queries/members";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("settings.apiKeys"));
-	const queryClient = useQueryClient();
+
 	const [page, setPage] = useState(1);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [revokeTarget, setRevokeTarget] = useState<ApiKeyDto | null>(null);
@@ -77,19 +59,10 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 		);
 	};
 
-	const invalidate = () =>
-		queryClient.invalidateQueries({ queryKey: apiKeysRootKey(orgId) });
-
-	const revokeMutation = useMutation({
-		mutationFn: (keyId: string) =>
-			unwrap(
-				client.api.orgs[":orgId"]["api-keys"][":keyId"].$delete({
-					param: { orgId, keyId },
-				}),
-			),
+	const revokeMutation = useRevokeApiKey(orgId, {
 		onSuccess: () => {
 			toast.success(t("toast.apiKeyRevoked"));
-			invalidate();
+
 			setRevokeTarget(null);
 			setPage((current) => {
 				const remaining = (keys.data?.total ?? 1) - 1;
@@ -245,7 +218,6 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 				orgId={orgId}
 				open={createOpen}
 				onOpenChange={setCreateOpen}
-				onCreated={invalidate}
 			/>
 
 			<AlertDialog
@@ -279,125 +251,5 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 				</AlertDialogContent>
 			</AlertDialog>
 		</div>
-	);
-}
-
-function CreateApiKeyDialog({
-	orgId,
-	open,
-	onOpenChange,
-	onCreated,
-}: {
-	orgId: string;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	onCreated: () => void;
-}) {
-	const { t } = useTranslation();
-	const [name, setName] = useState("");
-	const [createdKey, setCreatedKey] = useState<string | null>(null);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-
-	useEffect(() => {
-		if (open) {
-			setName("");
-			setCreatedKey(null);
-			setFieldErrors({});
-		}
-	}, [open]);
-
-	const createMutation = useMutation({
-		mutationFn: async (input: { name: string }) =>
-			unwrap(
-				client.api.orgs[":orgId"]["api-keys"].$post({
-					param: { orgId },
-					json: input,
-				}),
-			),
-		onSuccess: (apiKey) => {
-			setCreatedKey(apiKey.key);
-			onCreated();
-		},
-	});
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>
-						{createdKey ? t("apiKeys.createdTitle") : t("apiKeys.createTitle")}
-					</DialogTitle>
-					<DialogDescription>
-						{createdKey
-							? t("apiKeys.secretWarning")
-							: t("apiKeys.createDescription")}
-					</DialogDescription>
-				</DialogHeader>
-				{createdKey ? (
-					<div className="flex flex-col gap-3">
-						<SecretReveal value={createdKey} />
-						<DialogFooter>
-							<Button type="button" onClick={() => onOpenChange(false)}>
-								{t("common.done")}
-							</Button>
-						</DialogFooter>
-					</div>
-				) : (
-					<form
-						noValidate
-						className="flex flex-col gap-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							const parsed = createApiKeySchema.safeParse({
-								name: name.trim(),
-							});
-							if (!parsed.success) {
-								const errors = fieldErrorsFromZod(parsed.error, t);
-								setFieldErrors(errors);
-								focusFirstInvalidField(errors, { name: "api-key-name" });
-								return;
-							}
-							createMutation.mutate(parsed.data);
-						}}
-					>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="api-key-name">{t("apiKeys.name")}</Label>
-							<Input
-								id="api-key-name"
-								value={name}
-								placeholder={t("apiKeys.namePlaceholder")}
-								onChange={(e) => {
-									setName(e.target.value);
-									setFieldErrors((prev) => withoutFieldError(prev, "name"));
-								}}
-								maxLength={50}
-								aria-invalid={fieldErrors.name ? true : undefined}
-								aria-describedby={
-									fieldErrors.name ? "api-key-name-error" : undefined
-								}
-							/>
-							{fieldErrors.name && (
-								<p id="api-key-name-error" className="text-destructive text-sm">
-									{fieldErrors.name}
-								</p>
-							)}
-						</div>
-						{createMutation.isError && (
-							<Alert variant="destructive">
-								<CircleAlert />
-								<AlertDescription>
-									{apiErrorMessage(t, createMutation.error)}
-								</AlertDescription>
-							</Alert>
-						)}
-						<DialogFooter>
-							<Button type="submit" disabled={createMutation.isPending}>
-								{t("common.create")}
-							</Button>
-						</DialogFooter>
-					</form>
-				)}
-			</DialogContent>
-		</Dialog>
 	);
 }

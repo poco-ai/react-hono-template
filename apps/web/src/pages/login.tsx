@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
 	Link,
 	useNavigate,
@@ -17,15 +16,15 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { CircleAlert } from "lucide-react";
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { authClient } from "@/lib/auth-client";
+import { useSignIn } from "@/features/auth/data";
+
 import { apiErrorMessage } from "@/lib/errors";
-import { sessionOptions } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function LoginPage() {
@@ -33,28 +32,27 @@ export function LoginPage() {
 	useDocumentTitle(t("login.title"));
 	const navigate = useNavigate({ from: "/login" });
 	const router = useRouter();
-	const queryClient = useQueryClient();
 	const { redirect: redirectTo } = useSearch({ from: "/login" });
 	const [error, setError] = useState<string | null>(null);
+	const login = useSignIn({
+		onError: (error) => setError(apiErrorMessage(t, error, "login.failed")),
+		onSuccess: () => {
+			if (redirectTo) {
+				router.history.push(redirectTo);
+			} else {
+				navigate({ to: "/", replace: true });
+			}
+		},
+	});
 
-	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+	const onSubmit = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError(null);
 		const form = new FormData(e.currentTarget);
-		const { error } = await authClient.signIn.email({
+		login.mutate({
 			email: String(form.get("email") ?? ""),
 			password: String(form.get("password") ?? ""),
 		});
-		if (error) {
-			setError(apiErrorMessage(t, error, "login.failed"));
-			return;
-		}
-		queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
-		if (redirectTo) {
-			router.history.push(redirectTo);
-		} else {
-			navigate({ to: "/", replace: true });
-		}
 	};
 
 	return (
@@ -97,7 +95,9 @@ export function LoginPage() {
 								<AlertDescription>{error}</AlertDescription>
 							</Alert>
 						)}
-						<Button type="submit">{t("login.submit")}</Button>
+						<Button type="submit" disabled={login.isPending}>
+							{t("login.submit")}
+						</Button>
 					</form>
 					<p className="text-muted-foreground mt-4 text-center text-sm">
 						{t("login.noAccount")}{" "}

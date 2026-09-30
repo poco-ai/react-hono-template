@@ -3,7 +3,7 @@ import type { ApiOk, ApiResult } from "@workspace/shared";
 import { type ClientResponse, hc } from "hono/client";
 import { errorMessage } from "@/lib/errors";
 
-export const client = hc<AppType>(import.meta.env.VITE_API_URL ?? "", {
+export const client = hc<AppType>(import.meta.env?.VITE_API_URL ?? "", {
 	init: { credentials: "include" },
 });
 

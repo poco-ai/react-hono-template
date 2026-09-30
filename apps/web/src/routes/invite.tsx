@@ -1,4 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -13,9 +12,9 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { authClient } from "@/lib/auth-client";
-import { orgsQuery } from "@/lib/queries/org";
-import { sessionOptions } from "@/lib/session";
+import { sessionOptions } from "@/features/auth/data";
+import { useAcceptInvitation } from "@/features/members/data";
+import { errorCode } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const searchSchema = z.object({
@@ -35,14 +34,6 @@ const inviteErrorKeys: Record<string, InviteErrorKey> = {
 	USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "invite.errors.alreadyMember",
 	ORGANIZATION_MEMBERSHIP_LIMIT_REACHED: "invite.errors.orgFull",
 };
-
-class InviteAcceptError extends Error {
-	code?: string;
-	constructor(code?: string | null) {
-		super("invitation failed");
-		this.code = code ?? undefined;
-	}
-}
 
 function getInviteErrorKey(code?: string): InviteErrorKey {
 	return (code ? inviteErrorKeys[code] : undefined) ?? "invite.errors.generic";
@@ -65,22 +56,12 @@ export const Route = createFileRoute("/invite")({
 function InvitePage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
+
 	const { invitationId } = Route.useSearch();
 	const started = useRef(false);
 
-	const acceptMutation = useMutation({
-		mutationFn: async () => {
-			const { error } = await authClient.organization.acceptInvitation({
-				invitationId,
-			});
-			if (error) {
-				throw new InviteAcceptError(error.code);
-			}
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: orgsQuery().queryKey });
-		},
+	const acceptMutation = useAcceptInvitation(invitationId, {
+		onSuccess: () => {},
 	});
 
 	const { mutate: accept } = acceptMutation;
@@ -126,13 +107,7 @@ function InvitePage() {
 						<Alert variant="destructive">
 							<CircleAlert />
 							<AlertDescription>
-								{t(
-									getInviteErrorKey(
-										acceptMutation.error instanceof InviteAcceptError
-											? acceptMutation.error.code
-											: undefined,
-									),
-								)}
+								{t(getInviteErrorKey(errorCode(acceptMutation.error)))}
 							</AlertDescription>
 						</Alert>
 					)}

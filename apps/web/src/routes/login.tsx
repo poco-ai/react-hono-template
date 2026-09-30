@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
-import { sessionOptions } from "@/lib/session";
+import { sessionOptions } from "@/features/auth/data";
 import { LoginPage } from "@/pages/login";
 
 const searchSchema = z.object({
