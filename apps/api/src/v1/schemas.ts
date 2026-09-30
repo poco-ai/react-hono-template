@@ -1,5 +1,16 @@
+import type { ApiErr } from "@workspace/shared";
 import { z } from "zod";
+import type { IssueDetailDto, ListIssuesDto } from "../dto/issue.dto";
+import type { LabelDto } from "../dto/label.dto";
+import type { ProjectDto } from "../dto/project.dto";
 
+/**
+ * OpenAPI response schemas for the public v1 API. Each schema is compile-bound
+ * to its internal counterpart with `satisfies z.ZodType<...>`: adding, removing
+ * or retyping a DTO field breaks the build instead of silently drifting from
+ * the generated document. Request schemas are taken from @workspace/shared
+ * directly in the route files.
+ */
 export const projectSchema = z.object({
 	id: z.string(),
 	orgId: z.string(),
@@ -11,7 +22,7 @@ export const projectSchema = z.object({
 	nextNumber: z.number(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
-});
+}) satisfies z.ZodType<ProjectDto>;
 
 export const issueSchema = z.object({
 	id: z.string(),
@@ -30,7 +41,7 @@ export const issueSchema = z.object({
 	createdAt: z.string(),
 	updatedAt: z.string(),
 	labelIds: z.array(z.string()),
-});
+}) satisfies z.ZodType<IssueDetailDto>;
 
 export const labelSchema = z.object({
 	id: z.string(),
@@ -39,14 +50,14 @@ export const labelSchema = z.object({
 	color: z.string(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
-});
+}) satisfies z.ZodType<LabelDto>;
 
 export const issueListSchema = z.object({
 	items: z.array(issueSchema),
 	total: z.number(),
 	page: z.number(),
 	pageSize: z.number(),
-});
+}) satisfies z.ZodType<ListIssuesDto>;
 
 export const deletedSchema = z.object({
 	deleted: z.boolean(),
@@ -58,7 +69,7 @@ export const errorSchema = z.object({
 		code: z.string(),
 		message: z.string(),
 	}),
-});
+}) satisfies z.ZodType<ApiErr>;
 
 export const envelope = <T extends z.ZodType>(schema: T) =>
 	z.object({
@@ -74,16 +85,4 @@ export const jsonOk = <T extends z.ZodType>(schema: T) => ({
 export const jsonError = (description: string) => ({
 	description,
 	content: { "application/json": { schema: errorSchema } },
-});
-
-export const issueQuerySchema = z.object({
-	projectId: z.string().optional(),
-	status: z.string().optional(),
-	priority: z.string().optional(),
-	assigneeId: z.string().optional(),
-	labelId: z.string().optional(),
-	search: z.string().optional(),
-	sort: z.string().optional(),
-	page: z.string().optional(),
-	pageSize: z.string().optional(),
 });

@@ -1,10 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { ApiOk } from "@workspace/shared";
-import {
-	ApiError,
-	ApiErrorCode,
-	issueListQuerySchema,
-} from "@workspace/shared";
+import { ApiError, ApiErrorCode } from "@workspace/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
@@ -44,7 +40,15 @@ export const createV1App = (dependencies: Dependencies) => {
 	const { planService, projectService, issueService, labelService } =
 		dependencies.services;
 
-	const app = new OpenAPIHono<V1Env>();
+	// Validation failures (query/body/params) are answered with the same
+	// `{ ok: false, error }` envelope the routes document, instead of the
+	// framework's raw ZodError payload.
+	const app = new OpenAPIHono<V1Env>({
+		defaultHook: (result, c) =>
+			result.success
+				? undefined
+				: fail(c, ApiErrorCode.VALIDATION, formatZodError(result.error), 400),
+	});
 	const rateLimiter = rateLimit(planService);
 
 	for (const base of ["/projects", "/issues", "/labels"]) {
@@ -94,17 +98,9 @@ export const createV1App = (dependencies: Dependencies) => {
 
 	app.openapi(listIssuesRoute, async (c) => {
 		const orgId = c.get("apiKeyAuth").orgId;
-		const parsed = issueListQuerySchema.safeParse(c.req.valid("query"));
-		if (!parsed.success) {
-			throw new ApiError(
-				400,
-				ApiErrorCode.VALIDATION,
-				formatZodError(parsed.error),
-			);
-		}
 		return okV1(
 			c,
-			await issueService.listIssues(orgId, null, parsed.data),
+			await issueService.listIssues(orgId, null, c.req.valid("query")),
 			200,
 		);
 	});

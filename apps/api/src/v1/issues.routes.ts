@@ -1,10 +1,13 @@
 import { createRoute } from "@hono/zod-openapi";
-import { createIssueSchema, updateIssueSchema } from "@workspace/shared";
+import {
+	createIssueSchema,
+	issueListQuerySchema,
+	updateIssueSchema,
+} from "@workspace/shared";
 import { z } from "zod";
 import {
 	deletedSchema,
 	issueListSchema,
-	issueQuerySchema,
 	issueSchema,
 	jsonError,
 	jsonOk,
@@ -32,7 +35,7 @@ export const listIssuesRoute = createRoute({
 	method: "get",
 	path: "/issues",
 	request: {
-		query: issueQuerySchema,
+		query: issueListQuerySchema,
 	},
 	responses: {
 		200: jsonOk(issueListSchema),
