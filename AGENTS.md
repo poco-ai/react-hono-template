@@ -78,7 +78,8 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
 
 Push to `main` auto-deploys via GitHub Actions (needs repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`):
 
+- `ci.yml` — runs on every pull request and on pushes to `main`; a single `quality` job (`bun install --frozen-lockfile` → `bun run lint` → `bun run typecheck` → `bun run test`) is the shared quality gate.
 - `deploy-api.yml` — triggers on `apps/api/**`, `packages/shared/**`, or `bun.lock`; deploys source directly (wrangler bundles Hono, no build step).
-- `deploy-web.yml` — triggers on `apps/web/**`, `packages/ui/**`, `packages/shared/**`, or `bun.lock`; builds with `VITE_API_URL=https://react-hono-api.chenqiyuan1012.workers.dev`, then deploys.
+- `deploy-web.yml` — triggers on `apps/web/**`, `packages/ui/**`, `packages/shared/**`, `apps/api/**` (web's `tsc -b` type-checks api source via the `@api/*` alias), or `bun.lock`; builds with `VITE_API_URL=https://react-hono-api.chenqiyuan1012.workers.dev`, then deploys.
 
 Manual: `bun run deploy` inside the app dir. Prod URLs (`react-hono-api.chenqiyuan1012.workers.dev`, `react-hono-web.chenqiyuan1012.workers.dev`) appear in `trustedOrigins`, the web workflow's `VITE_API_URL`, and app READMEs — update all of them together if a Worker is renamed.

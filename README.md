@@ -36,7 +36,7 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 ```sh
 bun install
 cp apps/api/.dev.vars.example apps/api/.dev.vars   # minimum: BETTER_AUTH_SECRET
-bun run db:migrate:local                            # local miniflare D1
+(cd apps/api && bun run db:migrate:local)           # local miniflare D1 (script lives in apps/api)
 bun run dev                                         # api :8787 + web :5173
 ```
 
@@ -91,7 +91,7 @@ These are deliberate template-level simplifications. Each works correctly for de
 
 Push to `main` deploys both Workers via GitHub Actions (needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` secrets; web is built with `VITE_API_URL` pointing at the API Worker). Manual: `bun run deploy` inside each app. First production setup:
 
-1. `wrangler d1 create` + update `database_id` in `apps/api/wrangler.jsonc`, then `bun run db:migrate:remote`
+1. `wrangler d1 create` + update `database_id` in `apps/api/wrangler.jsonc`, then run `bun run db:migrate:remote` inside `apps/api`
 2. Set secrets (`BETTER_AUTH_SECRET`, optionally S3/Stripe vars) and add your web origin to `trustedOrigins` in `apps/api/src/index.ts`
 3. Stripe: create a subscription price, set the three secrets, add a webhook endpoint `<api-url>/api/stripe/webhook` (events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`)
 
