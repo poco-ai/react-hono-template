@@ -1,54 +1,20 @@
-import {
-	ApiError,
-	ApiErrorCode,
-	type AttachmentPresignInput,
-	type RegisterAttachmentInput,
+import type {
+	AttachmentPresignInput,
+	RegisterAttachmentInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
+import {
+	requireIssueNumber,
+	requireParam,
+	requireProjectId,
+} from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import type { AttachmentService } from "../services/attachment.service";
 
 type Env = SessionEnv & OrgEnv;
-
-const requireProjectId = (c: Context<Env>) => {
-	const projectId = c.req.param("projectId");
-	if (!projectId) {
-		throw new ApiError(
-			400,
-			ApiErrorCode.INVALID_PARAM,
-			"Missing required param: projectId",
-		);
-	}
-	return projectId;
-};
-
-const requireIssueNumber = (c: Context<Env>) => {
-	const raw = c.req.param("number");
-	const number = Number(raw);
-	if (!/^\d+$/.test(raw ?? "") || !Number.isInteger(number) || number < 1) {
-		throw new ApiError(
-			400,
-			ApiErrorCode.INVALID_PARAM,
-			"Issue number must be a positive integer",
-		);
-	}
-	return number;
-};
-
-const requireAttachmentId = (c: Context<Env>) => {
-	const attachmentId = c.req.param("attachmentId");
-	if (!attachmentId) {
-		throw new ApiError(
-			400,
-			ApiErrorCode.INVALID_PARAM,
-			"Missing required param: attachmentId",
-		);
-	}
-	return attachmentId;
-};
 
 export const createAttachmentController = (service: AttachmentService) => ({
 	list: async (c: Context<Env>) =>
@@ -93,13 +59,9 @@ export const createAttachmentController = (service: AttachmentService) => ({
 				orgMember.orgId,
 				requireProjectId(c),
 				requireIssueNumber(c),
-				requireAttachmentId(c),
+				requireParam(c, "attachmentId"),
 				{ userId: orgMember.userId, role: orgMember.role },
 			),
 		);
 	},
 });
-
-export type AttachmentController = ReturnType<
-	typeof createAttachmentController
->;

@@ -31,5 +31,3 @@ export const createAdminOrgController = (service: AdminOrgService) => ({
 
 	stats: async (c: Context<Env>) => ok(c, await service.stats()),
 });
-
-export type AdminOrgController = ReturnType<typeof createAdminOrgController>;

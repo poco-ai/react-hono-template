@@ -1,28 +1,12 @@
-import {
-	ApiError,
-	ApiErrorCode,
-	type CreateLabelInput,
-	type UpdateLabelInput,
-} from "@workspace/shared";
+import type { CreateLabelInput, UpdateLabelInput } from "@workspace/shared";
 import type { Context } from "hono";
+import { requireParam } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import type { LabelService } from "../services/label.service";
 
 type Env = SessionEnv & OrgEnv;
-
-const requireLabelId = (c: Context<Env>) => {
-	const labelId = c.req.param("labelId");
-	if (!labelId) {
-		throw new ApiError(
-			400,
-			ApiErrorCode.INVALID_PARAM,
-			"Missing required param: labelId",
-		);
-	}
-	return labelId;
-};
 
 export const createLabelController = (service: LabelService) => ({
 	list: async (c: Context<Env>) =>
@@ -36,15 +20,16 @@ export const createLabelController = (service: LabelService) => ({
 			c,
 			await service.updateLabel(
 				c.get("orgMember").orgId,
-				requireLabelId(c),
+				requireParam(c, "labelId"),
 				input,
 			),
 		),
 
 	remove: async (c: Context<Env>) => {
-		await service.deleteLabel(c.get("orgMember").orgId, requireLabelId(c));
+		await service.deleteLabel(
+			c.get("orgMember").orgId,
+			requireParam(c, "labelId"),
+		);
 		return ok(c, { deleted: true });
 	},
 });
-
-export type LabelController = ReturnType<typeof createLabelController>;

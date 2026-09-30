@@ -3,27 +3,15 @@ import type {
 	UpdateWebhookInput,
 	WebhookDeliveryListQuery,
 } from "@workspace/shared";
-import { ApiError, ApiErrorCode } from "@workspace/shared";
 import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
+import { requireParam } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import type { WebhookService } from "../services/webhook.service";
 
 type Env = SessionEnv & OrgEnv;
-
-const requireParam = (c: Context<Env>, name: string) => {
-	const value = c.req.param(name);
-	if (!value) {
-		throw new ApiError(
-			400,
-			ApiErrorCode.INVALID_PARAM,
-			`Missing required param: ${name}`,
-		);
-	}
-	return value;
-};
 
 export const createWebhookController = (service: WebhookService) => ({
 	list: async (c: Context<Env>) =>
@@ -99,5 +87,3 @@ export const createWebhookController = (service: WebhookService) => ({
 			),
 		),
 });
-
-export type WebhookController = ReturnType<typeof createWebhookController>;

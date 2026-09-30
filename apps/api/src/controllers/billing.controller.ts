@@ -22,5 +22,3 @@ export const createBillingController = (service: BillingService) => ({
 		return ok(c, await service.createPortal(orgId, origin));
 	},
 });
-
-export type BillingController = ReturnType<typeof createBillingController>;

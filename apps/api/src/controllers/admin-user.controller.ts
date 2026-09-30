@@ -43,5 +43,3 @@ export const createAdminController = (service: AdminUserService) => ({
 
 	unban: async (c: Context) => ok(c, await service.unbanUser(requireId(c))),
 });
-
-export type AdminController = ReturnType<typeof createAdminController>;
