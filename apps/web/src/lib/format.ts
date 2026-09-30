@@ -1,34 +1,4 @@
-import {
-	ISSUE_PRIORITIES,
-	ISSUE_PRIORITY,
-	type IssuePriorityName,
-} from "@workspace/shared";
 import { i18n } from "@/i18n";
-
-export function parseCsv(value: string | undefined): string[] {
-	return value
-		? value
-				.split(",")
-				.map((part) => part.trim())
-				.filter(Boolean)
-		: [];
-}
-
-export function serializeCsv(values: string[]): string {
-	return values.join(",");
-}
-
-const PRIORITY_NAMES = new Map<number, IssuePriorityName>(
-	ISSUE_PRIORITIES.map((p) => [p.value, p.name]),
-);
-
-export function priorityName(value: number): IssuePriorityName {
-	return PRIORITY_NAMES.get(value) ?? "none";
-}
-
-export function priorityValue(name: IssuePriorityName): number {
-	return ISSUE_PRIORITY[name];
-}
 
 function parseDateValue(value: string): Date {
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -119,17 +89,4 @@ export function slugify(value: string): string {
 		.replace(/[\s_]+/g, "-")
 		.replace(/-+/g, "-")
 		.replace(/^-|-$/g, "");
-}
-
-export function projectKeyFromName(name: string): string {
-	const words = name
-		.toUpperCase()
-		.replace(/[^A-Z ]/g, " ")
-		.trim()
-		.split(/\s+/)
-		.filter(Boolean);
-	const initials = words.map((word) => word[0]).join("");
-	const key =
-		initials.length >= 2 ? initials.slice(0, 6) : words.join("").slice(0, 3);
-	return /^[A-Z]{2,6}$/.test(key) ? key : "";
 }

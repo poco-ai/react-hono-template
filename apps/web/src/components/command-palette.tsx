@@ -25,8 +25,8 @@ import {
 import { type Dispatch, type SetStateAction, useEffect } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 import { projectsQuery } from "@/features/projects/data";
-import { useOrgRole } from "@/lib/use-org-role";
 
 export function CommandPalette({
 	open,

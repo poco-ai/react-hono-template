@@ -1,43 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import { Button } from "@workspace/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@workspace/ui/components/card";
-import { CircleAlert } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { z } from "zod";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { sessionOptions } from "@/features/auth/data";
-import { useAcceptInvitation } from "@/features/members/data";
-import { errorCode } from "@/lib/errors";
-import { useDocumentTitle } from "@/lib/use-document-title";
-
-const searchSchema = z.object({
-	invitationId: z.string().min(1),
-});
-
-type InviteErrorKey =
-	| "invite.errors.invitationNotFound"
-	| "invite.errors.emailMismatch"
-	| "invite.errors.alreadyMember"
-	| "invite.errors.orgFull"
-	| "invite.errors.generic";
-
-const inviteErrorKeys: Record<string, InviteErrorKey> = {
-	INVITATION_NOT_FOUND: "invite.errors.invitationNotFound",
-	YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION: "invite.errors.emailMismatch",
-	USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "invite.errors.alreadyMember",
-	ORGANIZATION_MEMBERSHIP_LIMIT_REACHED: "invite.errors.orgFull",
-};
-
-function getInviteErrorKey(code?: string): InviteErrorKey {
-	return (code ? inviteErrorKeys[code] : undefined) ?? "invite.errors.generic";
-}
+import { inviteSearchSchema } from "@/features/members/search";
+import { InvitePage } from "@/pages/invite";
 
 export const Route = createFileRoute("/invite")({
 	beforeLoad: async ({ context, location }) => {
@@ -49,73 +13,11 @@ export const Route = createFileRoute("/invite")({
 			});
 		}
 	},
-	validateSearch: searchSchema,
-	component: InvitePage,
+	validateSearch: inviteSearchSchema,
+	component: InviteRoute,
 });
 
-function InvitePage() {
-	const { t } = useTranslation();
-	const navigate = useNavigate();
-
+function InviteRoute() {
 	const { invitationId } = Route.useSearch();
-	const started = useRef(false);
-
-	const acceptMutation = useAcceptInvitation(invitationId, {
-		onSuccess: () => {},
-	});
-
-	const { mutate: accept } = acceptMutation;
-
-	useDocumentTitle(
-		acceptMutation.isSuccess
-			? t("invite.successTitle")
-			: acceptMutation.isError
-				? t("invite.errorTitle")
-				: t("invite.title"),
-	);
-
-	useEffect(() => {
-		if (!started.current) {
-			started.current = true;
-			accept();
-		}
-	}, [accept]);
-
-	const goHome = () => navigate({ to: "/", replace: true });
-
-	return (
-		<div className="flex min-h-svh items-center justify-center p-6">
-			<Card className="w-full max-w-sm">
-				<CardHeader>
-					<CardTitle>
-						{acceptMutation.isSuccess
-							? t("invite.successTitle")
-							: acceptMutation.isError
-								? t("invite.errorTitle")
-								: t("invite.title")}
-					</CardTitle>
-					<CardDescription>
-						{acceptMutation.isSuccess
-							? t("invite.successDescription")
-							: acceptMutation.isPending
-								? t("invite.accepting")
-								: undefined}
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-4">
-					{acceptMutation.isError && (
-						<Alert variant="destructive">
-							<CircleAlert />
-							<AlertDescription>
-								{t(getInviteErrorKey(errorCode(acceptMutation.error)))}
-							</AlertDescription>
-						</Alert>
-					)}
-					{(acceptMutation.isSuccess || acceptMutation.isError) && (
-						<Button onClick={goHome}>{t("invite.continue")}</Button>
-					)}
-				</CardContent>
-			</Card>
-		</div>
-	);
+	return <InvitePage invitationId={invitationId} />;
 }

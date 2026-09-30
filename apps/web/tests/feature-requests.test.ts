@@ -168,11 +168,7 @@ test("invitation failures retain plan-limit codes for translated quota feedback"
 			),
 		async () => {
 			await assert.rejects(
-				inviteMember(
-					"org",
-					{ email: "person@example.com", role: "member" },
-					"Invitation failed",
-				),
+				inviteMember("org", { email: "person@example.com", role: "member" }),
 				(error: unknown) =>
 					error instanceof Error &&
 					"code" in error &&

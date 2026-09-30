@@ -5,7 +5,7 @@ import {
 	useParams,
 } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { useOrgRole } from "@/lib/use-org-role";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 
 export const Route = createFileRoute("/_auth/orgs/$orgId/settings")({
 	component: SettingsLayout,

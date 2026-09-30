@@ -11,7 +11,7 @@ import { issueActivitiesQuery } from "@/features/activities/data";
 import { ActivitySentence } from "@/features/issues/components/activity-sentence";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
 
 export function IssueActivityTimeline({
 	orgId,

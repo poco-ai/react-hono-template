@@ -19,13 +19,13 @@ import { QuotaError } from "@/components/quota-error";
 import { useSession } from "@/features/auth/data";
 import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
 import { useCreateProject } from "@/features/projects/data";
+import { projectKeyFromName } from "@/features/projects/utils";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-import { projectKeyFromName } from "@/lib/issue-utils";
 
 const DEFAULT_COLOR = "#6366f1";
 

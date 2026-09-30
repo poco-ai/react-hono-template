@@ -5,6 +5,8 @@ import {
 	ISSUE_STATUSES,
 	type IssuePriorityName,
 	type IssueStatus,
+	priorityName,
+	priorityValue,
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
@@ -33,15 +35,10 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
 import { DateField } from "@/features/issues/components/date-field";
-import { LabelBadge } from "@/features/issues/components/label-badge";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
-import {
-	fromDateInputValue,
-	priorityName,
-	priorityValue,
-	toDateInputValue,
-} from "@/lib/issue-utils";
+import { LabelBadge } from "@/features/labels/components/label-badge";
+import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const UNASSIGNED = "__unassigned__";

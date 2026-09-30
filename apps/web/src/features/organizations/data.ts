@@ -4,10 +4,9 @@ import {
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { authClient } from "@/lib/auth-client";
 
-import { errorCode } from "@/lib/errors";
+import { codedError, errorCode } from "@/lib/errors";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -33,18 +32,19 @@ export function orgsQuery() {
 	});
 }
 
-export const createOrganization = async (
-	{ name, slug }: { name: string; slug: string },
-	failureMessage: string,
-) => {
+export const createOrganization = async ({
+	name,
+	slug,
+}: {
+	name: string;
+	slug: string;
+}) => {
 	const { data, error } = await authClient.organization.create({
 		name: name.trim(),
 		slug,
 	});
 	if (error) {
-		throw Object.assign(new Error(error.message ?? failureMessage), {
-			code: errorCode(error),
-		});
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 	return data;
 };
@@ -56,11 +56,10 @@ export function useCreateOrganization(
 	>,
 ) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		...callbacks,
 		mutationFn: (input: { name: string; slug: string }) =>
-			createOrganization(input, t("onboarding.failed")),
+			createOrganization(input),
 		onSuccess: (...args) => {
 			const org = args[0];
 			if (org)
@@ -77,16 +76,13 @@ export function useCreateOrganization(
 export const updateOrganization = async (
 	orgId: string,
 	{ name, slug }: { name: string; slug: string },
-	failureMessage: string,
 ) => {
 	const { error } = await authClient.organization.update({
 		organizationId: orgId,
 		data: { name: name.trim(), slug },
 	});
 	if (error) {
-		throw Object.assign(new Error(error.message ?? failureMessage), {
-			code: errorCode(error),
-		});
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 
@@ -98,11 +94,10 @@ export function useUpdateOrganization(
 	>,
 ) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		...callbacks,
 		mutationFn: (input: { name: string; slug: string }) =>
-			updateOrganization(orgId, input, t("settings.updateFailed")),
+			updateOrganization(orgId, input),
 		onSuccess: (...args) => {
 			void invalidateOrganizationQueries(queryClient);
 			return callbacks?.onSuccess?.(...args);
@@ -115,9 +110,7 @@ export const leaveOrganization = async (orgId: string) => {
 		organizationId: orgId,
 	});
 	if (error) {
-		throw Object.assign(new Error(error.message ?? ""), {
-			code: errorCode(error),
-		});
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 
@@ -145,9 +138,7 @@ export const deleteOrganization = async (orgId: string) => {
 		organizationId: orgId,
 	});
 	if (error) {
-		throw Object.assign(new Error(error.message ?? ""), {
-			code: errorCode(error),
-		});
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 

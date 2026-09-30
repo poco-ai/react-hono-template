@@ -1,14 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { z } from "zod";
+import { billingSearchSchema } from "@/features/billing/search";
 import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
 import { BillingSettingsPage } from "@/pages/org-settings/billing";
 
-const searchSchema = z.object({
-	checkout: z.enum(["success", "canceled"]).optional().catch(undefined),
-});
-
 export const Route = createFileRoute("/_auth/orgs/$orgId/settings/billing")({
-	validateSearch: searchSchema,
+	validateSearch: billingSearchSchema,
 	beforeLoad: async ({ context, params }) => {
 		const members = await context.queryClient.ensureQueryData(
 			membersQuery(params.orgId),

@@ -28,7 +28,7 @@ import {
 	useUpdateComment,
 } from "@/features/comments/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
 
 const COMMENT_MAX_LENGTH = 10000;
 

@@ -39,9 +39,9 @@ import {
 	useLeaveOrganization,
 	useUpdateOrganization,
 } from "@/features/organizations/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function GeneralSettingsPage({
 	orgId,

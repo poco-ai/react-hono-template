@@ -19,16 +19,16 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
-import { LabelBadge } from "@/features/issues/components/label-badge";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
+import { LabelBadge } from "@/features/labels/components/label-badge";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
 import {
 	formatDateTime,
 	formatDueDate,
 	formatRelativeTime,
-} from "@/lib/issue-utils";
+} from "@/lib/format";
 
 export function IssueList({
 	orgId,

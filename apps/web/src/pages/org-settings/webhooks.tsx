@@ -31,6 +31,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { DeliveriesDialog } from "@/features/webhooks/components/deliveries-dialog";
 import { EventBadge } from "@/features/webhooks/components/delivery-badges";
 import { WebhookDialog } from "@/features/webhooks/components/webhook-dialog";
@@ -40,13 +41,9 @@ import {
 	useToggleWebhook,
 	webhooksQuery,
 } from "@/features/webhooks/data";
-
 import { apiErrorMessage } from "@/lib/errors";
-
-import { formatDate } from "@/lib/issue-utils";
-
+import { formatDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();

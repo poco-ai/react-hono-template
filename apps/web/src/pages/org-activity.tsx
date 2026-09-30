@@ -25,7 +25,7 @@ import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { projectsQuery } from "@/features/projects/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const ALL_PROJECTS = "__all__";

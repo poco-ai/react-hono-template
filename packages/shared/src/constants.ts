@@ -29,6 +29,18 @@ export const ISSUE_PRIORITIES = [
 	{ value: ISSUE_PRIORITY.low, name: "low" },
 ] as const;
 
+const PRIORITY_NAMES = new Map<number, IssuePriorityName>(
+	ISSUE_PRIORITIES.map((priority) => [priority.value, priority.name]),
+);
+
+export function priorityName(value: number): IssuePriorityName {
+	return PRIORITY_NAMES.get(value) ?? "none";
+}
+
+export function priorityValue(name: IssuePriorityName): number {
+	return ISSUE_PRIORITY[name];
+}
+
 export const WEBHOOK_EVENTS = [
 	"issue.created",
 	"issue.updated",

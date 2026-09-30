@@ -1,13 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
+import { orgActivitySearchSchema } from "@/features/activities/search";
 import { OrgActivityPage } from "@/pages/org-activity";
 
-const searchSchema = z.object({
-	projectId: z.string().optional().catch(""),
-});
-
 export const Route = createFileRoute("/_auth/orgs/$orgId/activity")({
-	validateSearch: searchSchema,
+	validateSearch: orgActivitySearchSchema,
 	component: () => {
 		const { orgId } = Route.useParams();
 		const search = Route.useSearch();

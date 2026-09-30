@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { codedError } from "@/lib/errors";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export function bootstrapQuery() {
@@ -39,8 +40,7 @@ export function useSession() {
 
 export async function signIn(input: { email: string; password: string }) {
 	const { data, error } = await authClient.signIn.email(input);
-	if (error)
-		throw Object.assign(new Error(error.message), { code: error.code });
+	if (error) throw codedError(error.message ?? "", error.code);
 	return data;
 }
 
@@ -50,15 +50,13 @@ export async function signUp(input: {
 	password: string;
 }) {
 	const { data, error } = await authClient.signUp.email(input);
-	if (error)
-		throw Object.assign(new Error(error.message), { code: error.code });
+	if (error) throw codedError(error.message ?? "", error.code);
 	return data;
 }
 
 export async function signOut() {
 	const { error } = await authClient.signOut();
-	if (error)
-		throw Object.assign(new Error(error.message), { code: error.code });
+	if (error) throw codedError(error.message ?? "", error.code);
 }
 
 export function useSignIn(

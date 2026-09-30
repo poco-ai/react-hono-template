@@ -9,7 +9,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { formatDueDate } from "@/lib/issue-utils";
+import { formatDueDate } from "@/lib/format";
 
 function dateToInputValue(date: Date): string {
 	const month = String(date.getMonth() + 1).padStart(2, "0");

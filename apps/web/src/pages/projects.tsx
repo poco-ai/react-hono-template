@@ -40,13 +40,13 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { useSession } from "@/features/auth/data";
 import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { EditProjectDialog } from "@/features/projects/components/edit-project-dialog";
 import { projectsQuery, useArchiveProject } from "@/features/projects/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatRelativeTime } from "@/lib/issue-utils";
+import { formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function ProjectsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();

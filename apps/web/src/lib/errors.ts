@@ -14,6 +14,25 @@ type FlattenKeys<T, P extends string = ""> = T extends string
 export type TranslationKey = FlattenKeys<typeof en>;
 export type ErrorKey = FlattenKeys<typeof en.errors, "errors">;
 
+/** Error carrying a stable code (and optional details) instead of translated copy. */
+export interface CodedError extends Error {
+	code?: string;
+	details?: Record<string, unknown>;
+}
+
+/**
+ * Builds the error shape thrown by data modules: callers translate the stable
+ * code (see `apiErrorMessage`) and never depend on the message being localized.
+ */
+export const codedError = (
+	message: string,
+	code?: string,
+	details?: Record<string, unknown>,
+): CodedError =>
+	details === undefined
+		? Object.assign(new Error(message), { code })
+		: Object.assign(new Error(message), { code, details });
+
 export const errorCode = (err: unknown): string | undefined => {
 	if (typeof err !== "object" || err === null || !("code" in err)) {
 		return undefined;

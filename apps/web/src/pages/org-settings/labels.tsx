@@ -33,13 +33,14 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
-import { LabelBadge } from "@/features/issues/components/label-badge";
+import { LabelBadge } from "@/features/labels/components/label-badge";
 import {
 	labelsQuery,
 	useDeleteLabel,
 	useSaveLabel,
 } from "@/features/labels/data";
-
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
@@ -47,10 +48,7 @@ import {
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
-import { useOrgRole } from "@/lib/use-org-role";
 
 const DEFAULT_COLOR = "#94a3b8";
 

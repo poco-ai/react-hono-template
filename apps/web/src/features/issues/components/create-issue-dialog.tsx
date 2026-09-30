@@ -4,6 +4,7 @@ import {
 	ISSUE_STATUSES,
 	type IssuePriorityName,
 	type IssueStatus,
+	priorityValue,
 } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -42,7 +43,7 @@ import {
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-import { fromDateInputValue, priorityValue } from "@/lib/issue-utils";
+import { fromDateInputValue } from "@/lib/format";
 import { useCreateIssue } from "../data";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);

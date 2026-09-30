@@ -26,7 +26,7 @@ import {
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-import { slugify } from "@/lib/issue-utils";
+import { slugify } from "@/lib/format";
 
 import { useDocumentTitle } from "@/lib/use-document-title";
 

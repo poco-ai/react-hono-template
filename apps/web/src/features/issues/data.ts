@@ -12,10 +12,10 @@ import {
 	type IssueStatus,
 	type UpdateIssueInput,
 } from "@workspace/shared";
-import { useTranslation } from "react-i18next";
 import { orgActivitiesRootKey } from "@/features/activities/data";
 import { projectsRootKey } from "@/features/projects/data";
 import { client, unwrap } from "@/lib/api";
+import { type CodedError, codedError, errorCode } from "@/lib/errors";
 
 export const createIssue = (
 	orgId: string,
@@ -255,9 +255,23 @@ export function useMoveIssue(
 	});
 }
 
+export const BULK_PARTIAL_FAILURE = "BULK_PARTIAL_FAILURE";
+
+/** Counts reported by a bulk partial failure, or null for unrelated errors. */
+export function bulkPartialFailure(
+	error: unknown,
+): { failed: number; total: number } | null {
+	if (errorCode(error) !== BULK_PARTIAL_FAILURE) {
+		return null;
+	}
+	const { failed, total } = (error as CodedError).details ?? {};
+	return typeof failed === "number" && typeof total === "number"
+		? { failed, total }
+		: null;
+}
+
 export function useBulkUpdateIssues(orgId: string, projectId: string) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		mutationFn: async ({
 			numbers,
@@ -272,10 +286,12 @@ export function useBulkUpdateIssues(orgId: string, projectId: string) {
 			const failed = results.filter(
 				(result) => result.status === "rejected",
 			).length;
-			if (failed > 0)
-				throw new Error(
-					t("bulk.partialFailure", { failed, total: numbers.length }),
-				);
+			if (failed > 0) {
+				throw codedError("bulk update partially failed", BULK_PARTIAL_FAILURE, {
+					failed,
+					total: numbers.length,
+				});
+			}
 		},
 		onSettled: () => {
 			void invalidateIssueQueries(queryClient, orgId);

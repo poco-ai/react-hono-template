@@ -1,10 +1,14 @@
 import type { ActivityDto } from "@api/dto/activity.dto";
 import type { LabelDto } from "@api/dto/label.dto";
-import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
+import {
+	ISSUE_STATUSES,
+	type IssueStatus,
+	priorityName,
+} from "@workspace/shared";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { OrgMember } from "@/features/members/data";
-import { formatDueDate, priorityName } from "@/lib/issue-utils";
+import { formatDueDate } from "@/lib/format";
 
 export function ActivitySentence({
 	activity,

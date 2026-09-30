@@ -41,7 +41,7 @@ import {
 } from "@/features/admin/data";
 
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDate } from "@/lib/issue-utils";
+import { formatDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AdminOrgsPage() {

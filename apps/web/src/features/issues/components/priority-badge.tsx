@@ -1,8 +1,7 @@
-import type { IssuePriorityName } from "@workspace/shared";
+import { type IssuePriorityName, priorityName } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
 import { useTranslation } from "react-i18next";
-import { priorityName } from "@/lib/issue-utils";
 
 const PRIORITY_CLASS: Record<IssuePriorityName, string> = {
 	none: "bg-muted text-muted-foreground",

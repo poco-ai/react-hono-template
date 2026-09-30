@@ -45,10 +45,10 @@ import { UserDropdown } from "@/components/user-dropdown";
 import { useSession } from "@/features/auth/data";
 import { membersQuery, type OrgRole } from "@/features/members/data";
 import { orgsQuery } from "@/features/organizations/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { projectsQuery } from "@/features/projects/data";
 import { useHotkeys } from "@/lib/use-hotkeys";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 function SidebarLink({
 	to,

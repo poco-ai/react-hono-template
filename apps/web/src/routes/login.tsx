@@ -1,11 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { z } from "zod";
 import { sessionOptions } from "@/features/auth/data";
+import { loginSearchSchema } from "@/features/auth/search";
 import { LoginPage } from "@/pages/login";
-
-const searchSchema = z.object({
-	redirect: z.string().optional(),
-});
 
 export const Route = createFileRoute("/login")({
 	beforeLoad: async ({ context }) => {
@@ -14,6 +10,6 @@ export const Route = createFileRoute("/login")({
 			throw redirect({ to: "/" });
 		}
 	},
-	validateSearch: searchSchema,
+	validateSearch: loginSearchSchema,
 	component: LoginPage,
 });

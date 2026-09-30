@@ -33,15 +33,15 @@ import { IssueFilterControls } from "@/features/issues/components/issue-filter-c
 import { IssueList } from "@/features/issues/components/issue-list";
 import { projectIssuesQuery } from "@/features/issues/data";
 import type { IssuesSearch } from "@/features/issues/search";
+import { parseCsv } from "@/features/issues/utils";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
 import { isNotFoundError } from "@/lib/errors";
-import { parseCsv } from "@/lib/issue-utils";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 

@@ -39,9 +39,9 @@ import {
 	useRevokeInvitation,
 	useUpdateMemberRole,
 } from "@/features/members/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function MembersSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();

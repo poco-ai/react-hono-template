@@ -39,7 +39,7 @@ import {
 import { useSession } from "@/features/auth/data";
 import { membersQuery } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatBytes, formatRelativeTime } from "@/lib/issue-utils";
+import { formatBytes, formatRelativeTime } from "@/lib/format";
 
 const ALLOWED_CONTENT_TYPES = ATTACHMENT_CONTENT_TYPES;
 const MAX_SIZE = ATTACHMENT_MAX_SIZE;

@@ -13,7 +13,7 @@ import { StatusBadge } from "@/features/issues/components/status-badge";
 import { orgIssuesQuery } from "@/features/issues/data";
 import { projectsQuery } from "@/features/projects/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDueDate } from "@/lib/issue-utils";
+import { formatDueDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function MyIssuesPage({ orgId }: { orgId: string }) {

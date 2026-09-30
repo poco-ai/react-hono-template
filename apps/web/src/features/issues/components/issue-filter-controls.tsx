@@ -18,7 +18,7 @@ import { Search } from "lucide-react";
 import type { FormEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
-import { serializeCsv } from "@/lib/issue-utils";
+import { serializeCsv } from "@/features/issues/utils";
 import type { IssuesSearch } from "../search";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);

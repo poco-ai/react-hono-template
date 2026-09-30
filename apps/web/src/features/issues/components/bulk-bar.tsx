@@ -3,6 +3,7 @@ import {
 	ISSUE_STATUSES,
 	type IssuePriorityName,
 	type IssueStatus,
+	priorityValue,
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
@@ -18,8 +19,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
-import { priorityValue } from "@/lib/issue-utils";
-import { useBulkUpdateIssues } from "../data";
+import { apiErrorMessage } from "@/lib/errors";
+import { bulkPartialFailure, useBulkUpdateIssues } from "../data";
 
 const PRIORITY_NAMES = ISSUE_PRIORITIES.map((p) => p.name);
 const NO_ACTION = "__action__";
@@ -39,6 +40,7 @@ export function BulkActionBar({
 }) {
 	const { t } = useTranslation();
 	const bulkMutation = useBulkUpdateIssues(orgId, projectId);
+	const partialFailure = bulkPartialFailure(bulkMutation.error);
 	const updateSelected = (input: UpdateIssueInput) =>
 		bulkMutation.mutate(
 			{ numbers, input },
@@ -109,7 +111,9 @@ export function BulkActionBar({
 			</Button>
 			{bulkMutation.isError && (
 				<span className="text-destructive max-w-48 truncate text-xs">
-					{bulkMutation.error.message}
+					{partialFailure
+						? t("bulk.partialFailure", partialFailure)
+						: apiErrorMessage(t, bulkMutation.error)}
 				</span>
 			)}
 		</div>

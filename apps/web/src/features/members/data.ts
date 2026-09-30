@@ -4,10 +4,9 @@ import {
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { invalidateOrganizationQueries } from "@/features/organizations/data";
 import { authClient } from "@/lib/auth-client";
-import { errorCode } from "@/lib/errors";
+import { codedError, errorCode } from "@/lib/errors";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type OrgMember = NonNullable<
@@ -67,7 +66,6 @@ export const updateMemberRole = async (
 		memberId: string;
 		role: OrgRole;
 	},
-	failureMessage: string,
 ) => {
 	const { error } = await authClient.organization.updateMemberRole({
 		organizationId: orgId,
@@ -75,7 +73,7 @@ export const updateMemberRole = async (
 		role,
 	});
 	if (error) {
-		throw Object.assign(new Error(failureMessage), { code: errorCode(error) });
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 
@@ -90,11 +88,10 @@ export function useUpdateMemberRole(
 	>,
 ) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		...callbacks,
 		mutationFn: (input: { memberId: string; role: OrgRole }) =>
-			updateMemberRole(orgId, input, t("members.roleUpdateFailed")),
+			updateMemberRole(orgId, input),
 		onSuccess: (...args) => {
 			void invalidateMemberQueries(queryClient, orgId);
 			return callbacks?.onSuccess?.(...args);
@@ -102,17 +99,13 @@ export function useUpdateMemberRole(
 	});
 }
 
-export const removeMember = async (
-	orgId: string,
-	memberId: string,
-	failureMessage: string,
-) => {
+export const removeMember = async (orgId: string, memberId: string) => {
 	const { error } = await authClient.organization.removeMember({
 		organizationId: orgId,
 		memberIdOrEmail: memberId,
 	});
 	if (error) {
-		throw Object.assign(new Error(failureMessage), { code: errorCode(error) });
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 
@@ -124,11 +117,9 @@ export function useRemoveMember(
 	>,
 ) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		...callbacks,
-		mutationFn: (input: string) =>
-			removeMember(orgId, input, t("members.removeFailed")),
+		mutationFn: (input: string) => removeMember(orgId, input),
 		onSuccess: (...args) => {
 			void invalidateMemberQueries(queryClient, orgId);
 			return callbacks?.onSuccess?.(...args);
@@ -136,15 +127,12 @@ export function useRemoveMember(
 	});
 }
 
-export const revokeInvitation = async (
-	invitationId: string,
-	failureMessage: string,
-) => {
+export const revokeInvitation = async (invitationId: string) => {
 	const { error } = await authClient.organization.cancelInvitation({
 		invitationId,
 	});
 	if (error) {
-		throw Object.assign(new Error(failureMessage), { code: errorCode(error) });
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 
@@ -156,11 +144,9 @@ export function useRevokeInvitation(
 	>,
 ) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		...callbacks,
-		mutationFn: (input: string) =>
-			revokeInvitation(input, t("members.revokeFailed")),
+		mutationFn: (input: string) => revokeInvitation(input),
 		onSuccess: (...args) => {
 			void invalidateMemberQueries(queryClient, orgId);
 			return callbacks?.onSuccess?.(...args);
@@ -171,7 +157,6 @@ export function useRevokeInvitation(
 export const inviteMember = async (
 	orgId: string,
 	{ email, role }: { email: string; role: OrgRole },
-	failureMessage: string,
 ) => {
 	const { data, error } = await authClient.organization.inviteMember({
 		organizationId: orgId,
@@ -179,9 +164,7 @@ export const inviteMember = async (
 		role,
 	});
 	if (error || !data) {
-		throw Object.assign(new Error(error?.message ?? failureMessage), {
-			code: errorCode(error),
-		});
+		throw codedError(error?.message ?? "", errorCode(error));
 	}
 	return data.id;
 };
@@ -194,11 +177,10 @@ export function useInviteMember(
 	>,
 ) {
 	const queryClient = useQueryClient();
-	const { t } = useTranslation();
 	return useMutation({
 		...callbacks,
 		mutationFn: (input: { email: string; role: OrgRole }) =>
-			inviteMember(orgId, input, t("members.inviteFailed")),
+			inviteMember(orgId, input),
 		onSuccess: (...args) => {
 			void invalidateMemberQueries(queryClient, orgId);
 			return callbacks?.onSuccess?.(...args);
@@ -211,9 +193,7 @@ export const acceptInvitation = async (invitationId: string) => {
 		invitationId,
 	});
 	if (error) {
-		throw Object.assign(new Error("invitation failed"), {
-			code: errorCode(error),
-		});
+		throw codedError(error.message ?? "", errorCode(error));
 	}
 };
 

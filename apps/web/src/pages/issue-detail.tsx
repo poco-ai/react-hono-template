@@ -16,9 +16,9 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { NotFoundState } from "@/components/not-found-state";
-import { IssueActivityTimeline } from "@/features/issues/components/issue-activity";
-import { IssueAttachments } from "@/features/issues/components/issue-attachments";
-import { IssueComments } from "@/features/issues/components/issue-comments";
+import { IssueActivityTimeline } from "@/features/activities/components/issue-activity";
+import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
+import { IssueComments } from "@/features/comments/components/issue-comments";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
 import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
@@ -29,11 +29,11 @@ import {
 } from "@/features/issues/data";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
 import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
-import { formatDateTime, formatRelativeTime } from "@/lib/issue-utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function IssueDetailPage({
 	orgId,

@@ -32,10 +32,10 @@ import { UserAvatar } from "@/components/user-avatar";
 import { CreateApiKeyDialog } from "@/features/api-keys/components/create-api-key-dialog";
 import { apiKeysQuery, useRevokeApiKey } from "@/features/api-keys/data";
 import { membersQuery } from "@/features/members/data";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDate, formatRelativeTime } from "@/lib/issue-utils";
+import { formatDate, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useOrgFrozen } from "@/lib/use-org-frozen";
 
 export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();

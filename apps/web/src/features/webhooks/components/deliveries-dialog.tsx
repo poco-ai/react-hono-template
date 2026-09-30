@@ -21,15 +21,13 @@ import { CircleAlert, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TablePagination } from "@/components/table-pagination";
+import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import {
 	useRedeliverWebhook,
 	webhookDeliveriesQuery,
 } from "@/features/webhooks/data";
-
 import { apiErrorMessage } from "@/lib/errors";
-import { formatRelativeTime } from "@/lib/issue-utils";
-
-import { useOrgFrozen } from "@/lib/use-org-frozen";
+import { formatRelativeTime } from "@/lib/format";
 import { DeliveryStatusBadge, EventBadge } from "./delivery-badges";
 
 export function DeliveriesDialog({
