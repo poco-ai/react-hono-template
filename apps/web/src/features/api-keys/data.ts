@@ -1,4 +1,4 @@
-import type { ListApiKeysDto } from "@api/dto/apikey.dto";
+import type { ListApiKeysDto } from "@api/dto/api-key.dto";
 import {
 	type QueryClient,
 	queryOptions,

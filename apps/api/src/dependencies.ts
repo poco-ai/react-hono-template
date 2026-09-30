@@ -1,6 +1,6 @@
 import { createActivityDao } from "./dao/activity.dao";
 import { createAdminUserDao } from "./dao/admin-user.dao";
-import { createApiKeyDao } from "./dao/apiKey.dao";
+import { createApiKeyDao } from "./dao/api-key.dao";
 import { createAttachmentDao } from "./dao/attachment.dao";
 import { createCommentDao } from "./dao/comment.dao";
 import { createIssueDao } from "./dao/issue.dao";
@@ -17,7 +17,7 @@ import type { StripeSetup } from "./lib/stripe";
 import { createActivityService } from "./services/activity.service";
 import { createAdminOrgService } from "./services/admin-org.service";
 import { createAdminUserService } from "./services/admin-user.service";
-import { createApiKeyService } from "./services/apikey.service";
+import { createApiKeyService } from "./services/api-key.service";
 import { createAttachmentService } from "./services/attachment.service";
 import { createAuthPolicyService } from "./services/auth-policy.service";
 import { createBillingService } from "./services/billing.service";

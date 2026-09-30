@@ -4,7 +4,7 @@ export * from "./constants";
 export * from "./plans";
 export * from "./schemas/activity";
 export * from "./schemas/admin-user";
-export * from "./schemas/apikey";
+export * from "./schemas/api-key";
 export * from "./schemas/attachment";
 export * from "./schemas/billing";
 export * from "./schemas/comment";

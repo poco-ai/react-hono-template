@@ -1,4 +1,4 @@
-import type { ApiKeyDto } from "@api/dto/apikey.dto";
+import type { ApiKeyDto } from "@api/dto/api-key.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";

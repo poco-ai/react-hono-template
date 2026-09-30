@@ -1,7 +1,7 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { apiKeys } from "../db/schema";
 import type { Database } from "../db/types";
-import type { ApiKeyDto, ListApiKeysDto } from "../dto/apikey.dto";
+import type { ApiKeyDto, ListApiKeysDto } from "../dto/api-key.dto";
 
 type ApiKeyRow = typeof apiKeys.$inferSelect;
 

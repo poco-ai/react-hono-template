@@ -1,11 +1,11 @@
 import { apiKeyListQuerySchema, createApiKeySchema } from "@workspace/shared";
 import { Hono } from "hono";
-import { createApiKeyController } from "../controllers/apikey.controller";
+import { createApiKeyController } from "../controllers/api-key.controller";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import { requireOrgRole } from "../middleware/org";
-import type { ApiKeyService } from "../services/apikey.service";
+import type { ApiKeyService } from "../services/api-key.service";
 
 export const createApiKeysRoutes = (service: ApiKeyService) => {
 	const apiKeyController = createApiKeyController(service);

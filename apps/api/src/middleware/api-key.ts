@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import { createMiddleware } from "hono/factory";
-import type { ApiKeyDao } from "../dao/apiKey.dao";
+import type { ApiKeyDao } from "../dao/api-key.dao";
 import type { MemberDao } from "../dao/member.dao";
 import { backgroundFromContext } from "../lib/background";
 import { sha256Hex } from "../lib/crypto";

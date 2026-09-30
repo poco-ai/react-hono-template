@@ -4,7 +4,7 @@ import type { Context } from "hono";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
-import type { ApiKeyService } from "../services/apikey.service";
+import type { ApiKeyService } from "../services/api-key.service";
 
 type Env = SessionEnv & OrgEnv;
 
@@ -40,5 +40,3 @@ export const createApiKeyController = (service: ApiKeyService) => ({
 			await service.revokeApiKey(c.get("orgMember").orgId, requireKeyId(c)),
 		),
 });
-
-export type ApiKeyController = ReturnType<typeof createApiKeyController>;

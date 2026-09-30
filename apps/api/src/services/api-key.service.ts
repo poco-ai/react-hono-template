@@ -4,12 +4,12 @@ import {
 	type ApiKeyListQuery,
 	type CreateApiKeyInput,
 } from "@workspace/shared";
-import type { ApiKeyDao } from "../dao/apiKey.dao";
+import type { ApiKeyDao } from "../dao/api-key.dao";
 import type {
 	ApiKeyDto,
 	ApiKeyWithSecretDto,
 	ListApiKeysDto,
-} from "../dto/apikey.dto";
+} from "../dto/api-key.dto";
 import { randomBase64Url, sha256Hex } from "../lib/crypto";
 
 const KEY_PREFIX = "sk_";
