@@ -336,6 +336,8 @@ const en = {
 		cancelled: '"{{filename}}" upload was cancelled.',
 		deleteTitle: "Delete attachment?",
 		deleteDescription: '"{{filename}}" will be permanently deleted.',
+		storageUnavailable:
+			"Couldn't reach the file storage service — check the S3 configuration.",
 	},
 	activity: {
 		title: "Activity",

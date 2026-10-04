@@ -323,6 +323,7 @@ const zh: typeof en = {
 		cancelled: "“{{filename}}” 的上传已取消。",
 		deleteTitle: "删除附件？",
 		deleteDescription: "“{{filename}}” 将被永久删除。",
+		storageUnavailable: "无法连接文件存储服务，请检查 S3 配置。",
 	},
 	activity: {
 		title: "动态",
