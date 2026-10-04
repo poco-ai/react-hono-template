@@ -108,6 +108,13 @@ export function ProjectIssuesPage({
 		(search.assigneeId !== undefined ? 1 : 0) +
 		(search.labelId !== undefined ? 1 : 0) +
 		((search.search ?? "") !== "" ? 1 : 0);
+	// The empty state owns the only "create" call to action on a fresh project.
+	const hideHeaderCreate =
+		view === "list" &&
+		!hasFilters &&
+		!issues.isPending &&
+		!issues.isError &&
+		result?.items.length === 0;
 
 	const memberById = new Map(
 		(members.data ?? []).map((member) => [member.userId, member]),
@@ -138,6 +145,15 @@ export function ProjectIssuesPage({
 		setCreateStatus(status ?? "backlog");
 		setCreateOpen(true);
 	};
+
+	// The command palette can deep-link here with the `new` flag set.
+	useEffect(() => {
+		if (!search.new) {
+			return;
+		}
+		setCreateStatus("backlog");
+		setCreateOpen(true);
+	}, [search.new]);
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const isDesktop = useMediaQuery("(min-width: 640px)");
@@ -266,10 +282,12 @@ export function ProjectIssuesPage({
 								{t("issues.viewBoard")}
 							</Button>
 						</div>
-						<Button onClick={() => openCreate()} disabled={frozen} title="C">
-							<Plus />
-							{t("issues.newIssue")}
-						</Button>
+						{!hideHeaderCreate && (
+							<Button onClick={() => openCreate()} disabled={frozen} title="C">
+								<Plus />
+								{t("issues.newIssue")}
+							</Button>
+						)}
 					</div>
 				</div>
 			</header>
@@ -308,7 +326,9 @@ export function ProjectIssuesPage({
 					>
 						<SlidersHorizontal className="size-4" />
 						{activeFilterCount > 0
-							? `${t("issues.filterButton")} · ${activeFilterCount}`
+							? `${t("issues.filterButton")} (${t("issues.filterActive", {
+									count: activeFilterCount,
+								})})`
 							: t("issues.filterButton")}
 					</Button>
 					<Sheet open={filterOpen} onOpenChange={setFilterOpen}>
@@ -407,7 +427,13 @@ export function ProjectIssuesPage({
 				orgId={orgId}
 				projectId={projectId}
 				open={createOpen}
-				onOpenChange={setCreateOpen}
+				onOpenChange={(next) => {
+					setCreateOpen(next);
+					// Drop the deep-link flag so refresh/back does not reopen.
+					if (!next && search.new) {
+						setSearch({ new: undefined });
+					}
+				}}
 				defaultStatus={createStatus}
 				members={members.data ?? []}
 				labels={labels.data ?? []}

@@ -110,6 +110,36 @@ export function orgIssuesQuery(
 	});
 }
 
+/** Number of results the command palette requests per issue search. */
+export const ISSUE_SEARCH_LIMIT = 8;
+
+/** Minimum term length before the palette's issue search queries the API. */
+export const ISSUE_SEARCH_MIN_LENGTH = 2;
+
+/**
+ * Org-wide issue search used by the command palette. The query stays disabled
+ * until the (trimmed) term reaches `ISSUE_SEARCH_MIN_LENGTH`.
+ */
+export function issueSearchQuery(orgId: string, term: string) {
+	const search = term.trim();
+	return queryOptions({
+		queryKey: issueSearchKey(orgId, search),
+		queryFn: () =>
+			unwrap(
+				client.api.orgs[":orgId"].issues.$get({
+					param: { orgId },
+					query: {
+						page: "1",
+						pageSize: String(ISSUE_SEARCH_LIMIT),
+						search,
+						sort: "updated",
+					},
+				}),
+			),
+		enabled: search.length >= ISSUE_SEARCH_MIN_LENGTH,
+	});
+}
+
 export function issueQuery(orgId: string, projectId: string, number: number) {
 	return queryOptions({
 		queryKey: issueKey(orgId, projectId, number),
@@ -310,5 +340,7 @@ export const orgIssuesKey = (
 	orgId: string,
 	filters: Partial<IssueFilters> & { assigneeId: string },
 ) => [...orgIssuesRootKey(orgId), filters] as const;
+export const issueSearchKey = (orgId: string, term: string) =>
+	[...orgIssuesRootKey(orgId), "search", term] as const;
 export const issueKey = (orgId: string, projectId: string, number: number) =>
 	["orgs", orgId, "projects", projectId, "issues", "detail", number] as const;

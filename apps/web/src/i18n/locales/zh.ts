@@ -56,6 +56,7 @@ const zh: typeof en = {
 		groups: {
 			goto: "跳转",
 			projects: "项目",
+			issues: "事项",
 			actions: "操作",
 		},
 		goToProjects: "项目",
@@ -69,6 +70,8 @@ const zh: typeof en = {
 		settingsBilling: "设置 — 账单",
 		goToApiDocs: "API 文档",
 		newProject: "新建项目",
+		newIssue: "新建事项",
+		goToAdmin: "管理后台",
 	},
 	errors: {
 		generic: "出错了，请重试。",
@@ -254,6 +257,8 @@ const zh: typeof en = {
 		filterButton: "筛选",
 		searchPlaceholder: "按标题筛选…",
 		clearFilters: "清除筛选",
+		filterActive_one: "{{count}} 个筛选",
+		filterActive_other: "{{count}} 个筛选",
 		updated: "更新时间",
 		created: "创建时间",
 		empty: "还没有事项，创建第一个吧。",

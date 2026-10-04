@@ -54,6 +54,7 @@ const en = {
 		groups: {
 			goto: "Jump to",
 			projects: "Projects",
+			issues: "Issues",
 			actions: "Actions",
 		},
 		goToProjects: "Projects",
@@ -67,6 +68,8 @@ const en = {
 		settingsBilling: "Settings — Billing",
 		goToApiDocs: "API docs",
 		newProject: "New project",
+		newIssue: "New issue",
+		goToAdmin: "Admin",
 	},
 	errors: {
 		generic: "Something went wrong. Please try again.",
@@ -265,6 +268,8 @@ const en = {
 		filterButton: "Filter",
 		searchPlaceholder: "Filter by title…",
 		clearFilters: "Clear filters",
+		filterActive_one: "{{count}} filter",
+		filterActive_other: "{{count}} filters",
 		updated: "Updated",
 		created: "Created",
 		empty: "No issues yet. Create the first one.",
