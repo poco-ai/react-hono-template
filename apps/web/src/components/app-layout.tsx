@@ -34,7 +34,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 						{user?.role === "admin" && (
 							<Link
 								to="/admin/users"
-								className="text-muted-foreground hover:text-foreground shrink-0 whitespace-nowrap"
+								className="text-muted-foreground hover:text-foreground data-[status=active]:text-foreground data-[status=active]:font-medium shrink-0 whitespace-nowrap"
+								activeProps={{ "aria-current": "page" }}
 							>
 								{t("nav.users")}
 							</Link>
@@ -42,7 +43,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 						{user?.role === "admin" && (
 							<Link
 								to="/admin/orgs"
-								className="text-muted-foreground hover:text-foreground shrink-0 whitespace-nowrap"
+								className="text-muted-foreground hover:text-foreground data-[status=active]:text-foreground data-[status=active]:font-medium shrink-0 whitespace-nowrap"
+								activeProps={{ "aria-current": "page" }}
 							>
 								{t("nav.orgs")}
 							</Link>
@@ -55,7 +57,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 					</div>
 				</div>
 			</header>
-			<main id="main-content" className="mx-auto max-w-5xl px-6 py-8">
+			<main
+				id="main-content"
+				className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6"
+			>
 				{children}
 			</main>
 		</div>

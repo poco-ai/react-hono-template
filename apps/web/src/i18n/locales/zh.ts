@@ -47,6 +47,11 @@ const zh: typeof en = {
 		activity: "动态",
 		settings: "设置",
 		apiDocs: "API",
+		search: "搜索",
+		account: "账号",
+		admin: "管理后台",
+		signOutTitle: "退出登录？",
+		signOutDescription: "退出后需要重新登录才能进入应用。",
 	},
 	command: {
 		trigger: "搜索…",
@@ -170,6 +175,9 @@ const zh: typeof en = {
 	org: {
 		switcherLabel: "组织",
 		create: "创建组织",
+		settings: "组织设置",
+		inviteMembers: "邀请成员",
+		current: "当前",
 		frozenBanner: "此组织已被平台管理员冻结，当前为只读模式。",
 		roles: {
 			owner: "所有者",

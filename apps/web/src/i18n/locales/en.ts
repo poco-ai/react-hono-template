@@ -45,6 +45,12 @@ const en = {
 		activity: "Activity",
 		settings: "Settings",
 		apiDocs: "API",
+		search: "Search",
+		account: "Account",
+		admin: "Admin",
+		signOutTitle: "Sign out?",
+		signOutDescription:
+			"You'll need to sign in again to get back into the app.",
 	},
 	command: {
 		trigger: "Search…",
@@ -178,6 +184,9 @@ const en = {
 	org: {
 		switcherLabel: "Organizations",
 		create: "Create organization",
+		settings: "Organization settings",
+		inviteMembers: "Invite members",
+		current: "Current",
 		frozenBanner:
 			"This organization has been frozen by a platform admin and is read-only.",
 		roles: {

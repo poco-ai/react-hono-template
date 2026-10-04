@@ -33,19 +33,21 @@ import {
 	Menu,
 	Plus,
 	Search,
+	Settings,
 	Snowflake,
+	UserPlus,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "@/components/command-palette";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
 import { useSession } from "@/features/auth/data";
-import { membersQuery, type OrgRole } from "@/features/members/data";
+import type { OrgRole } from "@/features/members/data";
 import { orgsQuery } from "@/features/organizations/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { projectsQuery } from "@/features/projects/data";
 import { useHotkeys } from "@/lib/use-hotkeys";
@@ -96,14 +98,13 @@ function SidebarContent({
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
-	const members = useQuery(membersQuery(orgId));
+	const { role, canManage } = useOrgRole(orgId);
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 
 	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
-	const myMember = members.data?.find((m) => m.userId === session?.user.id);
 	const activeProjects = (projects.data ?? []).filter(
 		(project) => !project.archived,
 	);
@@ -146,9 +147,45 @@ function SidebarContent({
 										)}
 									/>
 									<span className="min-w-0 truncate">{org.name}</span>
+									{org.id === orgId && (
+										<span className="text-muted-foreground ml-auto shrink-0 text-xs">
+											{t("org.current")}
+										</span>
+									)}
 								</DropdownMenuItem>
 							))}
 						</DropdownMenuGroup>
+						{canManage && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuGroup>
+									<DropdownMenuItem
+										onClick={() => {
+											navigate({
+												to: "/orgs/$orgId/settings",
+												params: { orgId },
+											});
+											onNavigate?.();
+										}}
+									>
+										<Settings />
+										{t("org.settings")}
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => {
+											navigate({
+												to: "/orgs/$orgId/settings/members",
+												params: { orgId },
+											});
+											onNavigate?.();
+										}}
+									>
+										<UserPlus />
+										{t("org.inviteMembers")}
+									</DropdownMenuItem>
+								</DropdownMenuGroup>
+							</>
+						)}
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							onClick={() => {
@@ -172,7 +209,7 @@ function SidebarContent({
 						<Search className="size-4" />
 						{t("command.trigger")}
 					</span>
-					<kbd className="bg-muted pointer-events-none inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] font-medium">
+					<kbd className="bg-muted pointer-events-none hidden h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] font-medium sm:inline-flex">
 						{isMac ? "⌘K" : "Ctrl K"}
 					</kbd>
 				</Button>
@@ -243,12 +280,10 @@ function SidebarContent({
 				{session && (
 					<UserDropdown
 						user={session.user}
-						orgRole={myMember?.role as OrgRole | undefined}
+						orgRole={role as OrgRole | undefined}
 						className="flex-1"
 					/>
 				)}
-				<LanguageSwitcher />
-				<ThemeToggle />
 			</div>
 			<CreateProjectDialog
 				orgId={orgId}
@@ -307,6 +342,14 @@ export function OrgLayout() {
 				<span className="min-w-0 flex-1 truncate text-sm font-medium">
 					{currentOrg?.name ?? t("common.loading")}
 				</span>
+				<Button
+					variant="ghost"
+					size="icon"
+					aria-label={t("nav.search")}
+					onClick={() => setPaletteOpen(true)}
+				>
+					<Search />
+				</Button>
 				<ThemeToggle />
 			</header>
 			<Sheet open={menuOpen} onOpenChange={setMenuOpen}>

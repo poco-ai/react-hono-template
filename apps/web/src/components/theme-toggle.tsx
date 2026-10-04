@@ -17,9 +17,29 @@ import { type Theme, useTheme } from "@/components/theme-provider";
 
 const THEMES: Theme[] = ["light", "dark", "system"];
 
-export function ThemeToggle() {
+export function ThemeMenuItems() {
 	const { t } = useTranslation();
 	const { theme, setTheme } = useTheme();
+
+	return (
+		<>
+			{THEMES.map((value) => (
+				<DropdownMenuItem key={value} onClick={() => setTheme(value)}>
+					<Check
+						className={cn(
+							"size-4",
+							theme === value ? "opacity-100" : "opacity-0",
+						)}
+					/>
+					<span className="min-w-0 truncate">{t(`theme.${value}`)}</span>
+				</DropdownMenuItem>
+			))}
+		</>
+	);
+}
+
+export function ThemeToggle() {
+	const { t } = useTranslation();
 
 	return (
 		<DropdownMenu>
@@ -44,17 +64,7 @@ export function ThemeToggle() {
 				<TooltipContent>{t("theme.toggle")}</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="end">
-				{THEMES.map((value) => (
-					<DropdownMenuItem key={value} onClick={() => setTheme(value)}>
-						<Check
-							className={cn(
-								"size-4",
-								theme === value ? "opacity-100" : "opacity-0",
-							)}
-						/>
-						<span className="min-w-0 truncate">{t(`theme.${value}`)}</span>
-					</DropdownMenuItem>
-				))}
+				<ThemeMenuItems />
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

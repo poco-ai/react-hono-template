@@ -20,8 +20,31 @@ const LANGUAGE_LABELS: Record<Language, string> = {
 	zh: "中文",
 };
 
+export function LanguageMenuItems() {
+	const { i18n } = useTranslation();
+
+	return (
+		<>
+			{SUPPORTED_LANGUAGES.map((language) => (
+				<DropdownMenuItem
+					key={language}
+					onClick={() => changeLanguage(language)}
+				>
+					<Check
+						className={cn(
+							"size-4",
+							i18n.language === language ? "opacity-100" : "opacity-0",
+						)}
+					/>
+					<span className="min-w-0 truncate">{LANGUAGE_LABELS[language]}</span>
+				</DropdownMenuItem>
+			))}
+		</>
+	);
+}
+
 export function LanguageSwitcher() {
-	const { t, i18n } = useTranslation();
+	const { t } = useTranslation();
 
 	return (
 		<DropdownMenu>
@@ -44,22 +67,7 @@ export function LanguageSwitcher() {
 				<TooltipContent>{t("language.toggle")}</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="end">
-				{SUPPORTED_LANGUAGES.map((language) => (
-					<DropdownMenuItem
-						key={language}
-						onClick={() => changeLanguage(language)}
-					>
-						<Check
-							className={cn(
-								"size-4",
-								i18n.language === language ? "opacity-100" : "opacity-0",
-							)}
-						/>
-						<span className="min-w-0 truncate">
-							{LANGUAGE_LABELS[language]}
-						</span>
-					</DropdownMenuItem>
-				))}
+				<LanguageMenuItems />
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
