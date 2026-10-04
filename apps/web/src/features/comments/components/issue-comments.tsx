@@ -108,7 +108,7 @@ export function IssueComments({
 					const own = session?.user.id === comment.author.id;
 					const editing = editingId === comment.id;
 					return (
-						<li key={comment.id} className="flex gap-3">
+						<li key={comment.id} className="group/comment flex gap-3">
 							<UserAvatar
 								name={comment.author.name}
 								className="mt-0.5 size-6 shrink-0"
@@ -131,7 +131,7 @@ export function IssueComments({
 										</span>
 									)}
 									{own && !editing && (
-										<span className="ml-auto flex items-center gap-1">
+										<span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/comment:opacity-100 group-focus-within/comment:opacity-100 pointer-coarse:opacity-100 max-sm:opacity-100">
 											<Button
 												variant="ghost"
 												size="icon-sm"
@@ -196,7 +196,7 @@ export function IssueComments({
 										</div>
 									</div>
 								) : (
-									<div className="mt-1">
+									<div className="mt-1 max-w-3xl">
 										<MarkdownContent>{comment.body}</MarkdownContent>
 									</div>
 								)}

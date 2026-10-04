@@ -77,17 +77,22 @@ export function BoardView({
 	);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
-	const [overflows, setOverflows] = useState(false);
+	const [canScrollRight, setCanScrollRight] = useState(false);
 	useEffect(() => {
 		const el = scrollRef.current;
 		if (!el) {
 			return;
 		}
-		const update = () => setOverflows(el.scrollWidth > el.clientWidth);
+		const update = () =>
+			setCanScrollRight(el.scrollWidth - el.scrollLeft - el.clientWidth > 4);
 		update();
+		el.addEventListener("scroll", update, { passive: true });
 		const observer = new ResizeObserver(update);
 		observer.observe(el);
-		return () => observer.disconnect();
+		return () => {
+			el.removeEventListener("scroll", update);
+			observer.disconnect();
+		};
 	}, []);
 
 	const onDragEnd = (event: DragEndEvent) => {
@@ -119,7 +124,7 @@ export function BoardView({
 					{ISSUE_STATUSES.map((status) => (
 						<div
 							key={status}
-							className="flex min-w-[200px] max-w-[360px] flex-1 flex-col gap-2 rounded-lg border p-2"
+							className="flex min-w-44 max-w-[360px] flex-1 flex-col gap-2 rounded-lg border p-2"
 						>
 							<Skeleton className="mx-1 mb-1 h-5 w-20 rounded-md" />
 							{["card-1", "card-2"].map((cardKey) => (
@@ -180,8 +185,8 @@ export function BoardView({
 							/>
 						))}
 					</div>
-					{overflows && (
-						<div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent" />
+					{canScrollRight && (
+						<div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent" />
 					)}
 				</div>
 			</DndContext>
@@ -215,7 +220,7 @@ function BoardColumn({
 		<div
 			ref={setNodeRef}
 			className={cn(
-				"flex min-w-[200px] max-w-[360px] flex-1 flex-col rounded-lg border p-2 transition-colors",
+				"flex min-w-44 max-w-[360px] flex-1 flex-col rounded-lg border p-2 transition-colors",
 				isOver && "border-primary/60 bg-accent/50",
 			)}
 		>

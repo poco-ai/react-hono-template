@@ -253,6 +253,7 @@ const en = {
 		estimate: "Estimate",
 		estimateUnit: "points",
 		estimateInvalid: "Estimate must be a whole number between 0 and 100.",
+		estimateHint: "Story points, 0–100.",
 		statuses: {
 			backlog: "Backlog",
 			todo: "Todo",
@@ -296,7 +297,7 @@ const en = {
 		descriptionPlaceholder: "Describe the issue…",
 		deleteTitle: "Delete issue?",
 		deleteDescription:
-			"{{key}} will be deleted. You can restore it later from the database.",
+			"{{key}} will be deleted. This can't be undone from the app.",
 		prevIssue: "Previous issue",
 		nextIssue: "Next issue",
 		titleLabel: "Issue title",

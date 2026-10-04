@@ -53,7 +53,7 @@ export function BulkActionBar({
 		);
 
 	return (
-		<div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full border bg-background px-4 py-2 shadow-lg">
+		<div className="fixed bottom-10 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full border bg-background px-4 py-2 shadow-xl ring-1 ring-foreground/10">
 			<span className="text-sm font-medium whitespace-nowrap">
 				{t("bulk.selected", { count: numbers.length })}
 			</span>

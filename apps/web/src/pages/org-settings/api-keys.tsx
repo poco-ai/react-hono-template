@@ -117,13 +117,16 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 						return (
 							<TableRow key={apiKey.id}>
 								<TableCell>
-									<div className="flex items-center gap-3">
-										{creator && (
-											<UserAvatar name={creator.name} className="size-8" />
-										)}
-										<div className="min-w-0">
-											<div className="truncate font-medium">{apiKey.name}</div>
-											<div className="text-muted-foreground truncate text-xs">
+									<div className="min-w-0">
+										<div className="truncate font-medium">{apiKey.name}</div>
+										<div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+											{creator && (
+												<UserAvatar
+													name={creator.name}
+													className="size-4 shrink-0"
+												/>
+											)}
+											<span className="truncate">
 												{creator ? creator.name : t("apiKeys.unknownCreator")}
 												{" · "}
 												{t("apiKeys.created")} {formatDate(apiKey.createdAt)}
@@ -131,7 +134,7 @@ export function ApiKeysSettingsPage({ orgId }: { orgId: string }) {
 												{apiKey.lastUsedAt
 													? `${t("apiKeys.lastUsed")} ${formatRelativeTime(apiKey.lastUsedAt)}`
 													: t("apiKeys.lastUsedNever")}
-											</div>
+											</span>
 										</div>
 									</div>
 								</TableCell>

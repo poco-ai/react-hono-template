@@ -79,7 +79,7 @@ export function IssueDescription({
 	}
 
 	return (
-		<div className="group relative rounded-md">
+		<div className="group/description relative max-w-3xl rounded-md">
 			<div className="pr-8">
 				<MarkdownContent>{description}</MarkdownContent>
 			</div>
@@ -88,7 +88,7 @@ export function IssueDescription({
 					variant="ghost"
 					size="icon-sm"
 					aria-label={t("common.edit")}
-					className="text-muted-foreground hover:text-foreground absolute top-0 right-0 opacity-0 transition-opacity group-hover:opacity-100"
+					className="text-muted-foreground hover:text-foreground absolute top-0 right-0 opacity-0 transition-opacity group-hover/description:opacity-100 group-focus-within/description:opacity-100 pointer-coarse:opacity-100 max-sm:opacity-100"
 					onClick={() => setEditing(true)}
 				>
 					<Pencil />

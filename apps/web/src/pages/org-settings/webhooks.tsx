@@ -149,7 +149,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 												<Button
 													variant="ghost"
 													size="icon-sm"
-													aria-label={t("webhooks.ping")}
+													aria-label={t("webhooks.pingLabel")}
 													disabled={frozen || pingMutation.isPending}
 													onClick={() => pingMutation.mutate(webhook.id)}
 												>
@@ -157,7 +157,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 												</Button>
 											}
 										/>
-										<TooltipContent>{t("webhooks.ping")}</TooltipContent>
+										<TooltipContent>{t("webhooks.pingLabel")}</TooltipContent>
 									</Tooltip>
 									<Tooltip>
 										<TooltipTrigger

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createProjectSchema } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
+import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
 	Dialog,
 	DialogContent,
@@ -122,7 +123,7 @@ export function CreateProjectDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" closeLabel={t("common.close")}>
 				<DialogHeader>
 					<DialogTitle>{t("projects.createTitle")}</DialogTitle>
 					<DialogDescription>
@@ -209,19 +210,17 @@ export function CreateProjectDialog({
 						)}
 					</div>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor="project-color">
+						<Label>
 							{t("projects.color")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
 						</Label>
-						<Input
-							id="project-color"
-							type="color"
+						<ColorSwatchPicker
 							value={color}
-							onChange={(e) => setColor(e.target.value)}
-							className="h-8 w-full p-1"
+							onChange={setColor}
+							ariaLabel={t("projects.color")}
 						/>
 					</div>
 					{createMutation.isError && (

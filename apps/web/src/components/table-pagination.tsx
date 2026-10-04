@@ -16,7 +16,7 @@ export function TablePagination({
 }) {
 	const { t } = useTranslation();
 
-	if (total === 0) {
+	if (total === 0 || totalPages <= 1) {
 		return null;
 	}
 

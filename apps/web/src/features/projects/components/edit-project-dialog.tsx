@@ -2,6 +2,7 @@ import type { ProjectDto } from "@api/dto/project.dto";
 import { updateProjectSchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
+import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
 	Dialog,
 	DialogContent,
@@ -90,7 +91,7 @@ export function EditProjectDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" closeLabel={t("common.close")}>
 				<DialogHeader>
 					<DialogTitle>{t("projects.editTitle")}</DialogTitle>
 					<DialogDescription>{t("projects.editDescription")}</DialogDescription>
@@ -174,19 +175,17 @@ export function EditProjectDialog({
 						)}
 					</div>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor="edit-project-color">
+						<Label>
 							{t("projects.color")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
 						</Label>
-						<Input
-							id="edit-project-color"
-							type="color"
+						<ColorSwatchPicker
 							value={color}
-							onChange={(e) => setColor(e.target.value)}
-							className="h-8 w-full p-1"
+							onChange={setColor}
+							ariaLabel={t("projects.color")}
 						/>
 					</div>
 					{updateMutation.isError && (

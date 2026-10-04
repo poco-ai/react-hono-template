@@ -13,6 +13,7 @@ import {
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
+import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
 	Dialog,
 	DialogContent,
@@ -243,7 +244,7 @@ function LabelDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-sm">
+			<DialogContent className="sm:max-w-sm" closeLabel={t("common.close")}>
 				<DialogHeader>
 					<DialogTitle>
 						{label ? t("labels.editTitle") : t("labels.createTitle")}
@@ -291,13 +292,11 @@ function LabelDialog({
 						)}
 					</div>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor="label-color">{t("labels.color")}</Label>
-						<Input
-							id="label-color"
-							type="color"
+						<Label>{t("labels.color")}</Label>
+						<ColorSwatchPicker
 							value={color}
-							onChange={(e) => setColor(e.target.value)}
-							className="h-9 w-16 p-1"
+							onChange={setColor}
+							ariaLabel={t("labels.color")}
 						/>
 					</div>
 					{error && (

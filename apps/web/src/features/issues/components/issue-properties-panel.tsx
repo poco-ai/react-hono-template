@@ -183,6 +183,11 @@ export function IssuePropertiesPanel({
 				<MultiSelect
 					className="w-full justify-between"
 					placeholder={t("issues.noLabels")}
+					triggerLabel={
+						issue.labelIds.length > 0
+							? `${t("issues.labels")} · ${issue.labelIds.length}`
+							: undefined
+					}
 					value={issue.labelIds}
 					disabled={frozen}
 					options={labels.map((label) => ({

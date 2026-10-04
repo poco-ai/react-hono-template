@@ -327,6 +327,9 @@ export function CreateIssueDialog({
 									{t("issues.estimateUnit")}
 								</span>
 							</div>
+							<p className="text-muted-foreground text-xs">
+								{t("issues.estimateHint")}
+							</p>
 							{!estimateValid && (
 								<p className="text-destructive text-xs">
 									{t("issues.estimateInvalid")}

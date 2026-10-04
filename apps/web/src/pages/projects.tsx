@@ -77,6 +77,9 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	const visibleProjects = (projects.data ?? []).filter(
 		(project) => project.archived === archived,
 	);
+	// The empty state owns the only "create" call to action while the list is empty.
+	const hideHeaderCreate =
+		!projects.isPending && !projects.isError && projects.data?.length === 0;
 
 	const archiveMutation = useArchiveProject(orgId, {
 		onSuccess: (_data, project) => {
@@ -98,7 +101,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("projects.title")}
 				</h1>
-				{canManage && (
+				{canManage && !hideHeaderCreate && (
 					<Button onClick={() => setCreateOpen(true)} disabled={frozen}>
 						<Plus />
 						{t("projects.create")}

@@ -67,17 +67,25 @@ export function IssueFilterControls({
 }) {
 	const { t } = useTranslation();
 	const stacked = variant === "sheet";
+	const summarize = (labels: string[]) =>
+		labels.length === 0
+			? t("common.all")
+			: labels.length === 1
+				? labels[0]
+				: `${labels[0]} +${labels.length - 1}`;
+	const statusValue = summarize(
+		statusFilter.map((status) => t(`issues.statuses.${status}`)),
+	);
+	const priorityValue = summarize(
+		priorityFilter.map((name) => t(`issues.priorities.${name}`)),
+	);
 
 	return (
 		<>
 			<MultiSelect
-				className={stacked ? "w-full" : undefined}
+				className={cn("h-8 text-sm", stacked && "w-full")}
 				placeholder={t("issues.filterStatus")}
-				triggerLabel={
-					statusFilter.length > 0
-						? `${t("issues.filterStatus")} · ${statusFilter.length}`
-						: undefined
-				}
+				triggerLabel={`${t("issues.filterStatus")}: ${statusValue}`}
 				active={statusFilter.length > 0}
 				value={statusFilter}
 				options={ISSUE_STATUSES.map((status) => ({
@@ -89,13 +97,9 @@ export function IssueFilterControls({
 				}
 			/>
 			<MultiSelect
-				className={stacked ? "w-full" : undefined}
+				className={cn("h-8 text-sm", stacked && "w-full")}
 				placeholder={t("issues.filterPriority")}
-				triggerLabel={
-					priorityFilter.length > 0
-						? `${t("issues.filterPriority")} · ${priorityFilter.length}`
-						: undefined
-				}
+				triggerLabel={`${t("issues.filterPriority")}: ${priorityValue}`}
 				active={priorityFilter.length > 0}
 				value={priorityFilter}
 				options={ISSUE_PRIORITIES.map(({ name }) => ({
@@ -118,7 +122,7 @@ export function IssueFilterControls({
 				<SelectTrigger
 					className={cn(
 						stacked ? "w-full" : "w-44",
-						assigneeFilterActive && "bg-secondary dark:bg-secondary",
+						assigneeFilterActive && "border-foreground/30",
 					)}
 				>
 					<SelectValue>
@@ -154,7 +158,7 @@ export function IssueFilterControls({
 				<SelectTrigger
 					className={cn(
 						stacked ? "w-full" : "w-40",
-						labelFilterActive && "bg-secondary dark:bg-secondary",
+						labelFilterActive && "border-foreground/30",
 					)}
 				>
 					<SelectValue>

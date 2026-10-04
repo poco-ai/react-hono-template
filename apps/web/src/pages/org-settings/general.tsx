@@ -145,6 +145,7 @@ export function GeneralSettingsPage({
 						</div>
 						{canManage ? (
 							<Button
+								className="self-end"
 								onClick={() =>
 									updateMutation.mutate({ name: name.trim(), slug })
 								}
@@ -266,7 +267,7 @@ export function GeneralSettingsPage({
 					}
 				}}
 			>
-				<DialogContent>
+				<DialogContent closeLabel={t("common.close")}>
 					<DialogHeader>
 						<DialogTitle>{t("settings.deleteDialogTitle")}</DialogTitle>
 						<DialogDescription>

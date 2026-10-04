@@ -52,9 +52,9 @@ export function MultiSelect({
 			<DropdownMenuTrigger
 				render={
 					<Button
-						variant={active ? "secondary" : "outline"}
+						variant="outline"
 						size="sm"
-						className={className}
+						className={cn(className, active && "border-foreground/30")}
 						disabled={disabled}
 					>
 						<span
