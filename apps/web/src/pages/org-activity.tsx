@@ -20,6 +20,10 @@ import {
 	ORG_ACTIVITY_PAGE_SIZE,
 	orgActivitiesQuery,
 } from "@/features/activities/data";
+import {
+	activityDayLabel,
+	groupActivitiesByDay,
+} from "@/features/activities/grouping";
 import { ActivitySentence } from "@/features/issues/components/activity-sentence";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
@@ -53,6 +57,7 @@ export function OrgActivityPage({
 	);
 
 	const items = activities.data ?? [];
+	const groups = groupActivitiesByDay(items);
 	const canLoadMore = limit < ORG_ACTIVITY_MAX_LIMIT && items.length >= limit;
 
 	return (
@@ -123,70 +128,77 @@ export function OrgActivityPage({
 						<p className="text-muted-foreground">{t("activityFeed.empty")}</p>
 					</div>
 				)}
-				<ul className="flex flex-col gap-4">
-					{items.map((activity) => (
-						<li key={activity.id} className="flex gap-3">
-							<UserAvatar
-								name={activity.actor.name}
-								className="mt-0.5 size-6 shrink-0"
-							/>
-							<div className="flex min-w-0 flex-1 flex-col gap-1">
-								<div className="flex items-start justify-between gap-4">
-									<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-										<ActivitySentence
-											activity={activity}
-											members={members.data ?? []}
-											labels={labels.data ?? []}
-										/>
-										{activity.issue &&
-											activity.project &&
-											(activity.action === "issue.deleted" ? (
-												<span
-													className={cn(
-														badgeVariants({ variant: "secondary" }),
-														"max-w-full rounded-md font-mono",
-													)}
-												>
-													{activity.project.key}-{activity.issue.number}{" "}
-													{activity.issue.title}
-												</span>
-											) : (
-												<Link
-													to="/orgs/$orgId/projects/$projectId/$issueNumber"
-													params={{
-														orgId,
-														projectId: activity.project.id,
-														issueNumber: String(activity.issue.number),
-													}}
-													className={cn(
-														badgeVariants({ variant: "secondary" }),
-														"max-w-full rounded-md font-mono hover:bg-secondary/80",
-													)}
-												>
-													{activity.project.key}-{activity.issue.number}{" "}
-													{activity.issue.title}
-												</Link>
-											))}
+				{groups.map((group) => (
+					<section key={group.key} className="flex flex-col gap-3">
+						<h2 className="text-muted-foreground text-xs font-medium">
+							{activityDayLabel(group.key, t)}
+						</h2>
+						<ul className="flex flex-col gap-4">
+							{group.activities.map((activity) => (
+								<li key={activity.id} className="flex gap-3">
+									<UserAvatar
+										name={activity.actor.name}
+										className="mt-0.5 size-6 shrink-0"
+									/>
+									<div className="flex min-w-0 flex-1 flex-col gap-1">
+										<div className="flex items-start justify-between gap-4">
+											<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+												<ActivitySentence
+													activity={activity}
+													members={members.data ?? []}
+													labels={labels.data ?? []}
+												/>
+												{activity.issue &&
+													activity.project &&
+													(activity.action === "issue.deleted" ? (
+														<span
+															className={cn(
+																badgeVariants({ variant: "secondary" }),
+																"max-w-full rounded-md font-mono",
+															)}
+														>
+															{activity.project.key}-{activity.issue.number}{" "}
+															{activity.issue.title}
+														</span>
+													) : (
+														<Link
+															to="/orgs/$orgId/projects/$projectId/$issueNumber"
+															params={{
+																orgId,
+																projectId: activity.project.id,
+																issueNumber: String(activity.issue.number),
+															}}
+															className={cn(
+																badgeVariants({ variant: "secondary" }),
+																"max-w-full rounded-md font-mono hover:bg-secondary/80",
+															)}
+														>
+															{activity.project.key}-{activity.issue.number}{" "}
+															{activity.issue.title}
+														</Link>
+													))}
+											</div>
+											<time
+												dateTime={activity.createdAt}
+												title={formatDateTime(activity.createdAt)}
+												className="text-muted-foreground hidden shrink-0 text-xs sm:block"
+											>
+												{formatRelativeTime(activity.createdAt)}
+											</time>
+										</div>
+										<time
+											dateTime={activity.createdAt}
+											title={formatDateTime(activity.createdAt)}
+											className="text-muted-foreground text-xs sm:hidden"
+										>
+											{formatRelativeTime(activity.createdAt)}
+										</time>
 									</div>
-									<time
-										dateTime={activity.createdAt}
-										title={formatDateTime(activity.createdAt)}
-										className="text-muted-foreground hidden shrink-0 text-xs sm:block"
-									>
-										{formatRelativeTime(activity.createdAt)}
-									</time>
-								</div>
-								<time
-									dateTime={activity.createdAt}
-									title={formatDateTime(activity.createdAt)}
-									className="text-muted-foreground text-xs sm:hidden"
-								>
-									{formatRelativeTime(activity.createdAt)}
-								</time>
-							</div>
-						</li>
-					))}
-				</ul>
+								</li>
+							))}
+						</ul>
+					</section>
+				))}
 				{canLoadMore && (
 					<Button
 						variant="outline"
