@@ -9,6 +9,7 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 **Application features**
 
 - Multi-tenant workspaces (better-auth `organization` plugin): owner/admin/member roles, email invitations with shareable links
+- Self-service accounts: public landing page at `/`, register/login, `/forgot-password` + `/reset-password`, and an `/account` page (display name, password change)
 - Projects with per-project issue numbering (`PROJ-123`), statuses, priorities, labels, assignees, due dates
 - Issue list with URL-driven filters + pagination, drag-and-drop kanban board, bulk edits, my-issues view
 - Markdown descriptions and comments, R2-backed attachments with presigned direct upload, field-level activity timeline + org activity feed
@@ -40,7 +41,29 @@ cp apps/api/.dev.vars.example apps/api/.dev.vars   # minimum: BETTER_AUTH_SECRET
 bun run dev                                         # api :8787 + web :5173
 ```
 
-Open http://localhost:5173 — the first registered user becomes the platform admin. With no further config the app runs fully locally: attachments return 503 and billing runs in mock mode.
+Open http://localhost:5173 — the first registered user becomes the platform admin. With no further config the app runs fully locally: billing runs in mock mode and attachment endpoints return a storage 503.
+
+### Local attachment storage (optional)
+
+Uploads are presigned against `S3_ENDPOINT` (the browser then PUTs directly to `${S3_ENDPOINT}/${S3_BUCKET}/...`), so a local S3-compatible service is required for attachments — any MinIO instance works:
+
+```sh
+docker run -d --name minio -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+  minio/minio server /data --console-address ":9001"
+```
+
+Create a bucket (e.g. `test-bucket`) in the MinIO console at http://localhost:9001 — or from the CLI: `docker run --rm --network host minio/mc sh -c "mc alias set local http://localhost:9000 minioadmin minioadmin && mc mb local/test-bucket"`. Then set in `apps/api/.dev.vars`:
+
+```sh
+S3_ENDPOINT=http://localhost:9000
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_BUCKET=test-bucket
+```
+
+Browser uploads go straight to the bucket, so it must allow CORS `PUT` with `content-type` (MinIO's defaults allow this; R2 needs the CORS config in [apps/api/README.md](apps/api/README.md)). Without an S3-compatible service, uploads fail with a storage error before any bytes are sent.
 
 ## Validation
 
@@ -58,7 +81,7 @@ All optional except `BETTER_AUTH_SECRET`. Local: `apps/api/.dev.vars`; productio
 | Variable | Purpose |
 |---|---|
 | `BETTER_AUTH_SECRET` | Auth secret (required) |
-| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_BASE_URL` | R2 (or any S3-compatible storage) for issue attachments — see [apps/api/README.md](apps/api/README.md) incl. bucket CORS |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_BASE_URL` | S3-compatible storage for issue attachments — R2 in production, MinIO locally (see Quickstart); without it, attachment endpoints return 503 and uploads fail with a storage error. See [apps/api/README.md](apps/api/README.md) incl. bucket CORS |
 | `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | Real Stripe billing (all three or none; partial config returns 503) |
 | `BILLING_MOCK_MODE` | `true` enables simulated upgrades when Stripe is absent (intended for local/dev only) |
 
@@ -86,6 +109,7 @@ These are deliberate template-level simplifications. Each works correctly for de
 - **Webhook signatures** are HMAC over the payload with no timestamp (no replay protection) and secrets are stored plaintext with no rotation endpoint.
 - **Plan changes** propagate across isolates within ~60s (per-isolate cache), so a downgrade may briefly allow the old limits.
 - **Activity feeds** are capped at the latest 100 entries per issue/org.
+- **Password reset email** is not sent out of the box: with no email provider configured, better-auth's `sendResetPassword` writes the reset link to the Worker console (`wrangler dev` / `wrangler tail`). This is fine for local dev, but production deployments must wire `sendResetPassword` to a real email provider — otherwise users never receive the link.
 
 ## Deploying
 
