@@ -8,12 +8,12 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { useSession } from "@/features/auth/data";
+import { DueDateLabel } from "@/features/issues/components/issue-list";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { orgIssuesQuery } from "@/features/issues/data";
 import { projectsQuery } from "@/features/projects/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDueDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function MyIssuesPage({ orgId }: { orgId: string }) {
@@ -120,8 +120,8 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 												{project.name}
 											</span>
 										)}
-										<span className="text-muted-foreground hidden w-24 shrink-0 text-xs sm:inline">
-											{formatDueDate(issue.dueDate)}
+										<span className="hidden w-28 shrink-0 text-xs sm:inline">
+											<DueDateLabel value={issue.dueDate} />
 										</span>
 										{session && <UserAvatar name={session.user.name} />}
 									</Link>

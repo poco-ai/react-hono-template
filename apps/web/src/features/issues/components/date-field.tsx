@@ -9,7 +9,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { formatDueDate } from "@/lib/format";
+import { formatDueDate, getDueDateStatus } from "@/lib/format";
 
 function dateToInputValue(date: Date): string {
 	const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -40,6 +40,15 @@ export function DateField({
 	const [open, setOpen] = useState(false);
 	const locale = i18n.language.startsWith("zh") ? zhCN : enUS;
 	const selected = parseInputValue(value);
+	const status = getDueDateStatus(value);
+	const statusLabel =
+		status === "overdue"
+			? t("issues.dueOverdue")
+			: status === "today"
+				? t("issues.dueToday")
+				: status === "tomorrow"
+					? t("issues.dueTomorrow")
+					: null;
 
 	const commit = (next: string) => {
 		onChange(next);
@@ -57,9 +66,30 @@ export function DateField({
 					/>
 				}
 			>
-				<CalendarIcon className="text-muted-foreground size-4" />
+				<CalendarIcon className="text-muted-foreground size-4 shrink-0" />
 				{selected ? (
-					formatDueDate(value)
+					<>
+						<span
+							className={cn(
+								"min-w-0 truncate",
+								status === "overdue" && "text-destructive",
+							)}
+						>
+							{formatDueDate(value)}
+						</span>
+						{statusLabel && (
+							<span
+								className={cn(
+									"ml-auto text-xs",
+									status === "overdue"
+										? "text-destructive"
+										: "text-muted-foreground",
+								)}
+							>
+								{statusLabel}
+							</span>
+						)}
+					</>
 				) : (
 					<span className="text-muted-foreground font-normal">
 						{t("issues.duePlaceholder")}

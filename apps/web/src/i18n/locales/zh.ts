@@ -228,6 +228,8 @@ const zh: typeof en = {
 		duePlaceholder: "设置日期",
 		dueToday: "今天",
 		dueClear: "清除",
+		dueOverdue: "已逾期",
+		dueTomorrow: "明天",
 		estimate: "预估",
 		estimateUnit: "点数",
 		estimateInvalid: "预估必须是 0 到 100 之间的整数。",

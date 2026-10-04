@@ -25,9 +25,11 @@ import { LabelBadge } from "@/features/labels/components/label-badge";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
 import {
+	formatDate,
 	formatDateTime,
 	formatDueDate,
 	formatRelativeTime,
+	getDueDateStatus,
 } from "@/lib/format";
 
 export function IssueList({
@@ -187,9 +189,7 @@ export function IssueList({
 										)}
 									</TableCell>
 									<TableCell className="text-muted-foreground text-xs">
-										{formatDueDate(issue.dueDate) || (
-											<span className="text-muted-foreground/50">—</span>
-										)}
+										<DueDateLabel value={issue.dueDate} />
 									</TableCell>
 									<TableCell
 										title={formatDateTime(issue.updatedAt)}
@@ -290,5 +290,39 @@ export function IssueList({
 				)}
 			</footer>
 		</>
+	);
+}
+
+/** Due date with today/tomorrow labels and overdue emphasis; hover shows the exact date. */
+export function DueDateLabel({
+	value,
+	className,
+}: {
+	value: string | null | undefined;
+	className?: string;
+}) {
+	const { t } = useTranslation();
+	if (!value) {
+		return <span className={cn("text-muted-foreground/50", className)}>—</span>;
+	}
+	const status = getDueDateStatus(value);
+	const label =
+		status === "today"
+			? t("issues.dueToday")
+			: status === "tomorrow"
+				? t("issues.dueTomorrow")
+				: formatDueDate(value);
+	return (
+		<span
+			title={formatDate(value)}
+			className={cn(
+				"text-muted-foreground whitespace-nowrap",
+				status === "overdue" && "text-destructive",
+				className,
+			)}
+		>
+			{label}
+			{status === "overdue" && <> · {t("issues.dueOverdue")}</>}
+		</span>
 	);
 }

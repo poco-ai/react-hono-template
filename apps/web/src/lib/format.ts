@@ -17,9 +17,52 @@ export function formatDateTime(value: string | null | undefined): string {
 }
 
 export function formatDueDate(value: string | null | undefined): string {
-	return value
-		? parseDateValue(value.slice(0, 10)).toLocaleDateString(i18n.language)
-		: "";
+	if (!value) {
+		return "";
+	}
+	const date = parseDateValue(value.slice(0, 10));
+	const sameYear = date.getFullYear() === new Date().getFullYear();
+	return date.toLocaleDateString(
+		i18n.language,
+		sameYear
+			? { month: "short", day: "numeric" }
+			: { year: "numeric", month: "short", day: "numeric" },
+	);
+}
+
+export type DueDateStatus = "overdue" | "today" | "tomorrow";
+
+export function getDueDateStatus(
+	value: string | null | undefined,
+): DueDateStatus | null {
+	if (!value) {
+		return null;
+	}
+	const date = parseDateValue(value.slice(0, 10));
+	const now = new Date();
+	const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+	const target = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+	const days = Math.round((target - today) / 86_400_000);
+	if (days < 0) {
+		return "overdue";
+	}
+	if (days === 0) {
+		return "today";
+	}
+	if (days === 1) {
+		return "tomorrow";
+	}
+	return null;
+}
+
+export function dayKey(value: string | null | undefined): string {
+	if (!value) {
+		return "";
+	}
+	const date = new Date(value);
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export function formatRelativeTime(value: string | null | undefined): string {

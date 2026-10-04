@@ -239,6 +239,8 @@ const en = {
 		duePlaceholder: "Set date",
 		dueToday: "Today",
 		dueClear: "Clear",
+		dueOverdue: "Overdue",
+		dueTomorrow: "Tomorrow",
 		estimate: "Estimate",
 		estimateUnit: "points",
 		estimateInvalid: "Estimate must be a whole number between 0 and 100.",
