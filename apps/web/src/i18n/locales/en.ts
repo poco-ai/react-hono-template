@@ -624,6 +624,39 @@ const en = {
 		forbiddenDescription: "This area is only available to platform admins.",
 		noResults: "No matching results",
 	},
+	landing: {
+		badge: "Open-source SaaS starter",
+		title: "Launch your SaaS on Cloudflare's edge",
+		subtitle:
+			"React + Hono + D1. Multi-tenant organizations, plans, API keys and webhooks — ready to rebrand.",
+		ctaPrimary: "Get started",
+		ctaSecondary: "Sign in",
+		featuresTitle: "Everything a SaaS needs",
+		pricingTitle: "Simple pricing",
+		pricingDescription: "Start on Free, upgrade when your team grows.",
+		footer: "Built with React, Hono, Drizzle and better-auth.",
+		features: {
+			orgs: {
+				title: "Multi-tenant organizations",
+				description:
+					"Roles, invitations and freeze controls, scoped per organization.",
+			},
+			issues: {
+				title: "Issue tracking",
+				description: "List and board views, labels, estimates and due dates.",
+			},
+			developer: {
+				title: "Public API & webhooks",
+				description:
+					"Bearer API keys with rate limits, plus signed webhook deliveries.",
+			},
+			billing: {
+				title: "Plans & billing",
+				description:
+					"Stripe-ready subscriptions with per-plan quotas. Mock mode included.",
+			},
+		},
+	},
 	notFound: {
 		title: "Page not found",
 		backHome: "Back home",

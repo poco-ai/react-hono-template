@@ -9,11 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthAccountRouteImport } from './routes/_auth/account'
 import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
 import { Route as AuthApiDocsRouteImport } from './routes/_auth/api-docs'
 import { Route as AuthOnboardingRouteImport } from './routes/_auth/onboarding'
@@ -35,8 +38,18 @@ import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_aut
 import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteRoute = InviteRouteImport.update({
@@ -54,9 +67,14 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthIndexRoute = AuthIndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthAccountRoute = AuthAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthAdminRoute = AuthAdminRouteImport.update({
@@ -171,10 +189,13 @@ const AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthIndexRoute
+  '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/account': typeof AuthAccountRoute
   '/admin': typeof AuthAdminRouteWithChildren
   '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
@@ -197,12 +218,15 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/projects/$projectId/': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/account': typeof AuthAccountRoute
   '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
-  '/': typeof AuthIndexRoute
   '/admin/orgs': typeof AuthAdminOrgsRoute
   '/admin/users': typeof AuthAdminUsersRoute
   '/admin': typeof AuthAdminIndexRoute
@@ -221,14 +245,17 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_auth/account': typeof AuthAccountRoute
   '/_auth/admin': typeof AuthAdminRouteWithChildren
   '/_auth/api-docs': typeof AuthApiDocsRoute
   '/_auth/onboarding': typeof AuthOnboardingRoute
-  '/_auth/': typeof AuthIndexRoute
   '/_auth/admin/orgs': typeof AuthAdminOrgsRoute
   '/_auth/admin/users': typeof AuthAdminUsersRoute
   '/_auth/orgs/$orgId': typeof AuthOrgsOrgIdRouteWithChildren
@@ -251,9 +278,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot-password'
     | '/invite'
     | '/login'
     | '/register'
+    | '/reset-password'
+    | '/account'
     | '/admin'
     | '/api-docs'
     | '/onboarding'
@@ -276,12 +306,15 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
+    | '/forgot-password'
     | '/invite'
     | '/login'
     | '/register'
+    | '/reset-password'
+    | '/account'
     | '/api-docs'
     | '/onboarding'
-    | '/'
     | '/admin/orgs'
     | '/admin/users'
     | '/admin'
@@ -299,14 +332,17 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/projects/$projectId'
   id:
     | '__root__'
+    | '/'
     | '/_auth'
+    | '/forgot-password'
     | '/invite'
     | '/login'
     | '/register'
+    | '/reset-password'
+    | '/_auth/account'
     | '/_auth/admin'
     | '/_auth/api-docs'
     | '/_auth/onboarding'
-    | '/_auth/'
     | '/_auth/admin/orgs'
     | '/_auth/admin/users'
     | '/_auth/orgs/$orgId'
@@ -327,19 +363,36 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite': {
@@ -363,11 +416,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_auth/': {
-      id: '/_auth/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AuthIndexRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_auth/account': {
+      id: '/_auth/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthAccountRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/admin': {
@@ -580,28 +640,31 @@ const AuthOrgsOrgIdRouteWithChildren = AuthOrgsOrgIdRoute._addFileChildren(
 )
 
 interface AuthRouteChildren {
+  AuthAccountRoute: typeof AuthAccountRoute
   AuthAdminRoute: typeof AuthAdminRouteWithChildren
   AuthApiDocsRoute: typeof AuthApiDocsRoute
   AuthOnboardingRoute: typeof AuthOnboardingRoute
-  AuthIndexRoute: typeof AuthIndexRoute
   AuthOrgsOrgIdRoute: typeof AuthOrgsOrgIdRouteWithChildren
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthAccountRoute: AuthAccountRoute,
   AuthAdminRoute: AuthAdminRouteWithChildren,
   AuthApiDocsRoute: AuthApiDocsRoute,
   AuthOnboardingRoute: AuthOnboardingRoute,
-  AuthIndexRoute: AuthIndexRoute,
   AuthOrgsOrgIdRoute: AuthOrgsOrgIdRouteWithChildren,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

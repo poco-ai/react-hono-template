@@ -599,6 +599,36 @@ const zh: typeof en = {
 		forbiddenDescription: "此区域仅限平台管理员。",
 		noResults: "无匹配结果",
 	},
+	landing: {
+		badge: "开源 SaaS 模板",
+		title: "在 Cloudflare 边缘上发布你的 SaaS",
+		subtitle:
+			"React + Hono + D1。多租户组织、套餐、API 密钥与 Webhooks，开箱即可换皮。",
+		ctaPrimary: "开始使用",
+		ctaSecondary: "登录",
+		featuresTitle: "一个 SaaS 需要的全部",
+		pricingTitle: "简单定价",
+		pricingDescription: "免费开始，团队变大时再升级。",
+		footer: "基于 React、Hono、Drizzle 与 better-auth 构建。",
+		features: {
+			orgs: {
+				title: "多租户组织",
+				description: "按组织隔离的角色、邀请与冻结控制。",
+			},
+			issues: {
+				title: "事项追踪",
+				description: "列表与看板视图，标签、预估与截止日期。",
+			},
+			developer: {
+				title: "公开 API 与 Webhooks",
+				description: "带速率限制的 Bearer 密钥，以及签名 Webhook 投递。",
+			},
+			billing: {
+				title: "套餐与计费",
+				description: "Stripe 就绪的订阅与配额，内置模拟模式。",
+			},
+		},
+	},
 	notFound: {
 		title: "页面不存在",
 		backHome: "返回首页",
