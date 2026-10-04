@@ -12,6 +12,27 @@ import type { Database } from "../db/types";
 import type { AuthPolicyService } from "../services/auth-policy.service";
 import { ac, roles } from "./access";
 
+/**
+ * Password-reset delivery for this template: no email provider is configured,
+ * so the reset link (which points at the API and redirects to the web reset
+ * page) is written to the Worker console instead. A real deployment should
+ * send `url` to `user.email` here and remove this development fallback.
+ */
+export const sendResetPasswordToConsole = async ({
+	user,
+	url,
+}: {
+	user: { email?: string | null };
+	url: string;
+}) => {
+	console.log(
+		`[auth] Password reset link for ${user.email ?? "unknown"}: ${url}`,
+	);
+	console.log(
+		"[auth] No email provider is configured - deliver this URL to the user by email in production.",
+	);
+};
+
 export const createAuth = ({
 	db,
 	secret,
@@ -32,6 +53,7 @@ export const createAuth = ({
 		trustedOrigins,
 		emailAndPassword: {
 			enabled: true,
+			sendResetPassword: sendResetPasswordToConsole,
 		},
 		plugins: [
 			admin({
@@ -64,6 +86,11 @@ export const createAuth = ({
 							data: {
 								...userData,
 								role: await policy.initialUserRole(),
+								// This template has no email provider, so addresses are
+								// never verified. better-auth gates client-side
+								// `organization.listUserInvitations()` on a verified
+								// session email, which would otherwise stay unusable.
+								emailVerified: true,
 							},
 						};
 					},
