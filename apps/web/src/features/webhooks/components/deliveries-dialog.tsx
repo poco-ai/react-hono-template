@@ -29,6 +29,7 @@ import {
 import { apiErrorMessage } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/format";
 import { DeliveryStatusBadge, EventBadge } from "./delivery-badges";
+import { DeliveryDetailDialog } from "./delivery-detail-dialog";
 
 export function DeliveriesDialog({
 	orgId,
@@ -44,12 +45,14 @@ export function DeliveriesDialog({
 	const frozen = useOrgFrozen(orgId);
 	const [page, setPage] = useState(1);
 	const [redelivering, setRedelivering] = useState<string | null>(null);
+	const [detail, setDetail] = useState<WebhookDeliveryDto | null>(null);
 
 	useEffect(() => {
 		if (webhook) {
 			setPage(1);
 			setRedelivering(null);
 		}
+		setDetail(null);
 	}, [webhook]);
 
 	const deliveries = useQuery({
@@ -72,7 +75,7 @@ export function DeliveriesDialog({
 
 	return (
 		<Dialog open={webhook !== null} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-2xl">
+			<DialogContent className="sm:max-w-2xl" closeLabel={t("common.close")}>
 				<DialogHeader>
 					<DialogTitle>{t("webhooks.deliveriesTitle")}</DialogTitle>
 					<DialogDescription className="truncate font-mono text-xs">
@@ -94,7 +97,11 @@ export function DeliveriesDialog({
 					</TableHeader>
 					<TableBody>
 						{deliveries.data?.items.map((delivery: WebhookDeliveryDto) => (
-							<TableRow key={delivery.id}>
+							<TableRow
+								key={delivery.id}
+								className="cursor-pointer hover:bg-accent/40"
+								onClick={() => setDetail(delivery)}
+							>
 								<TableCell>
 									<EventBadge event={delivery.event} />
 								</TableCell>
@@ -116,7 +123,10 @@ export function DeliveriesDialog({
 										size="icon-sm"
 										aria-label={t("webhooks.redeliver")}
 										disabled={frozen || redelivering !== null}
-										onClick={() => redeliverMutation.mutate(delivery.id)}
+										onClick={(e) => {
+											e.stopPropagation();
+											redeliverMutation.mutate(delivery.id);
+										}}
 									>
 										{redelivering === delivery.id ? (
 											<Loader2 className="animate-spin" />
@@ -174,6 +184,10 @@ export function DeliveriesDialog({
 					/>
 				</div>
 			</DialogContent>
+			<DeliveryDetailDialog
+				delivery={detail}
+				onOpenChange={(open) => !open && setDetail(null)}
+			/>
 		</Dialog>
 	);
 }

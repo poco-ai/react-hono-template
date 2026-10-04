@@ -31,6 +31,7 @@ const en = {
 		loadMore: "Load more",
 		justNow: "Just now",
 		clear: "Clear",
+		close: "Close",
 		skipToContent: "Skip to content",
 	},
 	nav: {
@@ -554,7 +555,11 @@ const en = {
 		attempts: "Attempts",
 		time: "Time",
 		redeliver: "Redeliver",
-		ping: "Ping",
+		pingLabel: "Send test ping",
+		detailTitle: "Delivery detail",
+		payload: "Payload",
+		errorMessage: "Error",
+		noPayload: "No payload recorded.",
 		events: {
 			"issue.created": "Issue created",
 			"issue.updated": "Issue updated",

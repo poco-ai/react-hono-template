@@ -33,6 +33,7 @@ const zh: typeof en = {
 		loadMore: "加载更多",
 		justNow: "刚刚",
 		clear: "清除",
+		close: "关闭",
 		skipToContent: "跳到主要内容",
 	},
 	nav: {
@@ -532,7 +533,11 @@ const zh: typeof en = {
 		attempts: "尝试次数",
 		time: "时间",
 		redeliver: "重新投递",
-		ping: "Ping",
+		pingLabel: "发送测试 Ping",
+		detailTitle: "投递详情",
+		payload: "请求内容",
+		errorMessage: "错误信息",
+		noPayload: "没有记录请求内容。",
 		events: {
 			"issue.created": "事项已创建",
 			"issue.updated": "事项已更新",
