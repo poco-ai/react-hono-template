@@ -447,7 +447,7 @@ const zh: typeof en = {
 		planFree: "Free",
 		planPro: "Pro",
 		usageOf: "{{current}} / {{cap}}",
-		webhooksNotInPlan: "Free 计划不含 Webhooks",
+		webhooksNotInPlan: "Free 计划不含 Webhooks。",
 		upgradeToUnlock: "升级解锁",
 		recommended: "推荐",
 		renewsOn: "{{date}} 续期",
@@ -467,6 +467,7 @@ const zh: typeof en = {
 		pricePerMember: "每成员每月 {{price}}",
 		upgrade: "升级到 Pro",
 		manageBilling: "管理账单",
+		readOnly: "只有所有者或管理员可以更改方案。",
 		downgrade: "降级到 Free",
 		mockUpgradeTitle: "升级到 Pro？",
 		mockUpgradeDescription:

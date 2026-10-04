@@ -465,7 +465,7 @@ const en = {
 		planFree: "Free",
 		planPro: "Pro",
 		usageOf: "{{current}} / {{cap}}",
-		webhooksNotInPlan: "Webhooks aren't included in Free",
+		webhooksNotInPlan: "Webhooks aren't included in Free.",
 		upgradeToUnlock: "Upgrade to unlock",
 		recommended: "Recommended",
 		renewsOn: "Renews on {{date}}",
@@ -485,6 +485,7 @@ const en = {
 		pricePerMember: "{{price}} per member / mo",
 		upgrade: "Upgrade to Pro",
 		manageBilling: "Manage billing",
+		readOnly: "Only owners and admins can change the plan.",
 		downgrade: "Downgrade to Free",
 		mockUpgradeTitle: "Upgrade to Pro?",
 		mockUpgradeDescription:

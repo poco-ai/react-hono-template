@@ -32,6 +32,7 @@ import {
 	useCreateBillingPortal,
 	useCreateCheckout,
 } from "@/features/billing/data";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -52,6 +53,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 	const [portalOpen, setPortalOpen] = useState(false);
 
 	const billing = useQuery(billingQuery(orgId));
+	const { canManage } = useOrgRole(orgId);
 
 	useEffect(() => {
 		if (checkout === "success") {
@@ -196,11 +198,15 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 							unavailableNote={
 								isPro ? undefined : t("billing.webhooksNotInPlan")
 							}
-							onUnlock={isPro ? undefined : startUpgrade}
+							onUnlock={isPro || !canManage ? undefined : startUpgrade}
 						/>
 					</div>
 					<div className="flex items-center gap-2">
-						{isPro ? (
+						{!canManage ? (
+							<p className="text-muted-foreground text-sm">
+								{t("billing.readOnly")}
+							</p>
+						) : isPro ? (
 							data.stripeEnabled || !data.mockMode ? (
 								<Button
 									disabled={portalMutation.isPending}
@@ -302,25 +308,6 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 									</TableCell>
 								</TableRow>
 							))}
-							<TableRow>
-								<TableCell />
-								<TableCell />
-								<TableCell className="bg-muted/40">
-									{isPro ? (
-										<span className="text-muted-foreground text-sm">
-											{t("billing.currentPlan")}
-										</span>
-									) : (
-										<Button
-											size="sm"
-											disabled={checkoutMutation.isPending}
-											onClick={startUpgrade}
-										>
-											{t("billing.upgrade")}
-										</Button>
-									)}
-								</TableCell>
-							</TableRow>
 						</TableBody>
 					</Table>
 				</CardContent>

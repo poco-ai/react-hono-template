@@ -25,19 +25,16 @@ export function UsageRow({
 			</div>
 			<UsageBar usage={usage} cap={cap} />
 			{cap === 0 && unavailableNote && (
-				<p className="text-muted-foreground text-xs">
-					{unavailableNote}
+				<p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+					<span>{unavailableNote}</span>
 					{onUnlock && (
-						<>
-							{" "}
-							<button
-								type="button"
-								onClick={onUnlock}
-								className="text-foreground font-medium underline-offset-2 hover:underline"
-							>
-								{t("billing.upgradeToUnlock")}
-							</button>
-						</>
+						<button
+							type="button"
+							onClick={onUnlock}
+							className="text-foreground shrink-0 font-medium underline-offset-2 hover:underline"
+						>
+							{t("billing.upgradeToUnlock")}
+						</button>
 					)}
 				</p>
 			)}
