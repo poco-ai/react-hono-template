@@ -108,6 +108,7 @@ const en = {
 		noAccount: "No account?",
 		registerLink: "Register",
 		failed: "Login failed",
+		forgotPassword: "Forgot password?",
 	},
 	register: {
 		title: "Create account",
@@ -118,6 +119,25 @@ const en = {
 		haveAccount: "Already have an account?",
 		signInLink: "Sign in",
 		failed: "Registration failed",
+		alreadyRegistered:
+			"An account with this email already exists. Try signing in instead.",
+	},
+	forgotPassword: {
+		title: "Reset your password",
+		description: "We'll email you a link to reset it.",
+		submit: "Send reset link",
+		sent: "If that email exists, a reset link is on its way.",
+		backToLogin: "Back to sign in",
+		devHint:
+			"No email provider is configured on this instance — the reset link was written to the server log.",
+	},
+	resetPassword: {
+		title: "Set a new password",
+		description: "Choose a new password for your account.",
+		submit: "Update password",
+		success: "Password updated — you can sign in now.",
+		invalidToken: "This reset link is invalid or has expired.",
+		backToLogin: "Back to sign in",
 	},
 	invite: {
 		title: "Join organization",
@@ -146,6 +166,10 @@ const en = {
 		slugHint: "Lowercase letters, numbers and hyphens.",
 		submit: "Create organization",
 		failed: "Failed to create organization",
+		invitationsTitle: "Pending invitations",
+		invitationFrom: "{{inviter}} invited you to join {{org}}.",
+		join: "Join {{org}}",
+		orCreate: "Or create your own organization",
 	},
 	org: {
 		switcherLabel: "Organizations",
@@ -384,6 +408,22 @@ const en = {
 		deleteDescription:
 			"Labels still attached to issues cannot be deleted. Remove the label from those issues first.",
 		empty: "No labels yet.",
+	},
+	account: {
+		title: "Account",
+		description: "Manage your profile and password.",
+		profileTitle: "Profile",
+		profileDescription: "This name is shown to your teammates.",
+		nameUpdated: "Name updated.",
+		passwordTitle: "Password",
+		passwordDescription: "Use at least 8 characters.",
+		currentPassword: "Current password",
+		newPassword: "New password",
+		confirmPassword: "Confirm new password",
+		mismatch: "Passwords do not match.",
+		passwordUpdated: "Password updated.",
+		passwordFailed:
+			"Couldn't update the password. Check your current password and try again.",
 	},
 	settings: {
 		noPermission: "You do not have permission to view that settings page.",

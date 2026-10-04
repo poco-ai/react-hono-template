@@ -21,7 +21,7 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { bootstrapQuery, useSignUp } from "@/features/auth/data";
 
-import { apiErrorMessage } from "@/lib/errors";
+import { apiErrorMessage, errorCode } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -37,6 +37,13 @@ const registerSchema = z.object({
 	password: z.string().min(8),
 });
 
+/** better-auth answers a duplicate sign-up with 422 and this code; older
+ * versions and the admin plugin use the shorter one. Both mean "sign in". */
+const DUPLICATE_EMAIL_CODES = new Set([
+	"USER_ALREADY_EXISTS",
+	"USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+]);
+
 const INPUT_IDS = {
 	name: "name",
 	email: "email",
@@ -48,16 +55,24 @@ export function RegisterPage() {
 	useDocumentTitle(t("register.title"));
 	const navigate = useNavigate({ from: "/register" });
 	const [error, setError] = useState<string | null>(null);
+	const [duplicateEmail, setDuplicateEmail] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 	const { data: bootstrap } = useQuery(bootstrapQuery());
 	const register = useSignUp({
-		onError: (error) => setError(apiErrorMessage(t, error, "register.failed")),
+		onError: (error) => {
+			if (DUPLICATE_EMAIL_CODES.has(errorCode(error) ?? "")) {
+				setDuplicateEmail(true);
+				return;
+			}
+			setError(apiErrorMessage(t, error, "register.failed"));
+		},
 		onSuccess: () => navigate({ to: "/", replace: true }),
 	});
 
 	const onSubmit = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError(null);
+		setDuplicateEmail(false);
 		const data = new FormData(e.currentTarget);
 		const parsed = registerSchema.safeParse({
 			name: String(data.get("name") ?? ""),
@@ -147,6 +162,17 @@ export function RegisterPage() {
 								</p>
 							)}
 						</div>
+						{duplicateEmail && (
+							<Alert variant="destructive">
+								<CircleAlert />
+								<AlertDescription>
+									{t("register.alreadyRegistered")}{" "}
+									<Link to="/login" className="underline">
+										{t("register.signInLink")}
+									</Link>
+								</AlertDescription>
+							</Alert>
+						)}
 						{error && (
 							<Alert variant="destructive">
 								<CircleAlert />

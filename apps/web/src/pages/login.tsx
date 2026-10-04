@@ -89,6 +89,12 @@ export function LoginPage() {
 								required
 							/>
 						</div>
+						<Link
+							to="/forgot-password"
+							className="text-primary -mt-2 self-end text-sm underline"
+						>
+							{t("login.forgotPassword")}
+						</Link>
 						{error && (
 							<Alert variant="destructive">
 								<CircleAlert />

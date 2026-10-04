@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -17,6 +18,9 @@ import { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserDropdown } from "@/components/user-dropdown";
+import { pendingInvitationQuery, useSession } from "@/features/auth/data";
+import { useAcceptInvitation } from "@/features/members/data";
 import { useCreateOrganization } from "@/features/organizations/data";
 
 import { apiErrorMessage } from "@/lib/errors";
@@ -47,6 +51,10 @@ export function OnboardingPage() {
 	useDocumentTitle(t("onboarding.title"));
 	const navigate = useNavigate();
 
+	const { data: session } = useSession();
+	const invitations = useQuery(pendingInvitationQuery());
+	const invitation = invitations.data ?? null;
+
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
 	const [slugTouched, setSlugTouched] = useState(false);
@@ -58,6 +66,18 @@ export function OnboardingPage() {
 				navigate({
 					to: "/orgs/$orgId/projects",
 					params: { orgId: org.id },
+					replace: true,
+				});
+			}
+		},
+	});
+
+	const acceptMutation = useAcceptInvitation(invitation?.id ?? "", {
+		onSuccess: () => {
+			if (invitation) {
+				navigate({
+					to: "/orgs/$orgId/projects",
+					params: { orgId: invitation.organizationId },
 					replace: true,
 				});
 			}
@@ -98,6 +118,7 @@ export function OnboardingPage() {
 	return (
 		<div className="flex min-h-svh items-center justify-center p-6">
 			<div className="absolute top-4 right-4 flex items-center gap-1">
+				{session && <UserDropdown user={session.user} />}
 				<LanguageSwitcher />
 				<ThemeToggle />
 			</div>
@@ -107,7 +128,45 @@ export function OnboardingPage() {
 					<CardTitle>{t("onboarding.title")}</CardTitle>
 					<CardDescription>{t("onboarding.description")}</CardDescription>
 				</CardHeader>
-				<CardContent>
+				<CardContent className="flex flex-col gap-4">
+					{invitation && (
+						<div className="flex flex-col gap-3 rounded-lg border p-3">
+							<p className="text-sm font-medium">
+								{t("onboarding.invitationsTitle")}
+							</p>
+							<p className="text-muted-foreground text-sm">
+								{t("onboarding.invitationFrom", {
+									inviter: invitation.inviterEmail ?? invitation.inviterId,
+									org: invitation.organizationName,
+								})}
+							</p>
+							<Button
+								type="button"
+								variant="outline"
+								disabled={acceptMutation.isPending}
+								onClick={() => acceptMutation.mutate()}
+							>
+								{t("onboarding.join", { org: invitation.organizationName })}
+							</Button>
+							{acceptMutation.isError && (
+								<Alert variant="destructive">
+									<CircleAlert />
+									<AlertDescription>
+										{apiErrorMessage(t, acceptMutation.error)}
+									</AlertDescription>
+								</Alert>
+							)}
+						</div>
+					)}
+					{invitation && (
+						<div className="flex items-center gap-2">
+							<span className="bg-border h-px flex-1" />
+							<span className="text-muted-foreground text-xs">
+								{t("onboarding.orCreate")}
+							</span>
+							<span className="bg-border h-px flex-1" />
+						</div>
+					)}
 					<form noValidate className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="org-name">{t("onboarding.orgName")}</Label>
