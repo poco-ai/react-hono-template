@@ -34,6 +34,7 @@ const zh: typeof en = {
 		justNow: "刚刚",
 		clear: "清除",
 		close: "关闭",
+		dismiss: "忽略",
 		skipToContent: "跳到主要内容",
 	},
 	nav: {

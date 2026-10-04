@@ -32,6 +32,7 @@ import { useTranslation } from "react-i18next";
 import { UserAvatar } from "@/components/user-avatar";
 import {
 	attachmentsQuery,
+	isStorageUnavailableError,
 	resolveContentType,
 	useDeleteAttachment,
 	useUploadAttachment,
@@ -100,6 +101,7 @@ export function IssueAttachments({
 	const controllersRef = useRef(new Map<string, AbortController>());
 
 	const handleFiles = (files: FileList | File[]) => {
+		setPending((prev) => prev.filter((item) => !item.error));
 		for (const file of Array.from(files)) {
 			const id = crypto.randomUUID();
 			const contentType = resolveContentType(file);
@@ -148,9 +150,11 @@ export function IssueAttachments({
 													? t("attachments.cancelled", {
 															filename: file.name,
 														})
-													: t("attachments.uploadFailed", {
-															filename: file.name,
-														}),
+													: isStorageUnavailableError(error)
+														? t("attachments.storageUnavailable")
+														: t("attachments.uploadFailed", {
+																filename: file.name,
+															}),
 										}
 									: item,
 							),
@@ -177,7 +181,7 @@ export function IssueAttachments({
 			<button
 				type="button"
 				className={cn(
-					"flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+					"flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-lg border border-dashed px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
 					dragOver && "border-primary bg-accent",
 				)}
 				disabled={frozen}
@@ -195,13 +199,12 @@ export function IssueAttachments({
 					}
 				}}
 			>
-				<Paperclip className="text-muted-foreground size-5" />
-				<span className="text-sm font-medium">{t("attachments.add")}</span>
-				<span className="text-muted-foreground text-xs">
-					{t("attachments.dropHint")}
-				</span>
-				<span className="text-muted-foreground text-xs">
-					{t("attachments.typeLimit")}
+				<Paperclip className="text-muted-foreground size-5 shrink-0" />
+				<span className="flex min-w-0 flex-col">
+					<span className="text-sm font-medium">{t("attachments.add")}</span>
+					<span className="text-muted-foreground text-xs">
+						{t("attachments.dropHint")} · {t("attachments.typeLimit")}
+					</span>
 				</span>
 			</button>
 			<input
@@ -240,7 +243,9 @@ export function IssueAttachments({
 							<Button
 								variant="ghost"
 								size="icon-sm"
-								aria-label={t("common.cancel")}
+								aria-label={
+									item.error ? t("common.dismiss") : t("common.cancel")
+								}
 								onClick={() => {
 									const controller = controllersRef.current.get(item.id);
 									if (controller) {

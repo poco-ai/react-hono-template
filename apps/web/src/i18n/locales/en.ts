@@ -32,6 +32,7 @@ const en = {
 		justNow: "Just now",
 		clear: "Clear",
 		close: "Close",
+		dismiss: "Dismiss",
 		skipToContent: "Skip to content",
 	},
 	nav: {
