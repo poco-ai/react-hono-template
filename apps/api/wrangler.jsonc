@@ -32,6 +32,12 @@
 				"period": 60
 			}
 		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "fb4c47a58af04d05bf5b5e351e24feb2"
+		}
 	]
 	// "vars": { "ENVIRONMENT": "production" }
 }

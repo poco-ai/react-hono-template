@@ -110,12 +110,13 @@ These are deliberate template-level simplifications. Each works correctly for de
 - **Plan changes** propagate across isolates within ~60s (per-isolate cache), so a downgrade may briefly allow the old limits.
 - **Activity feeds** are capped at the latest 100 entries per issue/org.
 - **Password reset email** is not sent out of the box: with no email provider configured, better-auth's `sendResetPassword` writes the reset link to the Worker console (`wrangler dev` / `wrangler tail`). This is fine for local dev, but production deployments must wire `sendResetPassword` to a real email provider — otherwise users never receive the link.
+- **Runtime config** lives in KV (`config:global`) behind a 60s per-isolate cache, so updates can take up to a minute to propagate. `GET /api/config` is public — never store secrets there.
 
 ## Deploying
 
 Push to `main` deploys both Workers via GitHub Actions (needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` secrets; web is built with `VITE_API_URL` pointing at the API Worker). Manual: `bun run deploy` inside each app. First production setup:
 
-1. `wrangler d1 create` + update `database_id` in `apps/api/wrangler.jsonc`, then run `bun run db:migrate:remote` inside `apps/api`
+1. `wrangler d1 create` + update `database_id` in `apps/api/wrangler.jsonc`; create the `KV` namespace (`wrangler kv namespace create KV`) and set its id there too, then run `bun run db:migrate:remote` inside `apps/api`
 2. Set secrets (`BETTER_AUTH_SECRET`, optionally S3/Stripe vars) and add your web origin to `trustedOrigins` in `apps/api/src/index.ts`
 3. Stripe: create a subscription price, set the three secrets, add a webhook endpoint `<api-url>/api/stripe/webhook` (events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`)
 

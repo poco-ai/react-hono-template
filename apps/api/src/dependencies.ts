@@ -12,6 +12,7 @@ import { createProjectDao } from "./dao/project.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
+import type { CacheStore } from "./lib/kv/types";
 import type { StorageAdapter } from "./lib/storage/types";
 import type { StripeSetup } from "./lib/stripe";
 import { createActivityService } from "./services/activity.service";
@@ -23,6 +24,7 @@ import { createAuthPolicyService } from "./services/auth-policy.service";
 import { createBillingService } from "./services/billing.service";
 import { createBootstrapService } from "./services/bootstrap.service";
 import { createCommentService } from "./services/comment.service";
+import { createConfigService } from "./services/config.service";
 import { createIssueService } from "./services/issue.service";
 import { createLabelService } from "./services/label.service";
 import { createPlanService } from "./services/plan.service";
@@ -33,11 +35,13 @@ import { createWebhookDeliveryService } from "./services/webhook-delivery.servic
 export const createDependencies = ({
 	db,
 	storage,
+	cache,
 	stripeSetup,
 	billingMockEnabled,
 }: {
 	db: Database;
 	storage: StorageAdapter | null;
+	cache: CacheStore;
 	stripeSetup: StripeSetup;
 	billingMockEnabled: boolean;
 }) => {
@@ -107,6 +111,7 @@ export const createDependencies = ({
 	});
 
 	const bootstrapService = createBootstrapService(adminUserDao);
+	const configService = createConfigService(cache);
 	const authPolicyService = createAuthPolicyService({
 		adminUserDao,
 		memberDao,
@@ -128,6 +133,7 @@ export const createDependencies = ({
 			billingService,
 			planService,
 			bootstrapService,
+			configService,
 			authPolicyService,
 		},
 	};

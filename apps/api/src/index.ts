@@ -6,6 +6,7 @@ import { createStripeController } from "./controllers/stripe.controller";
 import { db } from "./db";
 import { createDependencies } from "./dependencies";
 import { createAuth } from "./lib/auth";
+import { createKvCache } from "./lib/kv/cache";
 import { fail } from "./lib/response";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { setupStripe } from "./lib/stripe";
@@ -30,6 +31,7 @@ const stripeSetup = setupStripe({
 const dependencies = createDependencies({
 	db,
 	storage: s3ClientFromEnv(),
+	cache: createKvCache(env.KV),
 	stripeSetup,
 	billingMockEnabled: env.BILLING_MOCK_MODE === "true",
 });

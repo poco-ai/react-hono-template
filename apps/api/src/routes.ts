@@ -13,6 +13,7 @@ import { createAttachmentsRoutes } from "./routes/attachments";
 import { createBillingRoutes } from "./routes/billing";
 import { createBootstrapRoutes } from "./routes/bootstrap";
 import { createCommentsRoutes } from "./routes/comments";
+import { createConfigRoutes } from "./routes/config";
 import { createIssuesRoutes } from "./routes/issues";
 import { createLabelsRoutes } from "./routes/labels";
 import { createProjectsRoutes } from "./routes/projects";
@@ -45,12 +46,14 @@ export const createRoutes = ({
 				);
 			})
 			.route("/", createBootstrapRoutes(dependencies.services.bootstrapService))
+			.route("/", createConfigRoutes(dependencies.services.configService))
 			.use("/api/admin/*", requireAuth(auth))
 			.route(
 				"/",
 				createAdminRoutes({
 					users: dependencies.services.adminUserService,
 					orgs: dependencies.services.adminOrgService,
+					config: dependencies.services.configService,
 				}),
 			)
 			// The authenticated org wildcard prefix is mounted before the resource

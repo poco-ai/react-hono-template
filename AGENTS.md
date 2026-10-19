@@ -36,6 +36,7 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
   - `.env` — drizzle-kit remote D1 credentials (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, `CLOUDFLARE_D1_TOKEN`), only needed for `db:migrate:remote` / `db:push`
   - Prod secrets: `bunx wrangler secret put <NAME>` (never put them in `wrangler.jsonc`)
 - `worker-configuration.d.ts` is generated. After editing `wrangler.jsonc` (e.g. new bindings), run `bun run cf-typegen`; never edit it by hand. Optional env vars are declared in `src/env.d.ts`.
+- KV binding `KV` (`kv_namespaces` in `wrangler.jsonc`) backs runtime config: public `GET /api/config`, admin `PUT /api/admin/config`, key `config:global`, L1 cache 60s. Local KV is simulated by `wrangler dev`; the namespace must exist before deploy (the CI `CLOUDFLARE_API_TOKEN` needs Workers KV permission).
 - Drizzle schema: `src/db/schema.ts` + `src/db/auth-schema.ts` (better-auth tables incl. organization/member/invitation). Workflow: `bun run db:generate` → `bun run db:migrate:local` (local miniflare D1). `db:migrate:remote` and `db:push` operate on the real remote D1 — do not run casually.
 - Layering (strictly one direction: `controller → service → dao → db`; dto is referenced by all layers):
   - `src/controllers/` — HTTP handlers: receive validated input (zod via `src/lib/validation.ts`, wired in resource routers), call service, wrap with `ok`/`fail` from `src/lib/response.ts`. Keep them thin.

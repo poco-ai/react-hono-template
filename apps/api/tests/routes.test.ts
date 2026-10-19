@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { DEFAULT_RUNTIME_CONFIG, type RuntimeConfig } from "@workspace/shared";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { createRoutes } from "../src/routes";
@@ -35,6 +36,10 @@ const appFor = ({
 			issueService: { listIssues: async () => ({ items: [] }) },
 			billingService: { createCheckout: async () => ({ url: null }) },
 			adminOrgService: { stats: async () => ({ orgs: 1 }) },
+			configService: {
+				getConfig: async () => DEFAULT_RUNTIME_CONFIG,
+				updateConfig: async (input: RuntimeConfig) => input,
+			},
 		},
 	} as unknown as Dependencies;
 	return createRoutes({ auth, dependencies });
@@ -56,6 +61,58 @@ test("composed admin and organization routes require a session", async () => {
 		await expectError(await app.request(path), 401, "UNAUTHORIZED");
 	}
 	assert.equal((await app.request("/api/bootstrap")).status, 200);
+});
+
+test("public config is readable signed out and cacheable", async () => {
+	const response = await appFor({ loggedIn: false }).request("/api/config");
+	assert.equal(response.status, 200);
+	assert.equal(response.headers.get("Cache-Control"), "public, max-age=60");
+	assert.deepEqual(await response.json(), {
+		ok: true,
+		data: DEFAULT_RUNTIME_CONFIG,
+	});
+});
+
+test("only admins can update runtime config", async () => {
+	await expectError(
+		await appFor().request("/api/admin/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ maintenance: true }),
+		}),
+		403,
+		"FORBIDDEN",
+	);
+
+	const response = await appFor({ platformRole: "admin" }).request(
+		"/api/admin/config",
+		{
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ maintenance: true, features: { beta: true } }),
+		},
+	);
+	assert.equal(response.status, 200);
+	assert.deepEqual(await response.json(), {
+		ok: true,
+		data: {
+			...DEFAULT_RUNTIME_CONFIG,
+			maintenance: true,
+			features: { beta: true },
+		},
+	});
+});
+
+test("admin config updates reject invalid bodies", async () => {
+	await expectError(
+		await appFor({ platformRole: "admin" }).request("/api/admin/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ maintenance: "yes" }),
+		}),
+		400,
+		"VALIDATION",
+	);
 });
 
 test("non-members cannot access organization resources", async () => {

@@ -9,6 +9,7 @@ export * from "./schemas/api-key";
 export * from "./schemas/attachment";
 export * from "./schemas/billing";
 export * from "./schemas/comment";
+export * from "./schemas/config";
 export * from "./schemas/issue";
 export * from "./schemas/label";
 export * from "./schemas/pagination";

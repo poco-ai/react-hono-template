@@ -25,6 +25,21 @@ bun run deploy
 bun run cf-typegen
 ```
 
+## KV 与运行时配置
+
+KV binding 为 `KV`，namespace id 配置在 `wrangler.jsonc`；修改 binding 后运行 `bun run cf-typegen` 重新生成类型。本地 KV 由 `wrangler dev` 模拟，无需额外服务；部署前 namespace 必须已存在，CI 的 `CLOUDFLARE_API_TOKEN` 需要 Workers KV 权限。
+
+运行时配置存放在 key `config:global`：服务内 L1 缓存 60s，KV 读取 `cacheTtl` 60s（下限 30s），写入不设过期时间。本地可写入初始值：
+
+```sh
+bunx wrangler kv key put --binding=KV "config:global" '{"version":1,"maintenance":false,"announcement":null,"features":{}}' --local
+```
+
+- `GET /api/config` — 公开读取（响应带 `Cache-Control: public, max-age=60`）
+- `PUT /api/admin/config` — 平台管理员写入完整配置（`version`、`maintenance`、`announcement`、`features`）
+
+配置可公开读取，禁止存放密钥或任何敏感信息。
+
 ## 对象存储（S3 协议，R2 / MinIO / OSS 通用）
 
 附件存储基于 S3 协议实现（`aws4fetch` 签名 SigV4），实际厂商只由环境变量决定，换厂商零代码改动：

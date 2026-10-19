@@ -2,26 +2,32 @@ import {
 	adminOrgListQuerySchema,
 	adminUserListQuerySchema,
 	banAdminUserSchema,
+	runtimeConfigSchema,
 	updateAdminUserRoleSchema,
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createAdminOrgController } from "../controllers/admin-org.controller";
 import { createAdminController } from "../controllers/admin-user.controller";
+import { createConfigController } from "../controllers/config.controller";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import { requirePermission } from "../middleware/auth";
 import type { AdminOrgService } from "../services/admin-org.service";
 import type { AdminUserService } from "../services/admin-user.service";
+import type { ConfigService } from "../services/config.service";
 
 export const createAdminRoutes = ({
 	users,
 	orgs,
+	config,
 }: {
 	users: AdminUserService;
 	orgs: AdminOrgService;
+	config: ConfigService;
 }) => {
 	const adminController = createAdminController(users);
 	const adminOrgController = createAdminOrgController(orgs);
+	const configController = createConfigController(config);
 	return new Hono<SessionEnv>()
 		.get(
 			"/api/admin/users",
@@ -68,5 +74,11 @@ export const createAdminRoutes = ({
 		)
 		.get("/api/admin/stats", requirePermission({ org: ["stats"] }), (c) =>
 			adminOrgController.stats(c),
+		)
+		.put(
+			"/api/admin/config",
+			requirePermission({ config: ["write"] }),
+			validate(runtimeConfigSchema, "json"),
+			(c) => configController.update(c, c.req.valid("json")),
 		);
 };
