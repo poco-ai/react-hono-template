@@ -47,8 +47,8 @@ export const createBillingService = ({
 	mockEnabled: boolean;
 	plans: PlanService;
 }) => {
-	const afterPlanChange = (orgId: string) => {
-		plans.invalidatePlanCache(orgId);
+	const afterPlanChange = async (orgId: string) => {
+		await plans.invalidatePlanCache(orgId);
 	};
 
 	const requireCompleteStripe = () => {
@@ -107,7 +107,7 @@ export const createBillingService = ({
 				status: "active",
 				seats,
 			});
-			afterPlanChange(orgId);
+			await afterPlanChange(orgId);
 			return { url: null };
 		},
 
@@ -137,7 +137,7 @@ export const createBillingService = ({
 				status: "active",
 				currentPeriodEnd: null,
 			});
-			afterPlanChange(orgId);
+			await afterPlanChange(orgId);
 			return { url: null };
 		},
 
@@ -160,7 +160,7 @@ export const createBillingService = ({
 							: (session.subscription?.id ?? null),
 					seats,
 				});
-				afterPlanChange(orgId);
+				await afterPlanChange(orgId);
 				return;
 			}
 			if (
@@ -183,7 +183,7 @@ export const createBillingService = ({
 						stripeSubscriptionId: null,
 						currentPeriodEnd: null,
 					});
-					afterPlanChange(row.orgId);
+					await afterPlanChange(row.orgId);
 					return;
 				}
 				const periodEnd = subscriptionObject.items.data[0]?.current_period_end;
@@ -193,7 +193,7 @@ export const createBillingService = ({
 					stripeSubscriptionId: subscriptionObject.id,
 					currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
 				});
-				afterPlanChange(row.orgId);
+				await afterPlanChange(row.orgId);
 			}
 		},
 	};

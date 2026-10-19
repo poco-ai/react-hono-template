@@ -47,6 +47,55 @@ test("checkout resolves the owner's email inside the service", async () => {
 	);
 });
 
+test("mock checkout awaits plan cache invalidation after the subscription write", async () => {
+	const events: string[] = [];
+	let startInvalidation: () => void = () => {};
+	const invalidationStarted = new Promise<void>((resolve) => {
+		startInvalidation = resolve;
+	});
+	let releaseInvalidation: () => void = () => {};
+	const invalidationGate = new Promise<void>((resolve) => {
+		releaseInvalidation = resolve;
+	});
+	const service = createBillingService({
+		memberDao: {
+			countByOrg: async () => 2,
+		},
+		billingDao: {
+			ensure: async (orgId: string) => {
+				events.push(`ensure:${orgId}`);
+			},
+			update: async (orgId: string) => {
+				events.push(`update:${orgId}`);
+				return null;
+			},
+		},
+		stripeSetup: { status: "disabled", context: null },
+		mockEnabled: true,
+		plans: {
+			invalidatePlanCache: async (orgId: string) => {
+				startInvalidation();
+				await invalidationGate;
+				events.push(`invalidate:${orgId}`);
+			},
+		},
+	} as unknown as BillingDependencies);
+
+	const checkout = service.createCheckout("org", "https://app.example.com");
+	await invalidationStarted;
+
+	let settled = false;
+	checkout.then(() => {
+		settled = true;
+	});
+	await Promise.resolve();
+	assert.equal(settled, false);
+
+	releaseInvalidation();
+	assert.deepEqual(await checkout, { url: null });
+	assert.deepEqual(events, ["ensure:org", "update:org", "invalidate:org"]);
+});
+
 test("missing or partial Stripe configuration still fails closed", async () => {
 	for (const status of ["disabled", "incomplete"]) {
 		const service = createBillingService({

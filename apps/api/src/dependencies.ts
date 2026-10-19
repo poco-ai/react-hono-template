@@ -62,7 +62,7 @@ export const createDependencies = ({
 	const webhookDao = createWebhookDao(db);
 	const webhookDeliveryDao = createWebhookDeliveryDao(db);
 	const billingDao = createBillingDao(db);
-	const planService = createPlanService(billingDao);
+	const planService = createPlanService(billingDao, cache);
 
 	const webhookDeliveryService = createWebhookDeliveryService({
 		webhookDao,
