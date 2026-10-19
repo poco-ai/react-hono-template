@@ -83,7 +83,7 @@ export const createDependencies = ({
 		memberDao,
 		webhooks: webhookDeliveryService,
 	});
-	const labelService = createLabelService(labelDao);
+	const labelService = createLabelService(labelDao, cache);
 	const commentService = createCommentService({
 		commentDao,
 		issueDao,

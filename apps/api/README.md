@@ -40,6 +40,8 @@ bunx wrangler kv key put --binding=KV "config:global" '{"version":1,"maintenance
 
 配置可公开读取，禁止存放密钥或任何敏感信息。
 
+Label 列表缓存于 `cache:v1:labels:<orgId>`（org id 经 `encodeURIComponent` 编码），TTL 300s，label 创建/更新/删除成功后失效。
+
 ## 对象存储（S3 协议，R2 / MinIO / OSS 通用）
 
 附件存储基于 S3 协议实现（`aws4fetch` 签名 SigV4），实际厂商只由环境变量决定，换厂商零代码改动：

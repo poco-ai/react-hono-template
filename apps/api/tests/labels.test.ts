@@ -3,7 +3,15 @@ import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
 import type { LabelDao } from "../src/dao/label.dao";
 import type { LabelDto } from "../src/dto/label.dto";
-import { createLabelService } from "../src/services/label.service";
+import type {
+	CacheGetOptions,
+	CacheSetOptions,
+	CacheStore,
+} from "../src/lib/kv/types";
+import {
+	createLabelService,
+	labelsCacheKey,
+} from "../src/services/label.service";
 
 const labelDto = (id: string, name: string): LabelDto => ({
 	id,
@@ -14,6 +22,31 @@ const labelDto = (id: string, name: string): LabelDto => ({
 	updatedAt: "2026-01-01T00:00:00.000Z",
 });
 
+const createFakeCache = (initial: Record<string, unknown> = {}) => {
+	const entries = new Map<string, unknown>(Object.entries(initial));
+	const calls = {
+		gets: [] as { key: string; cacheTtl?: number }[],
+		sets: [] as { key: string; value: unknown; ttlSeconds?: number }[],
+		deletes: [] as string[],
+	};
+	const store: CacheStore = {
+		get: async <T>(key: string, options?: CacheGetOptions) => {
+			calls.gets.push({ key, cacheTtl: options?.cacheTtl });
+			return (entries.get(key) as T | undefined) ?? null;
+		},
+		set: async <T>(key: string, value: T, options?: CacheSetOptions) => {
+			calls.sets.push({ key, value, ttlSeconds: options?.ttlSeconds });
+			entries.set(key, value);
+			return true;
+		},
+		delete: async (key: string) => {
+			calls.deletes.push(key);
+			return entries.delete(key);
+		},
+	};
+	return { store, calls };
+};
+
 const serviceFor = ({
 	byId = null as LabelDto | null,
 	byName = null as LabelDto | null,
@@ -22,37 +55,45 @@ const serviceFor = ({
 	updated = null as LabelDto | null,
 	references = 0,
 	createError = null as Error | null,
+	cache = createFakeCache(),
 } = {}) => {
 	const calls = {
+		list: 0,
 		created: [] as { id: string; orgId: string; name: string; color: string }[],
 		updated: [] as Record<string, unknown>[],
 	};
-	const service = createLabelService({
-		listByOrg: async () => listed,
-		findById: async () => byId,
-		findByName: async () => byName,
-		create: async (data: {
-			id: string;
-			orgId: string;
-			name: string;
-			color: string;
-		}) => {
-			if (createError) throw createError;
-			calls.created.push(data);
-			return created;
-		},
-		update: async (
-			_orgId: string,
-			_id: string,
-			patch: Record<string, unknown>,
-		) => {
-			calls.updated.push(patch);
-			return updated;
-		},
-		delete: async () => true,
-		countIssueReferences: async () => references,
-	} as unknown as LabelDao);
-	return { service, calls };
+	const service = createLabelService(
+		{
+			listByOrg: async () => {
+				calls.list += 1;
+				return listed;
+			},
+			findById: async () => byId,
+			findByName: async () => byName,
+			create: async (data: {
+				id: string;
+				orgId: string;
+				name: string;
+				color: string;
+			}) => {
+				if (createError) throw createError;
+				calls.created.push(data);
+				return created;
+			},
+			update: async (
+				_orgId: string,
+				_id: string,
+				patch: Record<string, unknown>,
+			) => {
+				calls.updated.push(patch);
+				return updated;
+			},
+			delete: async () => true,
+			countIssueReferences: async () => references,
+		} as unknown as LabelDao,
+		cache.store,
+	);
+	return { service, calls, cache };
 };
 
 const isLabelError = (status: number, code: ApiErrorCode) => (error: unknown) =>
@@ -163,4 +204,85 @@ test("deleteLabel refuses unknown or still-referenced labels", async () => {
 
 	const unused = serviceFor({ byId: labelDto("label-1", "Bug") });
 	await unused.service.deleteLabel("org", "label-1");
+});
+
+test("listLabels serves a cached list without hitting the dao", async () => {
+	const own = labelDto("label-1", "Bug");
+	const cache = createFakeCache({ [labelsCacheKey("org")]: [own] });
+	const { service, calls } = serviceFor({ cache });
+	assert.deepEqual(await service.listLabels("org"), [own]);
+	assert.equal(calls.list, 0);
+	assert.deepEqual(cache.calls.gets, [
+		{ key: "cache:v1:labels:org", cacheTtl: 30 },
+	]);
+	assert.equal(cache.calls.sets.length, 0);
+});
+
+test("listLabels caches a dao result under the encoded org key for 300s", async () => {
+	const own = labelDto("label-1", "Bug");
+	const { service, calls, cache } = serviceFor({ listed: [own] });
+	assert.deepEqual(await service.listLabels("org/one"), [own]);
+	assert.equal(calls.list, 1);
+	assert.deepEqual(cache.calls.sets, [
+		{
+			key: "cache:v1:labels:org%2Fone",
+			value: [own],
+			ttlSeconds: 300,
+		},
+	]);
+});
+
+test("listLabels treats a cached empty array as a hit", async () => {
+	const cache = createFakeCache({ [labelsCacheKey("org")]: [] });
+	const { service, calls } = serviceFor({
+		cache,
+		listed: [labelDto("label-1", "Bug")],
+	});
+	assert.deepEqual(await service.listLabels("org"), []);
+	assert.equal(calls.list, 0);
+});
+
+test("label writes invalidate the org-scoped list cache", async () => {
+	const key = labelsCacheKey("org");
+
+	const created = serviceFor();
+	await created.service.createLabel("org", { name: "Bug", color: "#112233" });
+	assert.deepEqual(created.cache.calls.deletes, [key]);
+
+	const updated = serviceFor({
+		byId: labelDto("label-1", "Bug"),
+		updated: labelDto("label-1", "Bugfix"),
+	});
+	await updated.service.updateLabel("org", "label-1", { name: "Bugfix" });
+	assert.deepEqual(updated.cache.calls.deletes, [key]);
+
+	const deleted = serviceFor({ byId: labelDto("label-1", "Bug") });
+	await deleted.service.deleteLabel("org", "label-1");
+	assert.deepEqual(deleted.cache.calls.deletes, [key]);
+});
+
+test("failed label writes leave the list cache untouched", async () => {
+	const duplicate = serviceFor({ byName: labelDto("existing", "Bug") });
+	await assert.rejects(
+		duplicate.service.createLabel("org", { name: "Bug", color: "#112233" }),
+		isLabelError(409, ApiErrorCode.LABEL_NAME_TAKEN),
+	);
+	assert.deepEqual(duplicate.cache.calls.deletes, []);
+
+	const lost = serviceFor({ byId: labelDto("label-1", "Bug"), updated: null });
+	await assert.rejects(
+		lost.service.updateLabel("org", "label-1", { color: "#445566" }),
+		isLabelError(404, ApiErrorCode.LABEL_NOT_FOUND),
+	);
+	assert.deepEqual(lost.cache.calls.deletes, []);
+
+	const inUse = serviceFor({
+		byId: labelDto("label-1", "Bug"),
+		references: 1,
+	});
+	await assert.rejects(
+		inUse.service.deleteLabel("org", "label-1"),
+		isLabelError(409, ApiErrorCode.LABEL_IN_USE),
+	);
+	assert.deepEqual(inUse.cache.calls.deletes, []);
 });

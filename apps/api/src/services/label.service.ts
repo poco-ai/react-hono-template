@@ -6,6 +6,10 @@ import {
 } from "@workspace/shared";
 import type { LabelDao } from "../dao/label.dao";
 import type { LabelDto } from "../dto/label.dto";
+import type { CacheStore } from "../lib/kv/types";
+
+export const labelsCacheKey = (orgId: string) =>
+	`cache:v1:labels:${encodeURIComponent(orgId)}`;
 
 const assertNameAvailable = async (
 	dao: LabelDao,
@@ -23,13 +27,23 @@ const assertNameAvailable = async (
 	}
 };
 
-export const createLabelService = (dao: LabelDao) => ({
-	listLabels: (orgId: string) => dao.listByOrg(orgId),
+export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
+	listLabels: async (orgId: string) => {
+		const key = labelsCacheKey(orgId);
+		const cached = await cache.get<LabelDto[]>(key, { cacheTtl: 30 });
+		if (cached !== null) {
+			return cached;
+		}
+		const labels = await dao.listByOrg(orgId);
+		await cache.set(key, labels, { ttlSeconds: 300 });
+		return labels;
+	},
 
 	createLabel: async (orgId: string, input: CreateLabelInput) => {
 		await assertNameAvailable(dao, orgId, input.name);
+		let created: LabelDto;
 		try {
-			return await dao.create({
+			created = await dao.create({
 				id: crypto.randomUUID(),
 				orgId,
 				name: input.name,
@@ -45,6 +59,8 @@ export const createLabelService = (dao: LabelDao) => ({
 			}
 			throw err;
 		}
+		await cache.delete(labelsCacheKey(orgId));
+		return created;
 	},
 
 	updateLabel: async (
@@ -74,6 +90,7 @@ export const createLabelService = (dao: LabelDao) => ({
 				`Label ${labelId} not found`,
 			);
 		}
+		await cache.delete(labelsCacheKey(orgId));
 		return updated;
 	},
 
@@ -95,6 +112,7 @@ export const createLabelService = (dao: LabelDao) => ({
 			);
 		}
 		await dao.delete(orgId, labelId);
+		await cache.delete(labelsCacheKey(orgId));
 	},
 });
 
