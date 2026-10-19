@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { ApiErrorCode } from "@workspace/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { logger } from "hono/logger";
 import { createStripeController } from "./controllers/stripe.controller";
 import { db } from "./db";
 import { createDependencies } from "./dependencies";
@@ -20,6 +21,7 @@ const trustedOrigins = [
 
 const app = new Hono<{ Bindings: Env }>();
 
+app.use(logger());
 app.use("/api/*", cors({ origin: trustedOrigins, credentials: true }));
 
 const stripeSetup = setupStripe({
