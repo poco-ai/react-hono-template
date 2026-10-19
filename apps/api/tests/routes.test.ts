@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_RUNTIME_CONFIG, type RuntimeConfig } from "@workspace/shared";
+import {
+	DEFAULT_RUNTIME_CONFIG,
+	type UpdateRuntimeConfigInput,
+} from "@workspace/shared";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { createRoutes } from "../src/routes";
@@ -38,7 +41,7 @@ const appFor = ({
 			adminOrgService: { stats: async () => ({ orgs: 1 }) },
 			configService: {
 				getConfig: async () => DEFAULT_RUNTIME_CONFIG,
-				updateConfig: async (input: RuntimeConfig) => input,
+				updateConfig: async (input: UpdateRuntimeConfigInput) => input,
 			},
 		},
 	} as unknown as Dependencies;
@@ -89,7 +92,12 @@ test("only admins can update runtime config", async () => {
 		{
 			method: "PUT",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ maintenance: true, features: { beta: true } }),
+			body: JSON.stringify({
+				version: 1,
+				maintenance: true,
+				announcement: null,
+				features: { beta: true },
+			}),
 		},
 	);
 	assert.equal(response.status, 200);
@@ -101,6 +109,18 @@ test("only admins can update runtime config", async () => {
 			features: { beta: true },
 		},
 	});
+});
+
+test("admin config updates require the complete config object", async () => {
+	await expectError(
+		await appFor({ platformRole: "admin" }).request("/api/admin/config", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ maintenance: true }),
+		}),
+		400,
+		"VALIDATION",
+	);
 });
 
 test("admin config updates reject invalid bodies", async () => {

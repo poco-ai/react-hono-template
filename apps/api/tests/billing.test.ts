@@ -111,3 +111,97 @@ test("missing or partial Stripe configuration still fails closed", async () => {
 		);
 	}
 });
+
+const recordingService = (
+	overrides: {
+		memberDao?: Record<string, unknown>;
+		billingDao?: Record<string, unknown>;
+	} = {},
+) => {
+	const events: string[] = [];
+	const service = createBillingService({
+		billingDao: {
+			ensure: async (orgId: string) => {
+				events.push(`ensure:${orgId}`);
+			},
+			update: async (orgId: string) => {
+				events.push(`update:${orgId}`);
+				return null;
+			},
+			findByStripeCustomer: async (customerId: string) => {
+				events.push(`find:${customerId}`);
+				return { orgId: "org" };
+			},
+			...overrides.billingDao,
+		},
+		memberDao: {
+			countByOrg: async (orgId: string) => {
+				events.push(`count:${orgId}`);
+				return 2;
+			},
+			...overrides.memberDao,
+		},
+		stripeSetup: { status: "disabled", context: null },
+		mockEnabled: true,
+		plans: {
+			invalidatePlanCache: async (orgId: string) => {
+				events.push(`invalidate:${orgId}`);
+			},
+		},
+	} as unknown as BillingDependencies);
+	return { service, events };
+};
+
+test("mock portal invalidates the plan cache after the subscription write", async () => {
+	const { service, events } = recordingService();
+	assert.deepEqual(
+		await service.createPortal("org", "https://app.example.com"),
+		{ url: null },
+	);
+	assert.deepEqual(events, ["ensure:org", "update:org", "invalidate:org"]);
+});
+
+test("checkout completion invalidates the plan cache after the update", async () => {
+	const { service, events } = recordingService();
+	await service.handleWebhookEvent({
+		type: "checkout.session.completed",
+		data: {
+			object: {
+				client_reference_id: "org",
+				customer: "cus_1",
+				subscription: "sub_1",
+			},
+		},
+	} as unknown as Stripe.Event);
+	assert.deepEqual(events, [
+		"count:org",
+		"ensure:org",
+		"update:org",
+		"invalidate:org",
+	]);
+});
+
+test("subscription deletion invalidates the plan cache after the update", async () => {
+	const { service, events } = recordingService();
+	await service.handleWebhookEvent({
+		type: "customer.subscription.deleted",
+		data: { object: { customer: "cus_1" } },
+	} as unknown as Stripe.Event);
+	assert.deepEqual(events, ["find:cus_1", "update:org", "invalidate:org"]);
+});
+
+test("subscription updates invalidate the plan cache after the update", async () => {
+	const { service, events } = recordingService();
+	await service.handleWebhookEvent({
+		type: "customer.subscription.updated",
+		data: {
+			object: {
+				customer: "cus_1",
+				id: "sub_1",
+				status: "canceled",
+				items: { data: [] },
+			},
+		},
+	} as unknown as Stripe.Event);
+	assert.deepEqual(events, ["find:cus_1", "update:org", "invalidate:org"]);
+});

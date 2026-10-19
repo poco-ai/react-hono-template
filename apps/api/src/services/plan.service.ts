@@ -9,7 +9,9 @@ import type { BillingDao } from "../dao/billing.dao";
 import type { CacheStore } from "../lib/kv/types";
 
 const PLAN_CACHE_TTL_MS = 60_000;
-const PLAN_KV_TTL_SECONDS = 60;
+// Billing changes invalidate explicitly; the long TTL is only a fallback that
+// keeps KV writes well inside the free-tier daily quota.
+const PLAN_KV_TTL_SECONDS = 3600;
 const PLAN_KV_CACHE_TTL_SECONDS = 30;
 
 type PlanCacheEntry = {
@@ -53,13 +55,9 @@ export const createPlanService = (
 		const subscription = await billingDao.findByOrg(orgId);
 		const plan = subscription.plan === "pro" ? "pro" : "free";
 		remember(orgId, plan);
-		try {
-			await cache.set(planCacheKey(orgId), plan, {
-				ttlSeconds: PLAN_KV_TTL_SECONDS,
-			});
-		} catch {
-			// KV is a best-effort cache; a failed write must not fail the request.
-		}
+		await cache.set(planCacheKey(orgId), plan, {
+			ttlSeconds: PLAN_KV_TTL_SECONDS,
+		});
 		return plan;
 	};
 

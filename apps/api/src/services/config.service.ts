@@ -4,6 +4,8 @@ import {
 	DEFAULT_RUNTIME_CONFIG,
 	type RuntimeConfig,
 	runtimeConfigSchema,
+	runtimeConfigUpdateSchema,
+	type UpdateRuntimeConfigInput,
 } from "@workspace/shared";
 import type { CacheStore } from "../lib/kv/types";
 
@@ -31,13 +33,15 @@ export const createConfigService = (cache: CacheStore) => {
 					parsed.error.message,
 				);
 			}
-			return remember(DEFAULT_RUNTIME_CONFIG);
+			return remember(structuredClone(DEFAULT_RUNTIME_CONFIG));
 		}
 		return remember(parsed.data);
 	};
 
-	const updateConfig = async (input: RuntimeConfig): Promise<RuntimeConfig> => {
-		const config = runtimeConfigSchema.parse(input);
+	const updateConfig = async (
+		input: UpdateRuntimeConfigInput,
+	): Promise<RuntimeConfig> => {
+		const config = runtimeConfigUpdateSchema.parse(input);
 		if (!(await cache.set(CONFIG_KEY, config))) {
 			throw new ApiError(
 				503,

@@ -2,7 +2,7 @@ import {
 	adminOrgListQuerySchema,
 	adminUserListQuerySchema,
 	banAdminUserSchema,
-	runtimeConfigSchema,
+	runtimeConfigUpdateSchema,
 	updateAdminUserRoleSchema,
 } from "@workspace/shared";
 import { Hono } from "hono";
@@ -78,7 +78,7 @@ export const createAdminRoutes = ({
 		.put(
 			"/api/admin/config",
 			requirePermission({ config: ["write"] }),
-			validate(runtimeConfigSchema, "json"),
+			validate(runtimeConfigUpdateSchema, "json"),
 			(c) => configController.update(c, c.req.valid("json")),
 		);
 };

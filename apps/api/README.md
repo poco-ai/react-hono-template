@@ -29,7 +29,7 @@ bun run cf-typegen
 
 KV binding 为 `KV`，namespace id 配置在 `wrangler.jsonc`；修改 binding 后运行 `bun run cf-typegen` 重新生成类型。本地 KV 由 `wrangler dev` 模拟，无需额外服务；部署前 namespace 必须已存在，CI 的 `CLOUDFLARE_API_TOKEN` 需要 Workers KV 权限。
 
-运行时配置存放在 key `config:global`：服务内 L1 缓存 60s，KV 读取 `cacheTtl` 60s（下限 30s），写入不设过期时间。组织计划缓存在 `cache:v1:plan:<orgId>`，TTL 60s，并在账单变更时失效。本地可写入初始值：
+运行时配置存放在 key `config:global`：服务内 L1 缓存 60s，KV 读取 `cacheTtl` 60s（下限 30s），写入不设过期时间。组织计划缓存在 `cache:v1:plan:<orgId>`，回退 TTL 1 小时，并在账单变更（checkout / portal / Stripe webhook）时显式失效；显式失效覆盖正常变更，长 TTL 只是省 KV 写入配额的回退手段。本地可写入初始值：
 
 ```sh
 bunx wrangler kv key put --binding=KV "config:global" '{"version":1,"maintenance":false,"announcement":null,"features":{}}' --local
@@ -40,7 +40,7 @@ bunx wrangler kv key put --binding=KV "config:global" '{"version":1,"maintenance
 
 配置可公开读取，禁止存放密钥或任何敏感信息。
 
-Label 列表缓存于 `cache:v1:labels:<orgId>`（org id 经 `encodeURIComponent` 编码），TTL 300s，label 创建/更新/删除成功后失效。
+Label 列表缓存于 `cache:v1:labels:<orgId>`（org id 经 `encodeURIComponent` 编码），回退 TTL 1 小时；label 创建/更新/删除成功后显式失效，长 TTL 只是省 KV 写入配额的回退手段。
 
 ## 对象存储（S3 协议，R2 / MinIO / OSS 通用）
 

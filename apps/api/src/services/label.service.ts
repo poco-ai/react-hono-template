@@ -11,6 +11,20 @@ import type { CacheStore } from "../lib/kv/types";
 export const labelsCacheKey = (orgId: string) =>
 	`cache:v1:labels:${encodeURIComponent(orgId)}`;
 
+// Label writes invalidate explicitly; the long TTL is only a fallback that
+// keeps KV writes well inside the free-tier daily quota.
+const LABELS_KV_TTL_SECONDS = 3600;
+
+const isCachedLabelList = (value: unknown): value is LabelDto[] =>
+	Array.isArray(value) &&
+	value.every(
+		(item) =>
+			typeof item === "object" &&
+			item !== null &&
+			"id" in item &&
+			typeof item.id === "string",
+	);
+
 const assertNameAvailable = async (
 	dao: LabelDao,
 	orgId: string,
@@ -30,12 +44,12 @@ const assertNameAvailable = async (
 export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 	listLabels: async (orgId: string) => {
 		const key = labelsCacheKey(orgId);
-		const cached = await cache.get<LabelDto[]>(key, { cacheTtl: 30 });
-		if (cached !== null) {
+		const cached = await cache.get<unknown>(key, { cacheTtl: 30 });
+		if (isCachedLabelList(cached)) {
 			return cached;
 		}
 		const labels = await dao.listByOrg(orgId);
-		await cache.set(key, labels, { ttlSeconds: 300 });
+		await cache.set(key, labels, { ttlSeconds: LABELS_KV_TTL_SECONDS });
 		return labels;
 	},
 

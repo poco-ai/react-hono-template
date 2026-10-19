@@ -218,7 +218,7 @@ test("listLabels serves a cached list without hitting the dao", async () => {
 	assert.equal(cache.calls.sets.length, 0);
 });
 
-test("listLabels caches a dao result under the encoded org key for 300s", async () => {
+test("listLabels caches a dao result under the encoded org key for 3600s", async () => {
 	const own = labelDto("label-1", "Bug");
 	const { service, calls, cache } = serviceFor({ listed: [own] });
 	assert.deepEqual(await service.listLabels("org/one"), [own]);
@@ -227,7 +227,7 @@ test("listLabels caches a dao result under the encoded org key for 300s", async 
 		{
 			key: "cache:v1:labels:org%2Fone",
 			value: [own],
-			ttlSeconds: 300,
+			ttlSeconds: 3600,
 		},
 	]);
 });
@@ -240,6 +240,23 @@ test("listLabels treats a cached empty array as a hit", async () => {
 	});
 	assert.deepEqual(await service.listLabels("org"), []);
 	assert.equal(calls.list, 0);
+});
+
+test("listLabels treats malformed cached payloads as misses", async () => {
+	for (const malformed of [
+		{ labels: [] },
+		[labelDto("label-1", "Bug"), { id: 42 }],
+	]) {
+		const own = labelDto("label-1", "Bug");
+		const cache = createFakeCache({ [labelsCacheKey("org")]: malformed });
+		const { service, calls } = serviceFor({ cache, listed: [own] });
+
+		assert.deepEqual(await service.listLabels("org"), [own]);
+		assert.equal(calls.list, 1);
+		assert.deepEqual(cache.calls.sets, [
+			{ key: "cache:v1:labels:org", value: [own], ttlSeconds: 3600 },
+		]);
+	}
 });
 
 test("label writes invalidate the org-scoped list cache", async () => {

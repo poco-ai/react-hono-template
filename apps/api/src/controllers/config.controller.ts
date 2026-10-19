@@ -1,4 +1,4 @@
-import type { RuntimeConfig } from "@workspace/shared";
+import type { UpdateRuntimeConfigInput } from "@workspace/shared";
 import type { Context } from "hono";
 import { ok } from "../lib/response";
 import type { ConfigService } from "../services/config.service";
@@ -9,6 +9,6 @@ export const createConfigController = (service: ConfigService) => ({
 		return ok(c, await service.getConfig());
 	},
 
-	update: async (c: Context, input: RuntimeConfig) =>
+	update: async (c: Context, input: UpdateRuntimeConfigInput) =>
 		ok(c, await service.updateConfig(input)),
 });

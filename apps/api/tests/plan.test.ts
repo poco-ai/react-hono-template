@@ -11,7 +11,6 @@ import { createPlanService, planCacheKey } from "../src/services/plan.service";
 const createFakeCache = ({
 	initial = {} as Record<string, unknown>,
 	setResult = true,
-	setError = null as Error | null,
 } = {}) => {
 	const entries = new Map<string, unknown>(Object.entries(initial));
 	const calls = {
@@ -26,7 +25,6 @@ const createFakeCache = ({
 		},
 		set: async <T>(key: string, value: T, options?: CacheSetOptions) => {
 			calls.sets.push({ key, value, ttlSeconds: options?.ttlSeconds });
-			if (setError) throw setError;
 			if (!setResult) return false;
 			entries.set(key, value);
 			return true;
@@ -63,7 +61,7 @@ test("a D1 miss caches the normalized plan in KV and L1", async () => {
 		{ key: "cache:v1:plan:org", cacheTtl: 30 },
 	]);
 	assert.deepEqual(cache.calls.sets, [
-		{ key: "cache:v1:plan:org", value: "pro", ttlSeconds: 60 },
+		{ key: "cache:v1:plan:org", value: "pro", ttlSeconds: 3600 },
 	]);
 
 	assert.equal(await service.getPlanForOrg("org"), "pro");
@@ -97,7 +95,7 @@ test("invalid KV values fall through to D1", async () => {
 		assert.equal(await service.getPlanForOrg("org"), "free");
 		assert.equal(calls.findByOrg, 1);
 		assert.deepEqual(cache.calls.sets, [
-			{ key: "cache:v1:plan:org", value: "free", ttlSeconds: 60 },
+			{ key: "cache:v1:plan:org", value: "free", ttlSeconds: 3600 },
 		]);
 	}
 });
@@ -121,19 +119,14 @@ test("invalidation clears L1 and the KV key so the next read hits D1", async () 
 });
 
 test("a failed KV write still returns the plan", async () => {
-	const rejected = createPlanService(
-		createFakeBillingDao("pro").dao,
-		createFakeCache({ setResult: false }).store,
-	);
-	assert.equal(await rejected.getPlanForOrg("org"), "pro");
+	const { dao, calls } = createFakeBillingDao("pro");
+	const cache = createFakeCache({ setResult: false });
+	const service = createPlanService(dao, cache.store);
 
-	const throwing = createFakeBillingDao("pro");
-	const failingCache = createFakeCache({ setError: new Error("kv down") });
-	const service = createPlanService(throwing.dao, failingCache.store);
 	assert.equal(await service.getPlanForOrg("org"), "pro");
-	assert.equal(failingCache.calls.sets.length, 1);
+	assert.equal(cache.calls.sets.length, 1);
 	assert.equal(await service.getPlanForOrg("org"), "pro");
-	assert.equal(throwing.calls.findByOrg, 1);
+	assert.equal(calls.findByOrg, 1);
 });
 
 test("org ids containing slashes are encoded in the cache key", async () => {

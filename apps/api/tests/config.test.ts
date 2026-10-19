@@ -59,6 +59,12 @@ test("getConfig falls back to defaults for malformed payloads", async () => {
 	);
 });
 
+test("getConfig returns a fresh default rather than the shared constant", async () => {
+	const config = await createConfigService(cacheFor().cache).getConfig();
+	config.features.mutated = true;
+	assert.equal(DEFAULT_RUNTIME_CONFIG.features.mutated, undefined);
+});
+
 test("L1 cache prevents a second KV read", async () => {
 	const { cache, gets } = cacheFor();
 	const service = createConfigService(cache);
