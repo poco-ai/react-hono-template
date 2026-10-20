@@ -9,6 +9,8 @@ bun run dev
 
 wrangler dev 会在 http://localhost:8787 启动本地 Workers 运行时（前端 `apps/web` 的 Vite 已配置把 `/api` 代理到这里）。
 
+Google / GitHub 登录是可选的：只有 client id 和 client secret 都非空时才会注册该提供方，缺任何一个则对应按钮不显示。本地 OAuth 请设置 `BETTER_AUTH_URL=http://localhost:5173`，让提供方跳回 Vite 源站，再由 `/api` 代理到 Worker。回调路径为 `http://localhost:5173/api/auth/callback/github` 和 `http://localhost:5173/api/auth/callback/google`。生产环境的 `BETTER_AUTH_URL` 用 API 源站，回调为 `${BETTER_AUTH_URL}/api/auth/callback/github` 与 `${BETTER_AUTH_URL}/api/auth/callback/google`。
+
 ## 部署
 
 ```sh
