@@ -11,7 +11,9 @@ import { createKvCache } from "./lib/kv/cache";
 import { fail } from "./lib/response";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { setupStripe } from "./lib/stripe";
+import { handleWebhookQueue } from "./queue";
 import { createRoutes } from "./routes";
+import type { WebhookJobQueue } from "./services/webhook-delivery.service";
 import { createV1App } from "./v1";
 
 const trustedOrigins = [
@@ -30,12 +32,21 @@ const stripeSetup = setupStripe({
 	webhookSecret: env.STRIPE_WEBHOOK_SECRET,
 });
 
+const webhookQueue: WebhookJobQueue | null = env.WEBHOOK_QUEUE
+	? {
+			send: async (message) => {
+				await env.WEBHOOK_QUEUE.send(message);
+			},
+		}
+	: null;
+
 const dependencies = createDependencies({
 	db,
 	storage: s3ClientFromEnv(),
 	cache: createKvCache(env.KV),
 	stripeSetup,
 	billingMockEnabled: env.BILLING_MOCK_MODE === "true",
+	webhookQueue,
 });
 
 const auth = createAuth({
@@ -62,4 +73,8 @@ app.get("/", (c) => {
 	return c.text("Hello Hono!");
 });
 
-export default app;
+export default {
+	fetch: app.fetch,
+	queue: (batch: MessageBatch<{ deliveryId: string }>) =>
+		handleWebhookQueue(batch, dependencies.services.webhookDeliveryService),
+};

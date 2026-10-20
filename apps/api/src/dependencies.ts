@@ -30,7 +30,10 @@ import { createLabelService } from "./services/label.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
 import { createWebhookService } from "./services/webhook.service";
-import { createWebhookDeliveryService } from "./services/webhook-delivery.service";
+import {
+	createWebhookDeliveryService,
+	type WebhookJobQueue,
+} from "./services/webhook-delivery.service";
 
 export const createDependencies = ({
 	db,
@@ -38,12 +41,14 @@ export const createDependencies = ({
 	cache,
 	stripeSetup,
 	billingMockEnabled,
+	webhookQueue = null,
 }: {
 	db: Database;
 	storage: StorageAdapter | null;
 	cache: CacheStore;
 	stripeSetup: StripeSetup;
 	billingMockEnabled: boolean;
+	webhookQueue?: WebhookJobQueue | null;
 }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
@@ -67,6 +72,7 @@ export const createDependencies = ({
 	const webhookDeliveryService = createWebhookDeliveryService({
 		webhookDao,
 		deliveryDao: webhookDeliveryDao,
+		queue: webhookQueue,
 	});
 	const webhookService = createWebhookService({
 		webhookDao,
@@ -130,6 +136,7 @@ export const createDependencies = ({
 			activityService,
 			apiKeyService,
 			webhookService,
+			webhookDeliveryService,
 			billingService,
 			planService,
 			bootstrapService,

@@ -4,14 +4,24 @@ import type { WebhookDeliveryDto } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
 
 const WEBHOOK_TIMEOUT_MS = 5_000;
-const WEBHOOK_MAX_ATTEMPTS = 2;
+export const WEBHOOK_MAX_ATTEMPTS = 2;
 const WEBHOOK_BACKOFF_MS = [500];
+
+export type WebhookJobQueue = {
+	send(message: { deliveryId: string }): Promise<void>;
+};
 
 export type WebhookTarget = {
 	id: string;
 	url: string;
 	secret: string;
 };
+
+export type QueuedDeliveryOutcome = "success" | "failed" | "missing";
+
+// `attempts` includes the current delivery and starts at 1.
+export const shouldRetryWebhookDelivery = (attempts: number) =>
+	attempts < WEBHOOK_MAX_ATTEMPTS;
 
 const signPayload = async (payload: string, secret: string) => {
 	const key = await crypto.subtle.importKey(
@@ -33,6 +43,46 @@ const signPayload = async (payload: string, secret: string) => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+type AttemptResult = {
+	success: boolean;
+	responseStatus: number | null;
+	lastError: string | null;
+};
+
+const postWebhook = async (
+	deliveryId: string,
+	url: string,
+	secret: string,
+	event: string,
+	payload: string,
+): Promise<AttemptResult> => {
+	let responseStatus: number | null = null;
+	let lastError: string | null = null;
+	try {
+		const response = await fetch(url, {
+			method: "POST",
+			redirect: "manual",
+			headers: {
+				"content-type": "application/json",
+				"x-webhook-event": event,
+				"x-webhook-delivery": deliveryId,
+				"x-webhook-signature": await signPayload(payload, secret),
+			},
+			body: payload,
+			signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
+		});
+		responseStatus = response.status;
+		if (responseStatus < 200 || responseStatus >= 300) {
+			lastError = `HTTP ${responseStatus}`;
+		}
+	} catch (err) {
+		lastError = err instanceof Error ? err.message : String(err);
+	}
+	const success =
+		responseStatus !== null && responseStatus >= 200 && responseStatus < 300;
+	return { success, responseStatus, lastError };
+};
+
 export type WebhookDispatcher = {
 	dispatch: (
 		orgId: string,
@@ -45,9 +95,11 @@ export type WebhookDispatcher = {
 export const createWebhookDeliveryService = ({
 	webhookDao,
 	deliveryDao,
+	queue = null,
 }: {
 	webhookDao: WebhookDao;
 	deliveryDao: WebhookDeliveryDao;
+	queue?: WebhookJobQueue | null;
 }) => {
 	const deliverWithRetries = async (
 		deliveryId: string,
@@ -57,40 +109,15 @@ export const createWebhookDeliveryService = ({
 		payload: string,
 	) => {
 		for (let attempt = 1; attempt <= WEBHOOK_MAX_ATTEMPTS; attempt++) {
-			let responseStatus: number | null = null;
-			let lastError: string | null = null;
-			try {
-				const response = await fetch(url, {
-					method: "POST",
-					redirect: "manual",
-					headers: {
-						"content-type": "application/json",
-						"x-webhook-event": event,
-						"x-webhook-delivery": deliveryId,
-						"x-webhook-signature": await signPayload(payload, secret),
-					},
-					body: payload,
-					signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
-				});
-				responseStatus = response.status;
-				if (response.status < 200 || response.status >= 300) {
-					lastError = `HTTP ${response.status}`;
-				}
-			} catch (err) {
-				lastError = err instanceof Error ? err.message : String(err);
-			}
-			const success =
-				responseStatus !== null &&
-				responseStatus >= 200 &&
-				responseStatus < 300;
+			const result = await postWebhook(deliveryId, url, secret, event, payload);
 			await deliveryDao.recordAttempt(deliveryId, {
 				attempts: attempt,
-				status: success ? "success" : "failed",
-				responseStatus,
-				lastError,
+				status: result.success ? "success" : "failed",
+				responseStatus: result.responseStatus,
+				lastError: result.lastError,
 				lastAttemptAt: new Date(),
 			});
-			if (success) {
+			if (result.success) {
 				return;
 			}
 			if (attempt < WEBHOOK_MAX_ATTEMPTS) {
@@ -108,6 +135,35 @@ export const createWebhookDeliveryService = ({
 			return;
 		}
 		fn().catch((err) => console.error("[webhook] delivery failed:", err));
+	};
+
+	const scheduleDelivery = async (
+		deliveryId: string,
+		target: { url: string; secret: string; event: string; payload: string },
+		background?: BackgroundFn,
+	) => {
+		if (queue) {
+			try {
+				await queue.send({ deliveryId });
+				return;
+			} catch (err) {
+				console.error(
+					"[webhook] queue send failed, delivering in-process:",
+					err,
+				);
+			}
+		}
+		runInBackground(
+			() =>
+				deliverWithRetries(
+					deliveryId,
+					target.url,
+					target.secret,
+					target.event,
+					target.payload,
+				),
+			background,
+		);
 	};
 
 	const enqueue = async (
@@ -133,15 +189,15 @@ export const createWebhookDeliveryService = ({
 			payload,
 			status: "pending",
 		});
-		runInBackground(
-			() =>
-				deliverWithRetries(deliveryId, hook.url, hook.secret, event, payload),
+		await scheduleDelivery(
+			deliveryId,
+			{ url: hook.url, secret: hook.secret, event, payload },
 			background,
 		);
 	};
 
 	return {
-		/** Creates the delivery row and schedules its delivery in the background. */
+		/** Creates the delivery row, then queues it or falls back to in-process delivery. */
 		enqueue,
 
 		/** Resets a stored delivery and schedules it again with its original payload. */
@@ -152,15 +208,14 @@ export const createWebhookDeliveryService = ({
 			background?: BackgroundFn,
 		) => {
 			await deliveryDao.resetForRedelivery(orgId, delivery.id);
-			runInBackground(
-				() =>
-					deliverWithRetries(
-						delivery.id,
-						hook.url,
-						hook.secret,
-						delivery.event,
-						delivery.payload,
-					),
+			await scheduleDelivery(
+				delivery.id,
+				{
+					url: hook.url,
+					secret: hook.secret,
+					event: delivery.event,
+					payload: delivery.payload,
+				},
 				background,
 			);
 		},
@@ -175,6 +230,39 @@ export const createWebhookDeliveryService = ({
 			for (const hook of hooks) {
 				await enqueue(hook, orgId, event, data, background);
 			}
+		},
+
+		/** One HTTP attempt for a queued delivery. Does not retry inside the call. */
+		deliverFromQueue: async (
+			deliveryId: string,
+			attempts: number,
+		): Promise<QueuedDeliveryOutcome> => {
+			const delivery = await deliveryDao.findByIdUnscoped(deliveryId);
+			if (!delivery) {
+				return "missing";
+			}
+			const hook = await webhookDao.findById(
+				delivery.orgId,
+				delivery.webhookId,
+			);
+			if (!hook) {
+				return "missing";
+			}
+			const result = await postWebhook(
+				delivery.id,
+				hook.url,
+				hook.secret,
+				delivery.event,
+				delivery.payload,
+			);
+			await deliveryDao.recordAttempt(delivery.id, {
+				attempts,
+				status: result.success ? "success" : "failed",
+				responseStatus: result.responseStatus,
+				lastError: result.lastError,
+				lastAttemptAt: new Date(),
+			});
+			return result.success ? "success" : "failed";
 		},
 	};
 };

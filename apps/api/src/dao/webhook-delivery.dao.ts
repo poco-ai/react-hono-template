@@ -56,6 +56,15 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 		return row ? toDeliveryDto(row) : null;
 	},
 
+	findByIdUnscoped: async (id: string): Promise<WebhookDeliveryDto | null> => {
+		const row = await db
+			.select()
+			.from(webhookDeliveries)
+			.where(eq(webhookDeliveries.id, id))
+			.get();
+		return row ? toDeliveryDto(row) : null;
+	},
+
 	recordAttempt: async (
 		id: string,
 		patch: WebhookDeliveryAttemptPatch,
