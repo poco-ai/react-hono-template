@@ -107,6 +107,11 @@ const zh: typeof en = {
 			maxLength: "最多不超过 {{count}} 个字符",
 		},
 	},
+	oauth: {
+		continueWithGitHub: "使用 GitHub 继续",
+		continueWithGoogle: "使用 Google 继续",
+		orDivider: "或",
+	},
 	login: {
 		title: "登录",
 		description: "输入邮箱和密码继续。",

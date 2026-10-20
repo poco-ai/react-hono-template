@@ -9,6 +9,7 @@ import { createDependencies } from "./dependencies";
 import { createAuth } from "./lib/auth";
 import { createKvCache } from "./lib/kv/cache";
 import { fail } from "./lib/response";
+import type { SocialProvidersConfig } from "./lib/social-providers";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { setupStripe } from "./lib/stripe";
 import { handleWebhookQueue } from "./queue";
@@ -50,14 +51,27 @@ const dependencies = createDependencies({
 	webhookQueue,
 });
 
+const social: SocialProvidersConfig = {
+	github: {
+		clientId: env.GITHUB_CLIENT_ID ?? "",
+		clientSecret: env.GITHUB_CLIENT_SECRET ?? "",
+	},
+	google: {
+		clientId: env.GOOGLE_CLIENT_ID ?? "",
+		clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
+	},
+};
+
 const auth = createAuth({
 	db,
 	secret: env.BETTER_AUTH_SECRET,
 	trustedOrigins,
 	policy: dependencies.services.authPolicyService,
+	baseURL: env.BETTER_AUTH_URL,
+	social,
 });
 
-app.route("/", createRoutes({ auth, dependencies }));
+app.route("/", createRoutes({ auth, dependencies, social }));
 app.route("/api/v1", createV1App(dependencies));
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));

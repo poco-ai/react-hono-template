@@ -1,5 +1,17 @@
 BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 
+# Optional Google and GitHub login. A provider is enabled only when both its
+# client id and client secret are non-empty; missing keys hide that button.
+# Local OAuth: BETTER_AUTH_URL=http://localhost:5173
+# Callbacks: http://localhost:5173/api/auth/callback/github
+#            http://localhost:5173/api/auth/callback/google
+# Production BETTER_AUTH_URL is the API origin instead.
+# BETTER_AUTH_URL=http://localhost:5173
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+
 BILLING_MOCK_MODE=true
 
 # S3-compatible storage for issue attachments (R2 in production).

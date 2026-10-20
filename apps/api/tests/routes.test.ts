@@ -6,6 +6,7 @@ import {
 } from "@workspace/shared";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
+import type { SocialProvidersConfig } from "../src/lib/social-providers";
 import { createRoutes } from "../src/routes";
 
 // Only methods exercised by these requests are stubbed. Unexpected service calls
@@ -16,6 +17,14 @@ const appFor = ({
 	frozen = false,
 	orgRole = "owner",
 	platformRole = "user",
+	social,
+}: {
+	loggedIn?: boolean;
+	member?: boolean;
+	frozen?: boolean;
+	orgRole?: string;
+	platformRole?: string;
+	social?: SocialProvidersConfig;
 } = {}) => {
 	const auth = {
 		api: {
@@ -45,7 +54,7 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return createRoutes({ auth, dependencies });
+	return createRoutes({ auth, dependencies, social });
 };
 
 const expectError = async (
@@ -64,6 +73,30 @@ test("composed admin and organization routes require a session", async () => {
 		await expectError(await app.request(path), 401, "UNAUTHORIZED");
 	}
 	assert.equal((await app.request("/api/bootstrap")).status, 200);
+});
+
+test("oauth providers are public and list only enabled providers", async () => {
+	const empty = await appFor({ loggedIn: false }).request(
+		"/api/oauth/providers",
+	);
+	assert.equal(empty.status, 200);
+	assert.deepEqual(await empty.json(), {
+		ok: true,
+		data: { providers: [] },
+	});
+
+	const response = await appFor({
+		loggedIn: false,
+		social: {
+			google: { clientId: "google-id", clientSecret: "google-secret" },
+			github: { clientId: "github-id", clientSecret: "github-secret" },
+		},
+	}).request("/api/oauth/providers");
+	assert.equal(response.status, 200);
+	assert.deepEqual(await response.json(), {
+		ok: true,
+		data: { providers: ["github", "google"] },
+	});
 });
 
 test("public config is readable signed out and cacheable", async () => {

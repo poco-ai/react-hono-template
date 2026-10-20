@@ -112,6 +112,11 @@ const en = {
 			maxLength: "Must be at most {{count}} characters.",
 		},
 	},
+	oauth: {
+		continueWithGitHub: "Continue with GitHub",
+		continueWithGoogle: "Continue with Google",
+		orDivider: "or",
+	},
 	login: {
 		title: "Sign in",
 		description: "Enter your email and password to continue.",

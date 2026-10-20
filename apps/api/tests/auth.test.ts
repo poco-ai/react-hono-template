@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Database } from "../src/db/types";
 import { createAuth, sendResetPasswordToConsole } from "../src/lib/auth";
+import {
+	enabledSocialProviders,
+	type SocialProvidersConfig,
+} from "../src/lib/social-providers";
 import type { AuthPolicyService } from "../src/services/auth-policy.service";
 
-const authFor = () =>
+const authFor = (extra?: {
+	baseURL?: string;
+	social?: SocialProvidersConfig;
+}) =>
 	createAuth({
 		db: {} as Database,
 		secret: "test-secret",
@@ -12,6 +19,7 @@ const authFor = () =>
 		policy: {
 			initialUserRole: async () => "user",
 		} as unknown as AuthPolicyService,
+		...extra,
 	});
 
 test("password reset links are written to the console instead of being emailed", async () => {
@@ -55,5 +63,64 @@ test("password reset sending stays wired into the auth options", () => {
 	assert.equal(
 		auth.options.emailAndPassword?.sendResetPassword,
 		sendResetPasswordToConsole,
+	);
+});
+
+test("no social config leaves social providers unset", () => {
+	const auth = authFor();
+	assert.equal(auth.options.socialProviders, undefined);
+	assert.deepEqual(enabledSocialProviders(undefined), []);
+});
+
+test("github credentials enable only github", () => {
+	const social = {
+		github: { clientId: "github-id", clientSecret: "github-secret" },
+	};
+	const auth = authFor({ social });
+	assert.deepEqual(enabledSocialProviders(social), ["github"]);
+	assert.deepEqual(auth.options.socialProviders, {
+		github: { clientId: "github-id", clientSecret: "github-secret" },
+	});
+	assert.equal(
+		auth.options.account?.accountLinking?.disableImplicitLinking,
+		true,
+	);
+});
+
+test("github and google credentials enable both providers", () => {
+	const social = {
+		github: { clientId: "github-id", clientSecret: "github-secret" },
+		google: { clientId: "google-id", clientSecret: "google-secret" },
+	};
+	const auth = authFor({ social });
+	assert.deepEqual(enabledSocialProviders(social), ["github", "google"]);
+	assert.deepEqual(auth.options.socialProviders, {
+		github: { clientId: "github-id", clientSecret: "github-secret" },
+		google: { clientId: "google-id", clientSecret: "google-secret" },
+	});
+	assert.ok(auth.options.socialProviders?.github);
+	assert.ok(auth.options.socialProviders?.google);
+	assert.equal(
+		auth.options.account?.accountLinking?.disableImplicitLinking,
+		true,
+	);
+});
+
+test("blank social credentials do not enable a provider", () => {
+	const social = {
+		github: { clientId: "", clientSecret: "github-secret" },
+		google: { clientId: "google-id", clientSecret: "   " },
+	};
+	const auth = authFor({ social });
+	assert.deepEqual(enabledSocialProviders(social), []);
+	assert.equal(auth.options.socialProviders, undefined);
+	assert.equal(auth.options.account?.accountLinking, undefined);
+});
+
+test("baseURL is set only when passed", () => {
+	assert.equal(authFor().options.baseURL, undefined);
+	assert.equal(
+		authFor({ baseURL: "http://localhost:5173" }).options.baseURL,
+		"http://localhost:5173",
 	);
 });

@@ -2,6 +2,11 @@ declare global {
 	namespace Cloudflare {
 		interface Env {
 			BETTER_AUTH_SECRET: string;
+			BETTER_AUTH_URL?: string;
+			GITHUB_CLIENT_ID?: string;
+			GITHUB_CLIENT_SECRET?: string;
+			GOOGLE_CLIENT_ID?: string;
+			GOOGLE_CLIENT_SECRET?: string;
 			S3_ENDPOINT?: string;
 			S3_REGION?: string;
 			S3_ACCESS_KEY_ID?: string;
@@ -17,6 +22,11 @@ declare global {
 
 	interface Env {
 		BETTER_AUTH_SECRET: string;
+		BETTER_AUTH_URL?: string;
+		GITHUB_CLIENT_ID?: string;
+		GITHUB_CLIENT_SECRET?: string;
+		GOOGLE_CLIENT_ID?: string;
+		GOOGLE_CLIENT_SECRET?: string;
 		S3_ENDPOINT?: string;
 		S3_REGION?: string;
 		S3_ACCESS_KEY_ID?: string;

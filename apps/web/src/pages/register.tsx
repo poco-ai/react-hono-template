@@ -19,6 +19,7 @@ import { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SocialSignIn } from "@/features/auth/components/social-sign-in";
 import { bootstrapQuery, useSignUp } from "@/features/auth/data";
 
 import { apiErrorMessage, errorCode } from "@/lib/errors";
@@ -103,6 +104,17 @@ export function RegisterPage() {
 					)}
 				</CardHeader>
 				<CardContent>
+					<SocialSignIn
+						callbackURL={new URL("/", window.location.origin).toString()}
+						onAttempt={() => {
+							setError(null);
+							setDuplicateEmail(false);
+						}}
+						onError={(error) => {
+							setDuplicateEmail(false);
+							setError(apiErrorMessage(t, error, "register.failed"));
+						}}
+					/>
 					<form noValidate className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="name">{t("common.name")}</Label>

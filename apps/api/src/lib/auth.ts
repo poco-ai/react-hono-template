@@ -11,6 +11,10 @@ import * as authSchema from "../db/auth-schema";
 import type { Database } from "../db/types";
 import type { AuthPolicyService } from "../services/auth-policy.service";
 import { ac, roles } from "./access";
+import {
+	enabledSocialProviders,
+	type SocialProvidersConfig,
+} from "./social-providers";
 
 /**
  * Password-reset delivery for this template: no email provider is configured,
@@ -38,12 +42,63 @@ export const createAuth = ({
 	secret,
 	trustedOrigins,
 	policy,
+	baseURL,
+	social,
 }: {
 	db: Database;
 	secret: string;
 	trustedOrigins: string[];
 	policy: AuthPolicyService;
+	baseURL?: string;
+	social?: SocialProvidersConfig;
 }) => {
+	const providers = enabledSocialProviders(social);
+	const trimmedBaseURL = baseURL?.trim();
+	const oauth: {
+		baseURL?: string;
+		socialProviders?: {
+			github?: { clientId: string; clientSecret: string };
+			google?: { clientId: string; clientSecret: string };
+		};
+		account?: {
+			accountLinking: {
+				enabled: boolean;
+				disableImplicitLinking: boolean;
+			};
+		};
+	} = {};
+	if (trimmedBaseURL) oauth.baseURL = trimmedBaseURL;
+	if (providers.length > 0) {
+		const github = social?.github;
+		const google = social?.google;
+		oauth.socialProviders = {
+			...(providers.includes("github") && github
+				? {
+						github: {
+							clientId: github.clientId,
+							clientSecret: github.clientSecret,
+						},
+					}
+				: {}),
+			...(providers.includes("google") && google
+				? {
+						google: {
+							clientId: google.clientId,
+							clientSecret: google.clientSecret,
+						},
+					}
+				: {}),
+		};
+		// Password signups are marked verified without an email provider, so
+		// implicit linking would attach a later OAuth login to that account.
+		oauth.account = {
+			accountLinking: {
+				enabled: true,
+				disableImplicitLinking: true,
+			},
+		};
+	}
+
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
@@ -51,6 +106,7 @@ export const createAuth = ({
 		}),
 		secret,
 		trustedOrigins,
+		...oauth,
 		emailAndPassword: {
 			enabled: true,
 			sendResetPassword: sendResetPasswordToConsole,

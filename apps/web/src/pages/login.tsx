@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SocialSignIn } from "@/features/auth/components/social-sign-in";
 import { useSignIn } from "@/features/auth/data";
 
 import { apiErrorMessage } from "@/lib/errors";
@@ -68,6 +69,16 @@ export function LoginPage() {
 					<CardDescription>{t("login.description")}</CardDescription>
 				</CardHeader>
 				<CardContent>
+					<SocialSignIn
+						callbackURL={new URL(
+							redirectTo || "/",
+							window.location.origin,
+						).toString()}
+						onAttempt={() => setError(null)}
+						onError={(error) =>
+							setError(apiErrorMessage(t, error, "login.failed"))
+						}
+					/>
 					<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="email">{t("common.email")}</Label>

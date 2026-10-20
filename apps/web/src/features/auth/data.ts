@@ -44,6 +44,18 @@ export async function signIn(input: { email: string; password: string }) {
 	return data;
 }
 
+export async function signInSocial(input: {
+	provider: "github" | "google";
+	callbackURL: string;
+}) {
+	const { data, error } = await authClient.signIn.social({
+		provider: input.provider,
+		callbackURL: input.callbackURL,
+	});
+	if (error) throw codedError(error.message ?? "", error.code);
+	return data;
+}
+
 export async function signUp(input: {
 	name: string;
 	email: string;
@@ -111,6 +123,36 @@ export function useSignIn(
 			return callbacks?.onSuccess?.(...args);
 		},
 	});
+}
+
+export function useSignInSocial(
+	callbacks?: MutationCallbacks<
+		Awaited<ReturnType<typeof signInSocial>>,
+		Parameters<typeof signInSocial>[0]
+	>,
+) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		...callbacks,
+		mutationFn: signInSocial,
+		onSuccess: (...args) => {
+			queryClient.removeQueries({ queryKey: sessionOptions.queryKey });
+			return callbacks?.onSuccess?.(...args);
+		},
+	});
+}
+
+export const oauthProvidersKey = () => ["oauth", "providers"] as const;
+
+export function oauthProvidersQuery() {
+	return queryOptions({
+		queryKey: oauthProvidersKey(),
+		queryFn: () => unwrap(client.api.oauth.providers.$get()),
+	});
+}
+
+export function useOAuthProviders() {
+	return useQuery(oauthProvidersQuery());
 }
 
 export function useSignUp(

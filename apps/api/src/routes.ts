@@ -4,6 +4,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Dependencies } from "./dependencies";
 import type { Auth } from "./lib/auth";
 import { fail } from "./lib/response";
+import type { SocialProvidersConfig } from "./lib/social-providers";
 import { requireAuth } from "./middleware/auth";
 import { requireOrgMember } from "./middleware/org";
 import { createActivitiesRoutes } from "./routes/activities";
@@ -16,15 +17,18 @@ import { createCommentsRoutes } from "./routes/comments";
 import { createConfigRoutes } from "./routes/config";
 import { createIssuesRoutes } from "./routes/issues";
 import { createLabelsRoutes } from "./routes/labels";
+import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectsRoutes } from "./routes/projects";
 import { createWebhooksRoutes } from "./routes/webhooks";
 
 export const createRoutes = ({
 	auth,
 	dependencies,
+	social,
 }: {
 	auth: Auth;
 	dependencies: Dependencies;
+	social?: SocialProvidersConfig;
 }) => {
 	return (
 		new Hono()
@@ -47,6 +51,7 @@ export const createRoutes = ({
 			})
 			.route("/", createBootstrapRoutes(dependencies.services.bootstrapService))
 			.route("/", createConfigRoutes(dependencies.services.configService))
+			.route("/", createOAuthRoutes(social))
 			.use("/api/admin/*", requireAuth(auth))
 			.route(
 				"/",
