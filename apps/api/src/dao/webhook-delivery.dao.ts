@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, lt } from "drizzle-orm";
 import { webhookDeliveries } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -63,6 +63,29 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 			.where(eq(webhookDeliveries.id, id))
 			.get();
 		return row ? toDeliveryDto(row) : null;
+	},
+
+	failNeverAttempted: async (
+		olderThan: Date,
+		now: Date,
+		lastError: string,
+	): Promise<number> => {
+		const rows = await db
+			.update(webhookDeliveries)
+			.set({
+				status: "failed",
+				lastError,
+				lastAttemptAt: now,
+			})
+			.where(
+				and(
+					eq(webhookDeliveries.status, "pending"),
+					eq(webhookDeliveries.attempts, 0),
+					lt(webhookDeliveries.createdAt, olderThan),
+				),
+			)
+			.returning({ id: webhookDeliveries.id });
+		return rows.length;
 	},
 
 	recordAttempt: async (

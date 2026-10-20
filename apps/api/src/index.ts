@@ -13,6 +13,7 @@ import { s3ClientFromEnv } from "./lib/storage/s3-client";
 import { setupStripe } from "./lib/stripe";
 import { handleWebhookQueue } from "./queue";
 import { createRoutes } from "./routes";
+import { handleScheduled } from "./scheduled";
 import type { WebhookJobQueue } from "./services/webhook-delivery.service";
 import { createV1App } from "./v1";
 
@@ -77,4 +78,5 @@ export default {
 	fetch: app.fetch,
 	queue: (batch: MessageBatch<{ deliveryId: string }>) =>
 		handleWebhookQueue(batch, dependencies.services.webhookDeliveryService),
+	scheduled: () => handleScheduled(dependencies.services.cleanupService),
 };

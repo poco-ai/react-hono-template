@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNotNull, lt } from "drizzle-orm";
 import { invitation, member, organization, user } from "../db/auth-schema";
 import { subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
@@ -55,6 +55,20 @@ export const createMemberDao = (db: Database) => ({
 				),
 			);
 		return row?.value ?? 0;
+	},
+
+	deleteExpiredPending: async (now: Date): Promise<number> => {
+		const rows = await db
+			.delete(invitation)
+			.where(
+				and(
+					eq(invitation.status, "pending"),
+					isNotNull(invitation.expiresAt),
+					lt(invitation.expiresAt, now),
+				),
+			)
+			.returning({ id: invitation.id });
+		return rows.length;
 	},
 
 	findInvitationOrgId: async (invitationId: string): Promise<string | null> => {

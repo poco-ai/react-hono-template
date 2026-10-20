@@ -23,6 +23,7 @@ import { createAttachmentService } from "./services/attachment.service";
 import { createAuthPolicyService } from "./services/auth-policy.service";
 import { createBillingService } from "./services/billing.service";
 import { createBootstrapService } from "./services/bootstrap.service";
+import { createCleanupService } from "./services/cleanup.service";
 import { createCommentService } from "./services/comment.service";
 import { createConfigService } from "./services/config.service";
 import { createIssueService } from "./services/issue.service";
@@ -73,6 +74,10 @@ export const createDependencies = ({
 		webhookDao,
 		deliveryDao: webhookDeliveryDao,
 		queue: webhookQueue,
+	});
+	const cleanupService = createCleanupService({
+		memberDao,
+		deliveryDao: webhookDeliveryDao,
 	});
 	const webhookService = createWebhookService({
 		webhookDao,
@@ -137,6 +142,7 @@ export const createDependencies = ({
 			apiKeyService,
 			webhookService,
 			webhookDeliveryService,
+			cleanupService,
 			billingService,
 			planService,
 			bootstrapService,

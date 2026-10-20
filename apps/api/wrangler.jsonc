@@ -54,6 +54,9 @@
 				"max_retries": 2
 			}
 		]
+	},
+	"triggers": {
+		"crons": ["*/15 * * * *"]
 	}
 	// "vars": { "ENVIRONMENT": "production" }
 }
