@@ -6,16 +6,8 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import { Button } from "@workspace/ui/components/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
+import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import {
 	Sheet,
 	SheetContent,
@@ -27,24 +19,17 @@ import {
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
-import {
-	Check,
-	ChevronsUpDown,
-	Menu,
-	Plus,
-	Search,
-	Settings,
-	Snowflake,
-	UserPlus,
-} from "lucide-react";
+import { ChevronsUpDown, Menu, Plus, Search, Snowflake } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
 import { useSession } from "@/features/auth/data";
 import type { OrgRole } from "@/features/members/data";
+import { ActiveOrganizationSync } from "@/features/organizations/active-organization";
 import { orgsQuery } from "@/features/organizations/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
@@ -98,7 +83,7 @@ function SidebarContent({
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
-	const { role, canManage } = useOrgRole(orgId);
+	const { role } = useOrgRole(orgId);
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 
@@ -112,92 +97,40 @@ function SidebarContent({
 	return (
 		<>
 			<div className="p-2">
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<Button
-								variant="ghost"
-								className="h-9 w-full justify-between px-2 font-medium"
-							>
-								<span className="min-w-0 truncate">
-									{currentOrg?.name ?? t("common.loading")}
-								</span>
-								<ChevronsUpDown className="text-muted-foreground size-4" />
-							</Button>
-						}
-					/>
-					<DropdownMenuContent align="start" className="w-56">
-						<DropdownMenuGroup>
-							<DropdownMenuLabel>{t("org.switcherLabel")}</DropdownMenuLabel>
-							{(orgs.data ?? []).map((org) => (
-								<DropdownMenuItem
-									key={org.id}
-									onClick={() => {
-										navigate({
-											to: "/orgs/$orgId/projects",
-											params: { orgId: org.id },
-										});
-										onNavigate?.();
-									}}
-								>
-									<Check
-										className={cn(
-											"size-4",
-											org.id === orgId ? "opacity-100" : "opacity-0",
-										)}
-									/>
-									<span className="min-w-0 truncate">{org.name}</span>
-									{org.id === orgId && (
-										<span className="text-muted-foreground ml-auto shrink-0 text-xs">
-											{t("org.current")}
-										</span>
-									)}
-								</DropdownMenuItem>
-							))}
-						</DropdownMenuGroup>
-						{canManage && (
-							<>
-								<DropdownMenuSeparator />
-								<DropdownMenuGroup>
-									<DropdownMenuItem
-										onClick={() => {
-											navigate({
-												to: "/orgs/$orgId/settings",
-												params: { orgId },
-											});
-											onNavigate?.();
-										}}
-									>
-										<Settings />
-										{t("org.settings")}
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => {
-											navigate({
-												to: "/orgs/$orgId/settings/members",
-												params: { orgId },
-											});
-											onNavigate?.();
-										}}
-									>
-										<UserPlus />
-										{t("org.inviteMembers")}
-									</DropdownMenuItem>
-								</DropdownMenuGroup>
-							</>
-						)}
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							onClick={() => {
-								navigate({ to: "/onboarding" });
-								onNavigate?.();
-							}}
+				<OrganizationSwitcher
+					align="start"
+					className="w-full"
+					hidePersonal
+					hideSettings
+					trigger={
+						<DropdownMenuTrigger
+							className={cn(
+								buttonVariants({ variant: "ghost" }),
+								"h-9 w-full justify-between px-2 text-left font-medium",
+							)}
 						>
-							<Plus className="size-4" />
-							{t("org.create")}
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+							<span className="min-w-0 truncate">
+								{currentOrg?.name ?? t("common.loading")}
+							</span>
+							<ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
+						</DropdownMenuTrigger>
+					}
+					setActive={(organization) => {
+						if (!organization) return;
+						void navigate({
+							to: "/orgs/$orgId/projects",
+							params: { orgId: organization.id },
+						});
+						onNavigate?.();
+					}}
+					onOrganizationCreated={(organization) => {
+						void navigate({
+							to: "/orgs/$orgId/projects",
+							params: { orgId: organization.id },
+						});
+						onNavigate?.();
+					}}
+				/>
 			</div>
 			<nav className="flex flex-col gap-0.5 px-2">
 				<Button
@@ -380,9 +313,11 @@ export function OrgLayout() {
 						</p>
 					</div>
 				)}
-				<main id="main-content" className="min-w-0 flex-1">
-					<Outlet />
-				</main>
+				<ActiveOrganizationSync orgId={orgId}>
+					<main id="main-content" className="min-w-0 flex-1">
+						<Outlet />
+					</main>
+				</ActiveOrganizationSync>
 			</div>
 		</div>
 	);

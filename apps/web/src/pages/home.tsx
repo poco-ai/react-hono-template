@@ -14,7 +14,7 @@ export function HomePage() {
 	const orgs = useQuery(orgsQuery());
 
 	useEffect(() => {
-		if (!orgs.data) {
+		if (orgs.isPending || orgs.isFetching || !orgs.data) {
 			return;
 		}
 		if (orgs.data.length === 0) {
@@ -26,7 +26,7 @@ export function HomePage() {
 				replace: true,
 			});
 		}
-	}, [orgs.data, navigate]);
+	}, [orgs.data, orgs.isFetching, orgs.isPending, navigate]);
 
 	if (orgs.isError) {
 		return (

@@ -9,26 +9,22 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { cn } from "@workspace/ui/lib/utils";
-import { Languages, LogOut, Shield, SunMoon, User } from "lucide-react";
-import { useState } from "react";
+import { Languages, Shield, SunMoon, User } from "lucide-react";
+import { type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import {
+	UserButton,
+	type UserButtonLink,
+} from "@/components/auth/user/user-button";
 import { LanguageMenuItems } from "@/components/language-switcher";
 import { ThemeMenuItems } from "@/components/theme-toggle";
 import { type SessionUser, useSignOut } from "@/features/auth/data";
@@ -52,95 +48,68 @@ export function UserDropdown({
 		onError: (error) => toast.error(apiErrorMessage(t, error)),
 	});
 
-	const platformRoleLabel: Record<"admin" | "user", string> = {
-		admin: t("adminUsers.roles.admin"),
-		user: t("adminUsers.roles.user"),
+	const accountLink: UserButtonLink = {
+		href: "/account",
+		icon: <User className="text-muted-foreground" />,
+		label: t("nav.account"),
+		visibility: "authenticated",
 	};
+	const adminLink: UserButtonLink = {
+		href: "/admin",
+		icon: <Shield className="text-muted-foreground" />,
+		label: t("nav.admin"),
+		visibility: "authenticated",
+	};
+	const links: (UserButtonLink | ReactElement)[] = [
+		accountLink,
+		...(user.role === "admin" ? [adminLink] : []),
+		<DropdownMenuSeparator key="user-menu-preferences" />,
+		<DropdownMenuSub key="language">
+			<DropdownMenuSubTrigger>
+				<Languages />
+				{t("language.toggle")}
+			</DropdownMenuSubTrigger>
+			<DropdownMenuSubContent>
+				<LanguageMenuItems />
+			</DropdownMenuSubContent>
+		</DropdownMenuSub>,
+		<DropdownMenuSub key="theme">
+			<DropdownMenuSubTrigger>
+				<SunMoon />
+				{t("theme.toggle")}
+			</DropdownMenuSubTrigger>
+			<DropdownMenuSubContent>
+				<ThemeMenuItems />
+			</DropdownMenuSubContent>
+		</DropdownMenuSub>,
+	];
 
-	const signOut = () => logout.mutate();
+	let badge: ReactNode = null;
+	if (orgRole) {
+		badge = (
+			<Badge variant="secondary" className="shrink-0">
+				{t(`org.roles.${orgRole}`)}
+			</Badge>
+		);
+	} else if (user.role === "admin") {
+		badge = (
+			<Badge variant="secondary" className="shrink-0">
+				{t("adminUsers.roles.admin")}
+			</Badge>
+		);
+	}
 
 	return (
 		<>
-			<DropdownMenu>
-				<DropdownMenuTrigger
-					render={
-						<Button
-							variant="ghost"
-							className={cn("h-9 min-w-0 gap-2 px-2", className)}
-						>
-							<Avatar className="size-6 shrink-0">
-								<AvatarFallback className="text-xs">
-									{user.name.slice(0, 1).toUpperCase()}
-								</AvatarFallback>
-							</Avatar>
-							<span className="min-w-0 flex-1 truncate text-left text-sm">
-								{user.name}
-							</span>
-							{orgRole ? (
-								<Badge variant="secondary" className="shrink-0">
-									{t(`org.roles.${orgRole}`)}
-								</Badge>
-							) : (
-								user.role === "admin" && (
-									<Badge variant="secondary" className="shrink-0">
-										{platformRoleLabel[user.role as "admin" | "user"]}
-									</Badge>
-								)
-							)}
-						</Button>
-					}
-				/>
-				<DropdownMenuContent align="end" className="w-56">
-					<DropdownMenuGroup>
-						<DropdownMenuLabel className="flex flex-col">
-							<span>{user.name}</span>
-							<span className="text-muted-foreground font-normal">
-								{user.email}
-							</span>
-						</DropdownMenuLabel>
-					</DropdownMenuGroup>
-					<DropdownMenuSeparator />
-					<DropdownMenuGroup>
-						<DropdownMenuItem onClick={() => navigate({ to: "/account" })}>
-							<User />
-							{t("nav.account")}
-						</DropdownMenuItem>
-						{user.role === "admin" && (
-							<DropdownMenuItem onClick={() => navigate({ to: "/admin" })}>
-								<Shield />
-								{t("nav.admin")}
-							</DropdownMenuItem>
-						)}
-					</DropdownMenuGroup>
-					<DropdownMenuSeparator />
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<Languages />
-							{t("language.toggle")}
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							<LanguageMenuItems />
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<SunMoon />
-							{t("theme.toggle")}
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							<ThemeMenuItems />
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem
-						disabled={logout.isPending}
-						onClick={() => setSignOutOpen(true)}
-					>
-						<LogOut />
-						{t("nav.signOut")}
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+			<UserButton
+				align="end"
+				className={cn("min-w-0", className)}
+				extra={badge}
+				hideSettings
+				links={links}
+				onSignOut={() => setSignOutOpen(true)}
+				user={user}
+			/>
 			<AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
@@ -156,7 +125,7 @@ export function UserDropdown({
 							disabled={logout.isPending}
 							onClick={(e) => {
 								e.preventDefault();
-								signOut();
+								logout.mutate();
 							}}
 						>
 							{t("nav.signOut")}

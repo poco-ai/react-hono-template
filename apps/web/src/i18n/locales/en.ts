@@ -115,6 +115,7 @@ const en = {
 	oauth: {
 		continueWithGitHub: "Continue with GitHub",
 		continueWithGoogle: "Continue with Google",
+		continueWith: "Continue with {{provider}}",
 		orDivider: "or",
 	},
 	login: {
@@ -155,6 +156,20 @@ const en = {
 		invalidToken: "This reset link is invalid or has expired.",
 		backToLogin: "Back to sign in",
 	},
+	authUi: {
+		hidePassword: "Hide password",
+		showPassword: "Show password",
+		rememberYourPassword: "Remember your password?",
+		checkYourEmailTitle: "Check your email",
+		resetLinkSentTo: "We sent a password reset link to {{email}}",
+		passwordStrength: "Password strength",
+		passwordWeak: "Weak",
+		passwordFair: "Fair",
+		passwordGood: "Good",
+		passwordStrong: "Strong",
+		openEmailProvider: "Open {{provider}}",
+		scanToOpenEmailProvider: "Scan to open {{provider}} on your phone",
+	},
 	invite: {
 		title: "Join organization",
 		accepting: "Accepting invitation…",
@@ -163,6 +178,7 @@ const en = {
 			"The invitation was accepted. You now have access to the organization.",
 		errorTitle: "Invitation failed",
 		continue: "Continue",
+		preview: "You've been invited to join {{organization}} as {{role}}.",
 		errors: {
 			invitationNotFound: "This invitation doesn't exist or has been revoked.",
 			emailMismatch: "This invitation was sent to a different email address.",
@@ -452,6 +468,9 @@ const en = {
 		passwordUpdated: "Password updated.",
 		passwordFailed:
 			"Couldn't update the password. Check your current password and try again.",
+		setPassword: "Set a password",
+		setPasswordDescription:
+			"You don't have a password yet. Request a reset link to set one up.",
 	},
 	settings: {
 		noPermission: "You do not have permission to view that settings page.",
@@ -707,6 +726,49 @@ const en = {
 	},
 	language: {
 		toggle: "Change language",
+	},
+	orgUi: {
+		organization: "Organization",
+		accept: "Accept",
+		reject: "Decline",
+		changeRole: "Change role",
+		changeRoleDescription:
+			"Choose the role this member should have in the organization.",
+		selectAtLeastOneRole: "Select at least one role.",
+		selectRoles: "Select a role",
+		invitedAt: "Invited",
+		accepted: "Accepted",
+		rejected: "Rejected",
+		canceled: "Canceled",
+		columns: "Columns",
+		rowsPerPage: "Rows per page",
+		pageOf: "Page {{page}} of {{pages}}",
+		range: "{{from}}–{{to}} of {{total}}",
+		nextPage: "Next page",
+		previousPage: "Previous page",
+		firstPage: "First page",
+		lastPage: "Last page",
+		selectedCount: "{{count}} selected",
+		selectRow: "Select row",
+		selectAllRows: "Select all rows on this page",
+		cancelSelectedInvitations: "Revoke selected invitations",
+		cancelSelectedInvitationsDescription:
+			"Revoke the selected pending invitations?",
+		invitationsCanceled: "{{count}} invitations revoked",
+		removeSelectedMembers: "Remove selected members",
+		removeSelectedMembersDescription:
+			"Remove the selected members from this organization? They will lose access immediately.",
+		membersRemoved: "{{count}} members removed",
+		noInvitationsDescription:
+			"Invite a teammate, then share the invitation link.",
+		userInvitationsEmpty:
+			"Invitations to join an organization will show up here.",
+		verifyEmail: "Verify your email to view invitations",
+		verifyEmailDescription:
+			"Invitations are available after your email address is verified.",
+		leftOrganization: "You left the organization.",
+		organizationDeleted: "Organization deleted.",
+		slugTaken: "That slug is already in use.",
 	},
 	toast: {
 		projectCreated: "Project created.",

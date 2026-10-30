@@ -11,10 +11,5 @@ export const Route = createFileRoute("/reset-password")({
 		}
 	},
 	validateSearch: resetPasswordSearchSchema,
-	component: ResetPasswordRoute,
+	component: ResetPasswordPage,
 });
-
-function ResetPasswordRoute() {
-	const { token } = Route.useSearch();
-	return <ResetPasswordPage token={token} />;
-}

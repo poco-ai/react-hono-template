@@ -1,0 +1,34 @@
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { TableCell, TableRow } from "@workspace/ui/components/table";
+import { UserView } from "../user/user-view";
+
+/**
+ * Placeholder row matching `OrganizationMemberRow` while members load.
+ */
+export function OrganizationMemberRowSkeleton({
+	showTeams,
+}: {
+	showTeams?: boolean;
+}) {
+	return (
+		<TableRow>
+			<TableCell>
+				<UserView isPending />
+			</TableCell>
+
+			<TableCell>
+				<Skeleton className="h-4 w-18 rounded-md" />
+			</TableCell>
+
+			{showTeams && (
+				<TableCell>
+					<Skeleton className="h-4 w-24 rounded-md" />
+				</TableCell>
+			)}
+
+			<TableCell className="flex justify-end">
+				<Skeleton className="size-8 rounded-md" />
+			</TableCell>
+		</TableRow>
+	);
+}

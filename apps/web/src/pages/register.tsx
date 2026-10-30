@@ -1,208 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import { Button } from "@workspace/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@workspace/ui/components/card";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import { CircleAlert } from "lucide-react";
-import { type FormEvent, useState } from "react";
-
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SocialSignIn } from "@/features/auth/components/social-sign-in";
-import { bootstrapQuery, useSignUp } from "@/features/auth/data";
-
-import { apiErrorMessage, errorCode } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
-
-import { useDocumentTitle } from "@/lib/use-document-title";
-
-const registerSchema = z.object({
-	name: z.string().trim().min(1),
-	email: z.string().trim().min(1).email(),
-	password: z.string().min(8),
-});
-
-/** better-auth answers a duplicate sign-up with 422 and this code; older
- * versions and the admin plugin use the shorter one. Both mean "sign in". */
-const DUPLICATE_EMAIL_CODES = new Set([
-	"USER_ALREADY_EXISTS",
-	"USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
-]);
-
-const INPUT_IDS = {
-	name: "name",
-	email: "email",
-	password: "password",
-};
+import { SignUp } from "@/components/auth/sign-up";
+import { PublicAuthScreen } from "@/components/public-auth-screen";
+import { bootstrapQuery } from "@/features/auth/data";
 
 export function RegisterPage() {
 	const { t } = useTranslation();
-	useDocumentTitle(t("register.title"));
-	const navigate = useNavigate({ from: "/register" });
-	const [error, setError] = useState<string | null>(null);
-	const [duplicateEmail, setDuplicateEmail] = useState(false);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 	const { data: bootstrap } = useQuery(bootstrapQuery());
-	const register = useSignUp({
-		onError: (error) => {
-			if (DUPLICATE_EMAIL_CODES.has(errorCode(error) ?? "")) {
-				setDuplicateEmail(true);
-				return;
-			}
-			setError(apiErrorMessage(t, error, "register.failed"));
-		},
-		onSuccess: () => navigate({ to: "/", replace: true }),
-	});
-
-	const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		setError(null);
-		setDuplicateEmail(false);
-		const data = new FormData(e.currentTarget);
-		const parsed = registerSchema.safeParse({
-			name: String(data.get("name") ?? ""),
-			email: String(data.get("email") ?? ""),
-			password: String(data.get("password") ?? ""),
-		});
-		if (!parsed.success) {
-			const errors = fieldErrorsFromZod(parsed.error, t);
-			setFieldErrors(errors);
-			focusFirstInvalidField(errors, INPUT_IDS);
-			return;
-		}
-		register.mutate(parsed.data);
-	};
 
 	return (
-		<div className="flex min-h-svh items-center justify-center p-6">
-			<div className="absolute top-4 right-4 flex items-center gap-1">
-				<LanguageSwitcher />
-				<ThemeToggle />
-			</div>
-			<Card className="w-full max-w-sm">
-				<CardHeader>
-					<Logo className="pb-2" />
-					<CardTitle>{t("register.title")}</CardTitle>
-					{bootstrap?.hasAdmin === false && (
-						<CardDescription>{t("register.description")}</CardDescription>
-					)}
-				</CardHeader>
-				<CardContent>
-					<SocialSignIn
-						callbackURL={new URL("/", window.location.origin).toString()}
-						onAttempt={() => {
-							setError(null);
-							setDuplicateEmail(false);
-						}}
-						onError={(error) => {
-							setDuplicateEmail(false);
-							setError(apiErrorMessage(t, error, "register.failed"));
-						}}
-					/>
-					<form noValidate className="flex flex-col gap-4" onSubmit={onSubmit}>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="name">{t("common.name")}</Label>
-							<Input
-								id="name"
-								name="name"
-								placeholder={t("register.namePlaceholder")}
-								aria-invalid={fieldErrors.name ? true : undefined}
-								aria-describedby={fieldErrors.name ? "name-error" : undefined}
-								onChange={() =>
-									setFieldErrors((prev) => withoutFieldError(prev, "name"))
-								}
-							/>
-							{fieldErrors.name && (
-								<p id="name-error" className="text-destructive text-sm">
-									{fieldErrors.name}
-								</p>
-							)}
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="email">{t("common.email")}</Label>
-							<Input
-								id="email"
-								name="email"
-								type="email"
-								placeholder={t("common.emailPlaceholder")}
-								aria-invalid={fieldErrors.email ? true : undefined}
-								aria-describedby={fieldErrors.email ? "email-error" : undefined}
-								onChange={() =>
-									setFieldErrors((prev) => withoutFieldError(prev, "email"))
-								}
-							/>
-							{fieldErrors.email && (
-								<p id="email-error" className="text-destructive text-sm">
-									{fieldErrors.email}
-								</p>
-							)}
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="password">{t("common.password")}</Label>
-							<Input
-								id="password"
-								name="password"
-								type="password"
-								placeholder={t("register.passwordPlaceholder")}
-								aria-invalid={fieldErrors.password ? true : undefined}
-								aria-describedby={
-									fieldErrors.password ? "password-error" : undefined
-								}
-								onChange={() =>
-									setFieldErrors((prev) => withoutFieldError(prev, "password"))
-								}
-							/>
-							{fieldErrors.password && (
-								<p id="password-error" className="text-destructive text-sm">
-									{fieldErrors.password}
-								</p>
-							)}
-						</div>
-						{duplicateEmail && (
-							<Alert variant="destructive">
-								<CircleAlert />
-								<AlertDescription>
-									{t("register.alreadyRegistered")}{" "}
-									<Link to="/login" className="underline">
-										{t("register.signInLink")}
-									</Link>
-								</AlertDescription>
-							</Alert>
-						)}
-						{error && (
-							<Alert variant="destructive">
-								<CircleAlert />
-								<AlertDescription>{error}</AlertDescription>
-							</Alert>
-						)}
-						<Button type="submit" disabled={register.isPending}>
-							{t("register.submit")}
-						</Button>
-					</form>
-					<p className="text-muted-foreground mt-4 text-center text-sm">
-						{t("register.haveAccount")}{" "}
-						<Link to="/login" className="text-primary underline">
-							{t("register.signInLink")}
-						</Link>
+		<PublicAuthScreen
+			title={t("register.title")}
+			notice={
+				bootstrap?.hasAdmin === false ? (
+					<p className="text-muted-foreground w-full text-center text-sm">
+						{t("register.description")}
 					</p>
-				</CardContent>
-			</Card>
-		</div>
+				) : null
+			}
+		>
+			<SignUp />
+		</PublicAuthScreen>
 	);
 }
