@@ -9,13 +9,13 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 **Application features**
 
 - Multi-tenant workspaces (better-auth `organization` plugin): owner/admin/member roles, email invitations with shareable links
-- Self-service accounts: public landing page at `/`, register/login with email and password, optional Google and GitHub sign-in (a provider's button appears only when both its client id and secret are set), `/forgot-password` + `/reset-password`, and an `/account` page (display name, password change)
+- Self-service accounts: public landing page at `/`, register/login with email and password, optional Google and GitHub sign-in (a provider's button appears only when both its client id and secret are set), `/forgot-password` + `/reset-password`, and an `/account` page (display name, password change, linked sign-in accounts, active sessions and appearance)
 - Projects with per-project issue numbering (`PROJ-123`), statuses, priorities, labels, assignees, due dates
 - Issue list with URL-driven filters + pagination, drag-and-drop kanban board, bulk edits, my-issues view
 - Markdown descriptions and comments, R2-backed attachments with presigned direct upload, field-level activity timeline + org activity feed
 - Public API (`/api/v1`) with `sk_` API keys, per-plan rate limiting, auto-generated OpenAPI docs (Scalar), and outbound webhooks (HMAC-SHA256 signed, delivery log, retries, ping/redeliver)
 - Stripe subscriptions with Free/Pro quota enforcement (members, projects, webhooks, attachment size, API rate) and a mock mode that runs the whole upgrade/downgrade flow without Stripe
-- Platform admin area: user management, org overview with freeze/unfreeze, global stats
+- Platform admin area: Better Auth UI user management with URL-driven email/name search, filters, roles, bans and session controls; org overview with freeze/unfreeze and global stats
 
 **Template capabilities**
 
@@ -29,8 +29,10 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 | Validation | zod schemas shared between API and web forms (`packages/shared`) |
 | Storage | S3-compatible presigned uploads (R2 by default, MinIO/OSS work too) |
 | Rate limiting | Workers Rate Limiting binding (per plan tier) |
-| UI | Tailwind v4 + shadcn/ui (Base UI), i18next (en/zh with typed keys), class-based theming |
+| UI | Better Auth UI registry components + Tailwind v4 + shadcn/ui (Base UI), i18next (en/zh with typed keys), class-based theming |
 | Tooling | Bun, Turborepo, Biome, drizzle-kit migrations, GitHub Actions deploy |
+
+Better Auth UI components are copied into `apps/web/src/components/auth/` and adapted locally. App requests and cache policies remain in feature `data.ts` modules, including registry integrations, and the architecture tests enforce that boundary. The admin UI uses Better Auth endpoints while server hooks preserve self-role and administrator-ban protections. Billing uses a custom UI adapter over the existing Stripe/mock endpoints; API-key UI retains the existing key storage, one-time secrets, authentication and rate limiting. These two integrations do not migrate backend data to Better Auth plugins.
 
 ## Quickstart
 
@@ -117,7 +119,11 @@ These are deliberate template-level simplifications. Each works correctly for de
 
 ## Deploying
 
-Push to `main` deploys both Workers via GitHub Actions (needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` secrets; web is built with `VITE_API_URL` pointing at the API Worker). Manual: `bun run deploy` inside each app. First production setup:
+Relevant pushes to `main` deploy the Workers via GitHub Actions (needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` secrets; web is built with `VITE_API_URL` pointing at the API Worker). Manual: `bun run deploy` inside each app.
+
+Both deployment workflows call the reusable CI quality workflow and wait for it through `needs: quality`: dependency installation, lint, typecheck and tests must pass before deployment. CI also runs on pull requests. All workflows select the Bun version from the root `package.json`.
+
+First production setup:
 
 1. `wrangler d1 create` + update `database_id` in `apps/api/wrangler.jsonc`; create the `KV` namespace (`wrangler kv namespace create react-hono-kv --binding KV --update-config`) and run `bun run db:migrate:remote` inside `apps/api`
 2. Set secrets (`BETTER_AUTH_SECRET`, optionally `BETTER_AUTH_URL` plus GitHub/Google client ids and secrets, and S3/Stripe vars) and add your web origin to `trustedOrigins` in `apps/api/src/index.ts`. In production `BETTER_AUTH_URL` is the API origin. The API Worker also needs the `react-hono-webhooks` queue (`wrangler queues create react-hono-webhooks`) before the first deploy that includes the queue consumer.
