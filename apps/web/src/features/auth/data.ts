@@ -1,5 +1,6 @@
 import type { BootstrapDto } from "@api/dto/bootstrap.dto";
 import { authMutationKeys } from "@better-auth-ui/core";
+import { useRevokeSessions as useAuthRevokeSessions } from "@better-auth-ui/react";
 import {
 	matchMutation,
 	type QueryClient,
@@ -8,7 +9,7 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { codedError } from "@/lib/errors";
@@ -68,6 +69,7 @@ export function useRefreshSessionOnUserUpdate() {
 	useEffect(() => {
 		return queryClient.getMutationCache().subscribe((event) => {
 			if (event.type !== "updated" || event.action.type !== "success") return;
+
 			if (
 				!matchMutation(
 					{ mutationKey: authMutationKeys.updateUser },
@@ -106,3 +108,19 @@ export function useSignOut(
 }
 
 export const bootstrapKey = () => ["bootstrap"] as const;
+
+/** Refresh the app route-guard session after a library sign-in completes. */
+export function useRefreshAppSession() {
+	const queryClient = useQueryClient();
+	return useCallback(() => refreshAppSession(queryClient), [queryClient]);
+}
+
+export function useRevokeAllAppSessions(onSuccess: () => void) {
+	const queryClient = useQueryClient();
+	return useAuthRevokeSessions(authClient, {
+		onSuccess: () => {
+			queryClient.clear();
+			onSuccess();
+		},
+	});
+}

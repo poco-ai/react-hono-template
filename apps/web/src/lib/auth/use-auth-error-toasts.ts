@@ -13,6 +13,7 @@ import {
 	matchQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -23,11 +24,11 @@ import {
 } from "@/lib/auth/organization-errors";
 
 function localizedAuthToast(
-	t: ReturnType<typeof useTranslation>["t"],
+	t: TFunction,
 	error: unknown,
 	raw: string,
 	mutationKey: readonly unknown[] | undefined,
-) {
+): string {
 	const isAccept =
 		mutationKey?.[0] === "auth" &&
 		mutationKey[1] === "organization" &&

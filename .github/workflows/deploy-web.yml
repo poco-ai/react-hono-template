@@ -11,16 +11,24 @@ on:
       # so api type changes must rebuild/redeploy web as well.
       - "apps/api/**"
       - "bun.lock"
+      - "package.json"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: quality
     name: Deploy Web Worker
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

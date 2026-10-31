@@ -16,7 +16,7 @@ import {
 	useFetchOptions,
 	useSignUpEmail,
 } from "@better-auth-ui/react";
-import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating } from "@tanstack/react-query";
 import {
 	Card,
 	CardContent,
@@ -43,7 +43,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { refreshAppSession } from "@/features/auth/data";
+import { useRefreshAppSession } from "@/features/auth/data";
 import {
 	getAuthAdditionalFieldValidators,
 	isAuthFormFieldInvalid,
@@ -104,7 +104,7 @@ export function SignUp({
 		navigate,
 		Link,
 	} = useAuth();
-	const queryClient = useQueryClient();
+	const refreshAppSession = useRefreshAppSession();
 	const { t } = useTranslation();
 
 	const { fetchOptions, resetFetchOptions } = useFetchOptions();
@@ -143,7 +143,7 @@ export function SignUp({
 					),
 				});
 			} else {
-				void refreshAppSession(queryClient).then(() => {
+				void refreshAppSession().then(() => {
 					if (onSignUpSuccess) {
 						onSignUpSuccess();
 					} else {

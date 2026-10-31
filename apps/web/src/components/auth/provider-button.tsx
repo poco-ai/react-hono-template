@@ -16,12 +16,12 @@ import {
 	useSignInOAuthPopup,
 	useSignInSocial,
 } from "@better-auth-ui/react";
-import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "cn";
 import type { ComponentProps } from "react";
-import { refreshAppSession } from "@/features/auth/data";
+import { useRefreshAppSession } from "@/features/auth/data";
 import { frontendCallbackURL } from "@/lib/auth/safe-redirect";
 import { LastUsedBadge } from "./last-login-method/last-used-badge";
 
@@ -48,7 +48,7 @@ export function ProviderButton({
 	const { authClient, localization, navigate, redirectTo, socialSignInMode } =
 		useAuth();
 
-	const queryClient = useQueryClient();
+	const refreshAppSession = useRefreshAppSession();
 	const callbackURL = frontendCallbackURL(redirectTo);
 	const { fetchOptions, resetFetchOptions } = useFetchOptions();
 
@@ -80,7 +80,7 @@ export function ProviderButton({
 				},
 				{
 					onSuccess: () => {
-						void refreshAppSession(queryClient).then(() => {
+						void refreshAppSession().then(() => {
 							navigate({ to: redirectTo });
 						});
 					},
