@@ -8,7 +8,7 @@ export const createAuthPolicyService = ({
 	memberDao,
 	plans,
 }: {
-	adminUserDao: Pick<AdminUserDao, "countUsers">;
+	adminUserDao: Pick<AdminUserDao, "countUsers" | "findById">;
 	memberDao: Pick<
 		MemberDao,
 		| "listOrgPlansByUser"
@@ -18,6 +18,28 @@ export const createAuthPolicyService = ({
 	>;
 	plans: Pick<PlanService, "getPlanForOrg">;
 }) => ({
+	assertAdminUserMutation: async (
+		actorId: string,
+		targetId: string,
+		action: "set-role" | "ban-user",
+	) => {
+		if (actorId === targetId)
+			throw new ApiError(
+				403,
+				ApiErrorCode.FORBIDDEN,
+				"You cannot change your own role or ban yourself",
+			);
+		if (action === "ban-user") {
+			const target = await adminUserDao.findById(targetId);
+			if (target?.role?.split(",").includes("admin"))
+				throw new ApiError(
+					403,
+					ApiErrorCode.FORBIDDEN,
+					"You cannot ban an admin",
+				);
+		}
+	},
+
 	initialUserRole: async () =>
 		(await adminUserDao.countUsers()) === 0 ? "admin" : "user",
 

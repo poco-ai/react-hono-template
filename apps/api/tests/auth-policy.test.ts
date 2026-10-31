@@ -17,7 +17,7 @@ const policyFor = ({
 	invitationOrg = "org" as string | null,
 } = {}) =>
 	createAuthPolicyService({
-		adminUserDao: { countUsers: async () => users },
+		adminUserDao: { countUsers: async () => users, findById: async () => null },
 		memberDao: {
 			listOrgPlansByUser: async () => orgPlans,
 			findInvitationOrgId: async () => invitationOrg,
@@ -82,4 +82,39 @@ test("accepting an invitation counts members without double counting pending sea
 		isQuotaError,
 	);
 	await policyFor({ invitationOrg: null }).assertCanAcceptInvitation("missing");
+});
+
+test("auth admin endpoints preserve self-role and administrator-ban restrictions", async () => {
+	const policy = policyFor();
+	await assert.rejects(
+		policy.assertAdminUserMutation("self", "self", "set-role"),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await assert.rejects(
+		policy.assertAdminUserMutation("self", "self", "ban-user"),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await policy.assertAdminUserMutation("actor", "other", "set-role");
+	const adminPolicy = createAuthPolicyService({
+		adminUserDao: {
+			countUsers: async () => 2,
+			findById: async () =>
+				({ role: "admin" }) as Awaited<
+					ReturnType<
+						import("../src/dao/admin-user.dao").AdminUserDao["findById"]
+					>
+				>,
+		},
+		memberDao: {
+			listOrgPlansByUser: async () => [],
+			findInvitationOrgId: async () => null,
+			countByOrg: async () => 0,
+			countPendingInvitationsByOrg: async () => 0,
+		},
+		plans: { getPlanForOrg: async () => "free" },
+	});
+	await assert.rejects(
+		adminPolicy.assertAdminUserMutation("actor", "admin", "ban-user"),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
 });

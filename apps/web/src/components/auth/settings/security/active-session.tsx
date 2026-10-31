@@ -13,11 +13,14 @@ import { Spinner } from "@workspace/ui/components/spinner";
 import type { Session } from "better-auth";
 import Bowser from "bowser";
 import { LogOut, Monitor, Smartphone, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useSignOut } from "@/features/auth/data";
+import { apiErrorMessage } from "@/lib/errors";
 
-function timeAgo(date: Date) {
+function timeAgo(date: Date, language: string) {
 	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-	const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+	const rtf = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
 
 	const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 		["year", 31536000],
@@ -52,8 +55,12 @@ export type ActiveSessionProps = {
  * @returns A JSX element containing the active session row
  */
 export function ActiveSession({ activeSession }: ActiveSessionProps) {
-	const { authClient, basePaths, localization, viewPaths, navigate } =
-		useAuth();
+	const { t, i18n } = useTranslation();
+	const logout = useSignOut({
+		onError: (error) => toast.error(apiErrorMessage(t, error)),
+		onSuccess: () => navigate({ to: "/login", replace: true }),
+	});
+	const { authClient, localization, navigate } = useAuth();
 	const { data: session } = useSession(authClient, { refetchOnMount: false });
 
 	const { mutate: revokeSession, isPending: isRevoking } = useRevokeSession(
@@ -78,7 +85,7 @@ export function ActiveSession({ activeSession }: ActiveSessionProps) {
 			</ItemMedia>
 			<ItemContent>
 				<ItemTitle>
-					{ua?.browser.name || "Unknown Browser"}
+					{ua?.browser.name || t("securityUi.unknownBrowser")}
 					{ua?.os.name ? `, ${ua.os.name}` : ""}
 				</ItemTitle>
 				{isCurrentSession ? (
@@ -88,7 +95,7 @@ export function ActiveSession({ activeSession }: ActiveSessionProps) {
 				) : (
 					activeSession.createdAt && (
 						<ItemDescription className="capitalize">
-							{timeAgo(activeSession.createdAt)}
+							{timeAgo(activeSession.createdAt, i18n.language)}
 						</ItemDescription>
 					)
 				)}
@@ -98,13 +105,9 @@ export function ActiveSession({ activeSession }: ActiveSessionProps) {
 					variant="outline"
 					size="sm"
 					onClick={() =>
-						isCurrentSession
-							? navigate({
-									to: `${basePaths.auth}/${viewPaths.auth.signOut}`,
-								})
-							: revokeSession(activeSession)
+						isCurrentSession ? logout.mutate() : revokeSession(activeSession)
 					}
-					disabled={isRevoking}
+					disabled={isRevoking || logout.isPending}
 					aria-label={
 						isCurrentSession
 							? localization.auth.signOut

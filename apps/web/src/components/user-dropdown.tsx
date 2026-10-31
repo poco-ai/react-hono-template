@@ -17,7 +17,7 @@ import {
 	DropdownMenuSubTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { cn } from "@workspace/ui/lib/utils";
-import { Languages, Shield, SunMoon, User } from "lucide-react";
+import { Languages, Shield, User } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -26,7 +26,6 @@ import {
 	type UserButtonLink,
 } from "@/components/auth/user/user-button";
 import { LanguageMenuItems } from "@/components/language-switcher";
-import { ThemeMenuItems } from "@/components/theme-toggle";
 import { type SessionUser, useSignOut } from "@/features/auth/data";
 import type { OrgRole } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
@@ -71,15 +70,6 @@ export function UserDropdown({
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>
 				<LanguageMenuItems />
-			</DropdownMenuSubContent>
-		</DropdownMenuSub>,
-		<DropdownMenuSub key="theme">
-			<DropdownMenuSubTrigger>
-				<SunMoon />
-				{t("theme.toggle")}
-			</DropdownMenuSubTrigger>
-			<DropdownMenuSubContent>
-				<ThemeMenuItems />
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>,
 	];

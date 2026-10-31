@@ -23,6 +23,8 @@ import {
 	oauthProvidersQuery,
 	useRefreshSessionOnUserUpdate,
 } from "@/features/auth/data";
+import { adminFlowLocalization } from "@/lib/auth/admin-localization";
+import { adminPlugin } from "@/lib/auth/admin-plugin";
 import {
 	accountSettingsLocalization,
 	authFlowLocalization,
@@ -30,6 +32,7 @@ import {
 } from "@/lib/auth/auth-localization";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { resolveSafeRedirect } from "@/lib/auth/safe-redirect";
+import { themePlugin } from "@/lib/auth/theme-plugin";
 import { authClient } from "@/lib/auth-client";
 
 export interface RouterContext {
@@ -136,6 +139,18 @@ function AuthLink({
 	);
 }
 
+function useAuthTheme() {
+	const { theme, setTheme } = useTheme();
+	return {
+		theme,
+		themes: ["system", "light", "dark"],
+		setTheme: (value: string) => {
+			if (value === "system" || value === "light" || value === "dark")
+				setTheme(value);
+		},
+	};
+}
+
 function RootComponent() {
 	const { theme } = useTheme();
 	const { t, i18n } = useTranslation();
@@ -156,6 +171,13 @@ function RootComponent() {
 	);
 	const plugins = useMemo(
 		() => [
+			adminPlugin({
+				roles: ["user", "admin"],
+				defaultRole: "user",
+				allowMultipleRoles: false,
+				pageSize: 10,
+			}),
+			themePlugin({ useTheme: useAuthTheme }),
 			organizationPlugin({
 				slugPrefix: "",
 				allowMultipleRoles: false,
@@ -184,6 +206,14 @@ function RootComponent() {
 			},
 			plugins: {
 				...enUS.plugins,
+				admin: adminFlowLocalization(t),
+				theme: {
+					appearance: t("securityUi.appearance"),
+					theme: t("theme.toggle"),
+					system: t("theme.system"),
+					light: t("theme.light"),
+					dark: t("theme.dark"),
+				},
 				organization: {
 					...enUS.plugins.organization,
 					...organizationFlowLocalization(t),

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { UserProfile } from "@/components/auth/settings/account/user-profile";
-import { ChangePassword } from "@/components/auth/settings/security/change-password";
+import { SecuritySettings } from "@/components/auth/settings/security/security-settings";
+import { Appearance } from "@/components/auth/theme/appearance";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AccountPage() {
@@ -16,7 +17,8 @@ export function AccountPage() {
 				</p>
 			</div>
 			<UserProfile />
-			<ChangePassword />
+			<SecuritySettings />
+			<Appearance />
 		</div>
 	);
 }

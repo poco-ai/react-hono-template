@@ -18,7 +18,11 @@ export type UserAvatarProps = {
 	fallback?: ReactNode;
 	isPending?: boolean;
 	/** @remarks `User` */
-	user?: User & { username?: string | null; displayUsername?: string | null };
+	user?: Pick<User, "name"> &
+		Partial<Pick<User, "email" | "image">> & {
+			username?: string | null;
+			displayUsername?: string | null;
+		};
 };
 
 /**

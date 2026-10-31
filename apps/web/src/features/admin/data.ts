@@ -1,4 +1,16 @@
 import {
+	banAdminUserOptions,
+	createAdminUserOptions,
+	impersonateAdminUserOptions,
+	removeAdminUserOptions,
+	revokeAdminUserSessionOptions,
+	revokeAdminUserSessionsOptions,
+	setAdminUserPasswordOptions,
+	setAdminUserRoleOptions,
+	unbanAdminUserOptions,
+	updateAdminUserOptions,
+} from "@better-auth-ui/core/plugins/admin";
+import {
 	type QueryClient,
 	queryOptions,
 	useMutation,
@@ -8,81 +20,6 @@ import { organizationsKey } from "@/features/organizations/data";
 import { client, unwrap } from "@/lib/api";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
-
-export const updateAdminUserRole = ({
-	id,
-	role,
-}: {
-	id: string;
-	role: "admin" | "user";
-}) =>
-	unwrap(
-		client.api.admin.users[":id"].role.$patch({
-			param: { id },
-			json: { role },
-		}),
-	);
-
-export function useUpdateAdminUserRole(
-	callbacks?: MutationCallbacks<
-		Awaited<ReturnType<typeof updateAdminUserRole>>,
-		{ id: string; role: "admin" | "user" }
-	>,
-) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
-		mutationFn: (input: { id: string; role: "admin" | "user" }) =>
-			updateAdminUserRole(input),
-		onSuccess: (...args) => {
-			void invalidateAdminUserQueries(queryClient);
-			return callbacks?.onSuccess?.(...args);
-		},
-	});
-}
-
-export const banAdminUser = (id: string) =>
-	unwrap(client.api.admin.users[":id"].ban.$post({ param: { id }, json: {} }));
-
-export function useBanAdminUser(
-	callbacks?: MutationCallbacks<
-		Awaited<ReturnType<typeof banAdminUser>>,
-		string
-	>,
-) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
-		mutationFn: (input: string) => banAdminUser(input),
-		onSuccess: (...args) => {
-			void invalidateAdminUserQueries(queryClient);
-			return callbacks?.onSuccess?.(...args);
-		},
-	});
-}
-
-export const unbanAdminUser = (id: string) =>
-	unwrap(client.api.admin.users[":id"].ban.$delete({ param: { id } }));
-
-export function useUnbanAdminUser(
-	callbacks?: MutationCallbacks<
-		Awaited<ReturnType<typeof unbanAdminUser>>,
-		string
-	>,
-) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
-		mutationFn: (input: string) => unbanAdminUser(input),
-		onSuccess: (...args) => {
-			void invalidateAdminUserQueries(queryClient);
-			return callbacks?.onSuccess?.(...args);
-		},
-	});
-}
 
 export const freezeOrganization = (orgId: string) =>
 	unwrap(client.api.admin.orgs[":orgId"].freeze.$post({ param: { orgId } }));
@@ -127,14 +64,10 @@ export function useUnfreezeOrganization(
 }
 
 export const ADMIN_PAGE_SIZE = 10;
-export const adminUsersRootKey = () => ["admin-users"] as const;
 export const adminOrgsRootKey = () => ["admin-orgs"] as const;
 export const adminStatsKey = () => ["admin-stats"] as const;
 export const invalidateAdminUserQueries = (client: QueryClient) =>
-	Promise.all([
-		client.invalidateQueries({ queryKey: adminUsersRootKey() }),
-		client.invalidateQueries({ queryKey: adminStatsKey() }),
-	]);
+	Promise.all([client.invalidateQueries({ queryKey: adminStatsKey() })]);
 export const invalidateAdminOrgQueries = (client: QueryClient) =>
 	Promise.all([
 		client.invalidateQueries({ queryKey: adminOrgsRootKey() }),
@@ -146,22 +79,6 @@ export function adminStatsQuery() {
 	return queryOptions({
 		queryKey: adminStatsKey(),
 		queryFn: () => unwrap(client.api.admin.stats.$get()),
-	});
-}
-
-export function adminUsersQuery(page: number, search: string) {
-	return queryOptions({
-		queryKey: adminUsersKey(page, search),
-		queryFn: () =>
-			unwrap(
-				client.api.admin.users.$get({
-					query: {
-						page: String(page),
-						pageSize: String(ADMIN_PAGE_SIZE),
-						search,
-					},
-				}),
-			),
 	});
 }
 
@@ -181,7 +98,135 @@ export function adminOrganizationsQuery(page: number, search: string) {
 	});
 }
 
-export const adminUsersKey = (page: number, search: string) =>
-	[...adminUsersRootKey(), page, search] as const;
 export const adminOrgsKey = (page: number, search: string) =>
 	[...adminOrgsRootKey(), page, search] as const;
+
+export function useAuthBanAdminUser(
+	...args: Parameters<typeof banAdminUserOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = banAdminUserOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useCreateAdminUser(
+	...args: Parameters<typeof createAdminUserOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = createAdminUserOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useImpersonateAdminUser(
+	...args: Parameters<typeof impersonateAdminUserOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = impersonateAdminUserOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useRemoveAdminUser(
+	...args: Parameters<typeof removeAdminUserOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = removeAdminUserOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useRevokeAdminUserSession(
+	...args: Parameters<typeof revokeAdminUserSessionOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = revokeAdminUserSessionOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useRevokeAdminUserSessions(
+	...args: Parameters<typeof revokeAdminUserSessionsOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = revokeAdminUserSessionsOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useSetAdminUserPassword(
+	...args: Parameters<typeof setAdminUserPasswordOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = setAdminUserPasswordOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useSetAdminUserRole(
+	...args: Parameters<typeof setAdminUserRoleOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = setAdminUserRoleOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useAuthUnbanAdminUser(
+	...args: Parameters<typeof unbanAdminUserOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = unbanAdminUserOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}
+
+export function useUpdateAdminUser(
+	...args: Parameters<typeof updateAdminUserOptions>
+) {
+	const queryClient = useQueryClient();
+	const options = updateAdminUserOptions(...args);
+	return useMutation({
+		...options,
+		onSuccess: async () => {
+			await invalidateAdminUserQueries(queryClient);
+		},
+	});
+}

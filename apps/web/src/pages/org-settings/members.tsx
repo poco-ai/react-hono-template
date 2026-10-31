@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { OrganizationInvitations } from "@/components/auth/organization/organization-invitations";
-import { OrganizationMembers } from "@/components/auth/organization/organization-members";
+import { OrganizationPeople } from "@/components/auth/organization/organization-people";
 import { useActiveOrganizationReady } from "@/features/organizations/active-organization";
 import { OrgWriteLockProvider } from "@/features/organizations/org-write-lock";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
@@ -27,10 +26,7 @@ export function MembersSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<OrgWriteLockProvider locked={frozen}>
-			<div className="flex flex-col gap-10">
-				<OrganizationMembers />
-				<OrganizationInvitations />
-			</div>
+			<OrganizationPeople className="gap-10" />
 		</OrgWriteLockProvider>
 	);
 }

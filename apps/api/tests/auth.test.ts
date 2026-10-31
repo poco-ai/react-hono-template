@@ -124,3 +124,30 @@ test("baseURL is set only when passed", () => {
 		"http://localhost:5173",
 	);
 });
+
+test("admin endpoint hooks invoke policy before role and ban writes", async () => {
+	const calls: unknown[][] = [];
+	const auth = createAuth({
+		db: {} as Database,
+		secret: "test-secret",
+		trustedOrigins: [],
+		policy: {
+			assertAdminUserMutation: async (...args: unknown[]) => {
+				calls.push(args);
+			},
+		} as unknown as AuthPolicyService,
+	});
+	const hook = auth.options.hooks?.before;
+	assert.ok(hook);
+	for (const path of ["/admin/set-role", "/admin/ban-user"]) {
+		await hook({
+			path,
+			body: { userId: "target" },
+			context: { session: { user: { id: "actor" } } },
+		} as unknown as Parameters<typeof hook>[0]);
+	}
+	assert.deepEqual(calls, [
+		["actor", "target", "set-role"],
+		["actor", "target", "ban-user"],
+	]);
+});

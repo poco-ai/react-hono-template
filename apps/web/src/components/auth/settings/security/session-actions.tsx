@@ -1,8 +1,4 @@
-import {
-	useAuth,
-	useRevokeOtherSessions,
-	useRevokeSessions,
-} from "@better-auth-ui/react";
+import { useAuth, useRevokeOtherSessions } from "@better-auth-ui/react";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -18,6 +14,7 @@ import { Spinner } from "@workspace/ui/components/spinner";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRevokeAllAppSessions } from "@/features/auth/data";
 
 type PendingAction = "other" | "all";
 
@@ -32,13 +29,12 @@ export function SessionActions(props: { hasOtherSessions: boolean }) {
 			setAction(null);
 		},
 	});
-	const revokeSessions = useRevokeSessions(authClient, {
-		onSuccess: () =>
-			navigate({
-				to: `${basePaths.auth}/${viewPaths.auth.signIn}`,
-				replace: true,
-			}),
-	});
+	const revokeSessions = useRevokeAllAppSessions(() =>
+		navigate({
+			to: `${basePaths.auth}/${viewPaths.auth.signIn}`,
+			replace: true,
+		}),
+	);
 
 	const isPending = revokeOtherSessions.isPending || revokeSessions.isPending;
 	const isEverywhere = action === "all";

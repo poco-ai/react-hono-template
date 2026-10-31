@@ -155,6 +155,24 @@ export const createAuth = ({
 		},
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
+				if (ctx.path === "/admin/set-role" || ctx.path === "/admin/ban-user") {
+					const session = await getSessionFromCtx(ctx);
+					const body = ctx.body as { userId?: unknown } | undefined;
+					if (session && typeof body?.userId === "string") {
+						try {
+							await policy.assertAdminUserMutation(
+								session.user.id,
+								body.userId,
+								ctx.path === "/admin/set-role" ? "set-role" : "ban-user",
+							);
+						} catch (error) {
+							if (error instanceof ApiError)
+								throw new APIError("FORBIDDEN", { message: error.message });
+							throw error;
+						}
+					}
+				}
+
 				if (
 					ctx.path !== "/organization/create" &&
 					ctx.path !== "/organization/invite-member" &&

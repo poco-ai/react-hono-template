@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
+import { UserAvatar as AuthUserAvatar } from "@/components/auth/user/user-avatar";
 
 export function initialsOf(name: string): string {
 	const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -18,10 +18,10 @@ export function UserAvatar({
 	className?: string;
 }) {
 	return (
-		<Avatar className={className ?? "size-5"}>
-			<AvatarFallback className="text-[10px]">
-				{initialsOf(name)}
-			</AvatarFallback>
-		</Avatar>
+		<AuthUserAvatar
+			user={{ name }}
+			fallback={initialsOf(name)}
+			className={className ?? "size-5 text-[10px]"}
+		/>
 	);
 }

@@ -4,7 +4,7 @@ import {
 	getReauthenticationSignInURL,
 	isReauthenticationSignInURL,
 } from "@better-auth-ui/core";
-import { useAuth, useSignOut } from "@better-auth-ui/react";
+import { useAuth } from "@better-auth-ui/react";
 import {
 	Alert,
 	AlertDescription,
@@ -14,6 +14,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "cn";
 import { useSyncExternalStore } from "react";
+import { useSignOut } from "@/features/auth/data";
 
 const subscribeToLocation = () => () => undefined;
 
@@ -35,7 +36,7 @@ export function ReauthenticationAction({
 	showTitle = true,
 }: ReauthenticationActionProps) {
 	const auth = useAuth();
-	const signOut = useSignOut(auth.authClient);
+	const signOut = useSignOut();
 
 	const handleReauthentication = () => {
 		const signInURL = getReauthenticationSignInURL(
