@@ -221,13 +221,13 @@ test("avatar uploads presign, PUT, then register the returned media URL", () =>
 			if (request.method === "PUT") return new Response(null, { status: 200 });
 			return ok({
 				assetId: "asset",
-				url: "https://api.example.com/api/media/asset",
+				url: "https://api.example.com/api/media/asset-12345678",
 			});
 		},
 		async (requests) => {
 			const file = new File(["image"], "avatar.webp", { type: "image/webp" });
 			const url = await uploadAvatar(file);
-			assert.equal(url, "https://api.example.com/api/media/asset");
+			assert.equal(url, "https://api.example.com/api/media/asset-12345678");
 			assert.equal(requests.length, 3);
 			assert.equal(requests[0].url.pathname, "/api/me/avatar/presign");
 			assert.deepEqual(requests[0].body, {
@@ -247,6 +247,15 @@ test("avatar uploads presign, PUT, then register the returned media URL", () =>
 		},
 	));
 
+test("deleting an OAuth avatar does not call the media API", () =>
+	withRequests(
+		() => ok({ deleted: true }),
+		async (requests) => {
+			await deleteAvatar("https://lh3.googleusercontent.com/a/legacy-avatar");
+			assert.equal(requests.length, 0);
+		},
+	));
+
 test("organization logo uploads use the active organization", () =>
 	withRequests(
 		(request) => {
@@ -263,13 +272,13 @@ test("organization logo uploads use the active organization", () =>
 			if (request.method === "PUT") return new Response(null, { status: 200 });
 			return ok({
 				assetId: "logo",
-				url: "https://api.example.com/api/media/logo",
+				url: "https://api.example.com/api/media/logo-12345678",
 			});
 		},
 		async (requests) => {
 			const file = new File(["image"], "logo.webp", { type: "image/webp" });
 			const url = await uploadOrganizationLogo(file);
-			assert.equal(url, "https://api.example.com/api/media/logo");
+			assert.equal(url, "https://api.example.com/api/media/logo-12345678");
 			assert.equal(requests[1].url.pathname, "/api/orgs/org-1/logo/presign");
 			assert.equal(requests[2].method, "PUT");
 			assert.deepEqual(requests[3].body, {

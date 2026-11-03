@@ -12,7 +12,8 @@ import {
 import { useCallback, useEffect } from "react";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
-import { codedError } from "@/lib/errors";
+import { codedError, errorCode } from "@/lib/errors";
+import { isMediaAssetUrl } from "@/lib/media";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export function bootstrapQuery() {
@@ -113,7 +114,15 @@ export async function uploadAvatar(file: File): Promise<string> {
 }
 
 export async function deleteAvatar(url: string): Promise<void> {
-	await unwrap(client.api.me.avatar.$delete({ json: { url } }));
+	// OAuth/legacy avatars are not media assets; there is nothing to delete.
+	if (!isMediaAssetUrl(url)) return;
+	try {
+		await unwrap(client.api.me.avatar.$delete({ json: { url } }));
+	} catch (error) {
+		const code = errorCode(error);
+		if (code === "ASSET_NOT_FOUND" || code === "VALIDATION") return;
+		throw error;
+	}
 }
 
 export async function signOut() {

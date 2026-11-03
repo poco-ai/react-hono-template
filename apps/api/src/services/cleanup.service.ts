@@ -1,4 +1,5 @@
 import type { AiConversationDao } from "../dao/ai-conversation.dao";
+import type { AttachmentDao } from "../dao/attachment.dao";
 import type { MediaAssetDao } from "../dao/media-asset.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { PendingUploadDao } from "../dao/pending-upload.dao";
@@ -17,14 +18,22 @@ export const createCleanupService = ({
 	deliveryDao,
 	conversationDao,
 	pendingUploadDao,
+	attachmentDao,
 	mediaAssetDao,
 	storage,
 }: {
 	memberDao: MemberDao;
 	deliveryDao: WebhookDeliveryDao;
 	conversationDao?: Pick<AiConversationDao, "deleteExpired">;
-	pendingUploadDao?: Pick<PendingUploadDao, "findExpired" | "deleteByKey">;
-	mediaAssetDao?: Pick<MediaAssetDao, "findSupersededBefore" | "deleteById">;
+	pendingUploadDao?: Pick<
+		PendingUploadDao,
+		"findExpired" | "deleteByKeyIfExpired"
+	>;
+	attachmentDao?: Pick<AttachmentDao, "existsByKey">;
+	mediaAssetDao?: Pick<
+		MediaAssetDao,
+		"findSupersededBefore" | "deleteById" | "existsByKey"
+	>;
 	storage?: StorageAdapter | null;
 }) => {
 	return {
@@ -47,10 +56,19 @@ export const createCleanupService = ({
 				);
 				for (const row of expired) {
 					try {
-						if (storage) {
+						// Delete the reservation first: if register already consumed
+						// it, this is a no-op and the object must survive.
+						const deleted = await pendingUploadDao.deleteByKeyIfExpired(
+							row.key,
+							now,
+						);
+						if (!deleted) continue;
+						const registered =
+							(await attachmentDao?.existsByKey(row.key)) ||
+							(await mediaAssetDao?.existsByKey(row.key));
+						if (storage && !registered) {
 							await storage.remove(row.key);
 						}
-						await pendingUploadDao.deleteByKey(row.key);
 						expiredPendingUploads += 1;
 					} catch (error) {
 						console.error(

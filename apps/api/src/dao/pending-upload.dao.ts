@@ -46,6 +46,16 @@ export const createPendingUploadDao = (db: Database) => ({
 		await db.delete(pendingUploads).where(eq(pendingUploads.key, key));
 	},
 
+	deleteByKeyIfExpired: async (key: string, now: Date): Promise<boolean> => {
+		const rows = await db
+			.delete(pendingUploads)
+			.where(
+				and(eq(pendingUploads.key, key), lt(pendingUploads.expiresAt, now)),
+			)
+			.returning({ key: pendingUploads.key });
+		return rows.length > 0;
+	},
+
 	findExpired: async (
 		now: Date,
 		limit: number,

@@ -45,6 +45,14 @@ const harness = ({
 			const index = pending.findIndex((row) => row.key === key);
 			if (index >= 0) pending.splice(index, 1);
 		},
+		deleteByKeyIfExpired: async (key: string, asOf: Date) => {
+			const index = pending.findIndex(
+				(row) => row.key === key && row.expiresAt.getTime() < asOf.getTime(),
+			);
+			if (index < 0) return false;
+			pending.splice(index, 1);
+			return true;
+		},
 		findExpired: async () => [],
 		sumDeclaredSizeByOrg: async (orgId: string, asOf: Date) =>
 			pending
@@ -102,17 +110,21 @@ const harness = ({
 		},
 		findByKey: async (key: string) =>
 			attachments.find((row) => row.key === key) ?? null,
-		create: async (data: {
-			id: string;
-			orgId: string;
-			issueId: string;
-			commentId?: string | null;
-			uploaderId: string | null;
-			key: string;
-			filename: string;
-			contentType: string;
-			size: number;
-		}) => {
+		create: async (
+			data: {
+				id: string;
+				orgId: string;
+				issueId: string;
+				commentId?: string | null;
+				uploaderId: string | null;
+				key: string;
+				filename: string;
+				contentType: string;
+				size: number;
+			},
+			_activity?: unknown,
+			pendingKey?: string,
+		) => {
 			const row: AttachmentDto = {
 				id: data.id,
 				orgId: data.orgId,
@@ -126,6 +138,10 @@ const harness = ({
 				createdAt: now().toISOString(),
 			};
 			attachments.push(row);
+			if (pendingKey) {
+				const index = pending.findIndex((item) => item.key === pendingKey);
+				if (index >= 0) pending.splice(index, 1);
+			}
 			return row;
 		},
 	} as unknown as AttachmentDao;
@@ -187,7 +203,13 @@ const presignInput = {
 };
 
 test("presign reserves a pending upload for the signed-in user", async () => {
-	const { service, pending } = harness();
+	let signedSize: number | undefined;
+	const { service, pending } = harness({
+		presignPut: async (_key, _contentType, _expiresIn, size) => {
+			signedSize = size;
+			return "https://storage.example/signed";
+		},
+	});
 	const result = await service.presignUpload(
 		"org",
 		"project",
@@ -201,6 +223,7 @@ test("presign reserves a pending upload for the signed-in user", async () => {
 	assert.equal(pending[0]?.kind, "issue_attachment");
 	assert.equal(pending[0]?.targetId, issue.id);
 	assert.equal(pending[0]?.declaredSize, 128);
+	assert.equal(signedSize, 128);
 	assert.match(result.uploadUrl, /^https:\/\/storage\.example\//);
 });
 
@@ -337,4 +360,66 @@ test("comment presign rejects a missing comment before reserving quota", async (
 			error.code === ApiErrorCode.COMMENT_NOT_FOUND,
 	);
 	assert.equal(pending.length, 0);
+});
+
+test("only the comment author can reserve or register comment attachments", async () => {
+	const { service, pending } = harness();
+	await assert.rejects(
+		() =>
+			service.presignCommentUpload(
+				"org",
+				"project",
+				4,
+				"comment-1",
+				"user-2",
+				presignInput,
+			),
+		(error: unknown) =>
+			error instanceof ApiError && error.code === ApiErrorCode.FORBIDDEN,
+	);
+	assert.equal(pending.length, 0);
+
+	const reserved = await service.presignCommentUpload(
+		"org",
+		"project",
+		4,
+		"comment-1",
+		"user-1",
+		presignInput,
+	);
+	await assert.rejects(
+		() =>
+			service.registerComment("org", "project", 4, "comment-1", "user-2", {
+				key: reserved.key,
+				filename: "note.png",
+				contentType: "image/png",
+				size: 128,
+			}),
+		(error: unknown) =>
+			error instanceof ApiError && error.code === ApiErrorCode.FORBIDDEN,
+	);
+});
+
+test("comment register rejects an empty object", async () => {
+	const { service, objects } = harness();
+	const reserved = await service.presignCommentUpload(
+		"org",
+		"project",
+		4,
+		"comment-1",
+		"user-1",
+		presignInput,
+	);
+	objects.set(reserved.key, { size: 0, contentType: "image/png" });
+	await assert.rejects(
+		() =>
+			service.registerComment("org", "project", 4, "comment-1", "user-1", {
+				key: reserved.key,
+				filename: "note.png",
+				contentType: "image/png",
+				size: 128,
+			}),
+		(error: unknown) =>
+			error instanceof ApiError && error.code === ApiErrorCode.FILE_TOO_LARGE,
+	);
 });

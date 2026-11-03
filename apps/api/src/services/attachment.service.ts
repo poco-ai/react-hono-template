@@ -176,6 +176,19 @@ export const createAttachmentService = ({
 		return comment;
 	};
 
+	const assertCommentAuthor = (
+		comment: { author: { id: string } },
+		userId: string,
+	) => {
+		if (comment.author.id !== userId) {
+			throw new ApiError(
+				403,
+				ApiErrorCode.FORBIDDEN,
+				"Only the comment author can attach files to this comment",
+			);
+		}
+	};
+
 	return {
 		presignUpload: async (
 			orgId: string,
@@ -209,6 +222,7 @@ export const createAttachmentService = ({
 					key,
 					input.contentType,
 					ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
+					input.size,
 				);
 				return {
 					key,
@@ -321,8 +335,8 @@ export const createAttachmentService = ({
 					"attachment.added",
 					input.filename,
 				),
+				input.key,
 			);
-			await pendingUploadDao.deleteByKey(input.key);
 			const url = storage
 				? await storage.presignGet(
 						attachment.key,
@@ -421,6 +435,7 @@ export const createAttachmentService = ({
 			const s3 = requireStorage(storage);
 			const issue = await requireWritableIssue(orgId, projectId, number);
 			const comment = await requireCommentOnIssue(orgId, issue.id, commentId);
+			assertCommentAuthor(comment, userId);
 			assertContentTypeAllowed(input.contentType);
 			await storageUsage.assertCanUpload(orgId, input.size, {
 				kind: "comment_attachment",
@@ -443,6 +458,7 @@ export const createAttachmentService = ({
 					key,
 					input.contentType,
 					ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
+					input.size,
 				);
 				return {
 					key,
@@ -471,6 +487,7 @@ export const createAttachmentService = ({
 		): Promise<AttachmentWithUrlDto> => {
 			const issue = await requireWritableIssue(orgId, projectId, number);
 			const comment = await requireCommentOnIssue(orgId, issue.id, commentId);
+			assertCommentAuthor(comment, userId);
 			const expectedPrefix = `orgs/${orgId}/issues/${issue.id}/comments/${comment.id}/`;
 			if (!input.key.startsWith(expectedPrefix)) {
 				throw new ApiError(
@@ -519,6 +536,7 @@ export const createAttachmentService = ({
 					"Uploaded object is larger than the reserved size",
 				);
 			}
+			assertSizeAllowed(stat.size, maxSize);
 			if (
 				stat.contentType &&
 				!stat.contentType.startsWith(pending.contentType)
@@ -558,8 +576,8 @@ export const createAttachmentService = ({
 					input.filename,
 					comment.id,
 				),
+				input.key,
 			);
-			await pendingUploadDao.deleteByKey(input.key);
 			const [result] = await withUrls([attachment]);
 			await webhooks?.dispatch(
 				orgId,

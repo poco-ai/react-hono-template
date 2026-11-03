@@ -31,61 +31,62 @@ const harness = ({
 			const index = pending.findIndex((row) => row.key === key);
 			if (index >= 0) pending.splice(index, 1);
 		},
+		deleteByKeyIfExpired: async (key: string, asOf: Date) => {
+			const index = pending.findIndex(
+				(row) => row.key === key && row.expiresAt.getTime() < asOf.getTime(),
+			);
+			if (index < 0) return false;
+			pending.splice(index, 1);
+			return true;
+		},
 		findExpired: async () => [],
 		sumDeclaredSizeByOrg: async () => 0,
 		countByTarget: async () => 0,
 	} as PendingUploadDao;
 	const mediaAssetDao = {
-		create: async (data: Omit<MediaAssetRow, "supersededAt" | "createdAt">) => {
-			const row: MediaAssetRow = {
-				...data,
-				supersededAt: null,
-				createdAt: new Date(),
-			};
-			assets.push(row);
-			return row;
-		},
 		findById: async (id: string) => assets.find((row) => row.id === id) ?? null,
 		findByKey: async (key: string) =>
 			assets.find((row) => row.key === key) ?? null,
+		existsByKey: async (key: string) => assets.some((row) => row.key === key),
 		deleteById: async (id: string) => {
 			const index = assets.findIndex((row) => row.id === id);
 			if (index >= 0) assets.splice(index, 1);
 		},
 		sumActiveSizeByOrg: async () => 0,
-		supersedeForUser: async (
-			userId: string,
-			kind: string,
-			exceptId: string,
-			now: Date,
-		) => {
-			for (const row of assets) {
+		register: async ({
+			asset,
+			supersede,
+			pendingKey,
+			now,
+		}: {
+			asset: Omit<MediaAssetRow, "supersededAt" | "createdAt">;
+			supersede: { userId: string } | { orgId: string };
+			pendingKey: string;
+			now: Date;
+		}) => {
+			const row: MediaAssetRow = {
+				...asset,
+				supersededAt: null,
+				createdAt: new Date(),
+			};
+			for (const item of assets) {
+				const sameScope =
+					"userId" in supersede
+						? item.ownerUserId === supersede.userId
+						: item.orgId === supersede.orgId;
 				if (
-					row.ownerUserId === userId &&
-					row.kind === kind &&
-					row.id !== exceptId &&
-					row.supersededAt === null
+					sameScope &&
+					item.kind === asset.kind &&
+					item.id !== asset.id &&
+					item.supersededAt === null
 				) {
-					row.supersededAt = now;
+					item.supersededAt = now;
 				}
 			}
-		},
-		supersedeForOrg: async (
-			orgId: string,
-			kind: string,
-			exceptId: string,
-			now: Date,
-		) => {
-			for (const row of assets) {
-				if (
-					row.orgId === orgId &&
-					row.kind === kind &&
-					row.id !== exceptId &&
-					row.supersededAt === null
-				) {
-					row.supersededAt = now;
-				}
-			}
+			assets.push(row);
+			const index = pending.findIndex((item) => item.key === pendingKey);
+			if (index >= 0) pending.splice(index, 1);
+			return row;
 		},
 		findSupersededBefore: async () => [],
 	} as MediaAssetDao;
@@ -286,7 +287,7 @@ test("organization logo register is scoped to that organization", async () => {
 	assert.equal(assets.length, 1);
 });
 
-test("public media reads the object and drops a missing one", async () => {
+test("public media reads the object and keeps the record when the object is missing", async () => {
 	const { service, assets, objects } = harness();
 	const reserved = await service.presignAvatar("user-1", image);
 	const body = new ReadableStream();
@@ -311,5 +312,7 @@ test("public media reads the object and drops a missing one", async () => {
 		(error: unknown) =>
 			error instanceof ApiError && error.code === ApiErrorCode.ASSET_NOT_FOUND,
 	);
-	assert.equal(assets.length, 0);
+	// A missing object must not delete the asset record: a transient storage
+	// failure would otherwise erase avatars that still exist.
+	assert.equal(assets.length, 1);
 });

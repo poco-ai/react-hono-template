@@ -13,6 +13,7 @@ import {
 	deleteCommentAttachment,
 	uploadCommentAttachment,
 } from "@/features/attachments/data";
+import { billingRootKey } from "@/features/billing/data";
 import { client, unwrap } from "@/lib/api";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -269,6 +270,7 @@ export const invalidateCommentQueries = (
 			queryKey: issueActivitiesKey(orgId, projectId, issueNumber),
 		}),
 		client.invalidateQueries({ queryKey: orgActivitiesRootKey(orgId) }),
+		client.invalidateQueries({ queryKey: billingRootKey(orgId) }),
 	]);
 export function commentsQuery(
 	orgId: string,

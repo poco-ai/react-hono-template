@@ -1,7 +1,7 @@
 import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
-import { attachments } from "../db/schema";
+import { attachments, pendingUploads } from "../db/schema";
 import type { Database } from "../db/types";
 import type { AttachmentDto } from "../dto/attachment.dto";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
@@ -94,6 +94,7 @@ export const createAttachmentDao = (db: Database) => ({
 			size: number;
 		},
 		activity?: ActivityInsert,
+		pendingKey?: string,
 	): Promise<AttachmentDto> => {
 		const statements = [
 			db.insert(attachments).values({
@@ -101,6 +102,13 @@ export const createAttachmentDao = (db: Database) => ({
 				commentId: data.commentId ?? null,
 			}),
 		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+		if (pendingKey) {
+			// Same batch as the insert: a successful register cannot leave the
+			// reservation behind for cleanup to delete the live object.
+			statements.push(
+				db.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
+			);
+		}
 		if (activity) {
 			statements.push(activityInsertStatement(db, [activity]));
 		}
@@ -253,6 +261,15 @@ export const createAttachmentDao = (db: Database) => ({
 			.where(eq(attachments.key, key))
 			.get();
 		return row ? toAttachmentDto(row) : null;
+	},
+
+	existsByKey: async (key: string): Promise<boolean> => {
+		const row = await db
+			.select({ id: attachments.id })
+			.from(attachments)
+			.where(eq(attachments.key, key))
+			.get();
+		return !!row;
 	},
 });
 

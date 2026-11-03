@@ -22,6 +22,7 @@ import {
 	resolveContentType,
 } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
+import { billingQuery } from "@/features/billing/data";
 import {
 	commentsQuery,
 	useDeleteComment,
@@ -57,6 +58,8 @@ export function IssueComments({
 
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
+	const billing = useQuery(billingQuery(orgId));
+	const maxSize = billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
 	const [body, setBody] = useState("");
 	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,7 +136,7 @@ export function IssueComments({
 				!(ATTACHMENT_CONTENT_TYPES as readonly string[]).includes(contentType)
 			) {
 				error = t("attachments.typeNotAllowed", { filename: file.name });
-			} else if (file.size < 1 || file.size > ATTACHMENT_MAX_SIZE) {
+			} else if (file.size < 1 || file.size > maxSize) {
 				error = t("attachments.tooLarge", { filename: file.name });
 			}
 			next.push({ id: crypto.randomUUID(), file, error });

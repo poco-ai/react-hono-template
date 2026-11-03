@@ -194,7 +194,7 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 	}
 });
 
-test("cleanup removes expired pending objects and leaves failed deletes for the next run", async () => {
+test("cleanup removes expired pending objects but keeps registered ones", async () => {
 	const now = new Date("2026-10-20T12:00:00.000Z");
 	const rows = [
 		{
@@ -202,7 +202,7 @@ test("cleanup removes expired pending objects and leaves failed deletes for the 
 			expiresAt: new Date(now.getTime() - 1_000),
 		},
 		{
-			key: "fail-key",
+			key: "registered-key",
 			expiresAt: new Date(now.getTime() - 1_000),
 		},
 		{
@@ -221,25 +221,42 @@ test("cleanup removes expired pending objects and leaves failed deletes for the 
 		pendingUploadDao: {
 			findExpired: async (asOf: Date) =>
 				rows.filter((row) => row.expiresAt.getTime() < asOf.getTime()),
-			deleteByKey: async (key: string) => {
-				const index = rows.findIndex((row) => row.key === key);
-				if (index >= 0) rows.splice(index, 1);
+			deleteByKeyIfExpired: async (key: string, asOf: Date) => {
+				const index = rows.findIndex(
+					(row) => row.key === key && row.expiresAt.getTime() < asOf.getTime(),
+				);
+				if (index < 0) return false;
+				rows.splice(index, 1);
+				return true;
 			},
-		} as unknown as Pick<PendingUploadDao, "findExpired" | "deleteByKey">,
+		} as unknown as Pick<
+			PendingUploadDao,
+			"findExpired" | "deleteByKeyIfExpired"
+		>,
+		attachmentDao: {
+			existsByKey: async (key: string) => key === "registered-key",
+		} as unknown as { existsByKey: (key: string) => Promise<boolean> },
+		mediaAssetDao: {
+			findSupersededBefore: async () => [],
+			deleteById: async () => {},
+			existsByKey: async () => false,
+		} as unknown as Pick<
+			MediaAssetDao,
+			"findSupersededBefore" | "deleteById" | "existsByKey"
+		>,
 		storage: {
 			remove: async (key: string) => {
-				if (key === "fail-key") throw new Error("object delete failed");
 				removed.push(key);
 			},
 		} as StorageAdapter,
 	}).cleanup(now);
 
-	assert.equal(counts.expiredPendingUploads, 1);
+	assert.equal(counts.expiredPendingUploads, 2);
 	assert.equal(counts.supersededMedia, 0);
 	assert.deepEqual(removed, ["old-key"]);
 	assert.deepEqual(
 		rows.map((row) => row.key),
-		["fail-key", "fresh-key"],
+		["fresh-key"],
 	);
 });
 
@@ -275,7 +292,11 @@ test("superseded avatars and logos are deleted after the one-day grace period", 
 				const index = assets.findIndex((asset) => asset.id === id);
 				if (index >= 0) assets.splice(index, 1);
 			},
-		} as unknown as Pick<MediaAssetDao, "findSupersededBefore" | "deleteById">,
+			existsByKey: async () => false,
+		} as unknown as Pick<
+			MediaAssetDao,
+			"findSupersededBefore" | "deleteById" | "existsByKey"
+		>,
 		storage: {
 			remove: async (key: string) => {
 				removed.push(key);

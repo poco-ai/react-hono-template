@@ -138,6 +138,7 @@ export const createDependencies = ({
 		deliveryDao: webhookDeliveryDao,
 		conversationDao: aiConversationDao,
 		pendingUploadDao,
+		attachmentDao,
 		mediaAssetDao,
 		storage,
 	});

@@ -41,12 +41,17 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 		`${trimSlashes(options.endpoint)}/${options.bucket}/${encodeKey(key)}`;
 
 	return {
-		presignPut: async (key, contentType, expiresIn) => {
+		presignPut: async (key, contentType, expiresIn, size) => {
 			const url = new URL(objectUrl(key));
 			url.searchParams.set("X-Amz-Expires", String(expiresIn));
+			// Signing Content-Length makes the bucket reject bodies that differ
+			// from the reserved size instead of trusting the register-time HEAD.
 			const signed = await client().sign(url.toString(), {
 				method: "PUT",
-				headers: { "Content-Type": contentType },
+				headers: {
+					"Content-Type": contentType,
+					"Content-Length": String(size),
+				},
 				aws: { signQuery: true, allHeaders: true },
 			});
 			return signed.url;

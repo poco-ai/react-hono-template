@@ -37,11 +37,11 @@ import {
 	useUploadAttachment,
 } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
+import { billingQuery } from "@/features/billing/data";
 import { membersQuery } from "@/features/members/data";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 
 const ALLOWED_CONTENT_TYPES = ATTACHMENT_CONTENT_TYPES;
-const MAX_SIZE = ATTACHMENT_MAX_SIZE;
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
 
 interface PendingUpload {
@@ -77,6 +77,8 @@ export function IssueAttachments({
 
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
+	const billing = useQuery(billingQuery(orgId));
+	const maxSize = billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
 	const attachments = useQuery(attachmentsQuery(orgId, projectId, issueNumber));
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [dragOver, setDragOver] = useState(false);
@@ -114,7 +116,7 @@ export function IssueAttachments({
 				]);
 				continue;
 			}
-			if (file.size < 1 || file.size > MAX_SIZE) {
+			if (file.size < 1 || file.size > maxSize) {
 				setPending((prev) => [
 					...prev,
 					{
@@ -193,7 +195,12 @@ export function IssueAttachments({
 				<span className="flex min-w-0 flex-col">
 					<span className="text-sm font-medium">{t("attachments.add")}</span>
 					<span className="text-muted-foreground text-xs">
-						{t("attachments.dropHint")} · {t("attachments.typeLimit")}
+						{t("attachments.dropHint")} ·{" "}
+						{t("attachments.typeLimit", {
+							size: t("billing.megabytes", {
+								value: maxSize / (1024 * 1024),
+							}),
+						})}
 					</span>
 				</span>
 			</button>

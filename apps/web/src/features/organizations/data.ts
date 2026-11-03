@@ -1,7 +1,8 @@
 import { queryOptions, useQueryClient } from "@tanstack/react-query";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
-import { codedError } from "@/lib/errors";
+import { codedError, errorCode } from "@/lib/errors";
+import { isMediaAssetUrl } from "@/lib/media";
 
 export type Organization = (typeof authClient.$Infer)["Organization"] & {
 	frozen: boolean;
@@ -87,13 +88,20 @@ export async function uploadOrganizationLogo(file: File): Promise<string> {
 }
 
 export async function deleteOrganizationLogo(url: string): Promise<void> {
-	const orgId = await activeOrganizationId();
-	await unwrap(
-		client.api.orgs[":orgId"].logo.$delete({
-			param: { orgId },
-			json: { url },
-		}),
-	);
+	if (!isMediaAssetUrl(url)) return;
+	try {
+		const orgId = await activeOrganizationId();
+		await unwrap(
+			client.api.orgs[":orgId"].logo.$delete({
+				param: { orgId },
+				json: { url },
+			}),
+		);
+	} catch (error) {
+		const code = errorCode(error);
+		if (code === "ASSET_NOT_FOUND" || code === "VALIDATION") return;
+		throw error;
+	}
 }
 
 export function useRefreshOrganizations() {

@@ -3,6 +3,7 @@ export interface StorageAdapter {
 		key: string,
 		contentType: string,
 		expiresIn: number,
+		size: number,
 	): Promise<string>;
 	presignGet(key: string, expiresIn: number): Promise<string>;
 	stat(

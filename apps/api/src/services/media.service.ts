@@ -127,6 +127,7 @@ export const createMediaService = ({
 				key,
 				input.contentType,
 				UPLOAD_URL_EXPIRES_IN,
+				input.size,
 			);
 			return { key, uploadUrl, expiresIn: UPLOAD_URL_EXPIRES_IN };
 		} catch (error) {
@@ -203,23 +204,22 @@ export const createMediaService = ({
 				"This object has already been registered",
 			);
 		}
-		const asset = await mediaAssetDao.create({
-			id: pending.targetId,
-			orgId,
-			ownerUserId: userId,
-			kind,
-			key: input.key,
-			filename: null,
-			contentType: pending.contentType,
-			size: stat.size,
-		});
 		const now = new Date();
-		if (kind === "avatar") {
-			await mediaAssetDao.supersedeForUser(userId, "avatar", asset.id, now);
-		} else if (orgId) {
-			await mediaAssetDao.supersedeForOrg(orgId, "org_logo", asset.id, now);
-		}
-		await pendingUploadDao.deleteByKey(input.key);
+		const asset = await mediaAssetDao.register({
+			asset: {
+				id: pending.targetId,
+				orgId,
+				ownerUserId: userId,
+				kind,
+				key: input.key,
+				filename: null,
+				contentType: pending.contentType,
+				size: stat.size,
+			},
+			supersede: kind === "avatar" ? { userId } : { orgId: orgId ?? "" },
+			pendingKey: input.key,
+			now,
+		});
 		return { assetId: asset.id, url: mediaUrl(asset.id, requestUrl) };
 	};
 
@@ -356,7 +356,6 @@ export const createMediaService = ({
 			const s3 = requireStorage(storage);
 			const object = await s3.get(asset.key);
 			if (!object) {
-				await mediaAssetDao.deleteById(asset.id);
 				throw new ApiError(
 					404,
 					ApiErrorCode.ASSET_NOT_FOUND,

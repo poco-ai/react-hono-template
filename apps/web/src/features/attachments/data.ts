@@ -9,6 +9,7 @@ import {
 	issueActivitiesKey,
 	orgActivitiesRootKey,
 } from "@/features/activities/data";
+import { billingRootKey } from "@/features/billing/data";
 import { client, unwrap } from "@/lib/api";
 import { codedError, errorCode } from "@/lib/errors";
 
@@ -352,4 +353,5 @@ export const invalidateAttachmentQueries = (
 			queryKey: issueActivitiesKey(orgId, projectId, issueNumber),
 		}),
 		client.invalidateQueries({ queryKey: orgActivitiesRootKey(orgId) }),
+		client.invalidateQueries({ queryKey: billingRootKey(orgId) }),
 	]);

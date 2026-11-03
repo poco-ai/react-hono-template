@@ -9,7 +9,7 @@ import {
 	notInArray,
 	sql,
 } from "drizzle-orm";
-import { mediaAssets } from "../db/schema";
+import { mediaAssets, pendingUploads } from "../db/schema";
 import type { Database } from "../db/types";
 import { type MediaKind, NON_QUOTA_MEDIA_KINDS } from "../lib/storage/uploads";
 
@@ -29,28 +29,6 @@ export type MediaAssetRow = {
 const numeric = (value: unknown) => Number(value ?? 0);
 
 export const createMediaAssetDao = (db: Database) => ({
-	create: async (data: {
-		id: string;
-		orgId: string | null;
-		ownerUserId: string | null;
-		kind: MediaKind;
-		key: string;
-		filename: string | null;
-		contentType: string;
-		size: number;
-	}): Promise<MediaAssetRow> => {
-		await db.insert(mediaAssets).values(data);
-		const row = await db
-			.select()
-			.from(mediaAssets)
-			.where(eq(mediaAssets.id, data.id))
-			.get();
-		if (!row) {
-			throw new Error(`Media asset ${data.id} not found after insert`);
-		}
-		return row;
-	},
-
 	findById: async (id: string): Promise<MediaAssetRow | null> => {
 		const row = await db
 			.select()
@@ -67,6 +45,67 @@ export const createMediaAssetDao = (db: Database) => ({
 			.where(eq(mediaAssets.key, key))
 			.get();
 		return row ?? null;
+	},
+
+	existsByKey: async (key: string): Promise<boolean> => {
+		const row = await db
+			.select({ id: mediaAssets.id })
+			.from(mediaAssets)
+			.where(eq(mediaAssets.key, key))
+			.get();
+		return !!row;
+	},
+
+	register: async ({
+		asset,
+		supersede,
+		pendingKey,
+		now,
+	}: {
+		asset: {
+			id: string;
+			orgId: string | null;
+			ownerUserId: string | null;
+			kind: MediaKind;
+			key: string;
+			filename: string | null;
+			contentType: string;
+			size: number;
+		};
+		supersede: { userId: string } | { orgId: string };
+		pendingKey: string;
+		now: Date;
+	}): Promise<MediaAssetRow> => {
+		const scope =
+			"userId" in supersede
+				? eq(mediaAssets.ownerUserId, supersede.userId)
+				: eq(mediaAssets.orgId, supersede.orgId);
+		// Insert, supersede the previous asset and drop the reservation in one
+		// atomic batch so cleanup can never race a half-applied register.
+		await db.batch([
+			db.insert(mediaAssets).values(asset),
+			db
+				.update(mediaAssets)
+				.set({ supersededAt: now })
+				.where(
+					and(
+						scope,
+						eq(mediaAssets.kind, asset.kind),
+						isNull(mediaAssets.supersededAt),
+						ne(mediaAssets.id, asset.id),
+					),
+				),
+			db.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
+		]);
+		const row = await db
+			.select()
+			.from(mediaAssets)
+			.where(eq(mediaAssets.id, asset.id))
+			.get();
+		if (!row) {
+			throw new Error(`Media asset ${asset.id} not found after insert`);
+		}
+		return row;
 	},
 
 	deleteById: async (id: string): Promise<void> => {
@@ -88,44 +127,6 @@ export const createMediaAssetDao = (db: Database) => ({
 			)
 			.get();
 		return numeric(row?.value);
-	},
-
-	supersedeForUser: async (
-		userId: string,
-		kind: MediaKind,
-		exceptId: string,
-		now: Date,
-	): Promise<void> => {
-		await db
-			.update(mediaAssets)
-			.set({ supersededAt: now })
-			.where(
-				and(
-					eq(mediaAssets.ownerUserId, userId),
-					eq(mediaAssets.kind, kind),
-					isNull(mediaAssets.supersededAt),
-					ne(mediaAssets.id, exceptId),
-				),
-			);
-	},
-
-	supersedeForOrg: async (
-		orgId: string,
-		kind: MediaKind,
-		exceptId: string,
-		now: Date,
-	): Promise<void> => {
-		await db
-			.update(mediaAssets)
-			.set({ supersededAt: now })
-			.where(
-				and(
-					eq(mediaAssets.orgId, orgId),
-					eq(mediaAssets.kind, kind),
-					isNull(mediaAssets.supersededAt),
-					ne(mediaAssets.id, exceptId),
-				),
-			);
 	},
 
 	findSupersededBefore: async (

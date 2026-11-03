@@ -695,9 +695,10 @@ const zh: typeof en = {
 		title: "附件",
 		add: "添加文件",
 		dropHint: "拖放文件到此处，或点击选择文件",
-		typeLimit: "支持 PNG、JPEG、WebP、GIF、PDF、TXT、Markdown、ZIP，最大 10MB",
+		typeLimit:
+			"支持 PNG、JPEG、WebP、GIF、PDF、TXT、Markdown、ZIP，最大 {{size}}",
 		typeNotAllowed: "“{{filename}}” 的文件类型不支持。",
-		tooLarge: "“{{filename}}” 超过了 10MB 限制。",
+		tooLarge: "“{{filename}}” 超过了当前套餐允许的大小。",
 		uploadFailed: "上传“{{filename}}”失败。",
 		uploading: "正在上传 {{filename}}…",
 		cancelled: "“{{filename}}” 的上传已取消。",
