@@ -15,6 +15,7 @@ import {
 	stripeUnavailableMessage,
 } from "../lib/stripe";
 import type { PlanService } from "./plan.service";
+import type { StorageUsageService } from "./storage-usage.service";
 
 const subscriptionPlanFor = (status: string) =>
 	status === "active" || status === "trialing" || status === "past_due"
@@ -38,6 +39,7 @@ export const createBillingService = ({
 	stripeSetup,
 	mockEnabled,
 	plans,
+	storageUsage,
 }: {
 	billingDao: BillingDao;
 	memberDao: MemberDao;
@@ -46,6 +48,7 @@ export const createBillingService = ({
 	stripeSetup: StripeSetup;
 	mockEnabled: boolean;
 	plans: PlanService;
+	storageUsage?: Pick<StorageUsageService, "getOrgUsage">;
 }) => {
 	const afterPlanChange = async (orgId: string) => {
 		await plans.invalidatePlanCache(orgId);
@@ -68,15 +71,21 @@ export const createBillingService = ({
 	return {
 		getBilling: async (orgId: string): Promise<BillingDto> => {
 			const subscription = await billingDao.findByOrg(orgId);
-			const [members, projects, webhooks] = await Promise.all([
+			const [members, projects, webhooks, storage] = await Promise.all([
 				memberDao.countByOrg(orgId),
 				projectDao.countByOrg(orgId),
 				webhookDao.countByOrg(orgId),
+				storageUsage ? storageUsage.getOrgUsage(orgId) : Promise.resolve(null),
 			]);
 			return {
 				plan: subscription.plan,
 				limits: PLANS[subscription.plan],
-				usage: { members, projects, webhooks },
+				usage: {
+					members,
+					projects,
+					webhooks,
+					storageBytes: storage?.total ?? 0,
+				},
 				stripeEnabled: stripeSetup.status === "enabled",
 				mockMode: stripeSetup.status === "disabled" && mockEnabled,
 				currentPeriodEnd: subscription.currentPeriodEnd,

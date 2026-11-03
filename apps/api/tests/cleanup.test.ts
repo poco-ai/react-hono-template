@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { MediaAssetDao } from "../src/dao/media-asset.dao";
 import type { MemberDao } from "../src/dao/member.dao";
 import type { PendingUploadDao } from "../src/dao/pending-upload.dao";
 import type { WebhookDeliveryDao } from "../src/dao/webhook-delivery.dao";
@@ -169,13 +170,14 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 				failedDeliveries: 1,
 				deletedConversations: 3,
 				expiredPendingUploads: 4,
+				supersededMedia: 5,
 			}),
 		});
 		assert.ok(
 			logs.some(
 				(args) =>
 					args[0] ===
-					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 expiredPendingUploads=4",
+					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 expiredPendingUploads=4 supersededMedia=5",
 			),
 		);
 		await handleScheduled({
@@ -233,9 +235,58 @@ test("cleanup removes expired pending objects and leaves failed deletes for the 
 	}).cleanup(now);
 
 	assert.equal(counts.expiredPendingUploads, 1);
+	assert.equal(counts.supersededMedia, 0);
 	assert.deepEqual(removed, ["old-key"]);
 	assert.deepEqual(
 		rows.map((row) => row.key),
 		["fail-key", "fresh-key"],
+	);
+});
+
+test("superseded avatars and logos are deleted after the one-day grace period", async () => {
+	const now = new Date("2026-06-01T00:00:00.000Z");
+	const day = 24 * 60 * 60 * 1000;
+	const assets = [
+		{
+			id: "old",
+			key: "old-logo",
+			supersededAt: new Date(now.getTime() - day - 1000),
+		},
+		{
+			id: "fresh",
+			key: "fresh-logo",
+			supersededAt: new Date(now.getTime() - 60 * 60 * 1000),
+		},
+	];
+	const removed: string[] = [];
+	const counts = await createCleanupService({
+		memberDao: {
+			deleteExpiredPending: async () => 0,
+		} as unknown as MemberDao,
+		deliveryDao: {
+			failNeverAttempted: async () => 0,
+		} as unknown as WebhookDeliveryDao,
+		mediaAssetDao: {
+			findSupersededBefore: async (before: Date) =>
+				assets.filter(
+					(asset) => asset.supersededAt.getTime() < before.getTime(),
+				),
+			deleteById: async (id: string) => {
+				const index = assets.findIndex((asset) => asset.id === id);
+				if (index >= 0) assets.splice(index, 1);
+			},
+		} as unknown as Pick<MediaAssetDao, "findSupersededBefore" | "deleteById">,
+		storage: {
+			remove: async (key: string) => {
+				removed.push(key);
+			},
+		} as StorageAdapter,
+	}).cleanup(now);
+
+	assert.equal(counts.supersededMedia, 1);
+	assert.deepEqual(removed, ["old-logo"]);
+	assert.deepEqual(
+		assets.map((asset) => asset.id),
+		["fresh"],
 	);
 });

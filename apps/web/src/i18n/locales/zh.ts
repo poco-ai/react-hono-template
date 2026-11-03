@@ -688,6 +688,8 @@ const zh: typeof en = {
 		edited: "已编辑",
 		deleteTitle: "删除评论？",
 		deleteDescription: "该评论将被永久删除。",
+		attach: "添加附件",
+		removeFile: "移除 {{filename}}",
 	},
 	attachments: {
 		title: "附件",
@@ -702,6 +704,7 @@ const zh: typeof en = {
 		deleteTitle: "删除附件？",
 		deleteDescription: "“{{filename}}” 将被永久删除。",
 		storageUnavailable: "无法连接文件存储服务，请检查 S3 配置。",
+		quotaExceeded: "组织已达到存储空间或附件数量上限。",
 	},
 	activity: {
 		title: "动态",
@@ -856,6 +859,7 @@ const zh: typeof en = {
 			members: "成员",
 			projects: "项目",
 			webhooks: "Webhooks",
+			storage: "存储空间",
 		},
 		attachmentSize: "附件大小",
 		apiRateLimit: "API 速率限制",

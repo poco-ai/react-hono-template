@@ -73,6 +73,33 @@ const harness = ({
 		sumSizeByOrg: async () => usageBytes,
 		countByIssue: async () => issueCount,
 		countByComment: async () => 0,
+		listByIssue: async (orgId: string, issueId: string) =>
+			attachments.filter(
+				(row) =>
+					row.orgId === orgId && row.issueId === issueId && !row.commentId,
+			),
+		listByComment: async (orgId: string, commentId: string) =>
+			attachments.filter(
+				(row) => row.orgId === orgId && row.commentId === commentId,
+			),
+		listByCommentIds: async (orgId: string, commentIds: string[]) =>
+			attachments.filter(
+				(row) =>
+					row.orgId === orgId &&
+					row.commentId !== null &&
+					commentIds.includes(row.commentId),
+			),
+		listKeysByComment: async (orgId: string, commentId: string) =>
+			attachments
+				.filter((row) => row.orgId === orgId && row.commentId === commentId)
+				.map((row) => row.key),
+		findById: async (orgId: string, id: string) =>
+			attachments.find((row) => row.orgId === orgId && row.id === id) ?? null,
+		delete: async (_orgId: string, id: string) => {
+			const index = attachments.findIndex((row) => row.id === id);
+			if (index >= 0) attachments.splice(index, 1);
+			return true;
+		},
 		findByKey: async (key: string) =>
 			attachments.find((row) => row.key === key) ?? null,
 		create: async (data: {
@@ -126,6 +153,26 @@ const harness = ({
 			findById: async () => ({ archived: false }),
 		} as never,
 		pendingUploadDao,
+		commentDao: {
+			findById: async (_orgId: string, id: string) =>
+				id === "comment-1"
+					? {
+							id: "comment-1",
+							orgId: "org",
+							issueId: issue.id,
+							body: "Looks good",
+							author: {
+								id: "user-1",
+								name: "User",
+								email: "user@example.com",
+								image: null,
+							},
+							createdAt: now().toISOString(),
+							updatedAt: now().toISOString(),
+							attachments: [],
+						}
+					: null,
+		} as never,
 		storage,
 		plans: { getLimitsForOrg: async () => PLANS.free },
 		storageUsage,
@@ -231,4 +278,63 @@ test("register requires a live reservation and stores the HEAD size", async () =
 	assert.equal(created.size, 64);
 	assert.equal(pending.length, 0);
 	assert.equal(attachments.length, 1);
+});
+
+test("comment uploads reserve against the comment and keep the file off the issue list", async () => {
+	const { service, pending, attachments, objects } = harness();
+	const reserved = await service.presignCommentUpload(
+		"org",
+		"project",
+		4,
+		"comment-1",
+		"user-1",
+		presignInput,
+	);
+	assert.equal(pending[0]?.kind, "comment_attachment");
+	assert.equal(pending[0]?.targetId, "comment-1");
+	assert.match(reserved.key, /\/comments\/comment-1\//);
+	objects.set(reserved.key, { size: 64, contentType: "image/png" });
+	const created = await service.registerComment(
+		"org",
+		"project",
+		4,
+		"comment-1",
+		"user-1",
+		{
+			key: reserved.key,
+			filename: "note.png",
+			contentType: "image/png",
+			size: 128,
+		},
+	);
+	assert.equal(created.commentId, "comment-1");
+	assert.equal(created.size, 64);
+	assert.equal(pending.length, 0);
+	const grouped = await service.forComments("org", ["comment-1"]);
+	assert.equal(grouped.get("comment-1")?.length, 1);
+	assert.equal((await service.list("org", "project", 4)).length, 0);
+	await service.removeComment("org", "project", 4, "comment-1", created.id, {
+		userId: "user-1",
+		role: "member",
+	});
+	assert.equal(attachments.length, 0);
+});
+
+test("comment presign rejects a missing comment before reserving quota", async () => {
+	const { service, pending } = harness();
+	await assert.rejects(
+		() =>
+			service.presignCommentUpload(
+				"org",
+				"project",
+				4,
+				"missing",
+				"user-1",
+				presignInput,
+			),
+		(error: unknown) =>
+			error instanceof ApiError &&
+			error.code === ApiErrorCode.COMMENT_NOT_FOUND,
+	);
+	assert.equal(pending.length, 0);
 });

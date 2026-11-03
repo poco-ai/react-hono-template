@@ -8,6 +8,7 @@ import type { ActivityInsert } from "../dao/activity.dao";
 import type { CommentDao } from "../dao/comment.dao";
 import type { IssueDao } from "../dao/issue.dao";
 import type { ProjectDao } from "../dao/project.dao";
+import type { AttachmentWithUrlDto } from "../dto/attachment.dto";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
@@ -44,11 +45,19 @@ export const createCommentService = ({
 	issueDao,
 	projectDao,
 	webhooks,
+	files,
 }: {
 	commentDao: CommentDao;
 	issueDao: IssueDao;
 	projectDao: ProjectDao;
 	webhooks?: WebhookDispatcher;
+	files?: {
+		forComments: (
+			orgId: string,
+			commentIds: string[],
+		) => Promise<Map<string, AttachmentWithUrlDto[]>>;
+		purgeForComment: (orgId: string, commentId: string) => Promise<void>;
+	};
 }) => {
 	const recordActivity = (
 		orgId: string,
@@ -103,12 +112,26 @@ export const createCommentService = ({
 					`Issue #${number} not found`,
 				);
 			}
-			return commentDao.listByIssue(
+			const page = await commentDao.listByIssue(
 				orgId,
 				issue.id,
 				query.page,
 				query.pageSize,
 			);
+			if (!files || page.items.length === 0) {
+				return page;
+			}
+			const grouped = await files.forComments(
+				orgId,
+				page.items.map((item) => item.id),
+			);
+			return {
+				...page,
+				items: page.items.map((item) => ({
+					...item,
+					attachments: grouped.get(item.id) ?? [],
+				})),
+			};
 		},
 
 		createComment: async (
@@ -207,6 +230,7 @@ export const createCommentService = ({
 					"Only the author can delete this comment",
 				);
 			}
+			await files?.purgeForComment(orgId, comment.id);
 			await commentDao.delete(orgId, commentId);
 		},
 	};

@@ -726,6 +726,8 @@ const en = {
 		edited: "edited",
 		deleteTitle: "Delete comment?",
 		deleteDescription: "This comment will be permanently deleted.",
+		attach: "Attach files",
+		removeFile: "Remove {{filename}}",
 	},
 	attachments: {
 		title: "Attachments",
@@ -741,6 +743,8 @@ const en = {
 		deleteDescription: '"{{filename}}" will be permanently deleted.',
 		storageUnavailable:
 			"Couldn't reach the file storage service — check the S3 configuration.",
+		quotaExceeded:
+			"This organization has reached its storage or attachment limit.",
 	},
 	activity: {
 		title: "Activity",
@@ -902,6 +906,7 @@ const en = {
 			members: "Members",
 			projects: "Projects",
 			webhooks: "Webhooks",
+			storage: "Storage",
 		},
 		attachmentSize: "Attachment size",
 		apiRateLimit: "API rate limit",

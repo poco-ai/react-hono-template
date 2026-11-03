@@ -138,6 +138,7 @@ export const createDependencies = ({
 		deliveryDao: webhookDeliveryDao,
 		conversationDao: aiConversationDao,
 		pendingUploadDao,
+		mediaAssetDao,
 		storage,
 	});
 	const webhookService = createWebhookService({
@@ -156,21 +157,23 @@ export const createDependencies = ({
 		webhooks: webhookDeliveryService,
 	});
 	const labelService = createLabelService(labelDao, cache);
-	const commentService = createCommentService({
-		commentDao,
-		issueDao,
-		projectDao,
-		webhooks: webhookDeliveryService,
-	});
 	const attachmentService = createAttachmentService({
 		attachmentDao,
 		issueDao,
 		projectDao,
+		commentDao,
 		pendingUploadDao,
 		storage,
 		webhooks: webhookDeliveryService,
 		plans: planService,
 		storageUsage: storageUsageService,
+	});
+	const commentService = createCommentService({
+		commentDao,
+		issueDao,
+		projectDao,
+		webhooks: webhookDeliveryService,
+		files: attachmentService,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
 	const apiKeyService = createApiKeyService(apiKeyDao);
@@ -227,6 +230,7 @@ export const createDependencies = ({
 		stripeSetup,
 		mockEnabled: billingMockEnabled,
 		plans: planService,
+		storageUsage: storageUsageService,
 	});
 
 	const bootstrapService = createBootstrapService(adminUserDao);

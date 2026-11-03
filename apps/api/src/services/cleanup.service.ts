@@ -1,9 +1,13 @@
 import type { AiConversationDao } from "../dao/ai-conversation.dao";
+import type { MediaAssetDao } from "../dao/media-asset.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { PendingUploadDao } from "../dao/pending-upload.dao";
 import type { WebhookDeliveryDao } from "../dao/webhook-delivery.dao";
 import type { StorageAdapter } from "../lib/storage/types";
-import { PENDING_CLEANUP_LIMIT } from "../lib/storage/uploads";
+import {
+	PENDING_CLEANUP_LIMIT,
+	SUPERSEDED_MEDIA_TTL_MS,
+} from "../lib/storage/uploads";
 
 export const ABANDONED_DELIVERY_AGE_MS = 15 * 60 * 1000;
 export const ABANDONED_DELIVERY_ERROR = "delivery timed out";
@@ -13,12 +17,14 @@ export const createCleanupService = ({
 	deliveryDao,
 	conversationDao,
 	pendingUploadDao,
+	mediaAssetDao,
 	storage,
 }: {
 	memberDao: MemberDao;
 	deliveryDao: WebhookDeliveryDao;
 	conversationDao?: Pick<AiConversationDao, "deleteExpired">;
 	pendingUploadDao?: Pick<PendingUploadDao, "findExpired" | "deleteByKey">;
+	mediaAssetDao?: Pick<MediaAssetDao, "findSupersededBefore" | "deleteById">;
 	storage?: StorageAdapter | null;
 }) => {
 	return {
@@ -55,11 +61,35 @@ export const createCleanupService = ({
 					}
 				}
 			}
+			let supersededMedia = 0;
+			if (mediaAssetDao) {
+				const cutoff = new Date(now.getTime() - SUPERSEDED_MEDIA_TTL_MS);
+				const stale = await mediaAssetDao.findSupersededBefore(
+					cutoff,
+					PENDING_CLEANUP_LIMIT,
+				);
+				for (const asset of stale) {
+					try {
+						if (storage) {
+							await storage.remove(asset.key);
+						}
+						await mediaAssetDao.deleteById(asset.id);
+						supersededMedia += 1;
+					} catch (error) {
+						console.error(
+							"[cleanup] superseded media delete failed:",
+							asset.key,
+							error,
+						);
+					}
+				}
+			}
 			return {
 				expiredInvitations,
 				failedDeliveries,
 				deletedConversations,
 				expiredPendingUploads,
+				supersededMedia,
 			};
 		},
 	};

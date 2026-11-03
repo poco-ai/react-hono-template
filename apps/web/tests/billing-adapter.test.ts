@@ -21,7 +21,7 @@ function setup(canManage = true, confirm = async () => false) {
 	queryClient.setQueryData(billingRootKey("org"), {
 		plan: "free",
 		limits: PLANS.free,
-		usage: { members: 1, projects: 2, webhooks: 0 },
+		usage: { members: 1, projects: 2, webhooks: 0, storageBytes: 0 },
 		mockMode: true,
 		stripeEnabled: false,
 		currentPeriodEnd: null,

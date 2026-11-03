@@ -1,4 +1,6 @@
 export const PENDING_UPLOAD_TTL_MS = 60 * 60 * 1000;
+/** Replaced avatars and logos stay readable for a day before object deletion. */
+export const SUPERSEDED_MEDIA_TTL_MS = 24 * 60 * 60 * 1000;
 export const PENDING_CLEANUP_LIMIT = 100;
 
 export const UPLOAD_KINDS = [

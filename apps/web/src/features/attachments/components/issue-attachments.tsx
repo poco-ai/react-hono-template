@@ -31,7 +31,7 @@ import { MutationError } from "@/components/mutation-error";
 import { UserAvatar } from "@/components/user-avatar";
 import {
 	attachmentsQuery,
-	isStorageUnavailableError,
+	attachmentUploadErrorKey,
 	resolveContentType,
 	useDeleteAttachment,
 	useUploadAttachment,
@@ -142,17 +142,9 @@ export function IssueAttachments({
 								item.id === id
 									? {
 											...item,
-											error:
-												error instanceof DOMException &&
-												error.name === "AbortError"
-													? t("attachments.cancelled", {
-															filename: file.name,
-														})
-													: isStorageUnavailableError(error)
-														? t("attachments.storageUnavailable")
-														: t("attachments.uploadFailed", {
-																filename: file.name,
-															}),
+											error: t(attachmentUploadErrorKey(error), {
+												filename: file.name,
+											}),
 										}
 									: item,
 							),

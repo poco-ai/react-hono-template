@@ -24,13 +24,36 @@ const STORAGE_UNAVAILABLE = "STORAGE_UNAVAILABLE";
 export const isStorageUnavailableError = (error: unknown): boolean =>
 	errorCode(error) === STORAGE_UNAVAILABLE;
 
-const storageUnavailableError = () =>
-	codedError("Storage service unavailable", STORAGE_UNAVAILABLE);
-
 const isAbortError = (error: unknown): boolean =>
 	typeof error === "object" &&
 	error !== null &&
 	(error as { name?: unknown }).name === "AbortError";
+
+export const attachmentUploadErrorKey = (
+	error: unknown,
+):
+	| "attachments.cancelled"
+	| "attachments.storageUnavailable"
+	| "attachments.quotaExceeded"
+	| "attachments.tooLarge"
+	| "attachments.typeNotAllowed"
+	| "attachments.uploadFailed" => {
+	if (isAbortError(error)) return "attachments.cancelled";
+	if (isStorageUnavailableError(error)) return "attachments.storageUnavailable";
+	switch (errorCode(error)) {
+		case "STORAGE_QUOTA_EXCEEDED":
+			return "attachments.quotaExceeded";
+		case "FILE_TOO_LARGE":
+			return "attachments.tooLarge";
+		case "FILE_TYPE_NOT_ALLOWED":
+			return "attachments.typeNotAllowed";
+		default:
+			return "attachments.uploadFailed";
+	}
+};
+
+const storageUnavailableError = () =>
+	codedError("Storage service unavailable", STORAGE_UNAVAILABLE);
 
 export function attachmentsQueryKey(
 	orgId: string,
@@ -155,6 +178,97 @@ export function useUploadAttachment(
 		},
 	});
 }
+
+export const uploadCommentAttachment = async (
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+	commentId: string,
+	{
+		file,
+		signal,
+	}: {
+		file: File;
+		signal?: AbortSignal;
+	},
+) => {
+	const contentType = resolveContentType(file);
+	const presignResponse = await client.api.orgs[":orgId"].projects[
+		":projectId"
+	].issues[":number"].comments[":commentId"].attachments.presign.$post({
+		param: {
+			orgId,
+			projectId,
+			number: String(issueNumber),
+			commentId,
+		},
+		json: { filename: file.name, contentType, size: file.size },
+	});
+	if (presignResponse.status >= 500) {
+		throw storageUnavailableError();
+	}
+	const presigned = await unwrap(presignResponse);
+
+	let response: Response;
+	try {
+		response = await fetch(presigned.uploadUrl, {
+			method: "PUT",
+			headers: { "Content-Type": contentType },
+			body: file,
+			signal,
+		});
+	} catch (error) {
+		if (isAbortError(error)) {
+			throw error;
+		}
+		throw storageUnavailableError();
+	}
+	if (!response.ok) {
+		throw new Error(`Upload failed with status ${response.status}`);
+	}
+
+	const registerResponse = await client.api.orgs[":orgId"].projects[
+		":projectId"
+	].issues[":number"].comments[":commentId"].attachments.$post({
+		param: {
+			orgId,
+			projectId,
+			number: String(issueNumber),
+			commentId,
+		},
+		json: {
+			key: presigned.key,
+			filename: file.name,
+			contentType,
+			size: file.size,
+		},
+	});
+	if (registerResponse.status >= 500) {
+		throw storageUnavailableError();
+	}
+	await unwrap(registerResponse);
+};
+
+export const deleteCommentAttachment = (
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+	commentId: string,
+	attachmentId: string,
+) =>
+	unwrap(
+		client.api.orgs[":orgId"].projects[":projectId"].issues[":number"].comments[
+			":commentId"
+		].attachments[":attachmentId"].$delete({
+			param: {
+				orgId,
+				projectId,
+				number: String(issueNumber),
+				commentId,
+				attachmentId,
+			},
+		}),
+	);
 
 export const deleteAttachment = (
 	orgId: string,

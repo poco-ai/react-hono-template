@@ -156,6 +156,7 @@ export function createAppBillingAdapter({
 						`${t("billing.limits.members")}: ${plan.members}`,
 						`${t("billing.limits.projects")}: ${plan.projects}`,
 						`${t("billing.limits.webhooks")}: ${plan.webhooks}`,
+						`${t("billing.limits.storage")}: ${t("billing.megabytes", { value: plan.storageBytes / (1024 * 1024) })}`,
 						`${t("billing.attachmentSize")}: ${t("billing.megabytes", { value: plan.attachmentMaxSize / (1024 * 1024) })}`,
 						`${t("billing.apiRateLimit")}: ${t("billing.perMinute", { value: plan.apiRateLimit })}`,
 					],
@@ -177,12 +178,24 @@ export function createAppBillingAdapter({
 						? { currentPeriodEnd: new Date(data.currentPeriodEnd) }
 						: {}),
 				},
-				usage: (["members", "projects", "webhooks"] as const).map((id) => ({
-					id,
-					label: t(`billing.limits.${id}`),
-					used: data.usage[id],
-					limit: data.limits[id],
-				})),
+				usage: [
+					...(["members", "projects", "webhooks"] as const).map((id) => ({
+						id,
+						label: t(`billing.limits.${id}`),
+						used: data.usage[id],
+						limit: data.limits[id],
+					})),
+					{
+						id: "storage",
+						label: t("billing.limits.storage"),
+						used:
+							Math.round(
+								((data.usage.storageBytes ?? 0) / (1024 * 1024)) * 10,
+							) / 10,
+						limit: data.limits.storageBytes / (1024 * 1024),
+						unit: "MB",
+					},
+				],
 			};
 		},
 		checkout: (scope, input) => {

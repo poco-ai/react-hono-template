@@ -1,4 +1,5 @@
 import type { Paginated } from "@workspace/shared";
+import type { AttachmentWithUrlDto } from "./attachment.dto";
 
 export type CommentAuthorDto = {
 	id: string;
@@ -15,6 +16,7 @@ export type CommentDto = {
 	author: CommentAuthorDto;
 	createdAt: string;
 	updatedAt: string;
+	attachments: AttachmentWithUrlDto[];
 };
 
 export type ListCommentsDto = Paginated<CommentDto>;

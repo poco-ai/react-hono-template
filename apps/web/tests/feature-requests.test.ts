@@ -3,8 +3,10 @@ import { test } from "node:test";
 import {
 	resolveContentType,
 	uploadAttachment,
+	uploadCommentAttachment,
 } from "../src/features/attachments/data";
 import { deleteAvatar, uploadAvatar } from "../src/features/auth/data";
+import { createComment } from "../src/features/comments/data";
 import { inviteMember } from "../src/features/members/data";
 import { uploadOrganizationLogo } from "../src/features/organizations/data";
 import { createProject, updateProject } from "../src/features/projects/data";
@@ -145,6 +147,46 @@ test("attachment uploads pass the AbortSignal and only finalize after a successf
 				contentType: "image/jpeg",
 				size: file.size,
 			});
+		},
+	));
+
+test("comment files are uploaded only after the comment exists", () =>
+	withRequests(
+		(request) =>
+			request.url.pathname.endsWith("/comments")
+				? ok({ id: "comment-1" })
+				: request.url.pathname.endsWith("/presign")
+					? ok({
+							key: "object-key",
+							uploadUrl: "https://storage.example/upload",
+						})
+					: request.method === "PUT"
+						? new Response(null, { status: 200 })
+						: ok({}),
+		async (requests) => {
+			const file = new File(["image"], "note.png", { type: "image/png" });
+			const controller = new AbortController();
+			const comment = await createComment("org", "project", 4, "See the file");
+			await uploadCommentAttachment("org", "project", 4, comment.id, {
+				file,
+				signal: controller.signal,
+			});
+			assert.equal(
+				requests[0]?.url.pathname,
+				"/api/orgs/org/projects/project/issues/4/comments",
+			);
+			assert.equal(requests[0]?.method, "POST");
+			assert.deepEqual(requests[0]?.body, { body: "See the file" });
+			assert.equal(
+				requests[1]?.url.pathname,
+				"/api/orgs/org/projects/project/issues/4/comments/comment-1/attachments/presign",
+			);
+			assert.equal(requests[2]?.method, "PUT");
+			assert.equal(requests[2]?.signal, controller.signal);
+			assert.equal(
+				requests[3]?.url.pathname,
+				"/api/orgs/org/projects/project/issues/4/comments/comment-1/attachments",
+			);
 		},
 	));
 

@@ -41,6 +41,7 @@ const toCommentDto = (row: {
 	...row,
 	createdAt: row.createdAt.toISOString(),
 	updatedAt: row.updatedAt.toISOString(),
+	attachments: [],
 });
 
 export const createCommentDao = (db: Database) => ({

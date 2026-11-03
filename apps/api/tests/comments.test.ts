@@ -41,6 +41,7 @@ const commentDto = (overrides: Partial<CommentDto> = {}): CommentDto => ({
 	},
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",
+	attachments: [],
 	...overrides,
 });
 
@@ -177,4 +178,31 @@ test("comments from other issues answer 404", async () => {
 		}),
 		isCommentError(404, ApiErrorCode.COMMENT_NOT_FOUND),
 	);
+});
+
+test("deleting a comment removes its stored files first", async () => {
+	const order: string[] = [];
+	const deleting = createCommentService({
+		issueDao: {
+			findByProjectAndNumber: async () => issueDto(),
+		} as unknown as IssueDao,
+		projectDao: {
+			findById: async () => ({ id: "project-1", archived: false }),
+		} as unknown as ProjectDao,
+		commentDao: {
+			findById: async () => commentDto(),
+			delete: async () => {
+				order.push("delete");
+				return true;
+			},
+		} as unknown as CommentDao,
+		files: {
+			forComments: async () => new Map(),
+			purgeForComment: async () => {
+				order.push("purge");
+			},
+		},
+	});
+	await deleting.deleteComment("org", "project-1", 7, "comment-1", "author-1");
+	assert.deepEqual(order, ["purge", "delete"]);
 });

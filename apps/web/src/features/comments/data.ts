@@ -9,6 +9,10 @@ import {
 	issueActivitiesKey,
 	orgActivitiesRootKey,
 } from "@/features/activities/data";
+import {
+	deleteCommentAttachment,
+	uploadCommentAttachment,
+} from "@/features/attachments/data";
 import { client, unwrap } from "@/lib/api";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -78,6 +82,89 @@ export function useCreateComment(
 		...callbacks,
 		mutationFn: (input: string) =>
 			createComment(orgId, projectId, issueNumber, input),
+		onSuccess: (...args) => {
+			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
+			return callbacks?.onSuccess?.(...args);
+		},
+	});
+}
+
+const isAbortError = (error: unknown): boolean =>
+	typeof error === "object" &&
+	error !== null &&
+	(error as { name?: unknown }).name === "AbortError";
+
+export function usePostComment(
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+	callbacks?: MutationCallbacks<
+		{
+			comment: Awaited<ReturnType<typeof createComment>>;
+			failed: { file: File; error: unknown }[];
+		},
+		{ body: string; files: File[]; signal?: AbortSignal }
+	>,
+) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		...callbacks,
+		mutationFn: async ({
+			body,
+			files,
+			signal,
+		}: {
+			body: string;
+			files: File[];
+			signal?: AbortSignal;
+		}) => {
+			const comment = await createComment(orgId, projectId, issueNumber, body);
+			const failed: { file: File; error: unknown }[] = [];
+			for (const file of files) {
+				try {
+					await uploadCommentAttachment(
+						orgId,
+						projectId,
+						issueNumber,
+						comment.id,
+						{ file, signal },
+					);
+				} catch (error) {
+					if (isAbortError(error)) throw error;
+					failed.push({ file, error });
+				}
+			}
+			return { comment, failed };
+		},
+		onSettled: (...args) => {
+			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
+			return callbacks?.onSettled?.(...args);
+		},
+	});
+}
+
+export function useDeleteCommentAttachment(
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+	callbacks?: MutationCallbacks<
+		Awaited<ReturnType<typeof deleteCommentAttachment>>,
+		{ commentId: string; attachmentId: string }
+	>,
+) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		...callbacks,
+		mutationFn: (input: { commentId: string; attachmentId: string }) =>
+			deleteCommentAttachment(
+				orgId,
+				projectId,
+				issueNumber,
+				input.commentId,
+				input.attachmentId,
+			),
 		onSuccess: (...args) => {
 			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
 			return callbacks?.onSuccess?.(...args);

@@ -65,4 +65,57 @@ export const createAttachmentController = (service: AttachmentService) => ({
 			),
 		);
 	},
+
+	presignComment: async (c: Context<Env>, input: AttachmentPresignInput) =>
+		ok(
+			c,
+			await service.presignCommentUpload(
+				c.get("orgMember").orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireParam(c, "commentId"),
+				c.get("session").user.id,
+				input,
+			),
+		),
+
+	registerComment: async (c: Context<Env>, input: RegisterAttachmentInput) =>
+		ok(
+			c,
+			await service.registerComment(
+				c.get("orgMember").orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireParam(c, "commentId"),
+				c.get("session").user.id,
+				input,
+				backgroundFromContext(c),
+			),
+		),
+
+	listComment: async (c: Context<Env>) =>
+		ok(
+			c,
+			await service.listComment(
+				c.get("orgMember").orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireParam(c, "commentId"),
+			),
+		),
+
+	removeComment: async (c: Context<Env>) => {
+		const orgMember = c.get("orgMember");
+		return ok(
+			c,
+			await service.removeComment(
+				orgMember.orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireParam(c, "commentId"),
+				requireParam(c, "attachmentId"),
+				{ userId: orgMember.userId, role: orgMember.role },
+			),
+		);
+	},
 });

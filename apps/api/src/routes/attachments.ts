@@ -29,5 +29,23 @@ export const createAttachmentsRoutes = (service: AttachmentService) => {
 		.delete(
 			"/api/orgs/:orgId/projects/:projectId/issues/:number/attachments/:attachmentId",
 			(c) => attachmentController.remove(c),
+		)
+		.get(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId/attachments",
+			(c) => attachmentController.listComment(c),
+		)
+		.post(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId/attachments",
+			validate(registerAttachmentSchema, "json"),
+			(c) => attachmentController.registerComment(c, c.req.valid("json")),
+		)
+		.post(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId/attachments/presign",
+			validate(attachmentPresignSchema, "json"),
+			(c) => attachmentController.presignComment(c, c.req.valid("json")),
+		)
+		.delete(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId/attachments/:attachmentId",
+			(c) => attachmentController.removeComment(c),
 		);
 };

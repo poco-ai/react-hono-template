@@ -58,6 +58,11 @@ export function LandingPage() {
 			value: String(limits.projects),
 		},
 		{
+			key: "storage",
+			label: t("billing.limits.storage"),
+			value: t("billing.megabytes", { value: limits.storageBytes / MB }),
+		},
+		{
 			key: "attachmentSize",
 			label: t("billing.attachmentSize"),
 			value: t("billing.megabytes", { value: limits.attachmentMaxSize / MB }),

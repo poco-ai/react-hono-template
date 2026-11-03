@@ -4,6 +4,7 @@ export type BillingUsageDto = {
 	members: number;
 	projects: number;
 	webhooks: number;
+	storageBytes: number;
 };
 
 export type BillingDto = {

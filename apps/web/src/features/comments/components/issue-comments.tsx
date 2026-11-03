@@ -1,10 +1,15 @@
+import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
 import type { CommentDto } from "@api/dto/comment.dto";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+	ATTACHMENT_CONTENT_TYPES,
+	ATTACHMENT_MAX_SIZE,
+} from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Paperclip, Pencil, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -12,14 +17,28 @@ import { MarkdownContent } from "@/components/markdown";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { MutationError } from "@/components/mutation-error";
 import { UserAvatar } from "@/components/user-avatar";
+import {
+	attachmentUploadErrorKey,
+	resolveContentType,
+} from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
 import {
 	commentsQuery,
-	useCreateComment,
 	useDeleteComment,
+	useDeleteCommentAttachment,
+	usePostComment,
 	useUpdateComment,
 } from "@/features/comments/data";
-import { formatDateTime, formatRelativeTime } from "@/lib/format";
+import { membersQuery } from "@/features/members/data";
+import { formatBytes, formatDateTime, formatRelativeTime } from "@/lib/format";
+
+const ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
+
+interface SelectedFile {
+	id: string;
+	file: File;
+	error?: string;
+}
 
 const COMMENT_MAX_LENGTH = 10000;
 
@@ -37,25 +56,49 @@ export function IssueComments({
 	const { t } = useTranslation();
 
 	const { data: session } = useSession();
+	const members = useQuery(membersQuery(orgId));
 	const [body, setBody] = useState("");
 	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editBody, setEditBody] = useState("");
 	const [deleting, setDeleting] = useState<CommentDto | null>(null);
+	const [deletingFile, setDeletingFile] = useState<{
+		commentId: string;
+		attachment: AttachmentWithUrlDto;
+	} | null>(null);
+	const [selected, setSelected] = useState<SelectedFile[]>([]);
+	const inputRef = useRef<HTMLInputElement>(null);
+	const abortRef = useRef<AbortController | null>(null);
+
+	const currentRole = members.data?.find(
+		(member) => member.userId === session?.user.id,
+	)?.role;
+	const isAdmin = currentRole === "owner" || currentRole === "admin";
 
 	const query = useInfiniteQuery(commentsQuery(orgId, projectId, issueNumber));
 
 	const comments = query.data?.pages.flatMap((page) => page.items) ?? [];
 	const total = query.data?.pages[0]?.total ?? 0;
 
-	const createMutation = useCreateComment(orgId, projectId, issueNumber, {
-		onSuccess: () => {
+	const createMutation = usePostComment(orgId, projectId, issueNumber, {
+		onSuccess: (result) => {
 			toast.success(t("toast.commentPosted"));
-
+			for (const failed of result.failed) {
+				toast.error(
+					t(attachmentUploadErrorKey(failed.error), {
+						filename: failed.file.name,
+					}),
+				);
+			}
 			setBody("");
+			setSelected([]);
 			setEditorResetKey((key) => key + 1);
 		},
 	});
+
+	useEffect(() => {
+		return () => abortRef.current?.abort();
+	}, []);
 
 	const updateMutation = useUpdateComment(orgId, projectId, issueNumber, {
 		onSuccess: () => {
@@ -68,8 +111,35 @@ export function IssueComments({
 			setDeleting(null);
 		},
 	});
+	const deleteFileMutation = useDeleteCommentAttachment(
+		orgId,
+		projectId,
+		issueNumber,
+		{
+			onSuccess: () => {
+				setDeletingFile(null);
+			},
+		},
+	);
 
 	const canSubmit = body.trim().length > 0 && body.length <= COMMENT_MAX_LENGTH;
+
+	const addFiles = (list: FileList | File[]) => {
+		const next: SelectedFile[] = [];
+		for (const file of Array.from(list)) {
+			const contentType = resolveContentType(file);
+			let error: string | undefined;
+			if (
+				!(ATTACHMENT_CONTENT_TYPES as readonly string[]).includes(contentType)
+			) {
+				error = t("attachments.typeNotAllowed", { filename: file.name });
+			} else if (file.size < 1 || file.size > ATTACHMENT_MAX_SIZE) {
+				error = t("attachments.tooLarge", { filename: file.name });
+			}
+			next.push({ id: crypto.randomUUID(), file, error });
+		}
+		setSelected((prev) => [...prev, ...next]);
+	};
 
 	return (
 		<section className="flex flex-col gap-4">
@@ -185,6 +255,62 @@ export function IssueComments({
 										<MarkdownContent>{comment.body}</MarkdownContent>
 									</div>
 								)}
+								{comment.attachments.length > 0 && (
+									<ul className="mt-2 flex max-w-3xl flex-col gap-1">
+										{comment.attachments.map((attachment) => {
+											const canDelete =
+												isAdmin ||
+												own ||
+												attachment.uploader?.id === session?.user.id;
+											return (
+												<li
+													key={attachment.id}
+													className="flex items-center gap-2 text-sm"
+												>
+													{attachment.contentType.startsWith("image/") &&
+													attachment.url ? (
+														<img
+															src={attachment.url}
+															alt={attachment.filename}
+															className="size-8 rounded object-cover"
+															loading="lazy"
+														/>
+													) : (
+														<Paperclip className="text-muted-foreground size-3.5 shrink-0" />
+													)}
+													<a
+														href={attachment.url ?? undefined}
+														target="_blank"
+														rel="noreferrer"
+														className="min-w-0 truncate hover:underline"
+													>
+														{attachment.filename}
+													</a>
+													<span className="text-muted-foreground shrink-0 text-xs">
+														{formatBytes(attachment.size)}
+													</span>
+													{canDelete && (
+														<Button
+															variant="ghost"
+															size="icon-sm"
+															aria-label={t("common.delete")}
+															className="text-destructive hover:text-destructive"
+															disabled={frozen}
+															onClick={() =>
+																setDeletingFile({
+																	commentId: comment.id,
+																	attachment,
+																})
+															}
+														>
+															<Trash2 />
+														</Button>
+													)}
+												</li>
+											);
+										})}
+									</ul>
+								)}
 							</div>
 						</li>
 					);
@@ -215,21 +341,89 @@ export function IssueComments({
 				rows={4}
 				maxLength={COMMENT_MAX_LENGTH}
 				footer={
-					<div className="flex items-center justify-between gap-2 border-t px-3 py-2">
-						<span className="text-muted-foreground text-xs">
-							{t("comments.charCount", {
-								count: body.length,
-								max: COMMENT_MAX_LENGTH,
-							})}
-						</span>
-						<Button
-							size="sm"
-							disabled={frozen || !canSubmit || createMutation.isPending}
-							onClick={() => createMutation.mutate(body.trim())}
-						>
-							{createMutation.isPending && <Spinner />}
-							{t("comments.post")}
-						</Button>
+					<div className="flex flex-col gap-2 border-t px-3 py-2">
+						{selected.length > 0 && (
+							<ul className="flex flex-col gap-1">
+								{selected.map((item) => (
+									<li key={item.id} className="flex items-center gap-2 text-xs">
+										<span
+											className={
+												item.error
+													? "text-destructive min-w-0 flex-1 truncate"
+													: "min-w-0 flex-1 truncate"
+											}
+										>
+											{item.error ?? item.file.name}
+										</span>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											aria-label={t("comments.removeFile", {
+												filename: item.file.name,
+											})}
+											onClick={() =>
+												setSelected((prev) =>
+													prev.filter((file) => file.id !== item.id),
+												)
+											}
+										>
+											<X />
+										</Button>
+									</li>
+								))}
+							</ul>
+						)}
+						<div className="flex items-center justify-between gap-2">
+							<div className="flex items-center gap-2">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label={t("comments.attach")}
+									disabled={frozen || createMutation.isPending}
+									onClick={() => inputRef.current?.click()}
+								>
+									<Paperclip />
+								</Button>
+								<input
+									ref={inputRef}
+									type="file"
+									multiple
+									hidden
+									accept={ACCEPT}
+									onChange={(event) => {
+										if (event.target.files && event.target.files.length > 0) {
+											addFiles(event.target.files);
+										}
+										event.target.value = "";
+									}}
+								/>
+								<span className="text-muted-foreground text-xs">
+									{t("comments.charCount", {
+										count: body.length,
+										max: COMMENT_MAX_LENGTH,
+									})}
+								</span>
+							</div>
+							<Button
+								size="sm"
+								disabled={frozen || !canSubmit || createMutation.isPending}
+								onClick={() => {
+									const controller = new AbortController();
+									abortRef.current = controller;
+									createMutation.mutate({
+										body: body.trim(),
+										files: selected
+											.filter((item) => !item.error)
+											.map((item) => item.file),
+										signal: controller.signal,
+									});
+								}}
+							>
+								{createMutation.isPending && <Spinner />}
+								{t("comments.post")}
+							</Button>
+						</div>
 					</div>
 				}
 			/>
@@ -249,6 +443,27 @@ export function IssueComments({
 				}}
 			/>
 			{deleteMutation.isError && <MutationError error={deleteMutation.error} />}
+			<ConfirmDialog
+				open={deletingFile !== null}
+				onOpenChange={(open) => !open && setDeletingFile(null)}
+				title={t("attachments.deleteTitle")}
+				description={t("attachments.deleteDescription", {
+					filename: deletingFile?.attachment.filename ?? "",
+				})}
+				confirmLabel={t("common.delete")}
+				pending={deleteFileMutation.isPending}
+				onConfirm={() => {
+					if (deletingFile) {
+						deleteFileMutation.mutate({
+							commentId: deletingFile.commentId,
+							attachmentId: deletingFile.attachment.id,
+						});
+					}
+				}}
+			/>
+			{deleteFileMutation.isError && (
+				<MutationError error={deleteFileMutation.error} />
+			)}
 		</section>
 	);
 }
