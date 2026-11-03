@@ -10,6 +10,7 @@ const LIST_COLUMNS = {
 	orgId: apiKeys.orgId,
 	name: apiKeys.name,
 	prefix: apiKeys.prefix,
+	scopes: apiKeys.scopes,
 	createdById: apiKeys.createdById,
 	lastUsedAt: apiKeys.lastUsedAt,
 	revokedAt: apiKeys.revokedAt,
@@ -22,6 +23,7 @@ type ListRow = {
 	orgId: string;
 	name: string;
 	prefix: string;
+	scopes: string[];
 	createdById: string | null;
 	lastUsedAt: Date | null;
 	revokedAt: Date | null;
@@ -34,6 +36,7 @@ const toApiKeyDto = (row: ListRow): ApiKeyDto => ({
 	orgId: row.orgId,
 	name: row.name,
 	prefix: row.prefix,
+	scopes: row.scopes,
 	createdById: row.createdById,
 	lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
 	revokedAt: row.revokedAt ? row.revokedAt.toISOString() : null,
@@ -47,6 +50,7 @@ export type ApiKeyInsert = {
 	name: string;
 	prefix: string;
 	keyHash: string;
+	scopes: string[];
 	createdById: string | null;
 };
 

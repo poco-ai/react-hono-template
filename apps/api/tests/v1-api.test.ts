@@ -38,6 +38,7 @@ const TOKEN = "sk_test_token";
 type KeyRecord = {
 	id: string;
 	orgId: string;
+	scopes: string[];
 	revokedAt: Date | null;
 	lastUsedAt: Date | null;
 };
@@ -45,6 +46,7 @@ type KeyRecord = {
 const keyRecord = (overrides: Partial<KeyRecord> = {}): KeyRecord => ({
 	id: KEY_ID,
 	orgId: ORG_ID,
+	scopes: ["read", "write", "admin"],
 	revokedAt: null,
 	lastUsedAt: null,
 	...overrides,
@@ -320,4 +322,25 @@ test("exhausted rate limits answer 429 with retry metadata", async () => {
 	} finally {
 		limiterAllows = true;
 	}
+});
+
+test("read-only API keys can read but cannot write", async () => {
+	const { app, calls } = setup({
+		key: keyRecord({ scopes: ["read"] }),
+	});
+	assert.equal(
+		(await app.request("/projects", { headers: bearer() })).status,
+		200,
+	);
+	const body = await expectEnvelope(
+		await app.request("/projects", {
+			method: "POST",
+			headers: jsonHeaders,
+			body: JSON.stringify({ name: "Blocked", key: "BLK" }),
+		}),
+		403,
+		"MCP_FORBIDDEN_SCOPE",
+	);
+	assert.equal(body.error.message.includes("write"), true);
+	assert.equal(calls.createdProjects.length, 0);
 });

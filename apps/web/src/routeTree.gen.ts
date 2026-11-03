@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as EmailOtpRouteImport } from './routes/email-otp'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as InviteRouteImport } from './routes/invite'
@@ -30,11 +31,15 @@ import { Route as AuthOrgsOrgIdIndexRouteImport } from './routes/_auth/orgs/$org
 import { Route as AuthOrgsOrgIdActivityRouteImport } from './routes/_auth/orgs/$orgId/activity'
 import { Route as AuthOrgsOrgIdMyIssuesRouteImport } from './routes/_auth/orgs/$orgId/my-issues'
 import { Route as AuthOrgsOrgIdSettingsRouteRouteImport } from './routes/_auth/orgs/$orgId/settings/route'
+import { Route as AuthOrgsOrgIdAiIndexRouteImport } from './routes/_auth/orgs/$orgId/ai.index'
+import { Route as AuthOrgsOrgIdAiConversationIdRouteImport } from './routes/_auth/orgs/$orgId/ai.$conversationId'
 import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/orgs/$orgId/projects.index'
 import { Route as AuthOrgsOrgIdSettingsIndexRouteImport } from './routes/_auth/orgs/$orgId/settings/index'
+import { Route as AuthOrgsOrgIdSettingsAiRouteImport } from './routes/_auth/orgs/$orgId/settings/ai'
 import { Route as AuthOrgsOrgIdSettingsApiKeysRouteImport } from './routes/_auth/orgs/$orgId/settings/api-keys'
 import { Route as AuthOrgsOrgIdSettingsBillingRouteImport } from './routes/_auth/orgs/$orgId/settings/billing'
 import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/orgs/$orgId/settings/labels'
+import { Route as AuthOrgsOrgIdSettingsMcpRouteImport } from './routes/_auth/orgs/$orgId/settings/mcp'
 import { Route as AuthOrgsOrgIdSettingsMembersRouteImport } from './routes/_auth/orgs/$orgId/settings/members'
 import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_auth/orgs/$orgId/settings/webhooks'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
@@ -47,6 +52,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsentRoute = ConsentRouteImport.update({
+  id: '/consent',
+  path: '/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailOtpRoute = EmailOtpRouteImport.update({
@@ -145,6 +155,17 @@ const AuthOrgsOrgIdSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthOrgsOrgIdRoute,
   } as any)
+const AuthOrgsOrgIdAiIndexRoute = AuthOrgsOrgIdAiIndexRouteImport.update({
+  id: '/ai/',
+  path: '/ai/',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
+const AuthOrgsOrgIdAiConversationIdRoute =
+  AuthOrgsOrgIdAiConversationIdRouteImport.update({
+    id: '/ai/$conversationId',
+    path: '/ai/$conversationId',
+    getParentRoute: () => AuthOrgsOrgIdRoute,
+  } as any)
 const AuthOrgsOrgIdProjectsIndexRoute =
   AuthOrgsOrgIdProjectsIndexRouteImport.update({
     id: '/projects/',
@@ -157,6 +178,11 @@ const AuthOrgsOrgIdSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
+const AuthOrgsOrgIdSettingsAiRoute = AuthOrgsOrgIdSettingsAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+} as any)
 const AuthOrgsOrgIdSettingsApiKeysRoute =
   AuthOrgsOrgIdSettingsApiKeysRouteImport.update({
     id: '/api-keys',
@@ -173,6 +199,12 @@ const AuthOrgsOrgIdSettingsLabelsRoute =
   AuthOrgsOrgIdSettingsLabelsRouteImport.update({
     id: '/labels',
     path: '/labels',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
+const AuthOrgsOrgIdSettingsMcpRoute =
+  AuthOrgsOrgIdSettingsMcpRouteImport.update({
+    id: '/mcp',
+    path: '/mcp',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
 const AuthOrgsOrgIdSettingsMembersRoute =
@@ -202,6 +234,7 @@ const AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
   '/email-otp': typeof EmailOtpRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
@@ -221,11 +254,15 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
+  '/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
+  '/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
   '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
   '/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
+  '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
+  '/orgs/$orgId/ai/': typeof AuthOrgsOrgIdAiIndexRoute
   '/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
@@ -233,6 +270,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
   '/email-otp': typeof EmailOtpRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
@@ -249,11 +287,15 @@ export interface FileRoutesByTo {
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdIndexRoute
+  '/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
+  '/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
   '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
   '/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
+  '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
+  '/orgs/$orgId/ai': typeof AuthOrgsOrgIdAiIndexRoute
   '/orgs/$orgId/projects': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
@@ -263,6 +305,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
+  '/consent': typeof ConsentRoute
   '/email-otp': typeof EmailOtpRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
@@ -282,11 +325,15 @@ export interface FileRoutesById {
   '/_auth/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
   '/_auth/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
   '/_auth/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
+  '/_auth/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
+  '/_auth/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
   '/_auth/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
   '/_auth/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
+  '/_auth/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/_auth/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/_auth/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
+  '/_auth/orgs/$orgId/ai/': typeof AuthOrgsOrgIdAiIndexRoute
   '/_auth/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/_auth/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/_auth/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
@@ -296,6 +343,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/consent'
     | '/email-otp'
     | '/forgot-password'
     | '/invite'
@@ -315,11 +363,15 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId/'
+    | '/orgs/$orgId/ai/$conversationId'
+    | '/orgs/$orgId/settings/ai'
     | '/orgs/$orgId/settings/api-keys'
     | '/orgs/$orgId/settings/billing'
     | '/orgs/$orgId/settings/labels'
+    | '/orgs/$orgId/settings/mcp'
     | '/orgs/$orgId/settings/members'
     | '/orgs/$orgId/settings/webhooks'
+    | '/orgs/$orgId/ai/'
     | '/orgs/$orgId/projects/'
     | '/orgs/$orgId/settings/'
     | '/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -327,6 +379,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/consent'
     | '/email-otp'
     | '/forgot-password'
     | '/invite'
@@ -343,11 +396,15 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/activity'
     | '/orgs/$orgId/my-issues'
     | '/orgs/$orgId'
+    | '/orgs/$orgId/ai/$conversationId'
+    | '/orgs/$orgId/settings/ai'
     | '/orgs/$orgId/settings/api-keys'
     | '/orgs/$orgId/settings/billing'
     | '/orgs/$orgId/settings/labels'
+    | '/orgs/$orgId/settings/mcp'
     | '/orgs/$orgId/settings/members'
     | '/orgs/$orgId/settings/webhooks'
+    | '/orgs/$orgId/ai'
     | '/orgs/$orgId/projects'
     | '/orgs/$orgId/settings'
     | '/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -356,6 +413,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_auth'
+    | '/consent'
     | '/email-otp'
     | '/forgot-password'
     | '/invite'
@@ -375,11 +433,15 @@ export interface FileRouteTypes {
     | '/_auth/orgs/$orgId/activity'
     | '/_auth/orgs/$orgId/my-issues'
     | '/_auth/orgs/$orgId/'
+    | '/_auth/orgs/$orgId/ai/$conversationId'
+    | '/_auth/orgs/$orgId/settings/ai'
     | '/_auth/orgs/$orgId/settings/api-keys'
     | '/_auth/orgs/$orgId/settings/billing'
     | '/_auth/orgs/$orgId/settings/labels'
+    | '/_auth/orgs/$orgId/settings/mcp'
     | '/_auth/orgs/$orgId/settings/members'
     | '/_auth/orgs/$orgId/settings/webhooks'
+    | '/_auth/orgs/$orgId/ai/'
     | '/_auth/orgs/$orgId/projects/'
     | '/_auth/orgs/$orgId/settings/'
     | '/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -389,6 +451,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  ConsentRoute: typeof ConsentRoute
   EmailOtpRoute: typeof EmailOtpRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InviteRoute: typeof InviteRoute
@@ -412,6 +475,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consent': {
+      id: '/consent'
+      path: '/consent'
+      fullPath: '/consent'
+      preLoaderRoute: typeof ConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email-otp': {
@@ -547,6 +617,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsRouteRouteImport
       parentRoute: typeof AuthOrgsOrgIdRoute
     }
+    '/_auth/orgs/$orgId/ai/': {
+      id: '/_auth/orgs/$orgId/ai/'
+      path: '/ai'
+      fullPath: '/orgs/$orgId/ai/'
+      preLoaderRoute: typeof AuthOrgsOrgIdAiIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/ai/$conversationId': {
+      id: '/_auth/orgs/$orgId/ai/$conversationId'
+      path: '/ai/$conversationId'
+      fullPath: '/orgs/$orgId/ai/$conversationId'
+      preLoaderRoute: typeof AuthOrgsOrgIdAiConversationIdRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
     '/_auth/orgs/$orgId/projects/': {
       id: '/_auth/orgs/$orgId/projects/'
       path: '/projects'
@@ -559,6 +643,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/orgs/$orgId/settings/'
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsIndexRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
+    '/_auth/orgs/$orgId/settings/ai': {
+      id: '/_auth/orgs/$orgId/settings/ai'
+      path: '/ai'
+      fullPath: '/orgs/$orgId/settings/ai'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsAiRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
     '/_auth/orgs/$orgId/settings/api-keys': {
@@ -580,6 +671,13 @@ declare module '@tanstack/react-router' {
       path: '/labels'
       fullPath: '/orgs/$orgId/settings/labels'
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsLabelsRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
+    '/_auth/orgs/$orgId/settings/mcp': {
+      id: '/_auth/orgs/$orgId/settings/mcp'
+      path: '/mcp'
+      fullPath: '/orgs/$orgId/settings/mcp'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsMcpRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
     '/_auth/orgs/$orgId/settings/members': {
@@ -630,9 +728,11 @@ const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
 )
 
 interface AuthOrgsOrgIdSettingsRouteRouteChildren {
+  AuthOrgsOrgIdSettingsAiRoute: typeof AuthOrgsOrgIdSettingsAiRoute
   AuthOrgsOrgIdSettingsApiKeysRoute: typeof AuthOrgsOrgIdSettingsApiKeysRoute
   AuthOrgsOrgIdSettingsBillingRoute: typeof AuthOrgsOrgIdSettingsBillingRoute
   AuthOrgsOrgIdSettingsLabelsRoute: typeof AuthOrgsOrgIdSettingsLabelsRoute
+  AuthOrgsOrgIdSettingsMcpRoute: typeof AuthOrgsOrgIdSettingsMcpRoute
   AuthOrgsOrgIdSettingsMembersRoute: typeof AuthOrgsOrgIdSettingsMembersRoute
   AuthOrgsOrgIdSettingsWebhooksRoute: typeof AuthOrgsOrgIdSettingsWebhooksRoute
   AuthOrgsOrgIdSettingsIndexRoute: typeof AuthOrgsOrgIdSettingsIndexRoute
@@ -640,9 +740,11 @@ interface AuthOrgsOrgIdSettingsRouteRouteChildren {
 
 const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteChildren =
   {
+    AuthOrgsOrgIdSettingsAiRoute: AuthOrgsOrgIdSettingsAiRoute,
     AuthOrgsOrgIdSettingsApiKeysRoute: AuthOrgsOrgIdSettingsApiKeysRoute,
     AuthOrgsOrgIdSettingsBillingRoute: AuthOrgsOrgIdSettingsBillingRoute,
     AuthOrgsOrgIdSettingsLabelsRoute: AuthOrgsOrgIdSettingsLabelsRoute,
+    AuthOrgsOrgIdSettingsMcpRoute: AuthOrgsOrgIdSettingsMcpRoute,
     AuthOrgsOrgIdSettingsMembersRoute: AuthOrgsOrgIdSettingsMembersRoute,
     AuthOrgsOrgIdSettingsWebhooksRoute: AuthOrgsOrgIdSettingsWebhooksRoute,
     AuthOrgsOrgIdSettingsIndexRoute: AuthOrgsOrgIdSettingsIndexRoute,
@@ -658,6 +760,8 @@ interface AuthOrgsOrgIdRouteChildren {
   AuthOrgsOrgIdActivityRoute: typeof AuthOrgsOrgIdActivityRoute
   AuthOrgsOrgIdMyIssuesRoute: typeof AuthOrgsOrgIdMyIssuesRoute
   AuthOrgsOrgIdIndexRoute: typeof AuthOrgsOrgIdIndexRoute
+  AuthOrgsOrgIdAiConversationIdRoute: typeof AuthOrgsOrgIdAiConversationIdRoute
+  AuthOrgsOrgIdAiIndexRoute: typeof AuthOrgsOrgIdAiIndexRoute
   AuthOrgsOrgIdProjectsIndexRoute: typeof AuthOrgsOrgIdProjectsIndexRoute
   AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute: typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
   AuthOrgsOrgIdProjectsProjectIdIndexRoute: typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
@@ -668,6 +772,8 @@ const AuthOrgsOrgIdRouteChildren: AuthOrgsOrgIdRouteChildren = {
   AuthOrgsOrgIdActivityRoute: AuthOrgsOrgIdActivityRoute,
   AuthOrgsOrgIdMyIssuesRoute: AuthOrgsOrgIdMyIssuesRoute,
   AuthOrgsOrgIdIndexRoute: AuthOrgsOrgIdIndexRoute,
+  AuthOrgsOrgIdAiConversationIdRoute: AuthOrgsOrgIdAiConversationIdRoute,
+  AuthOrgsOrgIdAiIndexRoute: AuthOrgsOrgIdAiIndexRoute,
   AuthOrgsOrgIdProjectsIndexRoute: AuthOrgsOrgIdProjectsIndexRoute,
   AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute:
     AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute,
@@ -700,6 +806,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  ConsentRoute: ConsentRoute,
   EmailOtpRoute: EmailOtpRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InviteRoute: InviteRoute,

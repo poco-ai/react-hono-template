@@ -10,8 +10,19 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
-import { Field, FieldLabel } from "@workspace/ui/components/field";
+import {
+	Field,
+	FieldDescription,
+	FieldLabel,
+} from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@workspace/ui/components/select";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { Key } from "lucide-react";
 import { useState } from "react";
@@ -34,6 +45,7 @@ export function CreateApiKeyDialog({
 }) {
 	const { t } = useTranslation();
 	const [name, setName] = useState("");
+	const [access, setAccess] = useState<"read" | "write">("write");
 	const [error, setError] = useState<string>();
 	const [created, setCreated] = useState<{ name: string; key: string } | null>(
 		null,
@@ -43,6 +55,7 @@ export function CreateApiKeyDialog({
 		if (mutation.isPending) return;
 		if (!next) {
 			setName("");
+			setAccess("write");
 			setError(undefined);
 			mutation.reset();
 		}
@@ -59,6 +72,7 @@ export function CreateApiKeyDialog({
 							if (locked || mutation.isPending) return;
 							const parsed = createApiKeySchema.safeParse({
 								name: name.trim(),
+								scopes: access === "read" ? ["read"] : ["read", "write"],
 							});
 							if (!parsed.success) {
 								setError(fieldErrorsFromZod(parsed.error, t).name);
@@ -107,6 +121,35 @@ export function CreateApiKeyDialog({
 									{error}
 								</p>
 							)}
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="api-key-access">
+								{t("apiKeys.access")}
+							</FieldLabel>
+							<Select
+								value={access}
+								disabled={locked || mutation.isPending}
+								onValueChange={(value) =>
+									setAccess(value === "read" ? "read" : "write")
+								}
+							>
+								<SelectTrigger id="api-key-access">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="read">
+										{t("apiKeys.accessRead")}
+									</SelectItem>
+									<SelectItem value="write">
+										{t("apiKeys.accessWrite")}
+									</SelectItem>
+								</SelectContent>
+							</Select>
+							<FieldDescription>
+								{access === "read"
+									? t("apiKeys.accessReadDescription")
+									: t("apiKeys.accessWriteDescription")}
+							</FieldDescription>
 						</Field>
 						{mutation.error && (
 							<p role="alert" className="text-destructive text-sm">

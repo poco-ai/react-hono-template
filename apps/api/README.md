@@ -9,7 +9,7 @@ bun run dev
 
 wrangler dev 会在 http://localhost:8787 启动本地 Workers 运行时（前端 `apps/web` 的 Vite 已配置把 `/api` 代理到这里）。
 
-Google / GitHub 登录是可选的：只有 client id 和 client secret 都非空时才会注册该提供方，缺任何一个则对应按钮不显示。本地 OAuth 请设置 `BETTER_AUTH_URL=http://localhost:5173`，让提供方跳回 Vite 源站，再由 `/api` 代理到 Worker。回调路径为 `http://localhost:5173/api/auth/callback/github` 和 `http://localhost:5173/api/auth/callback/google`。生产环境的 `BETTER_AUTH_URL` 用 API 源站，回调为 `${BETTER_AUTH_URL}/api/auth/callback/github` 与 `${BETTER_AUTH_URL}/api/auth/callback/google`。
+Google / GitHub 登录是可选的：只有 client id 和 client secret 都非空时才会注册该提供方，缺任何一个则对应按钮不显示。本地社交登录可设置 `BETTER_AUTH_URL=http://localhost:5173`，让提供方跳回 Vite 源站，再由 `/api` 代理到 Worker。如果同时启用 MCP OAuth，请改用 API 源站（本地 `http://localhost:8787`），这样 issuer、JWKS 与 MCP resource 的 audience 才能一致；此时社交回调也指向 API 源站。回调路径为 `${BETTER_AUTH_URL}/api/auth/callback/github` 与 `${BETTER_AUTH_URL}/api/auth/callback/google`。生产环境的 `BETTER_AUTH_URL` 用 API 源站。
 
 邮箱验证码登录使用 better-auth 的 `emailOTP` 插件，验证码为 6 位、5 分钟内有效，通过 Resend 发送；`disableSignUp: true`，因此只有已存在的账号可以登录（未注册邮箱不会收到邮件，也不会暴露账号是否存在）。配置以下变量后生效：
 

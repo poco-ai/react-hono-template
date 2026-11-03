@@ -20,11 +20,16 @@ function SettingsLayout() {
 		{ to: "/orgs/$orgId/settings", label: t("settings.general"), exact: true },
 		{ to: "/orgs/$orgId/settings/members", label: t("settings.members") },
 		{ to: "/orgs/$orgId/settings/labels", label: t("settings.labels") },
+		{ to: "/orgs/$orgId/settings/ai", label: t("settings.ai") },
 		...(canManage
 			? [
 					{
 						to: "/orgs/$orgId/settings/api-keys",
 						label: t("settings.apiKeys"),
+					},
+					{
+						to: "/orgs/$orgId/settings/mcp",
+						label: t("settings.mcp"),
 					},
 					{
 						to: "/orgs/$orgId/settings/webhooks",

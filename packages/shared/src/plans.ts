@@ -7,6 +7,9 @@ export const PLANS = {
 		attachmentMaxSize: 10 * 1024 * 1024,
 		apiRateLimit: 60,
 		webhooks: 0,
+		aiMonthlyTokens: 50_000,
+		aiRequestsPerMinute: 10,
+		aiMaxSteps: 4,
 	},
 	pro: {
 		price: 12,
@@ -16,6 +19,9 @@ export const PLANS = {
 		attachmentMaxSize: 50 * 1024 * 1024,
 		apiRateLimit: 600,
 		webhooks: 5,
+		aiMonthlyTokens: 1_000_000,
+		aiRequestsPerMinute: 60,
+		aiMaxSteps: 12,
 	},
 } as const;
 

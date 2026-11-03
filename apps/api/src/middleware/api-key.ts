@@ -1,5 +1,11 @@
 import { env } from "cloudflare:workers";
-import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
+import {
+	ApiError,
+	ApiErrorCode,
+	type ApiKeyScope,
+	normalizeApiKeyScopes,
+	PLANS,
+} from "@workspace/shared";
 import { createMiddleware } from "hono/factory";
 import type { ApiKeyDao } from "../dao/api-key.dao";
 import type { MemberDao } from "../dao/member.dao";
@@ -14,6 +20,7 @@ export type ApiKeyAuth = {
 	orgId: string;
 	keyId: string;
 	keyHash: string;
+	scopes: ApiKeyScope[];
 };
 
 export type ApiKeyEnv = {
@@ -42,6 +49,7 @@ export const requireApiKey = (apiKeyDao: ApiKeyDao) =>
 			orgId: apiKey.orgId,
 			keyId: apiKey.id,
 			keyHash,
+			scopes: normalizeApiKeyScopes(apiKey.scopes),
 		});
 		const lastUsedMs = apiKey.lastUsedAt
 			? new Date(apiKey.lastUsedAt).getTime()

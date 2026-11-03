@@ -31,6 +31,22 @@
 				"limit": 600,
 				"period": 60
 			}
+		},
+		{
+			"name": "RATE_LIMITER_AI_FREE",
+			"namespace_id": "1003",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		},
+		{
+			"name": "RATE_LIMITER_AI_PRO",
+			"namespace_id": "1004",
+			"simple": {
+				"limit": 60,
+				"period": 60
+			}
 		}
 	],
 	"kv_namespaces": [

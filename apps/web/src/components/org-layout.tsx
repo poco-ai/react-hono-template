@@ -27,13 +27,21 @@ import {
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
-import { ChevronsUpDown, Plus, Search, Snowflake } from "lucide-react";
+import {
+	ChevronsUpDown,
+	Plus,
+	Search,
+	Snowflake,
+	Sparkles,
+} from "lucide-react";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
+import { AiChatProvider, useAiChat } from "@/features/ai/chat-provider";
+import { AiChatPanel } from "@/features/ai/components/chat-panel";
 import { useSession } from "@/features/auth/data";
 import type { OrgRole } from "@/features/members/data";
 import { ActiveOrganizationSync } from "@/features/organizations/active-organization";
@@ -54,6 +62,7 @@ function SidebarLink({
 		| "/orgs/$orgId/projects"
 		| "/orgs/$orgId/my-issues"
 		| "/orgs/$orgId/activity"
+		| "/orgs/$orgId/ai"
 		| "/orgs/$orgId/settings"
 		| "/api-docs";
 	exact?: boolean;
@@ -93,6 +102,7 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 	const { isMobile, setOpenMobile } = useSidebar();
+	const { togglePanel, panelOpen } = useAiChat();
 
 	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
 	const onNavigate = () => {
@@ -180,6 +190,26 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 						>
 							{t("nav.activity")}
 						</SidebarLink>
+						<SidebarLink to="/orgs/$orgId/ai" onNavigate={onNavigate}>
+							<Sparkles />
+							<span>{t("nav.ai")}</span>
+						</SidebarLink>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								onClick={() => {
+									if (isMobile) setOpenMobile(false);
+									togglePanel();
+								}}
+								aria-pressed={panelOpen}
+								className="text-sidebar-foreground/80 justify-between"
+							>
+								<Sparkles />
+								<span className="flex-1 text-left">{t("ai.panel.toggle")}</span>
+								<Kbd className="hidden sm:inline-flex">
+									{isMac ? "⌘J" : "Ctrl J"}
+								</Kbd>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
 						<SidebarLink to="/orgs/$orgId/settings" onNavigate={onNavigate}>
 							{t("nav.settings")}
 						</SidebarLink>
@@ -267,8 +297,18 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 }
 
 export function OrgLayout() {
-	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
+
+	return (
+		<AiChatProvider key={orgId} orgId={orgId}>
+			<OrgLayoutContent orgId={orgId} />
+		</AiChatProvider>
+	);
+}
+
+function OrgLayoutContent({ orgId }: { orgId: string }) {
+	const { t } = useTranslation();
+	const { togglePanel } = useAiChat();
 	const navigate = useNavigate();
 	const orgs = useQuery(orgsQuery());
 	const frozen = useOrgFrozen(orgId);
@@ -303,6 +343,14 @@ export function OrgLayout() {
 					<Button
 						variant="ghost"
 						size="icon"
+						aria-label={t("ai.panel.toggle")}
+						onClick={togglePanel}
+					>
+						<Sparkles />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
 						aria-label={t("nav.search")}
 						onClick={() => setPaletteOpen(true)}
 					>
@@ -324,6 +372,7 @@ export function OrgLayout() {
 					</main>
 				</ActiveOrganizationSync>
 			</div>
+			<AiChatPanel />
 			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 		</SidebarProvider>
 	);

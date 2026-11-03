@@ -32,7 +32,15 @@ export const requireOrgMember = (memberDao: MemberDao) =>
 			const isBillingRoute = c.req.path.startsWith(
 				`/api/orgs/${orgId}/billing`,
 			);
-			if (method !== "GET" && method !== "HEAD" && !isBillingRoute) {
+			// AI chat is read-only by default; the capability executor blocks
+			// every write tool when the organization is frozen.
+			const isAiChatRoute = c.req.path.startsWith(`/api/orgs/${orgId}/ai/chat`);
+			if (
+				method !== "GET" &&
+				method !== "HEAD" &&
+				!isBillingRoute &&
+				!isAiChatRoute
+			) {
 				throw new ApiError(
 					403,
 					ApiErrorCode.ORG_FROZEN,

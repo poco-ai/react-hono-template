@@ -129,6 +129,8 @@ const en = {
 		close: "Close",
 		dismiss: "Dismiss",
 		skipToContent: "Skip to content",
+		enabled: "Enabled",
+		disabled: "Disabled",
 	},
 	nav: {
 		openMenu: "Open menu",
@@ -144,6 +146,7 @@ const en = {
 		search: "Search",
 		account: "Account",
 		admin: "Admin",
+		ai: "AI",
 		signOutTitle: "Sign out?",
 		signOutDescription:
 			"You'll need to sign in again to get back into the app.",
@@ -173,6 +176,268 @@ const en = {
 		newProject: "New project",
 		newIssue: "New issue",
 		goToAdmin: "Admin",
+		askAi: "Ask AI",
+	},
+	ai: {
+		title: "AI assistant",
+		pageDescription:
+			"Chat about issues, projects and activity in this organization.",
+		panelTitle: "Ask AI",
+		newChat: "New chat",
+		newChatTitle: "New conversation",
+		untitled: "Untitled conversation",
+		send: "Send",
+		stop: "Stop",
+		composerPlaceholder: "Ask about this workspace…",
+		composerHint: "Enter to send · Shift+Enter for a new line",
+		messagesLabel: "Conversation messages",
+		scrollToEnd: "Scroll to latest message",
+		thinking: "Thinking…",
+		loadingConversation: "Loading conversation…",
+		emptyTitle: "How can I help?",
+		emptyDescription:
+			"I can read this workspace and propose changes. Writes and deletions need your approval before they run.",
+		suggestedTitle: "Suggested prompts",
+		suggestions: {
+			summarize: "Summarize recent activity",
+			summarizePrompt:
+				"Summarize the most recent activity in this organization and highlight anything urgent.",
+			myIssues: "Review my open issues",
+			myIssuesPrompt:
+				"List my open issues, grouped by project, and point out the ones that need attention.",
+			triage: "Triage unassigned issues",
+			triagePrompt:
+				"Find unassigned issues that look important and suggest a priority for each.",
+			draftBug: "Draft a bug report",
+			draftBugPrompt:
+				"Help me draft a clear bug report with steps to reproduce, expected and actual behavior.",
+		},
+		context: {
+			label: "Context",
+			issue: "Issue",
+			project: "Project",
+			none: "No workspace context",
+			pageHint:
+				"No context is attached to this conversation. Open an issue or project and use the AI panel to ask with context.",
+		},
+		usage: {
+			title: "Usage",
+			month: "This month",
+			tokens: "Tokens",
+			ofLimit: "{{used}} of {{limit}}",
+			requests: "Requests",
+			toolCalls: "Tool calls",
+			limits: "{{plan}} plan",
+		},
+		tools: {
+			title: "Tool activity",
+			empty: "No tool calls yet.",
+			details: "Details",
+			input: "Input",
+			output: "Output",
+			links: "Links",
+			fallbackTitle: "Tool call",
+			states: {
+				"input-streaming": "Preparing…",
+				"input-available": "Running…",
+				"approval-requested": "Waiting for approval",
+				"approval-responded": "Responded",
+				"output-available": "Completed",
+				"output-error": "Failed",
+				"output-denied": "Rejected",
+			},
+			effects: {
+				read: "Read",
+				write: "Write",
+				destructive: "Destructive",
+			},
+		},
+		approval: {
+			title: "Approval required",
+			description:
+				"The assistant wants to run “{{tool}}”. Review the proposed input before allowing it.",
+			destructiveTitle: "Destructive action",
+			destructiveDescription:
+				"This action can remove data. Approve only if you are sure.",
+			inputLabel: "Proposed input",
+			approve: "Approve",
+			reject: "Reject",
+			approved: "Approved",
+			rejected: "Rejected",
+		},
+		errors: {
+			title: "AI request failed",
+			disabled: "AI is disabled for this organization.",
+			disabledDescription:
+				"Ask an organization owner or admin to enable AI in the organization settings.",
+			notConfigured: "The AI provider is not configured.",
+			notConfiguredDescription:
+				"A deployment administrator needs to configure an AI provider before chat can work.",
+			quota: "You have reached this month's AI token quota.",
+			quotaDescription:
+				"Upgrade your plan or wait for next month's quota to reset.",
+			rateLimited: "Too many AI requests. Wait a minute, then try again.",
+			toolFailed: "The tool call failed.",
+			conversationNotFound: "This conversation no longer exists.",
+			messageInvalid:
+				"The message could not be processed. Start a new chat and try again.",
+			approvalNotFound:
+				"This approval is no longer pending. Refresh the conversation.",
+			generic: "The AI request failed. Please try again.",
+			openSettings: "Open settings",
+			retry: "Retry",
+		},
+		conversations: {
+			title: "Conversations",
+			searchPlaceholder: "Search conversations…",
+			empty: "No conversations yet",
+			emptyDescription: "Start a chat and it will show up here.",
+			noResults: "No matching conversations",
+			untitled: "Untitled conversation",
+			loadError: "Could not load conversations.",
+			rename: "Rename",
+			delete: "Delete",
+			actions: "Conversation actions",
+			pinned: "Pinned",
+			renameTitle: "Rename conversation",
+			renameDescription: "Choose a short title for this conversation.",
+			titleLabel: "Title",
+			save: "Save",
+			deleteTitle: "Delete conversation?",
+			deleteDescription:
+				"This removes the conversation and all of its messages. This cannot be undone.",
+			deleted: "Conversation deleted.",
+			renamed: "Conversation renamed.",
+		},
+		panel: {
+			expand: "Open full page",
+			close: "Close AI panel",
+			toggle: "Toggle AI panel",
+			shortcut: "⌘J",
+		},
+		page: {
+			contextTitle: "Context",
+			noContext:
+				"No workspace context is attached. Open an issue or project and use the panel to ask with context.",
+			capabilitiesTitle: "Capabilities",
+			capabilitiesDescription:
+				"Read tools run automatically. Writes and deletions require your approval.",
+			suggestionsTitle: "Try asking",
+		},
+		capabilities: {
+			list_orgs: { title: "List organizations" },
+			get_org: { title: "Get organization" },
+			list_members: { title: "List members" },
+			list_projects: { title: "List projects" },
+			get_project: { title: "Get project" },
+			list_issues: { title: "List issues" },
+			search_issues: { title: "Search issues" },
+			get_issue: { title: "Get issue" },
+			list_comments: { title: "List comments" },
+			list_labels: { title: "List labels" },
+			get_issue_activity: { title: "Get issue activity" },
+			get_org_activity: { title: "Get organization activity" },
+			create_issue: { title: "Create issue" },
+			update_issue: { title: "Update issue" },
+			delete_issue: { title: "Delete issue" },
+			create_comment: { title: "Create comment" },
+			update_comment: { title: "Update comment" },
+			delete_comment: { title: "Delete comment" },
+			create_project: { title: "Create project" },
+			create_label: { title: "Create label" },
+			update_label: { title: "Update label" },
+			delete_label: { title: "Delete label" },
+		},
+		links: {
+			issue: "Open issue",
+			project: "Open project",
+			org: "Open organization",
+			labels: "Open labels",
+		},
+		settings: {
+			description:
+				"Control the assistant, model selection, retention and MCP write policy for this organization.",
+			model: "Default model",
+			providerDefault: "Provider default",
+			modelDescription:
+				"Only models exposed by this deployment can be selected.",
+			enabled: "Enable AI for this organization",
+			enabledDescription:
+				"Members can use the chat panel and /ai page when enabled.",
+			usageTitle: "Usage this month",
+			planLabel: "Plan",
+			controlsTitle: "Organization settings",
+			controlsDescription:
+				"Owners and admins can change these settings; members can read them.",
+			retentionDays: "Conversation retention (days)",
+			retentionDescription:
+				"Conversations older than this are removed by the scheduled cleanup.",
+			strictMcpWrites: "Block MCP writes",
+			strictMcpWritesDescription:
+				"When enabled, MCP clients are read-only; use the in-app assistant for approved writes.",
+			notConfiguredTitle: "AI provider not configured",
+			notConfiguredDescription:
+				"Set AI_PROVIDER=openai-compatible with AI_BASE_URL, AI_API_KEY and AI_MODEL on the API worker.",
+			mockTitle: "Mock provider",
+			mockDescription:
+				"The deployment is running a deterministic mock model. Configure an OpenAI-compatible provider for real answers.",
+			mock: "Mock",
+			noModel: "No model",
+			saved: "AI settings saved.",
+		},
+	},
+	mcp: {
+		description:
+			"Connect Claude, Cursor, ChatGPT or your own agent to this workspace through the Model Context Protocol.",
+		enabled: "Enabled",
+		disabled: "Disabled",
+		disabledTitle: "MCP is disabled",
+		disabledDescription:
+			"Set MCP_ENABLED=true on the API worker to expose the endpoint.",
+		endpointTitle: "MCP endpoint",
+		endpointDescription:
+			"Use this URL as the remote MCP server. Authentication is required.",
+		transport: "Transport",
+		apiKeyTitle: "API key access",
+		apiKeyDescription:
+			"Stable option for headless agents, scripts and CI. Create a key with the scopes you need.",
+		oauthTitle: "OAuth access",
+		oauthDescription:
+			"Interactive clients can discover the authorization server and ask the user to sign in and consent.",
+		dcr: "Dynamic client registration",
+		createKey: "Manage API keys",
+		instructionsTitle: "Connection notes",
+		instructions: {
+			apiKey:
+				"Create an API key with the scopes you need and send it as Authorization: Bearer sk_...",
+			oauth:
+				"OAuth-capable clients can connect to the endpoint and use the web login and consent pages.",
+			orgId:
+				"Organization-scoped tools accept an optional orgId. API keys are pinned to their organization; OAuth callers should call list_orgs when they belong to more than one organization.",
+		},
+		adminOnly:
+			"Only owners and admins can create API keys or change MCP settings.",
+		securityTitle: "Use read-only keys for autonomous agents",
+		securityDescription:
+			"Write and destructive tools are guarded by scopes and approvals, but a read-only key is the safest default for unattended agents.",
+		snippet: "Config",
+		consent: {
+			title: "Authorize MCP client",
+			description:
+				"An MCP client is requesting access to this workspace. Review the scopes before continuing.",
+			unknownClient: "Unknown client",
+			signInTitle: "Sign in required",
+			signInDescription:
+				"Sign in to your account before approving this connection.",
+			client: "Client",
+			scopes: "Requested scopes",
+			noScopes: "No scopes requested",
+			approve: "Approve",
+			deny: "Deny",
+			revokeHint:
+				"To revoke access later, sign out of the client or ask an organization admin to remove the connection.",
+			failed: "Could not complete the authorization request.",
+		},
 	},
 	errors: {
 		generic: "Something went wrong. Please try again.",
@@ -586,6 +851,8 @@ const en = {
 		general: "General",
 		members: "Members",
 		labels: "Labels",
+		ai: "AI",
+		mcp: "MCP",
 		apiKeys: "API Keys",
 		webhooks: "Webhooks",
 		billing: "Billing",
@@ -660,6 +927,13 @@ const en = {
 			"Give the key a recognizable name — it can be revoked at any time.",
 		name: "Name",
 		namePlaceholder: "e.g. CI pipeline",
+		access: "Access level",
+		accessRead: "Read only",
+		accessWrite: "Read and write",
+		accessReadDescription:
+			"Recommended for MCP agents and integrations that should never change data.",
+		accessWriteDescription:
+			"Allows creating and updating issues, comments and projects.",
 		key: "Key",
 		created: "Created",
 		lastUsed: "Last used",

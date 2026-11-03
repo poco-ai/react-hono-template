@@ -21,6 +21,7 @@ import {
 	PlusIcon,
 	SettingsIcon,
 	ShieldIcon,
+	Sparkles,
 	TagIcon,
 	UsersIcon,
 	WebhookIcon,
@@ -28,6 +29,7 @@ import {
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useAiChat } from "@/features/ai/chat-provider";
 import { useSession } from "@/features/auth/data";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { issueQuery, issueSearchQuery } from "@/features/issues/data";
@@ -49,6 +51,7 @@ export function CommandPalette({
 	const matchRoute = useMatchRoute();
 	const { canManage } = useOrgRole(orgId);
 	const { data: session } = useSession();
+	const { setPanelOpen } = useAiChat();
 	const projects = useQuery({ ...projectsQuery(orgId), enabled: open });
 
 	// cmdk owns the input; mirror the term so it can be debounced into an
@@ -348,6 +351,16 @@ export function CommandPalette({
 				)}
 				<CommandSeparator />
 				<CommandGroup heading={t("command.groups.actions")}>
+					<CommandItem
+						onSelect={() =>
+							run(() => {
+								setPanelOpen(true);
+							})
+						}
+					>
+						<Sparkles />
+						{t("command.askAi")}
+					</CommandItem>
 					{currentProjectId && (
 						<CommandItem
 							onSelect={() =>

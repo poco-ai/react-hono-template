@@ -12,11 +12,15 @@
 		"db:push": "drizzle-kit push"
 	},
 	"dependencies": {
+		"@ai-sdk/openai-compatible": "^3.0.84",
 		"@better-auth/drizzle-adapter": "^1.7.6",
+		"@better-auth/mcp": "^1.7.15",
 		"@hono/zod-openapi": "^1.6.3",
+		"@modelcontextprotocol/server": "^2.4.0",
 		"@workspace/shared": "workspace:*",
+		"ai": "^7.0.162",
 		"aws4fetch": "^1.0.20",
-		"better-auth": "^1.7.6",
+		"better-auth": "^1.7.15",
 		"dotenv": "^18.0.4",
 		"drizzle-orm": "^1.0.0-rc.4",
 		"hono": "^4.13.9",

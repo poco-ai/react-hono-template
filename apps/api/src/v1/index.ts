@@ -1,6 +1,11 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { ApiOk } from "@workspace/shared";
-import { ApiError, ApiErrorCode } from "@workspace/shared";
+import {
+	ApiError,
+	ApiErrorCode,
+	type ApiKeyScope,
+	scopeSatisfies,
+} from "@workspace/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
@@ -35,6 +40,20 @@ type V1Env = {
 const okV1 = <T, S extends 200 | 201>(c: Context<V1Env>, data: T, status: S) =>
 	c.json<ApiOk<T>, S>({ ok: true, data }, status);
 
+/**
+ * Scope check for public API endpoints. Scopes are cumulative, so a `write`
+ * key can also read and an `admin` key can do everything.
+ */
+const assertScope = (c: Context<V1Env>, scope: ApiKeyScope) => {
+	if (!scopeSatisfies(c.get("apiKeyAuth").scopes, scope)) {
+		throw new ApiError(
+			403,
+			ApiErrorCode.MCP_FORBIDDEN_SCOPE,
+			`This endpoint requires the ${scope} API key scope.`,
+		);
+	}
+};
+
 export const createV1App = (dependencies: Dependencies) => {
 	const { apiKeyDao, memberDao } = dependencies.daos;
 	const { planService, projectService, issueService, labelService } =
@@ -58,6 +77,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	}
 
 	app.openapi(listProjectsRoute, async (c) => {
+		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
 		return okV1(
 			c,
@@ -67,6 +87,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(createProjectRoute, async (c) => {
+		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
 		return okV1(
 			c,
@@ -76,6 +97,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(getProjectRoute, async (c) => {
+		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
 		return okV1(
 			c,
@@ -85,6 +107,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(createIssueRoute, async (c) => {
+		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
 		const issue = await issueService.createIssue(
 			orgId,
@@ -97,6 +120,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(listIssuesRoute, async (c) => {
+		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
 		return okV1(
 			c,
@@ -106,6 +130,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(getIssueRoute, async (c) => {
+		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
 		return okV1(
 			c,
@@ -115,6 +140,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(updateIssueRoute, async (c) => {
+		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
 		const existing = await issueService.getIssueById(
 			orgId,
@@ -132,6 +158,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(deleteIssueRoute, async (c) => {
+		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
 		const existing = await issueService.getIssueById(
 			orgId,
@@ -148,6 +175,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	});
 
 	app.openapi(listLabelsRoute, async (c) => {
+		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
 		return okV1(c, await labelService.listLabels(orgId), 200);
 	});

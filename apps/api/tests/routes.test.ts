@@ -69,7 +69,11 @@ const expectError = async (
 
 test("composed admin and organization routes require a session", async () => {
 	const app = appFor({ loggedIn: false });
-	for (const path of ["/api/admin/users", "/api/orgs/org/projects"]) {
+	for (const path of [
+		"/api/admin/users",
+		"/api/orgs/org/projects",
+		"/api/orgs/org/mcp/info",
+	]) {
 		await expectError(await app.request(path), 401, "UNAUTHORIZED");
 	}
 	assert.equal((await app.request("/api/bootstrap")).status, 200);

@@ -15,6 +15,10 @@ export type ActivityInsert = {
 	field: string | null;
 	oldValue: string | null;
 	newValue: string | null;
+	/** Origin of the write, e.g. "ai" or "mcp"; null for the web app. */
+	source?: string | null;
+	/** Originating tool-call id when the write came from AI/MCP. */
+	sourceId?: string | null;
 };
 
 /**

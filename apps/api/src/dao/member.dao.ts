@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull, lt } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, lt } from "drizzle-orm";
 import { invitation, member, organization, user } from "../db/auth-schema";
 import { subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
@@ -11,6 +11,23 @@ export type MemberWithOrg = {
 	createdAt: Date;
 	updatedAt: Date;
 	frozen: boolean;
+};
+
+export type MemberOrgSummary = {
+	id: string;
+	name: string;
+	slug: string;
+	frozen: boolean;
+	role: string;
+};
+
+export type MemberDirectoryEntry = {
+	userId: string;
+	name: string;
+	email: string;
+	image: string | null;
+	role: string;
+	createdAt: Date;
 };
 
 export const createMemberDao = (db: Database) => ({
@@ -34,6 +51,43 @@ export const createMemberDao = (db: Database) => ({
 			.where(eq(organization.id, orgId))
 			.get();
 		return row?.frozen ?? false;
+	},
+
+	listMembershipsByUser: async (
+		userId: string,
+	): Promise<MemberOrgSummary[]> => {
+		const rows = await db
+			.select({
+				id: organization.id,
+				name: organization.name,
+				slug: organization.slug,
+				frozen: organization.frozen,
+				role: member.role,
+			})
+			.from(member)
+			.innerJoin(organization, eq(organization.id, member.organizationId))
+			.where(eq(member.userId, userId))
+			.orderBy(asc(organization.name), asc(organization.id))
+			.all();
+		return rows;
+	},
+
+	listByOrg: async (orgId: string): Promise<MemberDirectoryEntry[]> => {
+		const rows = await db
+			.select({
+				userId: member.userId,
+				name: user.name,
+				email: user.email,
+				image: user.image,
+				role: member.role,
+				createdAt: member.createdAt,
+			})
+			.from(member)
+			.innerJoin(user, eq(user.id, member.userId))
+			.where(eq(member.organizationId, orgId))
+			.orderBy(asc(user.name), asc(member.userId))
+			.all();
+		return rows;
 	},
 
 	countByOrg: async (orgId: string): Promise<number> => {

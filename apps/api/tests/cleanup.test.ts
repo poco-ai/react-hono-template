@@ -162,12 +162,17 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 	};
 	try {
 		await handleScheduled({
-			cleanup: async () => ({ expiredInvitations: 2, failedDeliveries: 1 }),
+			cleanup: async () => ({
+				expiredInvitations: 2,
+				failedDeliveries: 1,
+				deletedConversations: 3,
+			}),
 		});
 		assert.ok(
 			logs.some(
 				(args) =>
-					args[0] === "[cron] cleanup expiredInvitations=2 failedDeliveries=1",
+					args[0] ===
+					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3",
 			),
 		);
 		await handleScheduled({

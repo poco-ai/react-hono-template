@@ -16,6 +16,8 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 - Public API (`/api/v1`) with `sk_` API keys, per-plan rate limiting, auto-generated OpenAPI docs (Scalar), and outbound webhooks (HMAC-SHA256 signed, delivery log, retries, ping/redeliver)
 - Stripe subscriptions with Free/Pro quota enforcement (members, projects, webhooks, attachment size, API rate) and a mock mode that runs the whole upgrade/downgrade flow without Stripe
 - Platform admin area: Better Auth UI user management with URL-driven email/name search, filters, roles, bans and session controls; org overview with freeze/unfreeze and global stats
+- **AI assistant** (`/ai` + a global `Cmd/Ctrl+J` side panel): streaming chat over the organization's data, tool calls rendered inline, read tools run automatically, writes/deletes require explicit approval, conversation history, per-plan monthly token quotas and usage meters
+- **Remote MCP server** (`POST /mcp`): the same capability layer exposed to Claude, Cursor, ChatGPT and custom agents, with API-key scopes (`read`/`write`/`admin`) or better-auth MCP OAuth (PKCE, JWKS, consent screen, opt-in dynamic client registration), plus issue/project resources and prompt templates
 
 **Template capabilities**
 
@@ -83,13 +85,23 @@ All optional except `BETTER_AUTH_SECRET`. Local: `apps/api/.dev.vars`; productio
 | Variable | Purpose |
 |---|---|
 | `BETTER_AUTH_SECRET` | Auth secret (required) |
-| `BETTER_AUTH_URL` | Public auth base URL. Local OAuth uses `http://localhost:5173` so providers redirect to Vite and the `/api` proxy reaches the Worker (`/api/auth/callback/github`, `/api/auth/callback/google`). Production uses the API origin, so callbacks are `${BETTER_AUTH_URL}/api/auth/callback/github` and `${BETTER_AUTH_URL}/api/auth/callback/google`. |
+| `BETTER_AUTH_URL` | Public auth base URL. Local social OAuth can use `http://localhost:5173` so providers redirect to Vite and the `/api` proxy reaches the Worker. If you enable MCP OAuth, use the API origin (`http://localhost:8787` locally, the Worker origin in production) so the OAuth issuer/JWKS and MCP resource agree; social callbacks then target the API origin. Production uses the API origin, so callbacks are `${BETTER_AUTH_URL}/api/auth/callback/github` and `${BETTER_AUTH_URL}/api/auth/callback/google`. |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth. Both must be non-empty; otherwise the GitHub button is hidden. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google OAuth. Both must be non-empty; otherwise the Google button is hidden. |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Email OTP sign-in through [Resend](https://resend.com). Set both or neither; without them the code is written to the Worker console (local development only). `EMAIL_FROM` must be a verified sender, e.g. `Acme <no-reply@example.com>`. |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_BASE_URL` | S3-compatible storage for issue attachments — R2 in production, MinIO locally (see Quickstart); without it, attachment endpoints return 503 and uploads fail with a storage error. See [apps/api/README.md](apps/api/README.md) incl. bucket CORS |
 | `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | Real Stripe billing (all three or none; partial config returns 503) |
 | `BILLING_MOCK_MODE` | `true` enables simulated upgrades when Stripe is absent (intended for local/dev only) |
+| `AI_ENABLED` | `true` enables the in-app AI assistant and its routes. |
+| `AI_PROVIDER` | `mock` (deterministic, offline; default in dev) or `openai-compatible`. |
+| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | OpenAI-compatible endpoint credentials. All three are required for a real provider; partial config fails closed with `AI_NOT_CONFIGURED`. Works with OpenAI, DeepSeek/SiliconFlow, Qwen, OpenRouter, Ollama and AI Gateway. |
+| `AI_MODEL_ALLOWLIST` | Optional comma-separated models the UI may select; `AI_MODEL` must be included when set. |
+| `AI_MAX_STEPS` / `AI_MAX_OUTPUT_TOKENS` | Optional caps for a chat turn. |
+| `APP_WEB_URL` | Public web origin used for AI deep links and MCP login/consent redirects. |
+| `MCP_ENABLED` | `true` exposes `POST /mcp`. |
+| `MCP_RESOURCE` | Canonical MCP protected-resource URL / OAuth audience, e.g. `https://api.example.com/mcp`. |
+| `MCP_LOGIN_PAGE` / `MCP_CONSENT_PAGE` | Web login and consent pages used by MCP OAuth. Defaults to `${APP_WEB_URL}/login` and `/consent`. |
+| `MCP_DCR_ENABLED` | Enables unauthenticated RFC 7591 dynamic client registration. Local/dev only; production should leave it off and use CIMD or manually provisioned clients. |
 
 ## Layout
 
@@ -103,6 +115,18 @@ packages/ui       shadcn/ui components (add via `bunx shadcn@latest add <name> -
 Conventions, workflows and per-app notes live in [AGENTS.md](AGENTS.md), [apps/api/README.md](apps/api/README.md) and [apps/web/README.md](apps/web/README.md).
 
 Every frontend domain exposes its data layer through `features/<domain>/data.ts`: query keys/factories, requests, mutation hooks and cache policies live together. Pages and components consume that entry point and own forms, dialogs, navigation and translated feedback. This convention applies to all domains, without a separate location for simpler features.
+
+## AI assistant and MCP
+
+The AI and MCP surfaces share one framework-neutral capability registry in `apps/api/src/capabilities`: the chat adapter (`apps/web` → AI SDK) and the MCP adapter (`apps/api/src/mcp`) only translate protocols. Authorization (org membership, role, API-key scope, frozen org), input validation and safe output projections live in the capability executor, so a new domain operation is added once and appears in both surfaces.
+
+**Local chat (no API key required).** Set `AI_ENABLED=true` and leave `AI_PROVIDER=mock`; the deterministic mock provider streams a fixed reply so the full UI, conversation persistence, quotas and tool cards work offline. To use a real model, set `AI_PROVIDER=openai-compatible` plus `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL` (all three; the deployment fails closed otherwise). `AI_MODEL` must support tool calling and streaming. The model receives a server-owned system prompt; client history is persisted in D1, and write tools pause for explicit approval.
+
+**MCP.** Set `MCP_ENABLED=true`, `MCP_RESOURCE` (the public API origin + `/mcp`), `APP_WEB_URL` and the login/consent pages. Connect with either an `sk_...` API key (`Authorization: Bearer`) or OAuth. The protected-resource metadata is served at `/.well-known/oauth-protected-resource/mcp`; the authorization server metadata/JWKS live under `/api/auth/...`. API keys are pinned to one organization; OAuth callers pass `orgId` (or call `list_orgs` first when they belong to multiple organizations). `tools/list` is scope-filtered; `tools/call` re-authorizes. Read-only keys are the recommended default for unattended agents.
+
+**Quotas and cost.** Free/Pro limits live in `packages/shared/src/plans.ts` (`aiMonthlyTokens`, `aiRequestsPerMinute`, `aiMaxSteps`). Chat usage is recorded per org/user/day in D1 and checked before the model call; MCP does not consume AI tokens, it uses the plan API rate limit. Use the organization AI settings page for enablement, model selection, retention and the strict MCP write toggle. Provider keys stay server-side and are never returned by `/api/config`.
+
+**Production notes.** `MCP_DCR_ENABLED` is intentionally off by default in production; enable CIMD or provision clients explicitly. OAuth tables are part of the normal drizzle migration. The auth instance is created lazily per Worker isolate because the MCP OAuth plugin seeds a resource row during init and Workers disallow D1 I/O at module scope. CIMD on Workers needs an application-owned metadata fetch transport; DCR is the simpler local/dev path. Conversations are private to their creator; admins see aggregate usage only. A scheduled cleanup removes conversations past the organization retention window.
 
 ## Production notes — honest simplifications
 

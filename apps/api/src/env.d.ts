@@ -19,6 +19,22 @@ declare global {
 			STRIPE_PRICE_ID?: string;
 			STRIPE_WEBHOOK_SECRET?: string;
 			BILLING_MOCK_MODE?: string;
+			AI_ENABLED?: string;
+			MCP_ENABLED?: string;
+			AI_PROVIDER?: string;
+			AI_BASE_URL?: string;
+			AI_API_KEY?: string;
+			AI_MODEL?: string;
+			AI_MODEL_ALLOWLIST?: string;
+			AI_MAX_STEPS?: string;
+			AI_MAX_OUTPUT_TOKENS?: string;
+			APP_WEB_URL?: string;
+			MCP_RESOURCE?: string;
+			MCP_LOGIN_PAGE?: string;
+			MCP_CONSENT_PAGE?: string;
+			MCP_DCR_ENABLED?: string;
+			RATE_LIMITER_AI_FREE: RateLimit;
+			RATE_LIMITER_AI_PRO: RateLimit;
 		}
 	}
 
@@ -41,6 +57,22 @@ declare global {
 		STRIPE_PRICE_ID?: string;
 		STRIPE_WEBHOOK_SECRET?: string;
 		BILLING_MOCK_MODE?: string;
+		AI_ENABLED?: string;
+		MCP_ENABLED?: string;
+		AI_PROVIDER?: string;
+		AI_BASE_URL?: string;
+		AI_API_KEY?: string;
+		AI_MODEL?: string;
+		AI_MODEL_ALLOWLIST?: string;
+		AI_MAX_STEPS?: string;
+		AI_MAX_OUTPUT_TOKENS?: string;
+		APP_WEB_URL?: string;
+		MCP_RESOURCE?: string;
+		MCP_LOGIN_PAGE?: string;
+		MCP_CONSENT_PAGE?: string;
+		MCP_DCR_ENABLED?: string;
+		RATE_LIMITER_AI_FREE: RateLimit;
+		RATE_LIMITER_AI_PRO: RateLimit;
 	}
 }
 

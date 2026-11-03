@@ -2,9 +2,11 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 
 # Optional Google and GitHub login. A provider is enabled only when both its
 # client id and client secret are non-empty; missing keys hide that button.
-# Local OAuth: BETTER_AUTH_URL=http://localhost:5173
+# Local social OAuth: BETTER_AUTH_URL=http://localhost:5173
 # Callbacks: http://localhost:5173/api/auth/callback/github
 #            http://localhost:5173/api/auth/callback/google
+# When MCP OAuth is enabled, use the API origin instead (http://localhost:8787)
+# so the issuer, JWKS and MCP resource audience agree.
 # Production BETTER_AUTH_URL is the API origin instead.
 # BETTER_AUTH_URL=http://localhost:5173
 # GITHUB_CLIENT_ID=
@@ -35,3 +37,34 @@ BILLING_MOCK_MODE=true
 # STRIPE_SECRET_KEY=
 # STRIPE_PRICE_ID=
 # STRIPE_WEBHOOK_SECRET=
+
+# AI assistant and MCP server (both features are opt-in).
+# AI assistant (opt-in). Local AI defaults to the deterministic, network-free
+# mock provider. To use an OpenAI-compatible endpoint (DeepSeek, OpenRouter, a
+# local gateway, ...) set AI_PROVIDER=openai-compatible and all three of
+# AI_BASE_URL, AI_API_KEY and AI_MODEL. Partial config fails closed with
+# AI_NOT_CONFIGURED.
+# AI_ENABLED=false
+# AI_PROVIDER=mock
+# AI_BASE_URL=https://api.example.com/v1
+# AI_API_KEY=
+# AI_MODEL=some-model
+# Optional comma-separated allowlist; AI_MODEL must be included when set.
+# AI_MODEL_ALLOWLIST=
+# AI_MAX_STEPS=8
+# AI_MAX_OUTPUT_TOKENS=2048
+# Public web origin used for deep links in AI replies and MCP login/consent.
+# APP_WEB_URL=http://localhost:5173
+
+# Remote MCP server (opt-in). The endpoint is POST <API origin>/mcp and accepts
+# either an API key (Authorization: Bearer sk_...) or better-auth MCP OAuth.
+# MCP_RESOURCE is the canonical protected-resource URL and OAuth audience; it
+# must match how clients reach the API (localhost:8787 in dev).
+# MCP_ENABLED=true
+# MCP_RESOURCE=http://localhost:8787/mcp
+# MCP_LOGIN_PAGE=http://localhost:5173/login
+# MCP_CONSENT_PAGE=http://localhost:5173/consent
+# MCP_DCR_ENABLED=true enables RFC 7591 dynamic client registration *without*
+# authentication. Local/dev only: any party could register a client. In
+# production leave this off and use CIMD or manually provisioned clients.
+# MCP_DCR_ENABLED=false

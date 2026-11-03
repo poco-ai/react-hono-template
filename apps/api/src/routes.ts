@@ -5,10 +5,13 @@ import type { Dependencies } from "./dependencies";
 import type { Auth } from "./lib/auth";
 import { fail } from "./lib/response";
 import type { SocialProvidersConfig } from "./lib/social-providers";
+import { type McpConfig, resolveMcpConfig } from "./mcp/config";
+import { createMcpRoutes } from "./mcp/routes";
 import { requireAuth } from "./middleware/auth";
 import { requireOrgMember } from "./middleware/org";
 import { createActivitiesRoutes } from "./routes/activities";
 import { createAdminRoutes } from "./routes/admin";
+import { createAiRoutes } from "./routes/ai";
 import { createApiKeysRoutes } from "./routes/api-keys";
 import { createAttachmentsRoutes } from "./routes/attachments";
 import { createBillingRoutes } from "./routes/billing";
@@ -25,10 +28,12 @@ export const createRoutes = ({
 	auth,
 	dependencies,
 	social,
+	mcp = resolveMcpConfig(),
 }: {
 	auth: Auth;
 	dependencies: Dependencies;
 	social?: SocialProvidersConfig;
+	mcp?: McpConfig;
 }) => {
 	return (
 		new Hono()
@@ -68,6 +73,9 @@ export const createRoutes = ({
 				requireAuth(auth),
 				requireOrgMember(dependencies.daos.memberDao),
 			)
+			// Mounted after the org middleware so /api/orgs/:orgId/mcp/* is
+			// session-authenticated; a route registered before `use` bypasses it.
+			.route("/", createMcpRoutes({ config: mcp }))
 			.route("/", createProjectsRoutes(dependencies.services.projectService))
 			.route("/", createIssuesRoutes(dependencies.services.issueService))
 			.route("/", createCommentsRoutes(dependencies.services.commentService))
@@ -80,6 +88,17 @@ export const createRoutes = ({
 			.route("/", createApiKeysRoutes(dependencies.services.apiKeyService))
 			.route("/", createWebhooksRoutes(dependencies.services.webhookService))
 			.route("/", createBillingRoutes(dependencies.services.billingService))
+			.route(
+				"/",
+				createAiRoutes({
+					conversations: dependencies.services.aiConversationService,
+					chat: dependencies.services.aiChatService,
+					usage: dependencies.services.aiUsageService,
+					settings: dependencies.services.orgAiSettingsService,
+					plans: dependencies.services.planService,
+					provider: dependencies.ai?.provider,
+				}),
+			)
 	);
 };
 

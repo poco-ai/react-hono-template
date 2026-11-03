@@ -28,7 +28,10 @@ export const requireAuth = (auth: Auth) =>
 export const requirePermission = (permission: Permission) =>
 	createMiddleware<SessionEnv>(async (c, next) => {
 		const session = c.get("session");
-		const role = session?.user.role;
+		// The admin plugin adds `role` to the user, but better-auth's plugin
+		// inference loses it once a plugin with a generic option type (the MCP
+		// OAuth provider) is registered. Keep the runtime contract explicit.
+		const role = (session?.user as { role?: string } | undefined)?.role;
 		if (!role || !hasPermission(role, permission)) {
 			throw new ApiError(
 				403,

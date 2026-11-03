@@ -1,12 +1,14 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
+import { mcp as mcpPlugin } from "@better-auth/mcp";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
+import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import {
 	APIError,
 	createAuthMiddleware,
 	getSessionFromCtx,
 } from "better-auth/api";
-import { admin, emailOTP, organization } from "better-auth/plugins";
+import { admin, emailOTP, jwt, organization } from "better-auth/plugins";
 import * as authSchema from "../db/auth-schema";
 import type { Database } from "../db/types";
 import type { AuthPolicyService } from "../services/auth-policy.service";
@@ -38,6 +40,21 @@ export const sendResetPasswordToConsole = async ({
 	);
 };
 
+export type McpAuthConfig = {
+	enabled: boolean;
+	/** Canonical MCP protected-resource URL used as the token audience. */
+	resource: string;
+	loginPage: string;
+	consentPage: string;
+	scopes: readonly string[];
+	/**
+	 * Enables RFC 7591 dynamic client registration, including unauthenticated
+	 * registration. Intended for local/dev only: any party could register a
+	 * client. Production should use CIMD or manually provisioned clients.
+	 */
+	dcrEnabled: boolean;
+};
+
 export const createAuth = ({
 	db,
 	secret,
@@ -46,6 +63,7 @@ export const createAuth = ({
 	baseURL,
 	social,
 	email,
+	mcp,
 }: {
 	db: Database;
 	secret: string;
@@ -54,6 +72,7 @@ export const createAuth = ({
 	baseURL?: string;
 	social?: SocialProvidersConfig;
 	email?: EmailDeliveryConfig;
+	mcp?: McpAuthConfig;
 }) => {
 	const providers = enabledSocialProviders(social);
 	const trimmedBaseURL = baseURL?.trim();
@@ -115,6 +134,27 @@ export const createAuth = ({
 			sendResetPassword: sendResetPasswordToConsole,
 		},
 		plugins: [
+			// jwt() backs OAuth access tokens / the JWKS used by MCP clients.
+			jwt(),
+			...(mcp?.enabled
+				? [
+						mcpPlugin({
+							resource: mcp.resource,
+							loginPage: mcp.loginPage,
+							consentPage: mcp.consentPage,
+							scopes: [...mcp.scopes],
+							...(mcp.dcrEnabled
+								? {
+										allowDynamicClientRegistration: true,
+										allowUnauthenticatedClientRegistration: true,
+									}
+								: {}),
+							// The oauth-provider return type is structurally a plugin but
+							// its generic signature prevents better-auth's plugin-field
+							// inference (admin role, etc.) from seeing the other plugins.
+						}) as BetterAuthPlugin,
+					]
+				: []),
 			admin({
 				defaultRole: "user",
 				adminRoles: ["admin"],
