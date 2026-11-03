@@ -188,7 +188,7 @@ const zh: typeof en = {
 		panelTitle: "询问 AI",
 		newChat: "新对话",
 		newChatTitle: "新对话",
-		recentChats: "最近对话",
+		allConversations: "全部对话",
 		untitled: "未命名对话",
 		send: "发送",
 		stop: "停止",

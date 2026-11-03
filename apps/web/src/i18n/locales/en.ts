@@ -190,7 +190,7 @@ const en = {
 		panelTitle: "Ask AI",
 		newChat: "New chat",
 		newChatTitle: "New conversation",
-		recentChats: "Recent chats",
+		allConversations: "All conversations",
 		untitled: "Untitled conversation",
 		send: "Send",
 		stop: "Stop",
