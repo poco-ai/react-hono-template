@@ -1,28 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-	Link,
-	Outlet,
-	useLocation,
-	useNavigate,
-	useParams,
-} from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
+import { Kbd } from "@workspace/ui/components/kbd";
 import {
-	Sheet,
-	SheetContent,
-	SheetTitle,
-} from "@workspace/ui/components/sheet";
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarMenuSkeleton,
+	SidebarProvider,
+	SidebarTrigger,
+	useSidebar,
+} from "@workspace/ui/components/sidebar";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
-import { ChevronsUpDown, Menu, Plus, Search, Snowflake } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
-
+import { ChevronsUpDown, Plus, Search, Snowflake } from "lucide-react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
@@ -56,28 +62,27 @@ function SidebarLink({
 }) {
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
 	return (
-		<Link
-			to={to}
-			params={to === "/api-docs" ? undefined : { orgId }}
-			activeOptions={{ exact }}
-			onClick={onNavigate}
-			className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium"
-			activeProps={{
-				className: "bg-accent text-foreground",
-			}}
-		>
-			{children}
-		</Link>
+		<SidebarMenuItem>
+			<SidebarMenuButton
+				render={
+					<Link
+						to={to}
+						params={to === "/api-docs" ? undefined : { orgId }}
+						activeOptions={{ exact }}
+						onClick={onNavigate}
+						activeProps={{
+							className: "bg-sidebar-accent text-sidebar-accent-foreground",
+						}}
+					/>
+				}
+			>
+				{children}
+			</SidebarMenuButton>
+		</SidebarMenuItem>
 	);
 }
 
-function SidebarContent({
-	onNavigate,
-	onOpenCommand,
-}: {
-	onNavigate?: () => void;
-	onOpenCommand?: () => void;
-}) {
+function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
 	const navigate = useNavigate();
@@ -87,8 +92,12 @@ function SidebarContent({
 	const { role } = useOrgRole(orgId);
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
+	const { isMobile, setOpenMobile } = useSidebar();
 
 	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
+	const onNavigate = () => {
+		if (isMobile) setOpenMobile(false);
+	};
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 	const activeProjects = (projects.data ?? []).filter(
@@ -97,7 +106,7 @@ function SidebarContent({
 
 	return (
 		<>
-			<div className="p-2">
+			<SidebarHeader>
 				<OrganizationSwitcher
 					align="start"
 					className="w-full"
@@ -110,9 +119,11 @@ function SidebarContent({
 								"h-9 w-full justify-between px-2 text-left font-medium",
 							)}
 						>
-							<span className="min-w-0 truncate">
-								{currentOrg?.name ?? t("common.loading")}
-							</span>
+							{currentOrg ? (
+								<span className="min-w-0 truncate">{currentOrg.name}</span>
+							) : (
+								<Skeleton className="h-4 w-24" />
+							)}
 							<ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
 						</DropdownMenuTrigger>
 					}
@@ -122,103 +133,130 @@ function SidebarContent({
 							to: "/orgs/$orgId/projects",
 							params: { orgId: organization.id },
 						});
-						onNavigate?.();
+						onNavigate();
 					}}
 					onOrganizationCreated={(organization) => {
 						void navigate({
 							to: "/orgs/$orgId/projects",
 							params: { orgId: organization.id },
 						});
-						onNavigate?.();
+						onNavigate();
 					}}
 				/>
-			</div>
-			<nav className="flex flex-col gap-0.5 px-2">
-				<Button
-					variant="ghost"
-					onClick={onOpenCommand}
-					className="text-muted-foreground hover:text-foreground mb-1 h-8 w-full justify-between px-2 text-sm font-normal"
-				>
-					<span className="flex items-center gap-2">
-						<Search className="size-4" />
-						{t("command.trigger")}
-					</span>
-					<kbd className="bg-muted pointer-events-none hidden h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] font-medium sm:inline-flex">
-						{isMac ? "⌘K" : "Ctrl K"}
-					</kbd>
-				</Button>
-				<SidebarLink to="/orgs/$orgId/projects" exact onNavigate={onNavigate}>
-					{t("nav.projects")}
-				</SidebarLink>
-				<SidebarLink to="/orgs/$orgId/my-issues" exact onNavigate={onNavigate}>
-					{t("nav.myIssues")}
-				</SidebarLink>
-				<SidebarLink to="/orgs/$orgId/activity" exact onNavigate={onNavigate}>
-					{t("nav.activity")}
-				</SidebarLink>
-				<SidebarLink to="/orgs/$orgId/settings" onNavigate={onNavigate}>
-					{t("nav.settings")}
-				</SidebarLink>
-				<SidebarLink to="/api-docs" onNavigate={onNavigate}>
-					{t("nav.apiDocs")}
-				</SidebarLink>
-			</nav>
-			<div className="mt-4 flex min-h-0 flex-1 flex-col px-2">
-				<div className="flex items-center justify-between px-2 pb-1">
-					<span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-						{t("projects.sidebarTitle")}
-					</span>
-					<Tooltip>
-						<TooltipTrigger
-							render={
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									aria-label={t("projects.create")}
-									title={frozen ? t("org.frozenBanner") : undefined}
-									disabled={frozen}
-									onClick={() => setCreateOpen(true)}
-								>
-									<Plus />
-								</Button>
-							}
-						/>
-						<TooltipContent>{t("projects.create")}</TooltipContent>
-					</Tooltip>
-				</div>
-				<div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2">
-					{activeProjects.map((project) => (
-						<Link
-							key={project.id}
-							to="/orgs/$orgId/projects/$projectId"
-							params={{ orgId, projectId: project.id }}
-							search={{ page: 1, sort: "updated" }}
-							onClick={onNavigate}
-							className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-							activeProps={{
-								className: "bg-accent text-foreground font-medium",
-							}}
+			</SidebarHeader>
+			<SidebarContent>
+				<SidebarGroup>
+					<SidebarMenu>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								onClick={onOpenCommand}
+								className="text-sidebar-foreground/80 justify-between"
+							>
+								<Search />
+								<span className="flex-1 text-left">{t("command.trigger")}</span>
+								<Kbd className="hidden sm:inline-flex">
+									{isMac ? "⌘K" : "Ctrl K"}
+								</Kbd>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarLink
+							to="/orgs/$orgId/projects"
+							exact
+							onNavigate={onNavigate}
 						>
-							<span
-								className="size-2 shrink-0 rounded-full"
-								style={{
-									backgroundColor: project.color ?? "var(--muted-foreground)",
-								}}
+							{t("nav.projects")}
+						</SidebarLink>
+						<SidebarLink
+							to="/orgs/$orgId/my-issues"
+							exact
+							onNavigate={onNavigate}
+						>
+							{t("nav.myIssues")}
+						</SidebarLink>
+						<SidebarLink
+							to="/orgs/$orgId/activity"
+							exact
+							onNavigate={onNavigate}
+						>
+							{t("nav.activity")}
+						</SidebarLink>
+						<SidebarLink to="/orgs/$orgId/settings" onNavigate={onNavigate}>
+							{t("nav.settings")}
+						</SidebarLink>
+						<SidebarLink to="/api-docs" onNavigate={onNavigate}>
+							{t("nav.apiDocs")}
+						</SidebarLink>
+					</SidebarMenu>
+				</SidebarGroup>
+				<SidebarGroup>
+					<SidebarGroupLabel className="justify-between pr-1">
+						{t("projects.sidebarTitle")}
+						<Tooltip>
+							<TooltipTrigger
+								render={
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										aria-label={t("projects.create")}
+										title={frozen ? t("org.frozenBanner") : undefined}
+										disabled={frozen}
+										onClick={() => setCreateOpen(true)}
+									>
+										<Plus />
+									</Button>
+								}
 							/>
-							<span className="min-w-0 truncate">{project.name}</span>
-						</Link>
-					))}
-				</div>
-			</div>
-			<div className="flex items-center gap-1 border-t p-2">
+							<TooltipContent>{t("projects.create")}</TooltipContent>
+						</Tooltip>
+					</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							{projects.isPending
+								? ["project-1", "project-2", "project-3"].map((key) => (
+										<SidebarMenuItem key={key}>
+											<SidebarMenuSkeleton showIcon />
+										</SidebarMenuItem>
+									))
+								: activeProjects.map((project) => (
+										<SidebarMenuItem key={project.id}>
+											<SidebarMenuButton
+												render={
+													<Link
+														to="/orgs/$orgId/projects/$projectId"
+														params={{ orgId, projectId: project.id }}
+														search={{ page: 1, sort: "updated" }}
+														onClick={onNavigate}
+														activeProps={{
+															className:
+																"bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+														}}
+													/>
+												}
+											>
+												<span
+													className="size-2 shrink-0 rounded-full"
+													style={{
+														backgroundColor:
+															project.color ?? "var(--muted-foreground)",
+													}}
+												/>
+												<span className="min-w-0 truncate">{project.name}</span>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									))}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+			</SidebarContent>
+			<SidebarFooter>
 				{session && (
 					<UserDropdown
 						user={session.user}
 						orgRole={role as OrgRole | undefined}
-						className="flex-1"
+						className="w-full"
 					/>
 				)}
-			</div>
+			</SidebarFooter>
 			<CreateProjectDialog
 				orgId={orgId}
 				open={createOpen}
@@ -231,11 +269,9 @@ function SidebarContent({
 export function OrgLayout() {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
-	const location = useLocation();
 	const navigate = useNavigate();
 	const orgs = useQuery(orgsQuery());
 	const frozen = useOrgFrozen(orgId);
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [paletteOpen, setPaletteOpen] = useState(false);
 
 	useHotkeys({
@@ -245,66 +281,37 @@ export function OrgLayout() {
 		"g s": () => navigate({ to: "/orgs/$orgId/settings", params: { orgId } }),
 	});
 
-	useEffect(() => {
-		if (location.pathname) {
-			setMenuOpen(false);
-		}
-	}, [location.pathname]);
-
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 
 	return (
-		<div className="bg-background flex min-h-svh flex-col lg:flex-row">
+		<SidebarProvider style={{ "--sidebar-width": "15rem" } as CSSProperties}>
 			<a
 				href="#main-content"
 				className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-md focus:border focus:bg-background focus:p-3 focus:shadow-md"
 			>
 				{t("common.skipToContent")}
 			</a>
-			<aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r lg:flex">
-				<SidebarContent onOpenCommand={() => setPaletteOpen(true)} />
-			</aside>
-			<header className="bg-background sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 lg:hidden">
-				<Button
-					variant="ghost"
-					size="icon"
-					aria-label={t("nav.openMenu")}
-					onClick={() => setMenuOpen(true)}
-				>
-					<Menu />
-				</Button>
-				<span className="min-w-0 flex-1 truncate text-sm font-medium">
-					{currentOrg?.name ?? t("common.loading")}
-				</span>
-				<Button
-					variant="ghost"
-					size="icon"
-					aria-label={t("nav.search")}
-					onClick={() => setPaletteOpen(true)}
-				>
-					<Search />
-				</Button>
-				<ThemeToggle />
-			</header>
-			<Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-				<SheetContent
-					side="left"
-					showCloseButton={false}
-					className="gap-0 data-[side=left]:w-72"
-				>
-					<SheetTitle className="sr-only">
-						{currentOrg?.name ?? t("common.loading")}
-					</SheetTitle>
-					<SidebarContent
-						onNavigate={() => setMenuOpen(false)}
-						onOpenCommand={() => setPaletteOpen(true)}
-					/>
-				</SheetContent>
-			</Sheet>
-			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+			<Sidebar collapsible="offcanvas">
+				<OrgSidebarContent onOpenCommand={() => setPaletteOpen(true)} />
+			</Sidebar>
 			<div className="flex min-w-0 flex-1 flex-col">
+				<header className="bg-background sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 md:hidden">
+					<SidebarTrigger aria-label={t("nav.openMenu")} />
+					<span className="min-w-0 flex-1 truncate text-sm font-medium">
+						{currentOrg?.name ?? t("common.loading")}
+					</span>
+					<Button
+						variant="ghost"
+						size="icon"
+						aria-label={t("nav.search")}
+						onClick={() => setPaletteOpen(true)}
+					>
+						<Search />
+					</Button>
+					<ThemeToggle />
+				</header>
 				{frozen && (
-					<Alert className="sticky top-12 z-30 rounded-none border-x-0 border-t-0 border-b-amber-500/30 bg-amber-500/10 px-4 py-2 font-medium text-amber-700 lg:top-0 dark:text-amber-400">
+					<Alert className="sticky top-12 z-30 rounded-none border-x-0 border-t-0 border-b-amber-500/30 bg-amber-500/10 px-4 py-2 font-medium text-amber-700 md:top-0 dark:text-amber-400">
 						<Snowflake />
 						<AlertDescription className="text-amber-700 dark:text-amber-400">
 							{t("org.frozenBanner")}
@@ -317,6 +324,7 @@ export function OrgLayout() {
 					</main>
 				</ActiveOrganizationSync>
 			</div>
-		</div>
+			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+		</SidebarProvider>
 	);
 }
