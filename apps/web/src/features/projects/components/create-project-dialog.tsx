@@ -10,8 +10,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldLabel,
+} from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -138,8 +143,8 @@ export function CreateProjectDialog({
 						onSubmit();
 					}}
 				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="project-name">{t("projects.name")}</Label>
+					<Field data-invalid={fieldErrors.name ? true : undefined}>
+						<FieldLabel htmlFor="project-name">{t("projects.name")}</FieldLabel>
 						<Input
 							id="project-name"
 							value={name}
@@ -150,14 +155,10 @@ export function CreateProjectDialog({
 								fieldErrors.name ? "project-name-error" : undefined
 							}
 						/>
-						{fieldErrors.name && (
-							<p id="project-name-error" className="text-destructive text-sm">
-								{fieldErrors.name}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="project-key">{t("projects.key")}</Label>
+						<FieldError id="project-name-error">{fieldErrors.name}</FieldError>
+					</Field>
+					<Field data-invalid={fieldErrors.key ? true : undefined}>
+						<FieldLabel htmlFor="project-key">{t("projects.key")}</FieldLabel>
 						<Input
 							id="project-key"
 							value={key}
@@ -171,23 +172,19 @@ export function CreateProjectDialog({
 									: "project-key-hint"
 							}
 						/>
-						<p id="project-key-hint" className="text-muted-foreground text-xs">
+						<FieldDescription id="project-key-hint">
 							{t("projects.keyHint")}
-						</p>
-						{fieldErrors.key && (
-							<p id="project-key-error" className="text-destructive text-sm">
-								{fieldErrors.key}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="project-description">
+						</FieldDescription>
+						<FieldError id="project-key-error">{fieldErrors.key}</FieldError>
+					</Field>
+					<Field data-invalid={fieldErrors.description ? true : undefined}>
+						<FieldLabel htmlFor="project-description">
 							{t("common.description")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
-						</Label>
+						</FieldLabel>
 						<Textarea
 							id="project-description"
 							value={description}
@@ -200,29 +197,24 @@ export function CreateProjectDialog({
 									: undefined
 							}
 						/>
-						{fieldErrors.description && (
-							<p
-								id="project-description-error"
-								className="text-destructive text-sm"
-							>
-								{fieldErrors.description}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>
+						<FieldError id="project-description-error">
+							{fieldErrors.description}
+						</FieldError>
+					</Field>
+					<Field>
+						<FieldLabel>
 							{t("projects.color")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
-						</Label>
+						</FieldLabel>
 						<ColorSwatchPicker
 							value={color}
 							onChange={setColor}
 							ariaLabel={t("projects.color")}
 						/>
-					</div>
+					</Field>
 					{createMutation.isError && (
 						<QuotaError
 							error={createMutation.error}

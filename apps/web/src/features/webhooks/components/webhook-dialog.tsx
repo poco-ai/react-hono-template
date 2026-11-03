@@ -15,8 +15,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import { Field, FieldError, FieldLabel } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import { Switch } from "@workspace/ui/components/switch";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -149,8 +149,8 @@ export function WebhookDialog({
 							onSubmit();
 						}}
 					>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="webhook-url">{t("webhooks.url")}</Label>
+						<Field data-invalid={fieldErrors.url ? true : undefined}>
+							<FieldLabel htmlFor="webhook-url">{t("webhooks.url")}</FieldLabel>
 							<Input
 								id="webhook-url"
 								type="url"
@@ -162,14 +162,10 @@ export function WebhookDialog({
 									fieldErrors.url ? "webhook-url-error" : undefined
 								}
 							/>
-							{fieldErrors.url && (
-								<p id="webhook-url-error" className="text-destructive text-sm">
-									{fieldErrors.url}
-								</p>
-							)}
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("webhooks.eventsLabel")}</Label>
+							<FieldError id="webhook-url-error">{fieldErrors.url}</FieldError>
+						</Field>
+						<Field data-invalid={fieldErrors.events ? true : undefined}>
+							<FieldLabel>{t("webhooks.eventsLabel")}</FieldLabel>
 							<div
 								className="grid grid-cols-1 gap-2"
 								aria-describedby={
@@ -193,24 +189,24 @@ export function WebhookDialog({
 									</label>
 								))}
 							</div>
-							{fieldErrors.events && (
-								<p
-									id="webhook-events-error"
-									className="text-destructive text-sm"
-								>
-									{fieldErrors.events}
-								</p>
-							)}
-						</div>
+							<FieldError id="webhook-events-error">
+								{fieldErrors.events}
+							</FieldError>
+						</Field>
 						{webhook && (
-							<div className="flex items-center justify-between">
-								<Label htmlFor="webhook-active">{t("webhooks.active")}</Label>
+							<Field
+								orientation="horizontal"
+								className="items-center justify-between"
+							>
+								<FieldLabel htmlFor="webhook-active">
+									{t("webhooks.active")}
+								</FieldLabel>
 								<Switch
 									id="webhook-active"
 									checked={active}
 									onCheckedChange={(v) => setActive(v === true)}
 								/>
-							</div>
+							</Field>
 						)}
 						{saveMutation.isError && (
 							<QuotaError

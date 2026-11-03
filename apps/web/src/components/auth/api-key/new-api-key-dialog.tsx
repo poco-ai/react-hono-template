@@ -11,13 +11,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import { Field, FieldLabel } from "@workspace/ui/components/field";
 import {
 	InputGroup,
 	InputGroupAddon,
 	InputGroupButton,
 	InputGroupInput,
 } from "@workspace/ui/components/input-group";
-import { Label } from "@workspace/ui/components/label";
 import { Check, Copy, Key } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -70,8 +70,10 @@ export function NewApiKeyDialog({
 					<DialogDescription>{t("apiKeys.secretWarning")}</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex flex-col gap-2">
-					<Label htmlFor="new-api-key-secret">{name || t("apiKeys.key")}</Label>
+				<Field>
+					<FieldLabel htmlFor="new-api-key-secret">
+						{name || t("apiKeys.key")}
+					</FieldLabel>
 
 					<InputGroup>
 						<InputGroupInput
@@ -91,7 +93,7 @@ export function NewApiKeyDialog({
 							</InputGroupButton>
 						</InputGroupAddon>
 					</InputGroup>
-				</div>
+				</Field>
 
 				<DialogFooter>
 					<Button type="button" onClick={() => handleOpenChange(false)}>

@@ -11,8 +11,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldLabel,
+} from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -104,8 +109,10 @@ export function EditProjectDialog({
 						onSubmit();
 					}}
 				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="edit-project-name">{t("projects.name")}</Label>
+					<Field data-invalid={fieldErrors.name ? true : undefined}>
+						<FieldLabel htmlFor="edit-project-name">
+							{t("projects.name")}
+						</FieldLabel>
 						<Input
 							id="edit-project-name"
 							value={name}
@@ -119,35 +126,30 @@ export function EditProjectDialog({
 								fieldErrors.name ? "edit-project-name-error" : undefined
 							}
 						/>
-						{fieldErrors.name && (
-							<p
-								id="edit-project-name-error"
-								className="text-destructive text-sm"
-							>
-								{fieldErrors.name}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="edit-project-key">{t("projects.key")}</Label>
+						<FieldError id="edit-project-name-error">
+							{fieldErrors.name}
+						</FieldError>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="edit-project-key">
+							{t("projects.key")}
+						</FieldLabel>
 						<Input
 							id="edit-project-key"
 							value={project?.key ?? ""}
 							disabled
 							className="w-full font-mono uppercase"
 						/>
-						<p className="text-muted-foreground text-xs">
-							{t("projects.keyLockedHint")}
-						</p>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="edit-project-description">
+						<FieldDescription>{t("projects.keyLockedHint")}</FieldDescription>
+					</Field>
+					<Field data-invalid={fieldErrors.description ? true : undefined}>
+						<FieldLabel htmlFor="edit-project-description">
 							{t("common.description")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
-						</Label>
+						</FieldLabel>
 						<Textarea
 							id="edit-project-description"
 							value={description}
@@ -165,29 +167,24 @@ export function EditProjectDialog({
 									: undefined
 							}
 						/>
-						{fieldErrors.description && (
-							<p
-								id="edit-project-description-error"
-								className="text-destructive text-sm"
-							>
-								{fieldErrors.description}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>
+						<FieldError id="edit-project-description-error">
+							{fieldErrors.description}
+						</FieldError>
+					</Field>
+					<Field>
+						<FieldLabel>
 							{t("projects.color")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
-						</Label>
+						</FieldLabel>
 						<ColorSwatchPicker
 							value={color}
 							onChange={setColor}
 							ariaLabel={t("projects.color")}
 						/>
-					</div>
+					</Field>
 					{updateMutation.isError && (
 						<Alert variant="destructive">
 							<CircleAlert />

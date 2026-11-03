@@ -16,8 +16,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldLabel,
+} from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import {
 	Select,
 	SelectContent,
@@ -150,8 +155,10 @@ export function CreateIssueDialog({
 						onSubmit();
 					}}
 				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="issue-title">{t("issues.titleField")}</Label>
+					<Field data-invalid={fieldErrors.title ? true : undefined}>
+						<FieldLabel htmlFor="issue-title">
+							{t("issues.titleField")}
+						</FieldLabel>
 						<Input
 							id="issue-title"
 							value={title}
@@ -165,20 +172,16 @@ export function CreateIssueDialog({
 								fieldErrors.title ? "issue-title-error" : undefined
 							}
 						/>
-						{fieldErrors.title && (
-							<p id="issue-title-error" className="text-destructive text-sm">
-								{fieldErrors.title}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="issue-description">
+						<FieldError id="issue-title-error">{fieldErrors.title}</FieldError>
+					</Field>
+					<Field data-invalid={fieldErrors.description ? true : undefined}>
+						<FieldLabel htmlFor="issue-description">
 							{t("common.description")}
 							<span className="text-muted-foreground">
 								{" "}
 								({t("common.optional")})
 							</span>
-						</Label>
+						</FieldLabel>
 						<div className="rounded-lg border">
 							<div className="border-b flex items-center gap-1 px-2 pt-1.5">
 								{(["write", "preview"] as const).map((value) => (
@@ -233,18 +236,13 @@ export function CreateIssueDialog({
 								</div>
 							)}
 						</div>
-						{fieldErrors.description && (
-							<p
-								id="issue-description-error"
-								className="text-destructive text-sm"
-							>
-								{fieldErrors.description}
-							</p>
-						)}
-					</div>
+						<FieldError id="issue-description-error">
+							{fieldErrors.description}
+						</FieldError>
+					</Field>
 					<div className="grid grid-cols-2 gap-4">
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.status")}</Label>
+						<Field>
+							<FieldLabel>{t("issues.status")}</FieldLabel>
 							<Select
 								value={status}
 								onValueChange={(v) => v && setStatus(v as IssueStatus)}
@@ -260,9 +258,9 @@ export function CreateIssueDialog({
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.priority")}</Label>
+						</Field>
+						<Field>
+							<FieldLabel>{t("issues.priority")}</FieldLabel>
 							<Select
 								value={priority}
 								onValueChange={(v) => v && setPriority(v as IssuePriorityName)}
@@ -280,9 +278,9 @@ export function CreateIssueDialog({
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.assignee")}</Label>
+						</Field>
+						<Field>
+							<FieldLabel>{t("issues.assignee")}</FieldLabel>
 							<Select
 								value={assigneeId}
 								onValueChange={(v) => v !== null && setAssigneeId(v)}
@@ -306,13 +304,13 @@ export function CreateIssueDialog({
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.dueDate")}</Label>
+						</Field>
+						<Field>
+							<FieldLabel>{t("issues.dueDate")}</FieldLabel>
 							<DateField value={dueDate} onChange={setDueDate} />
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("issues.estimate")}</Label>
+						</Field>
+						<Field data-invalid={!estimateValid ? true : undefined}>
+							<FieldLabel>{t("issues.estimate")}</FieldLabel>
 							<div className="relative">
 								<Input
 									type="number"
@@ -327,18 +325,14 @@ export function CreateIssueDialog({
 									{t("issues.estimateUnit")}
 								</span>
 							</div>
-							<p className="text-muted-foreground text-xs">
-								{t("issues.estimateHint")}
-							</p>
+							<FieldDescription>{t("issues.estimateHint")}</FieldDescription>
 							{!estimateValid && (
-								<p className="text-destructive text-xs">
-									{t("issues.estimateInvalid")}
-								</p>
+								<FieldError>{t("issues.estimateInvalid")}</FieldError>
 							)}
-						</div>
+						</Field>
 					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("issues.labels")}</Label>
+					<Field>
+						<FieldLabel>{t("issues.labels")}</FieldLabel>
 						<MultiSelect
 							placeholder={t("issues.noLabels")}
 							value={labelIds}
@@ -348,7 +342,7 @@ export function CreateIssueDialog({
 							}))}
 							onChange={setLabelIds}
 						/>
-					</div>
+					</Field>
 					{createMutation.isError && (
 						<Alert variant="destructive">
 							<CircleAlert />

@@ -28,6 +28,7 @@ import {
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import {
 	Tooltip,
 	TooltipContent,
@@ -109,22 +110,18 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				)}
 			</div>
 
-			<div className="bg-muted mb-4 flex w-fit rounded-lg p-0.5">
-				<Button
-					variant={archived ? "ghost" : "secondary"}
-					size="sm"
-					onClick={() => setShowArchived(false)}
-				>
-					{t("projects.activeTab")}
-				</Button>
-				<Button
-					variant={archived ? "secondary" : "ghost"}
-					size="sm"
-					onClick={() => setShowArchived(true)}
-				>
-					{t("projects.archivedTab")}
-				</Button>
-			</div>
+			<Tabs
+				value={archived ? "archived" : "active"}
+				onValueChange={(value) => setShowArchived(value === "archived")}
+				className="mb-4 w-fit"
+			>
+				<TabsList>
+					<TabsTrigger value="active">{t("projects.activeTab")}</TabsTrigger>
+					<TabsTrigger value="archived">
+						{t("projects.archivedTab")}
+					</TabsTrigger>
+				</TabsList>
+			</Tabs>
 
 			{projects.isPending && (
 				<div
@@ -156,9 +153,12 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				</div>
 			)}
 			{projects.isError && (
-				<p className="py-16 text-center text-sm text-red-500">
-					{apiErrorMessage(t, projects.error)}
-				</p>
+				<Alert variant="destructive" className="my-16">
+					<CircleAlert />
+					<AlertDescription>
+						{apiErrorMessage(t, projects.error)}
+					</AlertDescription>
+				</Alert>
 			)}
 
 			{projects.data?.length === 0 && (

@@ -22,8 +22,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import { Field, FieldError, FieldLabel } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
 import {
 	Tooltip,
 	TooltipContent,
@@ -104,9 +104,12 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 				</p>
 			)}
 			{labels.isError && (
-				<p className="py-8 text-center text-sm text-red-500">
-					{apiErrorMessage(t, labels.error)}
-				</p>
+				<Alert variant="destructive" className="my-8">
+					<CircleAlert />
+					<AlertDescription>
+						{apiErrorMessage(t, labels.error)}
+					</AlertDescription>
+				</Alert>
 			)}
 			{labels.data?.length === 0 && <EmptyState title={t("labels.empty")} />}
 			{labels.data && labels.data.length > 0 && (
@@ -269,8 +272,8 @@ function LabelDialog({
 						onSubmit(parsed.data);
 					}}
 				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="label-name">{t("labels.name")}</Label>
+					<Field data-invalid={fieldErrors.name ? true : undefined}>
+						<FieldLabel htmlFor="label-name">{t("labels.name")}</FieldLabel>
 						<Input
 							id="label-name"
 							value={name}
@@ -285,20 +288,16 @@ function LabelDialog({
 								fieldErrors.name ? "label-name-error" : undefined
 							}
 						/>
-						{fieldErrors.name && (
-							<p id="label-name-error" className="text-destructive text-sm">
-								{fieldErrors.name}
-							</p>
-						)}
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("labels.color")}</Label>
+						<FieldError id="label-name-error">{fieldErrors.name}</FieldError>
+					</Field>
+					<Field>
+						<FieldLabel>{t("labels.color")}</FieldLabel>
 						<ColorSwatchPicker
 							value={color}
 							onChange={setColor}
 							ariaLabel={t("labels.color")}
 						/>
-					</div>
+					</Field>
 					{error && (
 						<Alert variant="destructive">
 							<CircleAlert />

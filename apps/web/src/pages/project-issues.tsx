@@ -16,6 +16,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import {
 	ArrowLeft,
 	Columns3,
@@ -262,26 +263,23 @@ export function ProjectIssuesPage({
 						)}
 					</div>
 					<div className="flex items-center gap-2">
-						<div className="bg-muted flex rounded-lg p-0.5">
-							<Button
-								variant={view === "list" ? "secondary" : "ghost"}
-								size="sm"
-								className="gap-1.5"
-								onClick={() => updateSearch({ view: "list" })}
-							>
-								<List className="size-4" />
-								{t("issues.viewList")}
-							</Button>
-							<Button
-								variant={view === "board" ? "secondary" : "ghost"}
-								size="sm"
-								className="gap-1.5"
-								onClick={() => updateSearch({ view: "board" })}
-							>
-								<Columns3 className="size-4" />
-								{t("issues.viewBoard")}
-							</Button>
-						</div>
+						<Tabs
+							value={view}
+							onValueChange={(value) =>
+								updateSearch({ view: value === "board" ? "board" : "list" })
+							}
+						>
+							<TabsList>
+								<TabsTrigger value="list">
+									<List />
+									{t("issues.viewList")}
+								</TabsTrigger>
+								<TabsTrigger value="board">
+									<Columns3 />
+									{t("issues.viewBoard")}
+								</TabsTrigger>
+							</TabsList>
+						</Tabs>
 						{!hideHeaderCreate && (
 							<Button onClick={() => openCreate()} disabled={frozen} title="C">
 								<Plus />
