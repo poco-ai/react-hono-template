@@ -4,22 +4,19 @@ import {
 	ATTACHMENT_CONTENT_TYPES,
 	ATTACHMENT_MAX_SIZE,
 } from "@workspace/shared";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
+import {
+	Item,
+	ItemActions,
+	ItemContent,
+	ItemDescription,
+	ItemGroup,
+	ItemMedia,
+	ItemTitle,
+} from "@workspace/ui/components/item";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "@workspace/ui/lib/utils";
 import {
-	CircleAlert,
 	FileArchive,
 	FileImage,
 	FileText,
@@ -29,6 +26,8 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { MutationError } from "@/components/mutation-error";
 import { UserAvatar } from "@/components/user-avatar";
 import {
 	attachmentsQuery,
@@ -39,7 +38,6 @@ import {
 } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
 import { membersQuery } from "@/features/members/data";
-import { apiErrorMessage } from "@/lib/errors";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 
 const ALLOWED_CONTENT_TYPES = ATTACHMENT_CONTENT_TYPES;
@@ -222,85 +220,85 @@ export function IssueAttachments({
 			/>
 
 			{pending.length > 0 && (
-				<ul className="flex flex-col gap-2">
+				<ItemGroup className="gap-2">
 					{pending.map((item) => (
-						<li
-							key={item.id}
-							className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-						>
-							{item.error ? (
-								<span className="text-destructive min-w-0 flex-1 truncate">
-									{item.error}
-								</span>
-							) : (
-								<>
-									<Spinner className="text-muted-foreground shrink-0" />
-									<span className="min-w-0 flex-1 truncate">
-										{t("attachments.uploading", { filename: item.filename })}
+						<Item key={item.id} variant="outline" size="sm">
+							<ItemContent>
+								{item.error ? (
+									<span className="text-destructive truncate text-sm">
+										{item.error}
 									</span>
-								</>
-							)}
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label={
-									item.error ? t("common.dismiss") : t("common.cancel")
-								}
-								onClick={() => {
-									const controller = controllersRef.current.get(item.id);
-									if (controller) {
-										controller.abort();
-									} else {
-										setPending((prev) => prev.filter((p) => p.id !== item.id));
+								) : (
+									<span className="flex items-center gap-2 text-sm">
+										<Spinner className="text-muted-foreground shrink-0" />
+										<span className="min-w-0 flex-1 truncate">
+											{t("attachments.uploading", {
+												filename: item.filename,
+											})}
+										</span>
+									</span>
+								)}
+							</ItemContent>
+							<ItemActions>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label={
+										item.error ? t("common.dismiss") : t("common.cancel")
 									}
-								}}
-							>
-								<X />
-							</Button>
-						</li>
+									onClick={() => {
+										const controller = controllersRef.current.get(item.id);
+										if (controller) {
+											controller.abort();
+										} else {
+											setPending((prev) =>
+												prev.filter((p) => p.id !== item.id),
+											);
+										}
+									}}
+								>
+									<X />
+								</Button>
+							</ItemActions>
+						</Item>
 					))}
-				</ul>
+				</ItemGroup>
 			)}
 
-			{attachments.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, attachments.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+			{attachments.isError && <MutationError error={attachments.error} />}
 
 			{items.length > 0 && (
-				<ul className="flex flex-col gap-2">
+				<ItemGroup className="gap-2">
 					{items.map((attachment) => {
 						const canDelete =
 							isAdmin || attachment.uploader?.id === session?.user.id;
 						return (
-							<li
-								key={attachment.id}
-								className="flex items-center gap-3 rounded-md border px-3 py-2"
-							>
+							<Item key={attachment.id} variant="outline" size="sm">
 								{isImage(attachment.contentType) && attachment.url ? (
-									<img
-										src={attachment.url}
-										alt={attachment.filename}
-										loading="lazy"
-										className="size-10 shrink-0 rounded-md border object-cover"
-									/>
+									<ItemMedia variant="image">
+										<img
+											src={attachment.url}
+											alt={attachment.filename}
+											loading="lazy"
+										/>
+									</ItemMedia>
 								) : (
-									<AttachmentIcon attachment={attachment} />
+									<ItemMedia variant="icon">
+										<AttachmentIcon attachment={attachment} />
+									</ItemMedia>
 								)}
-								<div className="flex min-w-0 flex-1 flex-col">
-									<a
-										href={attachment.url ?? undefined}
-										target="_blank"
-										rel="noreferrer"
-										className="truncate text-sm font-medium hover:underline"
-									>
-										{attachment.filename}
-									</a>
-									<span className="text-muted-foreground flex items-center gap-1 text-xs">
+								<ItemContent>
+									<ItemTitle>
+										<a
+											href={attachment.url ?? undefined}
+											target="_blank"
+											rel="noreferrer"
+											className="truncate hover:underline"
+										>
+											{attachment.filename}
+										</a>
+									</ItemTitle>
+									<ItemDescription className="flex items-center gap-1 overflow-hidden text-xs">
 										{formatBytes(attachment.size)}
 										{attachment.uploader && (
 											<>
@@ -319,64 +317,45 @@ export function IssueAttachments({
 										>
 											{formatRelativeTime(attachment.createdAt)}
 										</time>
-									</span>
-								</div>
+									</ItemDescription>
+								</ItemContent>
 								{canDelete && (
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={t("common.delete")}
-										className="text-destructive hover:text-destructive"
-										disabled={frozen}
-										onClick={() => setDeleting(attachment)}
-									>
-										<Trash2 />
-									</Button>
+									<ItemActions>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											aria-label={t("common.delete")}
+											className="text-destructive hover:text-destructive"
+											disabled={frozen}
+											onClick={() => setDeleting(attachment)}
+										>
+											<Trash2 />
+										</Button>
+									</ItemActions>
 								)}
-							</li>
+							</Item>
 						);
 					})}
-				</ul>
+				</ItemGroup>
 			)}
 
-			<AlertDialog
+			<ConfirmDialog
 				open={deleting !== null}
 				onOpenChange={(open) => !open && setDeleting(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("attachments.deleteTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("attachments.deleteDescription", {
-								filename: deleting?.filename ?? "",
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={deleteMutation.isPending || deleting === null}
-							onClick={(e) => {
-								e.preventDefault();
-								if (deleting) {
-									deleteMutation.mutate(deleting.id);
-								}
-							}}
-						>
-							{deleteMutation.isPending && <Spinner />}
-							{t("common.delete")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={t("attachments.deleteTitle")}
+				description={t("attachments.deleteDescription", {
+					filename: deleting?.filename ?? "",
+				})}
+				confirmLabel={t("common.delete")}
+				pending={deleteMutation.isPending}
+				onConfirm={() => {
+					if (deleting) {
+						deleteMutation.mutate(deleting.id);
+					}
+				}}
+			/>
 			{deleteMutation.isError && (
-				<Alert variant="destructive" className="mt-2">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, deleteMutation.error)}
-					</AlertDescription>
-				</Alert>
+				<MutationError error={deleteMutation.error} className="mt-2" />
 			)}
 		</section>
 	);

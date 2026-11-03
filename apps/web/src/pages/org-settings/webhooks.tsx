@@ -1,16 +1,6 @@
 import type { WebhookDto } from "@api/dto/webhook.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
 import { Switch } from "@workspace/ui/components/switch";
 import {
@@ -30,7 +20,9 @@ import { CircleAlert, Inbox, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
+import { MutationError } from "@/components/mutation-error";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { DeliveriesDialog } from "@/features/webhooks/components/deliveries-dialog";
 import { EventBadge } from "@/features/webhooks/components/delivery-badges";
@@ -90,14 +82,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				</Button>
 			</div>
 
-			{pingMutation.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, pingMutation.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+			{pingMutation.isError && <MutationError error={pingMutation.error} />}
 
 			<Table>
 				{!(webhooks.data?.length === 0 && !webhooks.isPending) && (
@@ -263,36 +248,21 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 				onOpenChange={(open) => !open && setDeliveriesTarget(null)}
 			/>
 
-			<AlertDialog
+			<ConfirmDialog
 				open={deleteTarget !== null}
 				onOpenChange={(open) => !open && setDeleteTarget(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("webhooks.deleteTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("webhooks.deleteDescription", {
-								url: deleteTarget?.url ?? "",
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={deleteMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								if (deleteTarget) {
-									deleteMutation.mutate(deleteTarget.id);
-								}
-							}}
-						>
-							{t("common.delete")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={t("webhooks.deleteTitle")}
+				description={t("webhooks.deleteDescription", {
+					url: deleteTarget?.url ?? "",
+				})}
+				confirmLabel={t("common.delete")}
+				pending={deleteMutation.isPending}
+				onConfirm={() => {
+					if (deleteTarget) {
+						deleteMutation.mutate(deleteTarget.id);
+					}
+				}}
+			/>
 		</div>
 	);
 }

@@ -2,16 +2,6 @@ import type { LabelDto } from "@api/dto/label.dto";
 import { useQuery } from "@tanstack/react-query";
 import { createLabelSchema } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
 import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
@@ -25,6 +15,12 @@ import {
 import { Field, FieldError, FieldLabel } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import {
+	Item,
+	ItemActions,
+	ItemContent,
+	ItemGroup,
+} from "@workspace/ui/components/item";
+import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -33,7 +29,9 @@ import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
+import { MutationError } from "@/components/mutation-error";
 import { LabelBadge } from "@/features/labels/components/label-badge";
 import {
 	labelsQuery,
@@ -113,15 +111,14 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 			)}
 			{labels.data?.length === 0 && <EmptyState title={t("labels.empty")} />}
 			{labels.data && labels.data.length > 0 && (
-				<div className="overflow-hidden rounded-lg border">
+				<ItemGroup className="gap-2">
 					{labels.data.map((label) => (
-						<div
-							key={label.id}
-							className="flex items-center justify-between border-b px-3 py-2 last:border-b-0"
-						>
-							<LabelBadge label={label} className="text-sm" />
+						<Item key={label.id} variant="outline" size="sm">
+							<ItemContent>
+								<LabelBadge label={label} className="text-sm" />
+							</ItemContent>
 							{canManage && (
-								<div className="flex items-center gap-1">
+								<ItemActions>
 									<Tooltip>
 										<TooltipTrigger
 											render={
@@ -158,21 +155,14 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 										/>
 										<TooltipContent>{t("common.delete")}</TooltipContent>
 									</Tooltip>
-								</div>
+								</ItemActions>
 							)}
-						</div>
+						</Item>
 					))}
-				</div>
+				</ItemGroup>
 			)}
 
-			{deleteMutation.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, deleteMutation.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+			{deleteMutation.isError && <MutationError error={deleteMutation.error} />}
 
 			<LabelDialog
 				open={dialogOpen}
@@ -183,36 +173,21 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 				onSubmit={(input) => saveMutation.mutate(input)}
 			/>
 
-			<AlertDialog
+			<ConfirmDialog
 				open={deleteTarget !== null}
 				onOpenChange={(open) => !open && setDeleteTarget(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("labels.deleteTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("labels.deleteDescription", {
-								name: deleteTarget?.name ?? "",
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={deleteMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								if (deleteTarget) {
-									deleteMutation.mutate(deleteTarget.id);
-								}
-							}}
-						>
-							{t("common.delete")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={t("labels.deleteTitle")}
+				description={t("labels.deleteDescription", {
+					name: deleteTarget?.name ?? "",
+				})}
+				confirmLabel={t("common.delete")}
+				pending={deleteMutation.isPending}
+				onConfirm={() => {
+					if (deleteTarget) {
+						deleteMutation.mutate(deleteTarget.id);
+					}
+				}}
+			/>
 		</div>
 	);
 }
@@ -298,12 +273,7 @@ function LabelDialog({
 							ariaLabel={t("labels.color")}
 						/>
 					</Field>
-					{error && (
-						<Alert variant="destructive">
-							<CircleAlert />
-							<AlertDescription>{apiErrorMessage(t, error)}</AlertDescription>
-						</Alert>
-					)}
+					{error && <MutationError error={error} />}
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
 							{label ? t("common.save") : t("common.create")}

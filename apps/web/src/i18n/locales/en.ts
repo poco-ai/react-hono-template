@@ -372,6 +372,7 @@ const en = {
 		status: "Status",
 		priority: "Priority",
 		assignee: "Assignee",
+		project: "Project",
 		labels: "Labels",
 		noLabels: "No labels",
 		dueDate: "Due date",

@@ -358,6 +358,7 @@ const zh: typeof en = {
 		status: "状态",
 		priority: "优先级",
 		assignee: "经办人",
+		project: "项目",
 		labels: "标签",
 		noLabels: "暂无标签",
 		dueDate: "截止日期",
