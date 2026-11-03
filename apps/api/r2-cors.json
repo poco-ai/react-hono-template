@@ -1,0 +1,16 @@
+{
+	"rules": [
+		{
+			"allowed": {
+				"origins": [
+					"http://localhost:5173",
+					"https://react-hono-web.poco-ai.workers.dev"
+				],
+				"methods": ["GET", "PUT", "DELETE", "HEAD"],
+				"headers": ["content-type"]
+			},
+			"exposeHeaders": ["etag"],
+			"maxAgeSeconds": 3600
+		}
+	]
+}

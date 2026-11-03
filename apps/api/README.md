@@ -72,21 +72,31 @@ Label 列表缓存于 `cache:v1:labels:<orgId>`（org id 经 `encodeURIComponent
 
 1. Dashboard → R2 → 创建桶（建议 dev/prod 分桶）
 2. R2 → Manage API Tokens → 创建 token（Object Read & Write），得到 Access Key ID / Secret
-3. 浏览器直传需要给桶配置 CORS（Dashboard 或 `wrangler r2 bucket cors put <bucket> --file cors.json`）：
+3. 浏览器直传需要给桶配置 CORS（仓库已提供 `r2-cors.json`）：
+
+```sh
+wrangler r2 bucket cors set <bucket> --file r2-cors.json
+```
+
+Wrangler 的 CORS 文件使用 Cloudflare 格式（`rules` + `allowed`），不是 AWS S3 的 `AllowedOrigins` 写法：
 
 ```json
-[
-	{
-		"AllowedOrigins": [
-			"http://localhost:5173",
-			"https://react-hono-web.poco-ai.workers.dev"
-		],
-		"AllowedMethods": ["GET", "PUT", "DELETE"],
-		"AllowedHeaders": ["content-type"],
-		"ExposeHeaders": ["etag"],
-		"MaxAgeSeconds": 3600
-	}
-]
+{
+	"rules": [
+		{
+			"allowed": {
+				"origins": [
+					"http://localhost:5173",
+					"https://react-hono-web.poco-ai.workers.dev"
+				],
+				"methods": ["GET", "PUT", "DELETE", "HEAD"],
+				"headers": ["content-type"]
+			},
+			"exposeHeaders": ["etag"],
+			"maxAgeSeconds": 3600
+		}
+	]
+}
 ```
 
 ### 接口与约定

@@ -89,6 +89,9 @@
 		"MCP_RESOURCE": "https://react-hono-api.poco-ai.workers.dev/mcp",
 		"MCP_LOGIN_PAGE": "https://react-hono-web.poco-ai.workers.dev/login",
 		"MCP_CONSENT_PAGE": "https://react-hono-web.poco-ai.workers.dev/consent",
-		"MCP_DCR_ENABLED": "false"
+		"MCP_DCR_ENABLED": "false",
+		"S3_ENDPOINT": "https://e3299b6523b3e90e23ce76f0004eda78.r2.cloudflarestorage.com",
+		"S3_REGION": "auto",
+		"S3_BUCKET": "react-hono-attachments"
 	}
 }
