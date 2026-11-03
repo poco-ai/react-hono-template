@@ -2,6 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { UpdateIssueInput } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@workspace/ui/components/breadcrumb";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Separator } from "@workspace/ui/components/separator";
 import { Spinner } from "@workspace/ui/components/spinner";
@@ -15,6 +23,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { MutationError } from "@/components/mutation-error";
 import { NotFoundState } from "@/components/not-found-state";
 import { IssueActivityTimeline } from "@/features/activities/components/issue-activity";
 import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
@@ -31,7 +40,7 @@ import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
-import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
+import { isNotFoundError } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -142,43 +151,55 @@ export function IssueDetailPage({
 	return (
 		<div className="flex flex-col gap-8 px-4 py-8 lg:flex-row lg:px-6">
 			<div className="min-w-0 flex-1">
-				<nav className="mb-4 flex items-center gap-1.5 text-sm">
-					<Link
-						to="/orgs/$orgId/projects/$projectId"
-						params={{ orgId, projectId }}
-						search={{ page: 1, sort: "updated" }}
-						className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-1"
-					>
-						<ArrowLeft className="size-4 shrink-0" />
-						<span className="truncate">{project.data?.name ?? projectId}</span>
-					</Link>
-					<span className="text-muted-foreground/50">/</span>
-					<span className="text-foreground shrink-0 font-mono text-xs">
-						{project.data?.key}-{data.number}
-					</span>
-					<div className="flex shrink-0 items-center">
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							className="size-7"
-							disabled={data.prevNumber === null}
-							aria-label={t("issues.prevIssue")}
-							onClick={() => navigateToIssue(data.prevNumber)}
-						>
-							<ChevronLeft />
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							className="size-7"
-							disabled={data.nextNumber === null}
-							aria-label={t("issues.nextIssue")}
-							onClick={() => navigateToIssue(data.nextNumber)}
-						>
-							<ChevronRight />
-						</Button>
-					</div>
-				</nav>
+				<Breadcrumb className="mb-4">
+					<BreadcrumbList>
+						<BreadcrumbItem className="min-w-0">
+							<BreadcrumbLink
+								render={
+									<Link
+										to="/orgs/$orgId/projects/$projectId"
+										params={{ orgId, projectId }}
+										search={{ page: 1, sort: "updated" }}
+										className="inline-flex min-w-0 items-center gap-1"
+									/>
+								}
+							>
+								<ArrowLeft className="size-4 shrink-0" />
+								<span className="truncate">
+									{project.data?.name ?? projectId}
+								</span>
+							</BreadcrumbLink>
+						</BreadcrumbItem>
+						<BreadcrumbSeparator />
+						<BreadcrumbItem>
+							<BreadcrumbPage className="shrink-0 font-mono text-xs">
+								{project.data?.key}-{data.number}
+							</BreadcrumbPage>
+						</BreadcrumbItem>
+						<BreadcrumbItem className="ml-auto">
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								className="size-7"
+								disabled={data.prevNumber === null}
+								aria-label={t("issues.prevIssue")}
+								onClick={() => navigateToIssue(data.prevNumber)}
+							>
+								<ChevronLeft />
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								className="size-7"
+								disabled={data.nextNumber === null}
+								aria-label={t("issues.nextIssue")}
+								onClick={() => navigateToIssue(data.nextNumber)}
+							>
+								<ChevronRight />
+							</Button>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
 				<div className="group/title relative mt-1">
 					<input
 						value={title}
@@ -273,21 +294,11 @@ export function IssueDetailPage({
 					onConfirm={remove}
 				/>
 				{deleteMutation.isError && (
-					<Alert variant="destructive">
-						<CircleAlert />
-						<AlertDescription>
-							{apiErrorMessage(t, deleteMutation.error)}
-						</AlertDescription>
-					</Alert>
+					<MutationError error={deleteMutation.error} />
 				)}
 
 				{updateMutation.isError && (
-					<Alert variant="destructive">
-						<CircleAlert />
-						<AlertDescription>
-							{apiErrorMessage(t, updateMutation.error)}
-						</AlertDescription>
-					</Alert>
+					<MutationError error={updateMutation.error} />
 				)}
 			</aside>
 		</div>

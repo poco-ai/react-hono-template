@@ -1,7 +1,6 @@
 import type { AdminOrgDto, ListAdminOrgsDto } from "@api/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,7 +20,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
-import { Input } from "@workspace/ui/components/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from "@workspace/ui/components/input-group";
 import {
 	Table,
 	TableBody,
@@ -30,10 +34,11 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { CircleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
+import { MutationError } from "@/components/mutation-error";
 import { TablePagination } from "@/components/table-pagination";
 import {
 	adminOrganizationsQuery,
@@ -111,8 +116,8 @@ export function AdminOrgsPage() {
 				<CardDescription>{t("adminOrgs.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
-				<div className="relative max-w-xs">
-					<Input
+				<InputGroup className="max-w-xs">
+					<InputGroupInput
 						placeholder={t("adminOrgs.searchPlaceholder")}
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
@@ -121,30 +126,21 @@ export function AdminOrgsPage() {
 								clearSearch();
 							}
 						}}
-						className="pr-8"
 					/>
 					{searchInput && (
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon"
-							className="absolute top-1/2 right-1 size-6 -translate-y-1/2"
-							aria-label={t("common.clear")}
-							onClick={clearSearch}
-						>
-							<X />
-						</Button>
+						<InputGroupAddon align="inline-end">
+							<InputGroupButton
+								size="icon-xs"
+								aria-label={t("common.clear")}
+								onClick={clearSearch}
+							>
+								<X />
+							</InputGroupButton>
+						</InputGroupAddon>
 					)}
-				</div>
+				</InputGroup>
 
-				{mutationError && (
-					<Alert variant="destructive">
-						<CircleAlert />
-						<AlertDescription>
-							{apiErrorMessage(t, mutationError)}
-						</AlertDescription>
-					</Alert>
-				)}
+				{mutationError && <MutationError error={mutationError} />}
 
 				<Table>
 					{!listEmpty && (

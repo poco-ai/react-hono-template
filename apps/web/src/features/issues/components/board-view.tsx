@@ -13,19 +13,18 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
-import { CircleAlert, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MutationError } from "@/components/mutation-error";
 import { UserAvatar } from "@/components/user-avatar";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { type IssueFilters, projectIssuesQuery } from "@/features/issues/data";
 import type { OrgMember } from "@/features/members/data";
-import { apiErrorMessage } from "@/lib/errors";
 import { useMoveIssue } from "../data";
 
 const BOARD_PAGE_SIZE = 100;
@@ -145,21 +144,9 @@ export function BoardView({
 				</div>
 			)}
 			{issues.isError && (
-				<Alert variant="destructive" className="my-8">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, issues.error)}
-					</AlertDescription>
-				</Alert>
+				<MutationError error={issues.error} className="my-8" />
 			)}
-			{moveMutation.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, moveMutation.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+			{moveMutation.isError && <MutationError error={moveMutation.error} />}
 			{issues.data && issues.data.total > items.length && (
 				<p className="text-muted-foreground px-1 text-xs">
 					{t("issues.showingCap", { count: items.length })}

@@ -16,7 +16,10 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
+import {
+	ToggleGroup,
+	ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group";
 import {
 	ArrowLeft,
 	Columns3,
@@ -263,23 +266,27 @@ export function ProjectIssuesPage({
 						)}
 					</div>
 					<div className="flex items-center gap-2">
-						<Tabs
-							value={view}
-							onValueChange={(value) =>
-								updateSearch({ view: value === "board" ? "board" : "list" })
-							}
+						<ToggleGroup
+							value={[view]}
+							onValueChange={(next) => {
+								if (next[0]) {
+									updateSearch({
+										view: next[0] === "board" ? "board" : "list",
+									});
+								}
+							}}
+							spacing={0}
+							variant="outline"
 						>
-							<TabsList>
-								<TabsTrigger value="list">
-									<List />
-									{t("issues.viewList")}
-								</TabsTrigger>
-								<TabsTrigger value="board">
-									<Columns3 />
-									{t("issues.viewBoard")}
-								</TabsTrigger>
-							</TabsList>
-						</Tabs>
+							<ToggleGroupItem value="list" size="sm">
+								<List />
+								{t("issues.viewList")}
+							</ToggleGroupItem>
+							<ToggleGroupItem value="board" size="sm">
+								<Columns3 />
+								{t("issues.viewBoard")}
+							</ToggleGroupItem>
+						</ToggleGroup>
 						{!hideHeaderCreate && (
 							<Button onClick={() => openCreate()} disabled={frozen} title="C">
 								<Plus />

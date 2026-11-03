@@ -6,7 +6,6 @@ import {
 	type IssueStatus,
 	priorityValue,
 } from "@workspace/shared";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -24,24 +23,27 @@ import {
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+	InputGroupText,
+} from "@workspace/ui/components/input-group";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@workspace/ui/components/select";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { cn } from "@workspace/ui/lib/utils";
-import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { MarkdownContent } from "@/components/markdown";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { MultiSelect } from "@/components/multi-select";
+import { MutationError } from "@/components/mutation-error";
 import { DateField } from "@/features/issues/components/date-field";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
-import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -73,7 +75,6 @@ export function CreateIssueDialog({
 	const { t } = useTranslation();
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	const [descTab, setDescTab] = useState<"write" | "preview">("write");
 	const [status, setStatus] = useState<IssueStatus>(defaultStatus);
 	const [priority, setPriority] = useState<IssuePriorityName>("none");
 	const [assigneeId, setAssigneeId] = useState(UNASSIGNED);
@@ -93,7 +94,6 @@ export function CreateIssueDialog({
 		if (open) {
 			setTitle("");
 			setDescription("");
-			setDescTab("write");
 			setStatus(defaultStatus);
 			setPriority("none");
 			setAssigneeId(UNASSIGNED);
@@ -182,60 +182,21 @@ export function CreateIssueDialog({
 								({t("common.optional")})
 							</span>
 						</FieldLabel>
-						<div className="rounded-lg border">
-							<div className="border-b flex items-center gap-1 px-2 pt-1.5">
-								{(["write", "preview"] as const).map((value) => (
-									<button
-										key={value}
-										type="button"
-										className={cn(
-											"rounded-md px-2 py-1 text-xs font-medium",
-											descTab === value
-												? "bg-accent text-accent-foreground"
-												: "text-muted-foreground hover:text-foreground",
-										)}
-										onClick={() => setDescTab(value)}
-									>
-										{t(`common.${value}`)}
-									</button>
-								))}
-							</div>
-							{descTab === "write" ? (
-								<>
-									<Textarea
-										id="issue-description"
-										value={description}
-										placeholder={t("issues.descriptionPlaceholder")}
-										onChange={(e) => {
-											setDescription(e.target.value);
-											setFieldErrors((prev) =>
-												withoutFieldError(prev, "description"),
-											);
-										}}
-										className="resize-y border-0 focus-visible:ring-0"
-										aria-invalid={fieldErrors.description ? true : undefined}
-										aria-describedby={
-											fieldErrors.description
-												? "issue-description-error"
-												: undefined
-										}
-									/>
-									<p className="text-muted-foreground px-3 pb-2 text-xs">
-										{t("markdown.hint")}
-									</p>
-								</>
-							) : (
-								<div className="min-h-24 px-3 py-2">
-									{description.trim() ? (
-										<MarkdownContent>{description}</MarkdownContent>
-									) : (
-										<p className="text-muted-foreground text-sm">
-											{t("comments.previewEmpty")}
-										</p>
-									)}
-								</div>
-							)}
-						</div>
+						<MarkdownEditor
+							id="issue-description"
+							value={description}
+							onChange={(next) => {
+								setDescription(next);
+								setFieldErrors((prev) =>
+									withoutFieldError(prev, "description"),
+								);
+							}}
+							placeholder={t("issues.descriptionPlaceholder")}
+							ariaInvalid={Boolean(fieldErrors.description)}
+							ariaDescribedBy={
+								fieldErrors.description ? "issue-description-error" : undefined
+							}
+						/>
 						<FieldError id="issue-description-error">
 							{fieldErrors.description}
 						</FieldError>
@@ -311,20 +272,19 @@ export function CreateIssueDialog({
 						</Field>
 						<Field data-invalid={!estimateValid ? true : undefined}>
 							<FieldLabel>{t("issues.estimate")}</FieldLabel>
-							<div className="relative">
-								<Input
+							<InputGroup>
+								<InputGroupInput
 									type="number"
 									min={0}
 									max={100}
 									step={1}
 									value={estimate}
 									onChange={(e) => setEstimate(e.target.value)}
-									className="pr-16"
 								/>
-								<span className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs">
-									{t("issues.estimateUnit")}
-								</span>
-							</div>
+								<InputGroupAddon align="inline-end">
+									<InputGroupText>{t("issues.estimateUnit")}</InputGroupText>
+								</InputGroupAddon>
+							</InputGroup>
 							<FieldDescription>{t("issues.estimateHint")}</FieldDescription>
 							{!estimateValid && (
 								<FieldError>{t("issues.estimateInvalid")}</FieldError>
@@ -344,12 +304,7 @@ export function CreateIssueDialog({
 						/>
 					</Field>
 					{createMutation.isError && (
-						<Alert variant="destructive">
-							<CircleAlert />
-							<AlertDescription>
-								{apiErrorMessage(t, createMutation.error)}
-							</AlertDescription>
-						</Alert>
+						<MutationError error={createMutation.error} />
 					)}
 					<DialogFooter>
 						<Button

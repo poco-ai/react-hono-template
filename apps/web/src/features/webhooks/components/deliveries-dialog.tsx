@@ -1,6 +1,5 @@
 import type { WebhookDeliveryDto, WebhookDto } from "@api/dto/webhook.dto";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -18,9 +17,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { CircleAlert, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MutationError } from "@/components/mutation-error";
 import { TablePagination } from "@/components/table-pagination";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import {
@@ -164,12 +164,7 @@ export function DeliveriesDialog({
 					</TableBody>
 				</Table>
 				{redeliverMutation.isError && (
-					<Alert variant="destructive">
-						<CircleAlert />
-						<AlertDescription>
-							{apiErrorMessage(t, redeliverMutation.error)}
-						</AlertDescription>
-					</Alert>
+					<MutationError error={redeliverMutation.error} />
 				)}
 				<div className="flex items-center justify-end text-sm">
 					<TablePagination

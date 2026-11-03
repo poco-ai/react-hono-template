@@ -1,6 +1,5 @@
 import type { ProjectDto } from "@api/dto/project.dto";
 import { updateProjectSchema } from "@workspace/shared";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
@@ -19,13 +18,12 @@ import {
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { MutationError } from "@/components/mutation-error";
 import { useUpdateProject } from "@/features/projects/data";
 
-import { apiErrorMessage } from "@/lib/errors";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
@@ -186,12 +184,7 @@ export function EditProjectDialog({
 						/>
 					</Field>
 					{updateMutation.isError && (
-						<Alert variant="destructive">
-							<CircleAlert />
-							<AlertDescription>
-								{apiErrorMessage(t, updateMutation.error)}
-							</AlertDescription>
-						</Alert>
+						<MutationError error={updateMutation.error} />
 					)}
 					<DialogFooter>
 						<Button type="submit" disabled={updateMutation.isPending}>

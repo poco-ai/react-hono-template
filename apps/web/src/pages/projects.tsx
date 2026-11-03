@@ -28,7 +28,10 @@ import {
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
+import {
+	ToggleGroup,
+	ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group";
 import {
 	Tooltip,
 	TooltipContent,
@@ -110,18 +113,22 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				)}
 			</div>
 
-			<Tabs
-				value={archived ? "archived" : "active"}
-				onValueChange={(value) => setShowArchived(value === "archived")}
-				className="mb-4 w-fit"
+			<ToggleGroup
+				value={[archived ? "archived" : "active"]}
+				onValueChange={(next) => {
+					if (next[0]) setShowArchived(next[0] === "archived");
+				}}
+				spacing={0}
+				variant="outline"
+				className="mb-4"
 			>
-				<TabsList>
-					<TabsTrigger value="active">{t("projects.activeTab")}</TabsTrigger>
-					<TabsTrigger value="archived">
-						{t("projects.archivedTab")}
-					</TabsTrigger>
-				</TabsList>
-			</Tabs>
+				<ToggleGroupItem value="active" size="sm">
+					{t("projects.activeTab")}
+				</ToggleGroupItem>
+				<ToggleGroupItem value="archived" size="sm">
+					{t("projects.archivedTab")}
+				</ToggleGroupItem>
+			</ToggleGroup>
 
 			{projects.isPending && (
 				<div

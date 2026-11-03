@@ -1,25 +1,16 @@
 import type { CommentDto } from "@api/dto/comment.dto";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { cn } from "@workspace/ui/lib/utils";
-import { CircleAlert, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MarkdownContent } from "@/components/markdown";
+import { MarkdownEditor } from "@/components/markdown-editor";
+import { MutationError } from "@/components/mutation-error";
 import { UserAvatar } from "@/components/user-avatar";
 import { useSession } from "@/features/auth/data";
 import {
@@ -28,7 +19,6 @@ import {
 	useDeleteComment,
 	useUpdateComment,
 } from "@/features/comments/data";
-import { apiErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 
 const COMMENT_MAX_LENGTH = 10000;
@@ -48,7 +38,7 @@ export function IssueComments({
 
 	const { data: session } = useSession();
 	const [body, setBody] = useState("");
-	const [tab, setTab] = useState<"write" | "preview">("write");
+	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editBody, setEditBody] = useState("");
 	const [deleting, setDeleting] = useState<CommentDto | null>(null);
@@ -63,7 +53,7 @@ export function IssueComments({
 			toast.success(t("toast.commentPosted"));
 
 			setBody("");
-			setTab("write");
+			setEditorResetKey((key) => key + 1);
 		},
 	});
 
@@ -93,12 +83,7 @@ export function IssueComments({
 			{query.isPending && (
 				<p className="text-muted-foreground text-sm">{t("common.loading")}</p>
 			)}
-			{query.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>{apiErrorMessage(t, query.error)}</AlertDescription>
-				</Alert>
-			)}
+			{query.isError && <MutationError error={query.error} />}
 
 			{!query.isPending && comments.length === 0 && !query.isError && (
 				<p className="text-muted-foreground text-sm">{t("comments.empty")}</p>
@@ -218,122 +203,51 @@ export function IssueComments({
 				</Button>
 			)}
 
-			{updateMutation.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, updateMutation.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+			{updateMutation.isError && <MutationError error={updateMutation.error} />}
 
-			<div className="rounded-lg border">
-				<div className="border-b flex items-center gap-1 px-2 pt-1.5">
-					{(["write", "preview"] as const).map((value) => (
-						<button
-							key={value}
-							type="button"
-							className={cn(
-								"rounded-md px-2 py-1 text-xs font-medium",
-								tab === value
-									? "bg-accent text-accent-foreground"
-									: "text-muted-foreground hover:text-foreground",
-							)}
-							onClick={() => setTab(value)}
+			<MarkdownEditor
+				value={body}
+				onChange={setBody}
+				resetKey={editorResetKey}
+				placeholder={t("comments.placeholder")}
+				disabled={frozen}
+				rows={4}
+				maxLength={COMMENT_MAX_LENGTH}
+				footer={
+					<div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+						<span className="text-muted-foreground text-xs">
+							{t("comments.charCount", {
+								count: body.length,
+								max: COMMENT_MAX_LENGTH,
+							})}
+						</span>
+						<Button
+							size="sm"
+							disabled={frozen || !canSubmit || createMutation.isPending}
+							onClick={() => createMutation.mutate(body.trim())}
 						>
-							{t(`common.${value}`)}
-						</button>
-					))}
-				</div>
-				{tab === "write" ? (
-					<>
-						<Textarea
-							value={body}
-							placeholder={t("comments.placeholder")}
-							onChange={(e) => setBody(e.target.value)}
-							rows={4}
-							maxLength={COMMENT_MAX_LENGTH}
-							disabled={frozen}
-							className="resize-y border-0 focus-visible:ring-0"
-						/>
-						<p className="text-muted-foreground px-3 pb-2 text-xs">
-							{t("markdown.hint")}
-						</p>
-					</>
-				) : (
-					<div className="min-h-24 px-3 py-2">
-						{body.trim() ? (
-							<MarkdownContent>{body}</MarkdownContent>
-						) : (
-							<p className="text-muted-foreground text-sm">
-								{t("comments.previewEmpty")}
-							</p>
-						)}
+							{createMutation.isPending && <Spinner />}
+							{t("comments.post")}
+						</Button>
 					</div>
-				)}
-				<div className="flex items-center justify-between gap-2 border-t px-3 py-2">
-					<span className="text-muted-foreground text-xs">
-						{t("comments.charCount", {
-							count: body.length,
-							max: COMMENT_MAX_LENGTH,
-						})}
-					</span>
-					<Button
-						size="sm"
-						disabled={frozen || !canSubmit || createMutation.isPending}
-						onClick={() => createMutation.mutate(body.trim())}
-					>
-						{createMutation.isPending && <Spinner />}
-						{t("comments.post")}
-					</Button>
-				</div>
-			</div>
-			{createMutation.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, createMutation.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+				}
+			/>
+			{createMutation.isError && <MutationError error={createMutation.error} />}
 
-			<AlertDialog
+			<ConfirmDialog
 				open={deleting !== null}
 				onOpenChange={(open) => !open && setDeleting(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("comments.deleteTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("comments.deleteDescription")}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={deleteMutation.isPending || deleting === null}
-							onClick={(e) => {
-								e.preventDefault();
-								if (deleting) {
-									deleteMutation.mutate(deleting.id);
-								}
-							}}
-						>
-							{deleteMutation.isPending && <Spinner />}
-							{t("common.delete")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-			{deleteMutation.isError && (
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>
-						{apiErrorMessage(t, deleteMutation.error)}
-					</AlertDescription>
-				</Alert>
-			)}
+				title={t("comments.deleteTitle")}
+				description={t("comments.deleteDescription")}
+				confirmLabel={t("common.delete")}
+				pending={deleteMutation.isPending}
+				onConfirm={() => {
+					if (deleting) {
+						deleteMutation.mutate(deleting.id);
+					}
+				}}
+			/>
+			{deleteMutation.isError && <MutationError error={deleteMutation.error} />}
 		</section>
 	);
 }

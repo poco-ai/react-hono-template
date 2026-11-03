@@ -6,7 +6,11 @@ import {
 	serializeCsv,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+} from "@workspace/ui/components/input-group";
 import {
 	Select,
 	SelectContent,
@@ -183,17 +187,18 @@ export function IssueFilterControls({
 				className={cn("flex items-center gap-2", stacked && "w-full")}
 				onSubmit={onSearchSubmit}
 			>
-				<div className={cn("relative", stacked && "w-full")}>
-					<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
-					<Input
+				<InputGroup className={cn(stacked ? "h-9 w-full" : "w-56")}>
+					<InputGroupAddon align="inline-start">
+						<Search />
+					</InputGroupAddon>
+					<InputGroupInput
 						ref={searchInputRef}
 						value={searchInput}
 						placeholder={t("issues.searchPlaceholder")}
 						onChange={(e) => onSearchInput(e.target.value)}
-						className={cn("pl-8", stacked ? "h-9 w-full" : "h-8 w-56")}
 						title="/"
 					/>
-				</div>
+				</InputGroup>
 			</form>
 			{showSort && (
 				<Select
