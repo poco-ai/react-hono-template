@@ -3,12 +3,12 @@ import {
 	ApiErrorCode,
 	ATTACHMENT_CONTENT_TYPES,
 	type AttachmentPresignInput,
-	PLANS,
 	type RegisterAttachmentInput,
 } from "@workspace/shared";
 import type { ActivityInsert } from "../dao/activity.dao";
 import type { AttachmentDao } from "../dao/attachment.dao";
 import type { IssueDao } from "../dao/issue.dao";
+import type { PendingUploadDao } from "../dao/pending-upload.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type {
 	AttachmentWithUrlDto,
@@ -17,7 +17,9 @@ import type {
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
 import type { StorageAdapter } from "../lib/storage/types";
+import { PENDING_UPLOAD_TTL_MS } from "../lib/storage/uploads";
 import type { PlanService } from "./plan.service";
+import type { StorageUsageService } from "./storage-usage.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 export const ATTACHMENT_UPLOAD_URL_EXPIRES_IN = 600;
@@ -55,16 +57,20 @@ export const createAttachmentService = ({
 	attachmentDao,
 	issueDao,
 	projectDao,
+	pendingUploadDao,
 	storage,
 	webhooks,
 	plans,
+	storageUsage,
 }: {
 	attachmentDao: AttachmentDao;
 	issueDao: IssueDao;
 	projectDao: ProjectDao;
+	pendingUploadDao: PendingUploadDao;
 	storage: StorageAdapter | null;
 	webhooks?: WebhookDispatcher;
-	plans: PlanService;
+	plans: Pick<PlanService, "getLimitsForOrg">;
+	storageUsage: StorageUsageService;
 }) => {
 	const assertSizeAllowed = (size: number, maxSize: number) => {
 		if (!Number.isSafeInteger(size) || size < 1 || size > maxSize) {
@@ -137,28 +143,49 @@ export const createAttachmentService = ({
 			orgId: string,
 			projectId: string,
 			number: number,
+			userId: string,
 			input: AttachmentPresignInput,
 		): Promise<PresignAttachmentResponseDto> => {
 			const s3 = requireStorage(storage);
 			const issue = await requireWritableIssue(orgId, projectId, number);
 			assertContentTypeAllowed(input.contentType);
-			if (input.size !== undefined) {
-				assertSizeAllowed(
-					input.size,
-					PLANS[await plans.getPlanForOrg(orgId)].attachmentMaxSize,
-				);
-			}
+			await storageUsage.assertCanUpload(orgId, input.size, {
+				kind: "issue_attachment",
+				issueId: issue.id,
+			});
 			const key = `orgs/${orgId}/issues/${issue.id}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
-			const uploadUrl = await s3.presignPut(
+			const pendingId = crypto.randomUUID();
+			await pendingUploadDao.create({
+				id: pendingId,
 				key,
-				input.contentType,
-				ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-			);
-			return {
-				key,
-				uploadUrl,
-				expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-			};
+				kind: "issue_attachment",
+				orgId,
+				userId,
+				targetId: issue.id,
+				declaredSize: input.size,
+				contentType: input.contentType,
+				expiresAt: new Date(Date.now() + PENDING_UPLOAD_TTL_MS),
+			});
+			try {
+				const uploadUrl = await s3.presignPut(
+					key,
+					input.contentType,
+					ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
+				);
+				return {
+					key,
+					uploadUrl,
+					expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
+				};
+			} catch (error) {
+				await pendingUploadDao.deleteByKey(key).catch((deleteError) => {
+					console.error(
+						"[attachment] failed to drop pending upload after presign error:",
+						deleteError,
+					);
+				});
+				throw error;
+			}
 		},
 
 		register: async (
@@ -179,8 +206,29 @@ export const createAttachmentService = ({
 				);
 			}
 			assertContentTypeAllowed(input.contentType);
-			const maxSize = PLANS[await plans.getPlanForOrg(orgId)].attachmentMaxSize;
-			assertSizeAllowed(input.size, maxSize);
+			const pending = await pendingUploadDao.findByKey(input.key);
+			if (
+				!pending ||
+				pending.expiresAt.getTime() <= Date.now() ||
+				pending.orgId !== orgId ||
+				pending.userId !== userId ||
+				pending.kind !== "issue_attachment" ||
+				pending.targetId !== issue.id
+			) {
+				throw new ApiError(
+					400,
+					ApiErrorCode.UPLOAD_NOT_PENDING,
+					"Upload was not reserved or has expired",
+				);
+			}
+			if (input.contentType !== pending.contentType) {
+				throw new ApiError(
+					400,
+					ApiErrorCode.VALIDATION,
+					"Registered content type does not match the reserved upload",
+				);
+			}
+			const maxSize = (await plans.getLimitsForOrg(orgId)).attachmentMaxSize;
 			const s3 = requireStorage(storage);
 			const stat = await s3.stat(input.key);
 			if (!stat) {
@@ -190,18 +238,30 @@ export const createAttachmentService = ({
 					"No uploaded object found for this key — upload the file before registering",
 				);
 			}
-			if (stat.size > maxSize) {
+			if (stat.size > maxSize || stat.size > pending.declaredSize) {
 				throw new ApiError(
 					413,
 					ApiErrorCode.FILE_TOO_LARGE,
-					`Uploaded object is ${stat.size} bytes, exceeding the ${maxSize} byte plan limit`,
+					`Uploaded object is ${stat.size} bytes, exceeding the reserved ${Math.min(maxSize, pending.declaredSize)} byte limit`,
 				);
 			}
-			if (stat.contentType && !stat.contentType.startsWith(input.contentType)) {
+			assertSizeAllowed(stat.size, maxSize);
+			if (
+				stat.contentType &&
+				!stat.contentType.startsWith(pending.contentType)
+			) {
 				throw new ApiError(
 					400,
 					ApiErrorCode.VALIDATION,
 					"Uploaded object content type does not match the registered content type",
+				);
+			}
+			const existing = await attachmentDao.findByKey(input.key);
+			if (existing) {
+				throw new ApiError(
+					409,
+					ApiErrorCode.CONFLICT,
+					"This object has already been registered",
 				);
 			}
 			const attachment = await attachmentDao.create(
@@ -212,7 +272,7 @@ export const createAttachmentService = ({
 					uploaderId: userId,
 					key: input.key,
 					filename: input.filename,
-					contentType: input.contentType,
+					contentType: pending.contentType,
 					size: stat.size,
 				},
 				recordActivity(
@@ -224,6 +284,7 @@ export const createAttachmentService = ({
 					input.filename,
 				),
 			);
+			await pendingUploadDao.deleteByKey(input.key);
 			const url = storage
 				? await storage.presignGet(
 						attachment.key,
@@ -270,7 +331,11 @@ export const createAttachmentService = ({
 		) => {
 			const issue = await requireIssue(orgId, projectId, number);
 			const attachment = await attachmentDao.findById(orgId, attachmentId);
-			if (!attachment || attachment.issueId !== issue.id) {
+			if (
+				!attachment ||
+				attachment.issueId !== issue.id ||
+				attachment.commentId
+			) {
 				throw new ApiError(
 					404,
 					ApiErrorCode.ATTACHMENT_NOT_FOUND,

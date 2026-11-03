@@ -34,6 +34,7 @@ export const createAttachmentController = (service: AttachmentService) => ({
 				c.get("orgMember").orgId,
 				requireProjectId(c),
 				requireIssueNumber(c),
+				c.get("session").user.id,
 				input,
 			),
 		),

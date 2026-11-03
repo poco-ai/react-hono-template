@@ -16,9 +16,11 @@ import { createBillingDao } from "./dao/billing.dao";
 import { createCommentDao } from "./dao/comment.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createLabelDao } from "./dao/label.dao";
+import { createMediaAssetDao } from "./dao/media-asset.dao";
 import { createMemberDao } from "./dao/member.dao";
 import { createOrgAiSettingsDao } from "./dao/org-ai-settings.dao";
 import { createOrganizationDao } from "./dao/organization.dao";
+import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
@@ -48,6 +50,7 @@ import { createLabelService } from "./services/label.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
+import { createStorageUsageService } from "./services/storage-usage.service";
 import { createWebhookService } from "./services/webhook.service";
 import {
 	createWebhookDeliveryService,
@@ -96,6 +99,8 @@ export const createDependencies = ({
 	const labelDao = createLabelDao(db);
 	const commentDao = createCommentDao(db);
 	const attachmentDao = createAttachmentDao(db);
+	const pendingUploadDao = createPendingUploadDao(db);
+	const mediaAssetDao = createMediaAssetDao(db);
 	const activityDao = createActivityDao(db);
 	const apiKeyDao = createApiKeyDao(db);
 	const webhookDao = createWebhookDao(db);
@@ -113,10 +118,18 @@ export const createDependencies = ({
 		deliveryDao: webhookDeliveryDao,
 		queue: webhookQueue,
 	});
+	const storageUsageService = createStorageUsageService({
+		attachmentDao,
+		pendingUploadDao,
+		mediaAssetDao,
+		plans: planService,
+	});
 	const cleanupService = createCleanupService({
 		memberDao,
 		deliveryDao: webhookDeliveryDao,
 		conversationDao: aiConversationDao,
+		pendingUploadDao,
+		storage,
 	});
 	const webhookService = createWebhookService({
 		webhookDao,
@@ -144,9 +157,11 @@ export const createDependencies = ({
 		attachmentDao,
 		issueDao,
 		projectDao,
+		pendingUploadDao,
 		storage,
 		webhooks: webhookDeliveryService,
 		plans: planService,
+		storageUsage: storageUsageService,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
 	const apiKeyService = createApiKeyService(apiKeyDao);

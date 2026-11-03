@@ -9,6 +9,7 @@ export type AttachmentDto = {
 	id: string;
 	orgId: string;
 	issueId: string;
+	commentId: string | null;
 	key: string;
 	filename: string;
 	contentType: string;

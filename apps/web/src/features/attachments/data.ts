@@ -84,7 +84,7 @@ export const uploadAttachment = async (
 		":projectId"
 	].issues[":number"].attachments.presign.$post({
 		param: { orgId, projectId, number: String(issueNumber) },
-		json: { filename: file.name, contentType },
+		json: { filename: file.name, contentType, size: file.size },
 	});
 	if (presignResponse.status >= 500) {
 		throw storageUnavailableError();

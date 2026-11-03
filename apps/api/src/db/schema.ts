@@ -147,6 +147,9 @@ export const attachments = sqliteTable(
 		uploaderId: text("uploader_id").references(() => user.id, {
 			onDelete: "set null",
 		}),
+		commentId: text("comment_id").references(() => comments.id, {
+			onDelete: "cascade",
+		}),
 		key: text("key").notNull(),
 		filename: text("filename").notNull(),
 		contentType: text("content_type").notNull(),
@@ -155,7 +158,73 @@ export const attachments = sqliteTable(
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
 	},
-	(table) => [index("attachments_issueId_idx").on(table.issueId)],
+	(table) => [
+		uniqueIndex("attachments_key_uq").on(table.key),
+		index("attachments_issueId_idx").on(table.issueId),
+		index("attachments_orgId_createdAt_idx").on(table.orgId, table.createdAt),
+		index("attachments_commentId_idx").on(table.commentId),
+	],
+);
+
+export const pendingUploads = sqliteTable(
+	"pending_uploads",
+	{
+		id: text("id").primaryKey(),
+		key: text("key").notNull(),
+		kind: text("kind").notNull(),
+		orgId: text("org_id").references(() => organization.id, {
+			onDelete: "cascade",
+		}),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		targetId: text("target_id"),
+		declaredSize: integer("declared_size").notNull(),
+		contentType: text("content_type").notNull(),
+		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("pending_uploads_key_uq").on(table.key),
+		index("pending_uploads_orgId_expiresAt_idx").on(
+			table.orgId,
+			table.expiresAt,
+		),
+		index("pending_uploads_expiresAt_idx").on(table.expiresAt),
+	],
+);
+
+export const mediaAssets = sqliteTable(
+	"media_assets",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id").references(() => organization.id, {
+			onDelete: "cascade",
+		}),
+		ownerUserId: text("owner_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		kind: text("kind").notNull(),
+		key: text("key").notNull(),
+		filename: text("filename"),
+		contentType: text("content_type").notNull(),
+		size: integer("size").notNull(),
+		supersededAt: integer("superseded_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("media_assets_key_uq").on(table.key),
+		index("media_assets_orgId_kind_idx").on(table.orgId, table.kind),
+		index("media_assets_ownerUserId_kind_idx").on(
+			table.ownerUserId,
+			table.kind,
+		),
+		index("media_assets_supersededAt_idx").on(table.supersededAt),
+	],
 );
 
 export const apiKeys = sqliteTable(

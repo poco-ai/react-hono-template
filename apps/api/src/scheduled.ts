@@ -4,7 +4,7 @@ export const handleScheduled = async (cleanup: CleanupService) => {
 	try {
 		const counts = await cleanup.cleanup();
 		console.log(
-			`[cron] cleanup expiredInvitations=${counts.expiredInvitations} failedDeliveries=${counts.failedDeliveries} deletedConversations=${counts.deletedConversations}`,
+			`[cron] cleanup expiredInvitations=${counts.expiredInvitations} failedDeliveries=${counts.failedDeliveries} deletedConversations=${counts.deletedConversations} expiredPendingUploads=${counts.expiredPendingUploads}`,
 		);
 	} catch (err) {
 		console.error("[cron] cleanup failed:", err);

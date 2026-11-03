@@ -73,6 +73,23 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 				contentType: res.headers.get("content-type"),
 			};
 		},
+		get: async (key) => {
+			const res = await client().fetch(objectUrl(key), { method: "GET" });
+			if (res.status === 404) {
+				return null;
+			}
+			if (!res.ok || !res.body) {
+				throw new Error(`S3 GET ${key} failed with status ${res.status}`);
+			}
+			const lengthHeader = res.headers.get("content-length");
+			const contentLength = lengthHeader === null ? null : Number(lengthHeader);
+			return {
+				body: res.body,
+				contentType: res.headers.get("content-type"),
+				contentLength: Number.isFinite(contentLength) ? contentLength : null,
+				etag: res.headers.get("etag"),
+			};
+		},
 		remove: async (key) => {
 			const res = await client().fetch(objectUrl(key), { method: "DELETE" });
 			if (!res.ok && res.status !== 404) {

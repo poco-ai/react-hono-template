@@ -25,8 +25,7 @@ export const attachmentPresignSchema = z.object({
 		.number()
 		.int()
 		.min(1)
-		.max(ATTACHMENT_MAX_SIZE, attachmentMaxSizeMessage)
-		.optional(),
+		.max(ATTACHMENT_MAX_SIZE, attachmentMaxSizeMessage),
 });
 
 export const registerAttachmentSchema = z.object({

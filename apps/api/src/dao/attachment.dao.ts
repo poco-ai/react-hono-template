@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
 import { attachments } from "../db/schema";
@@ -10,6 +10,7 @@ const ATTACHMENT_SELECT = {
 	id: attachments.id,
 	orgId: attachments.orgId,
 	issueId: attachments.issueId,
+	commentId: attachments.commentId,
 	key: attachments.key,
 	filename: attachments.filename,
 	contentType: attachments.contentType,
@@ -28,6 +29,7 @@ type AttachmentJoinRow = {
 	id: string;
 	orgId: string;
 	issueId: string;
+	commentId: string | null;
 	key: string;
 	filename: string;
 	contentType: string;
@@ -56,7 +58,11 @@ export const createAttachmentDao = (db: Database) => ({
 			.from(attachments)
 			.leftJoin(user, eq(user.id, attachments.uploaderId))
 			.where(
-				and(eq(attachments.orgId, orgId), eq(attachments.issueId, issueId)),
+				and(
+					eq(attachments.orgId, orgId),
+					eq(attachments.issueId, issueId),
+					isNull(attachments.commentId),
+				),
 			)
 			.orderBy(desc(attachments.createdAt), desc(attachments.id));
 		return rows.map(toAttachmentDto);
@@ -80,6 +86,7 @@ export const createAttachmentDao = (db: Database) => ({
 			id: string;
 			orgId: string;
 			issueId: string;
+			commentId?: string | null;
 			uploaderId: string | null;
 			key: string;
 			filename: string;
@@ -88,10 +95,12 @@ export const createAttachmentDao = (db: Database) => ({
 		},
 		activity?: ActivityInsert,
 	): Promise<AttachmentDto> => {
-		const statements = [db.insert(attachments).values(data)] as [
-			BatchItem<"sqlite">,
-			...BatchItem<"sqlite">[],
-		];
+		const statements = [
+			db.insert(attachments).values({
+				...data,
+				commentId: data.commentId ?? null,
+			}),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 		if (activity) {
 			statements.push(activityInsertStatement(db, [activity]));
 		}
@@ -124,6 +133,7 @@ export const createAttachmentDao = (db: Database) => ({
 			id: row.id,
 			orgId: row.orgId,
 			issueId: row.issueId,
+			commentId: row.commentId,
 			key: row.key,
 			filename: row.filename,
 			contentType: row.contentType,
@@ -149,6 +159,100 @@ export const createAttachmentDao = (db: Database) => ({
 		}
 		const [rows] = await db.batch(statements);
 		return rows.length > 0;
+	},
+
+	listByComment: async (
+		orgId: string,
+		commentId: string,
+	): Promise<AttachmentDto[]> => {
+		const rows = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(
+				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
+			)
+			.orderBy(desc(attachments.createdAt), desc(attachments.id));
+		return rows.map(toAttachmentDto);
+	},
+
+	listByCommentIds: async (
+		orgId: string,
+		commentIds: string[],
+	): Promise<AttachmentDto[]> => {
+		if (commentIds.length === 0) return [];
+		const rows = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					inArray(attachments.commentId, commentIds),
+				),
+			)
+			.orderBy(desc(attachments.createdAt), desc(attachments.id));
+		return rows.map(toAttachmentDto);
+	},
+
+	sumSizeByOrg: async (orgId: string): Promise<number> => {
+		const row = await db
+			.select({
+				value: sql<number>`coalesce(sum(${attachments.size}), 0)`,
+			})
+			.from(attachments)
+			.where(eq(attachments.orgId, orgId))
+			.get();
+		return Number(row?.value ?? 0);
+	},
+
+	countByIssue: async (orgId: string, issueId: string): Promise<number> => {
+		const row = await db
+			.select({ value: count() })
+			.from(attachments)
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					eq(attachments.issueId, issueId),
+					isNull(attachments.commentId),
+				),
+			)
+			.get();
+		return row?.value ?? 0;
+	},
+
+	countByComment: async (orgId: string, commentId: string): Promise<number> => {
+		const row = await db
+			.select({ value: count() })
+			.from(attachments)
+			.where(
+				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
+			)
+			.get();
+		return row?.value ?? 0;
+	},
+
+	listKeysByComment: async (
+		orgId: string,
+		commentId: string,
+	): Promise<string[]> => {
+		const rows = await db
+			.select({ key: attachments.key })
+			.from(attachments)
+			.where(
+				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
+			);
+		return rows.map((row) => row.key);
+	},
+
+	findByKey: async (key: string): Promise<AttachmentDto | null> => {
+		const row = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(eq(attachments.key, key))
+			.get();
+		return row ? toAttachmentDto(row) : null;
 	},
 });
 

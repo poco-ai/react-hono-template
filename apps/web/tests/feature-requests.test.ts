@@ -129,6 +129,11 @@ test("attachment uploads pass the AbortSignal and only finalize after a successf
 			});
 			assert.equal(resolveContentType(file), "image/jpeg");
 			assert.equal(requests.length, 3);
+			assert.deepEqual(requests[0].body, {
+				filename: "example.jpg",
+				contentType: "image/jpeg",
+				size: file.size,
+			});
 			assert.equal(requests[1].method, "PUT");
 			assert.equal(requests[1].body, file);
 			assert.equal(requests[1].signal, controller.signal);

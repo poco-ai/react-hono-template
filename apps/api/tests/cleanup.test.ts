@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MemberDao } from "../src/dao/member.dao";
+import type { PendingUploadDao } from "../src/dao/pending-upload.dao";
 import type { WebhookDeliveryDao } from "../src/dao/webhook-delivery.dao";
+import type { StorageAdapter } from "../src/lib/storage/types";
 import { handleScheduled } from "../src/scheduled";
 import {
 	ABANDONED_DELIVERY_AGE_MS,
@@ -166,13 +168,14 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 				expiredInvitations: 2,
 				failedDeliveries: 1,
 				deletedConversations: 3,
+				expiredPendingUploads: 4,
 			}),
 		});
 		assert.ok(
 			logs.some(
 				(args) =>
 					args[0] ===
-					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3",
+					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 expiredPendingUploads=4",
 			),
 		);
 		await handleScheduled({
@@ -187,4 +190,52 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 		console.log = originalLog;
 		console.error = originalError;
 	}
+});
+
+test("cleanup removes expired pending objects and leaves failed deletes for the next run", async () => {
+	const now = new Date("2026-10-20T12:00:00.000Z");
+	const rows = [
+		{
+			key: "old-key",
+			expiresAt: new Date(now.getTime() - 1_000),
+		},
+		{
+			key: "fail-key",
+			expiresAt: new Date(now.getTime() - 1_000),
+		},
+		{
+			key: "fresh-key",
+			expiresAt: new Date(now.getTime() + 60_000),
+		},
+	];
+	const removed: string[] = [];
+	const counts = await createCleanupService({
+		memberDao: {
+			deleteExpiredPending: async () => 0,
+		} as unknown as MemberDao,
+		deliveryDao: {
+			failNeverAttempted: async () => 0,
+		} as unknown as WebhookDeliveryDao,
+		pendingUploadDao: {
+			findExpired: async (asOf: Date) =>
+				rows.filter((row) => row.expiresAt.getTime() < asOf.getTime()),
+			deleteByKey: async (key: string) => {
+				const index = rows.findIndex((row) => row.key === key);
+				if (index >= 0) rows.splice(index, 1);
+			},
+		} as unknown as Pick<PendingUploadDao, "findExpired" | "deleteByKey">,
+		storage: {
+			remove: async (key: string) => {
+				if (key === "fail-key") throw new Error("object delete failed");
+				removed.push(key);
+			},
+		} as StorageAdapter,
+	}).cleanup(now);
+
+	assert.equal(counts.expiredPendingUploads, 1);
+	assert.deepEqual(removed, ["old-key"]);
+	assert.deepEqual(
+		rows.map((row) => row.key),
+		["fail-key", "fresh-key"],
+	);
 });
