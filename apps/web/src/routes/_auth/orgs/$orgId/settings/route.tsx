@@ -4,6 +4,7 @@ import {
 	Outlet,
 	useParams,
 } from "@tanstack/react-router";
+import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 
@@ -58,6 +59,16 @@ function SettingsLayout() {
 						{link.label}
 					</Link>
 				))}
+				{/* The docs page lives outside the settings layout, so a plain anchor opens it in a new tab. */}
+				<a
+					href="/api-docs"
+					target="_blank"
+					rel="noreferrer"
+					className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm whitespace-nowrap"
+				>
+					{t("apiDocs.title")}
+					<ExternalLink className="size-3.5" />
+				</a>
 			</nav>
 			<Outlet />
 		</div>

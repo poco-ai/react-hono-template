@@ -187,6 +187,7 @@ const en = {
 		panelTitle: "Ask AI",
 		newChat: "New chat",
 		newChatTitle: "New conversation",
+		recentChats: "Recent chats",
 		untitled: "Untitled conversation",
 		send: "Send",
 		stop: "Stop",
@@ -593,6 +594,7 @@ const en = {
 	},
 	projects: {
 		sidebarTitle: "Projects",
+		viewAll: "View all {{count}} projects",
 		title: "Projects",
 		create: "New project",
 		createTitle: "Create project",

@@ -185,6 +185,7 @@ const zh: typeof en = {
 		panelTitle: "询问 AI",
 		newChat: "新对话",
 		newChatTitle: "新对话",
+		recentChats: "最近对话",
 		untitled: "未命名对话",
 		send: "发送",
 		stop: "停止",
@@ -558,6 +559,7 @@ const zh: typeof en = {
 	},
 	projects: {
 		sidebarTitle: "项目",
+		viewAll: "查看全部 {{count}} 个项目",
 		title: "项目",
 		create: "新建项目",
 		createTitle: "创建项目",

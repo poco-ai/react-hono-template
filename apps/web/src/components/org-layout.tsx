@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import {
+	Link,
+	Outlet,
+	useMatchRoute,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
@@ -14,9 +20,13 @@ import {
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuAction,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
+	SidebarMenuSubItem,
 	SidebarProvider,
 	SidebarTrigger,
 	useSidebar,
@@ -30,15 +40,17 @@ import {
 import { cn } from "@workspace/ui/lib/utils";
 import {
 	Activity,
+	ChevronRight,
 	ChevronsUpDown,
 	Inbox,
+	MessageSquare,
 	Plus,
 	Search,
 	Settings,
 	Snowflake,
 	Sparkles,
 } from "lucide-react";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
@@ -55,6 +67,10 @@ import { useOrgRole } from "@/features/organizations/use-org-role";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { projectsQuery } from "@/features/projects/data";
 import { useHotkeys } from "@/lib/use-hotkeys";
+
+const MAX_SIDEBAR_PROJECTS = 7;
+const ACTIVE_ITEM_CLASS =
+	"bg-sidebar-accent text-sidebar-accent-foreground font-medium";
 
 function SidebarLink({
 	to,
@@ -81,7 +97,7 @@ function SidebarLink({
 						activeOptions={{ exact }}
 						onClick={onNavigate}
 						activeProps={{
-							className: "bg-sidebar-accent text-sidebar-accent-foreground",
+							className: ACTIVE_ITEM_CLASS,
 						}}
 					/>
 				}
@@ -102,8 +118,9 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const { role } = useOrgRole(orgId);
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [recentChatsOpen, setRecentChatsOpen] = useState(false);
 	const { isMobile, setOpenMobile } = useSidebar();
-	const { newChat } = useAiChat();
+	const { newChat, conversations } = useAiChat();
 
 	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
 	const onNavigate = () => {
@@ -119,6 +136,28 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const activeProjects = (projects.data ?? []).filter(
 		(project) => !project.archived,
 	);
+	const visibleProjects = activeProjects.slice(0, MAX_SIDEBAR_PROJECTS);
+	const matchRoute = useMatchRoute();
+	const projectMatch = matchRoute({
+		to: "/orgs/$orgId/projects/$projectId",
+	});
+	const onConversationRoute = Boolean(
+		matchRoute({ to: "/orgs/$orgId/ai/$conversationId" }),
+	);
+	useEffect(() => {
+		if (onConversationRoute) setRecentChatsOpen(true);
+	}, [onConversationRoute]);
+	const currentProject = projectMatch
+		? activeProjects.find((project) => project.id === projectMatch.projectId)
+		: undefined;
+	if (
+		currentProject &&
+		!visibleProjects.some((project) => project.id === currentProject.id)
+	) {
+		visibleProjects.push(currentProject);
+	}
+	// The conversation list is pinned-first; the header only appears once it has data.
+	const recentConversations = conversations.data?.items.slice(0, 3) ?? [];
 
 	return (
 		<>
@@ -206,9 +245,9 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 										params={{ orgId }}
 										aria-label={t("nav.aiAssistant")}
 										onClick={onNavigate}
+										activeOptions={{ exact: true }}
 										activeProps={{
-											className:
-												"bg-sidebar-accent text-sidebar-accent-foreground",
+											className: ACTIVE_ITEM_CLASS,
 										}}
 									/>
 								}
@@ -235,6 +274,63 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 								<TooltipContent>{t("ai.newChat")}</TooltipContent>
 							</Tooltip>
 						</SidebarMenuItem>
+						{recentConversations.length > 0 ? (
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									size="sm"
+									className="text-muted-foreground font-normal"
+									aria-expanded={recentChatsOpen}
+									onClick={() => setRecentChatsOpen((open) => !open)}
+								>
+									<ChevronRight
+										className={cn(
+											"transition-transform",
+											recentChatsOpen && "rotate-90",
+										)}
+									/>
+									<span className="flex-1 text-left">
+										{t("ai.recentChats")}
+									</span>
+								</SidebarMenuButton>
+								{recentChatsOpen ? (
+									<SidebarMenuSub>
+										{recentConversations.map((conversation) => {
+											const title = conversation.title || t("ai.untitled");
+											return (
+												<SidebarMenuSubItem key={conversation.id}>
+													<Tooltip>
+														<TooltipTrigger
+															render={
+																<SidebarMenuSubButton
+																	size="sm"
+																	render={
+																		<Link
+																			to="/orgs/$orgId/ai/$conversationId"
+																			params={{
+																				orgId,
+																				conversationId: conversation.id,
+																			}}
+																			onClick={onNavigate}
+																			activeProps={{
+																				className: ACTIVE_ITEM_CLASS,
+																			}}
+																		/>
+																	}
+																>
+																	<MessageSquare />
+																	<span>{title}</span>
+																</SidebarMenuSubButton>
+															}
+														/>
+														<TooltipContent>{title}</TooltipContent>
+													</Tooltip>
+												</SidebarMenuSubItem>
+											);
+										})}
+									</SidebarMenuSub>
+								) : null}
+							</SidebarMenuItem>
+						) : null}
 					</SidebarMenu>
 				</SidebarGroup>
 				<SidebarGroup>
@@ -299,18 +395,19 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 											<SidebarMenuSkeleton showIcon />
 										</SidebarMenuItem>
 									))
-								: activeProjects.map((project) => (
+								: visibleProjects.map((project) => (
 										<SidebarMenuItem key={project.id}>
 											<SidebarMenuButton
+												className="pr-8"
 												render={
 													<Link
 														to="/orgs/$orgId/projects/$projectId"
 														params={{ orgId, projectId: project.id }}
 														search={{ page: 1, sort: "updated" }}
+														activeOptions={{ includeSearch: false }}
 														onClick={onNavigate}
 														activeProps={{
-															className:
-																"bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+															className: ACTIVE_ITEM_CLASS,
 														}}
 													/>
 												}
@@ -324,8 +421,35 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 												/>
 												<span className="min-w-0 truncate">{project.name}</span>
 											</SidebarMenuButton>
+											{project.openIssueCount > 0 ? (
+												<SidebarMenuBadge className="text-muted-foreground font-normal">
+													{project.openIssueCount}
+												</SidebarMenuBadge>
+											) : null}
 										</SidebarMenuItem>
 									))}
+							{!projects.isPending &&
+							activeProjects.length > MAX_SIDEBAR_PROJECTS ? (
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										className="text-muted-foreground"
+										render={
+											<Link
+												to="/orgs/$orgId/projects"
+												params={{ orgId }}
+												onClick={onNavigate}
+											/>
+										}
+									>
+										<ChevronRight />
+										<span className="flex-1 text-left">
+											{t("projects.viewAll", {
+												count: activeProjects.length,
+											})}
+										</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							) : null}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
