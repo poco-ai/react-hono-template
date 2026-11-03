@@ -84,6 +84,11 @@ import {
 	InputGroupInput,
 } from "@workspace/ui/components/input-group";
 import {
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+} from "@workspace/ui/components/pagination";
+import {
 	RadioGroup,
 	RadioGroupItem,
 } from "@workspace/ui/components/radio-group";
@@ -682,26 +687,32 @@ export function AdminUsers({
 							.replace("{{to}}", String(to))
 							.replace("{{total}}", String(total))}
 					</span>
-					<div className="flex gap-1">
-						<Button
-							aria-label={localization.previousPage}
-							disabled={!table.getCanPreviousPage() || users.isFetching}
-							onClick={() => table.previousPage()}
-							size="icon-sm"
-							variant="outline"
-						>
-							<ChevronLeftIcon />
-						</Button>
-						<Button
-							aria-label={localization.nextPage}
-							disabled={!table.getCanNextPage() || users.isFetching}
-							onClick={() => table.nextPage()}
-							size="icon-sm"
-							variant="outline"
-						>
-							<ChevronRightIcon />
-						</Button>
-					</div>
+					<Pagination className="mx-0 w-auto">
+						<PaginationContent>
+							<PaginationItem>
+								<Button
+									aria-label={localization.previousPage}
+									disabled={!table.getCanPreviousPage() || users.isFetching}
+									onClick={() => table.previousPage()}
+									size="icon-sm"
+									variant="outline"
+								>
+									<ChevronLeftIcon />
+								</Button>
+							</PaginationItem>
+							<PaginationItem>
+								<Button
+									aria-label={localization.nextPage}
+									disabled={!table.getCanNextPage() || users.isFetching}
+									onClick={() => table.nextPage()}
+									size="icon-sm"
+									variant="outline"
+								>
+									<ChevronRightIcon />
+								</Button>
+							</PaginationItem>
+						</PaginationContent>
+					</Pagination>
 				</div>
 			</div>
 

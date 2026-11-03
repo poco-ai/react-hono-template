@@ -1,4 +1,9 @@
 import { Button } from "@workspace/ui/components/button";
+import {
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+} from "@workspace/ui/components/pagination";
 import { useTranslation } from "react-i18next";
 
 export function TablePagination({
@@ -21,26 +26,34 @@ export function TablePagination({
 	}
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
-			<Button
-				variant="outline"
-				size="sm"
-				disabled={page <= 1 || disabled}
-				onClick={() => onPageChange(page - 1)}
-			>
-				{t("common.prev")}
-			</Button>
-			<span className="text-muted-foreground">
-				{t("issues.pageIndicator", { page, total: totalPages })}
-			</span>
-			<Button
-				variant="outline"
-				size="sm"
-				disabled={page >= totalPages || disabled}
-				onClick={() => onPageChange(page + 1)}
-			>
-				{t("common.next")}
-			</Button>
-		</div>
+		<Pagination className="justify-start">
+			<PaginationContent className="flex-wrap">
+				<PaginationItem>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={page <= 1 || disabled}
+						onClick={() => onPageChange(page - 1)}
+					>
+						{t("common.prev")}
+					</Button>
+				</PaginationItem>
+				<PaginationItem>
+					<span className="text-muted-foreground px-2 text-sm tabular-nums">
+						{t("issues.pageIndicator", { page, total: totalPages })}
+					</span>
+				</PaginationItem>
+				<PaginationItem>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={page >= totalPages || disabled}
+						onClick={() => onPageChange(page + 1)}
+					>
+						{t("common.next")}
+					</Button>
+				</PaginationItem>
+			</PaginationContent>
+		</Pagination>
 	);
 }

@@ -9,6 +9,11 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import {
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+} from "@workspace/ui/components/pagination";
 import { cn } from "cn";
 import {
 	ChevronLeft,
@@ -96,45 +101,57 @@ export function OrganizationTablePagination({
 						.replace("{{pages}}", String(Math.max(1, pageCount)))}
 				</span>
 
-				<Button
-					aria-label={localization.firstPage}
-					size="icon-sm"
-					variant="outline"
-					disabled={disabled || !canPreviousPage}
-					onClick={onFirstPage}
-				>
-					<ChevronsLeft />
-				</Button>
+				<Pagination className="mx-0 w-auto">
+					<PaginationContent>
+						<PaginationItem>
+							<Button
+								aria-label={localization.firstPage}
+								size="icon-sm"
+								variant="outline"
+								disabled={disabled || !canPreviousPage}
+								onClick={onFirstPage}
+							>
+								<ChevronsLeft />
+							</Button>
+						</PaginationItem>
 
-				<Button
-					aria-label={localization.previousPage}
-					size="icon-sm"
-					variant="outline"
-					disabled={disabled || !canPreviousPage}
-					onClick={onPreviousPage}
-				>
-					<ChevronLeft />
-				</Button>
+						<PaginationItem>
+							<Button
+								aria-label={localization.previousPage}
+								size="icon-sm"
+								variant="outline"
+								disabled={disabled || !canPreviousPage}
+								onClick={onPreviousPage}
+							>
+								<ChevronLeft />
+							</Button>
+						</PaginationItem>
 
-				<Button
-					aria-label={localization.nextPage}
-					size="icon-sm"
-					variant="outline"
-					disabled={disabled || !canNextPage}
-					onClick={onNextPage}
-				>
-					<ChevronRight />
-				</Button>
+						<PaginationItem>
+							<Button
+								aria-label={localization.nextPage}
+								size="icon-sm"
+								variant="outline"
+								disabled={disabled || !canNextPage}
+								onClick={onNextPage}
+							>
+								<ChevronRight />
+							</Button>
+						</PaginationItem>
 
-				<Button
-					aria-label={localization.lastPage}
-					size="icon-sm"
-					variant="outline"
-					disabled={disabled || !canNextPage}
-					onClick={onLastPage}
-				>
-					<ChevronsRight />
-				</Button>
+						<PaginationItem>
+							<Button
+								aria-label={localization.lastPage}
+								size="icon-sm"
+								variant="outline"
+								disabled={disabled || !canNextPage}
+								onClick={onLastPage}
+							>
+								<ChevronsRight />
+							</Button>
+						</PaginationItem>
+					</PaginationContent>
+				</Pagination>
 			</div>
 		</div>
 	);
