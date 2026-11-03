@@ -1,3 +1,4 @@
+import type { AiConversationDto } from "@api/dto/ai.dto";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Link,
@@ -9,7 +10,6 @@ import {
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
-import { Kbd } from "@workspace/ui/components/kbd";
 import {
 	Sidebar,
 	SidebarContent,
@@ -18,8 +18,6 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
-	SidebarMenuAction,
-	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
@@ -37,18 +35,16 @@ import {
 import { cn } from "@workspace/ui/lib/utils";
 import {
 	Activity,
-	ArrowRight,
-	ChevronRight,
 	ChevronsUpDown,
+	Folder,
 	FolderKanban,
 	Inbox,
-	Plus,
 	Search,
-	Settings,
 	Snowflake,
 	Sparkles,
+	SquarePen,
 } from "lucide-react";
-import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
+import { type CSSProperties, Fragment, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
@@ -62,11 +58,9 @@ import { ActiveOrganizationSync } from "@/features/organizations/active-organiza
 import { orgsQuery } from "@/features/organizations/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
-import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { projectsQuery } from "@/features/projects/data";
 import { useHotkeys } from "@/lib/use-hotkeys";
 
-const MAX_SIDEBAR_PROJECTS = 7;
 const ACTIVE_ITEM_CLASS =
 	"bg-sidebar-accent text-sidebar-accent-foreground font-medium";
 
@@ -109,17 +103,43 @@ function SidebarLink({
 	);
 }
 
-function readSectionOpen(orgId: string, section: string) {
-	if (typeof localStorage === "undefined") return true;
-	return localStorage.getItem(`sidebar:${orgId}:${section}-open`) !== "false";
-}
-
-function writeSectionOpen(orgId: string, section: string, open: boolean) {
-	try {
-		localStorage.setItem(`sidebar:${orgId}:${section}-open`, String(open));
-	} catch {
-		// Storage can be unavailable in private mode; the section still toggles.
-	}
+function ConversationRow({
+	orgId,
+	conversation,
+	indented = false,
+	onNavigate,
+}: {
+	orgId: string;
+	conversation: AiConversationDto;
+	indented?: boolean;
+	onNavigate?: () => void;
+}) {
+	const { t } = useTranslation();
+	const title = conversation.title || t("ai.untitled");
+	return (
+		<SidebarMenuItem>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<SidebarMenuButton
+							className={indented ? "pl-14" : "pl-8"}
+							render={
+								<Link
+									to="/orgs/$orgId/ai/$conversationId"
+									params={{ orgId, conversationId: conversation.id }}
+									onClick={onNavigate}
+									activeProps={{ className: ACTIVE_ITEM_CLASS }}
+								/>
+							}
+						>
+							<span className="min-w-0 truncate">{title}</span>
+						</SidebarMenuButton>
+					}
+				/>
+				<TooltipContent>{title}</TooltipContent>
+			</Tooltip>
+		</SidebarMenuItem>
+	);
 }
 
 function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
@@ -130,20 +150,11 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
 	const { role } = useOrgRole(orgId);
-	const frozen = useOrgFrozen(orgId);
-	const [createOpen, setCreateOpen] = useState(false);
-	const [conversationsOpen, setConversationsOpen] = useState(() =>
-		readSectionOpen(orgId, "conversations"),
-	);
-	const [projectsOpen, setProjectsOpen] = useState(() =>
-		readSectionOpen(orgId, "projects"),
-	);
 	const { isMobile, setOpenMobile, state } = useSidebar();
 	const { newChat, conversations } = useAiChat();
 	// `state` tracks the desktop rail; the mobile Sheet always renders full content.
 	const collapsed = state === "collapsed" && !isMobile;
 
-	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
 	const onNavigate = () => {
 		if (isMobile) setOpenMobile(false);
 	};
@@ -152,39 +163,39 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 		void navigate({ to: "/orgs/$orgId/ai", params: { orgId } });
 		onNavigate();
 	};
-	useEffect(() => {
-		writeSectionOpen(orgId, "conversations", conversationsOpen);
-	}, [orgId, conversationsOpen]);
-	useEffect(() => {
-		writeSectionOpen(orgId, "projects", projectsOpen);
-	}, [orgId, projectsOpen]);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 	const activeProjects = (projects.data ?? []).filter(
 		(project) => !project.archived,
 	);
-	const visibleProjects = activeProjects.slice(0, MAX_SIDEBAR_PROJECTS);
 	const matchRoute = useMatchRoute();
 	const projectMatch = matchRoute({
 		to: "/orgs/$orgId/projects/$projectId",
 	});
-	const onAiRoute =
-		Boolean(matchRoute({ to: "/orgs/$orgId/ai" })) ||
-		Boolean(matchRoute({ to: "/orgs/$orgId/ai/$conversationId" }));
-	const onProjectsRoute =
-		Boolean(matchRoute({ to: "/orgs/$orgId/projects" })) ||
-		Boolean(projectMatch);
 	const currentProject = projectMatch
 		? activeProjects.find((project) => project.id === projectMatch.projectId)
 		: undefined;
-	if (
-		currentProject &&
-		!visibleProjects.some((project) => project.id === currentProject.id)
-	) {
-		visibleProjects.push(currentProject);
-	}
-	// The conversation list is pinned-first; the header only appears once it has data.
-	const recentConversations = conversations.data?.items.slice(0, 3) ?? [];
+	const conversationItems = conversations.data?.items ?? [];
+	const pinnedConversations = conversationItems
+		.filter((conversation) => conversation.pinned)
+		.slice(0, 3);
+	const recentConversations = conversationItems
+		.filter(
+			(conversation) =>
+				!conversation.pinned &&
+				!(conversation.contextType === "project" && conversation.contextId),
+		)
+		.slice(0, 3);
+	const projectConversations = currentProject
+		? conversationItems
+				.filter(
+					(conversation) =>
+						!conversation.pinned &&
+						conversation.contextType === "project" &&
+						conversation.contextId === currentProject.id,
+				)
+				.slice(0, 3)
+		: [];
 
 	const organizationSwitcher = (
 		<OrganizationSwitcher
@@ -245,6 +256,24 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 		/>
 	);
 
+	const searchButton = (
+		<Tooltip>
+			<TooltipTrigger
+				render={
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label={t("nav.search")}
+						onClick={onOpenCommand}
+					>
+						<Search />
+					</Button>
+				}
+			/>
+			<TooltipContent>{t("nav.search")}</TooltipContent>
+		</Tooltip>
+	);
+
 	return (
 		<>
 			<SidebarHeader>
@@ -256,6 +285,7 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 								{currentOrg?.name ?? t("common.loading")}
 							</TooltipContent>
 						</Tooltip>
+						{searchButton}
 						<Tooltip>
 							<TooltipTrigger
 								render={
@@ -273,26 +303,7 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 				) : (
 					<div className="flex items-center gap-1">
 						{organizationSwitcher}
-						{/* Settings stay reachable for every member; write controls are gated inside the pages. */}
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<Link
-										to="/orgs/$orgId/settings"
-										params={{ orgId }}
-										onClick={onNavigate}
-										aria-label={t("nav.orgSettings")}
-										className={cn(
-											buttonVariants({ variant: "ghost", size: "icon-sm" }),
-											"shrink-0",
-										)}
-									>
-										<Settings />
-									</Link>
-								}
-							/>
-							<TooltipContent>{t("nav.orgSettings")}</TooltipContent>
-						</Tooltip>
+						{searchButton}
 						<Tooltip>
 							<TooltipTrigger
 								render={
@@ -311,147 +322,42 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 				<SidebarGroup>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton
-								onClick={onOpenCommand}
-								tooltip={t("nav.search")}
-								className="text-sidebar-foreground/80 justify-between"
-							>
-								<Search />
-								<span className="flex-1 text-left">{t("command.trigger")}</span>
-								{collapsed ? null : (
-									<Kbd className="hidden sm:inline-flex">
-										{isMac ? "⌘K" : "Ctrl K"}
-									</Kbd>
-								)}
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								render={
-									<Link
-										to="/orgs/$orgId/ai"
-										params={{ orgId }}
-										aria-label={t("nav.aiAssistant")}
-										onClick={onNavigate}
-										activeOptions={{ exact: true }}
-										activeProps={{
-											className: ACTIVE_ITEM_CLASS,
-										}}
-									/>
-								}
-								tooltip={t("nav.aiAssistant")}
-								className="justify-between"
-							>
-								<Sparkles />
-								<span className="min-w-0 flex-1 truncate pr-8 text-left">
-									{t("nav.aiAssistant")}
-								</span>
-								{collapsed ? null : (
-									<Kbd
-										title={t("ai.panel.toggle")}
-										className="absolute top-1/2 right-2 hidden -translate-y-1/2 md:inline-flex"
-									>
-										{isMac ? "⌘J" : "Ctrl J"}
-									</Kbd>
-								)}
+							<SidebarMenuButton onClick={onNewChat} tooltip={t("ai.newChat")}>
+								<SquarePen />
+								<span className="flex-1 text-left">{t("ai.newChat")}</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
-				</SidebarGroup>
-				{!collapsed && recentConversations.length > 0 ? (
-					<SidebarGroup>
+					{!collapsed && pinnedConversations.length > 0 ? (
+						<>
+							<SidebarGroupLabel>
+								{t("ai.conversations.pinned")}
+							</SidebarGroupLabel>
+							<SidebarMenu>
+								{pinnedConversations.map((conversation) => (
+									<ConversationRow
+										key={conversation.id}
+										orgId={orgId}
+										conversation={conversation}
+										onNavigate={onNavigate}
+									/>
+								))}
+							</SidebarMenu>
+						</>
+					) : null}
+					{!collapsed && recentConversations.length > 0 ? (
 						<SidebarMenu>
-							<SidebarMenuItem>
-								<SidebarMenuButton
-									onClick={() => setConversationsOpen((open) => !open)}
-									aria-expanded={conversationsOpen}
-									isActive={onAiRoute}
-								>
-									<ChevronRight
-										className={cn(
-											"transition-transform",
-											conversationsOpen && "rotate-90",
-										)}
-									/>
-									<span className="flex-1 text-left">
-										{t("ai.conversations.title")}
-									</span>
-									<span className="text-muted-foreground tabular-nums">
-										{conversations.data?.items.length ?? 0}
-									</span>
-								</SidebarMenuButton>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<SidebarMenuAction
-												aria-label={t("ai.newChat")}
-												onClick={onNewChat}
-											>
-												<Plus />
-											</SidebarMenuAction>
-										}
-									/>
-									<TooltipContent>{t("ai.newChat")}</TooltipContent>
-								</Tooltip>
-							</SidebarMenuItem>
-							{conversationsOpen ? (
-								<>
-									{recentConversations.map((conversation) => {
-										const title = conversation.title || t("ai.untitled");
-										return (
-											<SidebarMenuItem key={conversation.id}>
-												<Tooltip>
-													<TooltipTrigger
-														render={
-															<SidebarMenuButton
-																className="pl-8"
-																render={
-																	<Link
-																		to="/orgs/$orgId/ai/$conversationId"
-																		params={{
-																			orgId,
-																			conversationId: conversation.id,
-																		}}
-																		onClick={onNavigate}
-																		activeProps={{
-																			className: ACTIVE_ITEM_CLASS,
-																		}}
-																	/>
-																}
-															>
-																<span className="min-w-0 truncate">
-																	{title}
-																</span>
-															</SidebarMenuButton>
-														}
-													/>
-													<TooltipContent>{title}</TooltipContent>
-												</Tooltip>
-											</SidebarMenuItem>
-										);
-									})}
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											className="text-muted-foreground pl-8"
-											render={
-												<Link
-													to="/orgs/$orgId/ai"
-													params={{ orgId }}
-													onClick={onNavigate}
-												/>
-											}
-										>
-											<span className="flex-1 text-left">
-												{t("ai.allConversations")}
-											</span>
-											<ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover/menu-button:opacity-100" />
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								</>
-							) : null}
+							{recentConversations.map((conversation) => (
+								<ConversationRow
+									key={conversation.id}
+									orgId={orgId}
+									conversation={conversation}
+									onNavigate={onNavigate}
+								/>
+							))}
 						</SidebarMenu>
-					</SidebarGroup>
-				) : null}
+					) : null}
+				</SidebarGroup>
 				<SidebarGroup>
 					{!collapsed ? (
 						<SidebarGroupLabel>{t("nav.workspace")}</SidebarGroupLabel>
@@ -484,119 +390,65 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 								<FolderKanban />
 								<span>{t("nav.projects")}</span>
 							</SidebarLink>
-						) : (
-							<>
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										onClick={() => setProjectsOpen((open) => !open)}
-										aria-expanded={projectsOpen}
-										isActive={onProjectsRoute}
-									>
-										<ChevronRight
-											className={cn(
-												"transition-transform",
-												projectsOpen && "rotate-90",
-											)}
-										/>
-										<span className="flex-1 text-left">
-											{t("projects.sidebarTitle")}
-										</span>
-										<span className="text-muted-foreground tabular-nums">
-											{projects.isPending || projects.isError
-												? null
-												: activeProjects.length}
-										</span>
-									</SidebarMenuButton>
-									<Tooltip>
-										<TooltipTrigger
-											render={
-												<SidebarMenuAction
-													aria-label={t("projects.create")}
-													title={frozen ? t("org.frozenBanner") : undefined}
-													disabled={frozen}
-													onClick={() => setCreateOpen(true)}
-												>
-													<Plus />
-												</SidebarMenuAction>
-											}
-										/>
-										<TooltipContent>{t("projects.create")}</TooltipContent>
-									</Tooltip>
-								</SidebarMenuItem>
-								{projectsOpen ? (
-									<>
-										{projects.isPending
-											? ["project-1", "project-2", "project-3"].map((key) => (
-													<SidebarMenuItem key={key}>
-														<SidebarMenuSkeleton showIcon />
-													</SidebarMenuItem>
-												))
-											: visibleProjects.map((project) => (
-													<SidebarMenuItem key={project.id}>
-														<SidebarMenuButton
-															className="pr-8"
-															render={
-																<Link
-																	to="/orgs/$orgId/projects/$projectId"
-																	params={{ orgId, projectId: project.id }}
-																	search={{ page: 1, sort: "updated" }}
-																	activeOptions={{ includeSearch: false }}
-																	onClick={onNavigate}
-																	activeProps={{
-																		className: ACTIVE_ITEM_CLASS,
-																	}}
-																/>
-															}
-														>
-															<span className="flex size-4 shrink-0 items-center justify-center">
-																<span
-																	className="size-2 rounded-full"
-																	style={{
-																		backgroundColor:
-																			project.color ??
-																			"var(--muted-foreground)",
-																	}}
-																/>
-															</span>
-															<span className="min-w-0 truncate">
-																{project.name}
-															</span>
-														</SidebarMenuButton>
-														{project.openIssueCount > 0 ? (
-															<SidebarMenuBadge className="text-muted-foreground font-normal">
-																{project.openIssueCount}
-															</SidebarMenuBadge>
-														) : null}
-													</SidebarMenuItem>
-												))}
-										{!projects.isPending &&
-										activeProjects.length > MAX_SIDEBAR_PROJECTS ? (
+						) : null}
+					</SidebarMenu>
+				</SidebarGroup>
+				{!collapsed ? (
+					<SidebarGroup>
+						<SidebarGroupLabel>{t("projects.sidebarTitle")}</SidebarGroupLabel>
+						<SidebarMenu>
+							{projects.isPending
+								? ["project-1", "project-2", "project-3"].map((key) => (
+										<SidebarMenuItem key={key}>
+											<SidebarMenuSkeleton showIcon />
+										</SidebarMenuItem>
+									))
+								: activeProjects.map((project) => (
+										<Fragment key={project.id}>
 											<SidebarMenuItem>
 												<SidebarMenuButton
-													className="text-muted-foreground pl-8"
 													render={
 														<Link
-															to="/orgs/$orgId/projects"
-															params={{ orgId }}
+															to="/orgs/$orgId/projects/$projectId"
+															params={{ orgId, projectId: project.id }}
+															search={{ page: 1, sort: "updated" }}
+															activeOptions={{ includeSearch: false }}
 															onClick={onNavigate}
+															activeProps={{
+																className: ACTIVE_ITEM_CLASS,
+															}}
 														/>
 													}
 												>
-													<span className="flex-1 text-left">
-														{t("projects.viewAll", {
-															count: activeProjects.length,
-														})}
+													<Folder
+														className="shrink-0 text-muted-foreground"
+														style={
+															project.color
+																? { color: project.color }
+																: undefined
+														}
+													/>
+													<span className="min-w-0 truncate">
+														{project.name}
 													</span>
-													<ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover/menu-button:opacity-100" />
 												</SidebarMenuButton>
 											</SidebarMenuItem>
-										) : null}
-									</>
-								) : null}
-							</>
-						)}
-					</SidebarMenu>
-				</SidebarGroup>
+											{currentProject?.id === project.id
+												? projectConversations.map((conversation) => (
+														<ConversationRow
+															key={conversation.id}
+															orgId={orgId}
+															conversation={conversation}
+															indented
+															onNavigate={onNavigate}
+														/>
+													))
+												: null}
+										</Fragment>
+									))}
+						</SidebarMenu>
+					</SidebarGroup>
+				) : null}
 			</SidebarContent>
 			<SidebarFooter className={collapsed ? "items-center" : undefined}>
 				{session && (
@@ -609,11 +461,6 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 					/>
 				)}
 			</SidebarFooter>
-			<CreateProjectDialog
-				orgId={orgId}
-				open={createOpen}
-				onOpenChange={setCreateOpen}
-			/>
 		</>
 	);
 }
