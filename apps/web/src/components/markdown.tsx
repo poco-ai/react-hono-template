@@ -137,7 +137,9 @@ const components: Components = {
 		<TableRow className="hover:bg-transparent">{children}</TableRow>
 	),
 	th: ({ children }) => (
-		<TableHead className="h-auto border px-2 py-1">{children}</TableHead>
+		<TableHead className="h-auto border px-2 py-1 whitespace-normal">
+			{children}
+		</TableHead>
 	),
 	td: ({ children }) => (
 		<TableCell className="border px-2 py-1 whitespace-normal">

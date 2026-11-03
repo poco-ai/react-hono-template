@@ -14,14 +14,16 @@ export function NotFoundState({
 	description,
 	action,
 	icon: Icon = SearchX,
+	fullscreen = false,
 }: {
 	title: string;
 	description?: string;
 	action: ReactNode;
 	icon?: LucideIcon;
+	fullscreen?: boolean;
 }) {
 	return (
-		<Empty className="min-h-svh justify-center p-8">
+		<Empty className={fullscreen ? "min-h-svh justify-center p-8" : "py-16"}>
 			<EmptyHeader>
 				<EmptyMedia>
 					<Icon className="text-muted-foreground size-10" />

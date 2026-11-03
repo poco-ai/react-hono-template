@@ -45,6 +45,7 @@ function NotFound() {
 	const { t } = useTranslation();
 	return (
 		<NotFoundState
+			fullscreen
 			title={t("notFound.title")}
 			action={
 				<Link
@@ -66,6 +67,7 @@ function RootError({ error, reset }: ErrorComponentProps) {
 
 	return (
 		<NotFoundState
+			fullscreen
 			title={t("error.title")}
 			description={t("error.description")}
 			action={

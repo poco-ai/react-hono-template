@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import { badgeVariants } from "@workspace/ui/components/badge";
+import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Select,
@@ -12,10 +12,10 @@ import {
 } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { cn } from "@workspace/ui/lib/utils";
 import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import {
 	ORG_ACTIVITY_MAX_LIMIT,
@@ -129,9 +129,7 @@ export function OrgActivityPage({
 					</Alert>
 				)}
 				{!activities.isPending && items.length === 0 && !activities.isError && (
-					<div className="border-muted-foreground/25 rounded-xl border border-dashed py-16 text-center">
-						<p className="text-muted-foreground">{t("activityFeed.empty")}</p>
-					</div>
+					<EmptyState title={t("activityFeed.empty")} />
 				)}
 				{groups.map((group) => (
 					<section key={group.key} className="flex flex-col gap-3">
@@ -156,31 +154,31 @@ export function OrgActivityPage({
 												{activity.issue &&
 													activity.project &&
 													(activity.action === "issue.deleted" ? (
-														<span
-															className={cn(
-																badgeVariants({ variant: "secondary" }),
-																"max-w-full rounded-md font-mono",
-															)}
+														<Badge
+															variant="secondary"
+															className="max-w-full rounded-md font-mono"
 														>
 															{activity.project.key}-{activity.issue.number}{" "}
 															{activity.issue.title}
-														</span>
+														</Badge>
 													) : (
-														<Link
-															to="/orgs/$orgId/projects/$projectId/$issueNumber"
-															params={{
-																orgId,
-																projectId: activity.project.id,
-																issueNumber: String(activity.issue.number),
-															}}
-															className={cn(
-																badgeVariants({ variant: "secondary" }),
-																"max-w-full rounded-md font-mono hover:bg-secondary/80",
-															)}
+														<Badge
+															variant="secondary"
+															className="max-w-full rounded-md font-mono hover:bg-secondary/80"
+															render={
+																<Link
+																	to="/orgs/$orgId/projects/$projectId/$issueNumber"
+																	params={{
+																		orgId,
+																		projectId: activity.project.id,
+																		issueNumber: String(activity.issue.number),
+																	}}
+																/>
+															}
 														>
 															{activity.project.key}-{activity.issue.number}{" "}
 															{activity.issue.title}
-														</Link>
+														</Badge>
 													))}
 											</div>
 											<time

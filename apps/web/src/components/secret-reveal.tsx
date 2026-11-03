@@ -9,6 +9,7 @@ export function SecretReveal({ value }: { value: string }) {
 	const copy = async () => {
 		await navigator.clipboard.writeText(value);
 		setCopied(true);
+		window.setTimeout(() => setCopied(false), 1600);
 	};
 
 	return (
