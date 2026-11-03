@@ -28,8 +28,10 @@ import { adminPlugin } from "@/lib/auth/admin-plugin";
 import {
 	accountSettingsLocalization,
 	authFlowLocalization,
+	emailOtpFlowLocalization,
 	organizationFlowLocalization,
 } from "@/lib/auth/auth-localization";
+import { emailOtpPlugin } from "@/lib/auth/email-otp-plugin";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { resolveSafeRedirect } from "@/lib/auth/safe-redirect";
 import { themePlugin } from "@/lib/auth/theme-plugin";
@@ -157,8 +159,11 @@ function RootComponent() {
 	const { queryClient } = useRouteContext({ from: "__root__" });
 	const navigate = useNavigate();
 	const redirectParam = useRouterState({
-		select: (state) =>
-			new URLSearchParams(state.location.searchStr).get("redirect"),
+		select: (state) => {
+			const search = new URLSearchParams(state.location.searchStr);
+			// App links use `redirect`; Better Auth UI Links append `redirectTo`.
+			return search.get("redirect") ?? search.get("redirectTo");
+		},
 	});
 	const redirectTo = useMemo(
 		() => resolveSafeRedirect(redirectParam),
@@ -177,6 +182,11 @@ function RootComponent() {
 				allowMultipleRoles: false,
 				pageSize: 10,
 			}),
+			emailOtpPlugin({
+				otpLength: 6,
+				disableSignUp: true,
+				localization: emailOtpFlowLocalization(t),
+			}),
 			themePlugin({ useTheme: useAuthTheme }),
 			organizationPlugin({
 				slugPrefix: "",
@@ -184,7 +194,7 @@ function RootComponent() {
 				logo: { enabled: false },
 			}),
 		],
-		[],
+		[t],
 	);
 	const locale = useMemo(() => {
 		const auth = {
@@ -255,6 +265,7 @@ function RootComponent() {
 					forgotPassword: "forgot-password",
 					resetPassword: "reset-password",
 					resetLinkSent: "reset-link-sent",
+					emailOtp: "email-otp",
 				},
 			}}
 			plugins={plugins}

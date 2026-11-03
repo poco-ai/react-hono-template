@@ -9,7 +9,7 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 **Application features**
 
 - Multi-tenant workspaces (better-auth `organization` plugin): owner/admin/member roles, email invitations with shareable links
-- Self-service accounts: public landing page at `/`, register/login with email and password, optional Google and GitHub sign-in (a provider's button appears only when both its client id and secret are set), `/forgot-password` + `/reset-password`, and an `/account` page (display name, password change, linked sign-in accounts, active sessions and appearance)
+- Self-service accounts: public landing page at `/`, register/login with email and password, optional passwordless email-code login via Resend (`/email-otp`), optional Google and GitHub sign-in (a provider's button appears only when both its client id and secret are set), `/forgot-password` + `/reset-password`, and an `/account` page (display name, password change, linked sign-in accounts, active sessions and appearance)
 - Projects with per-project issue numbering (`PROJ-123`), statuses, priorities, labels, assignees, due dates
 - Issue list with URL-driven filters + pagination, drag-and-drop kanban board, bulk edits, my-issues view
 - Markdown descriptions and comments, R2-backed attachments with presigned direct upload, field-level activity timeline + org activity feed
@@ -23,7 +23,7 @@ Use it as the starting point for your own multi-tenant product: the issue tracke
 |---|---|
 | Runtime | Hono on Cloudflare Workers (`apps/api`), React 19 SPA served as Workers static assets (`apps/web`) |
 | Database | Cloudflare D1 via drizzle-orm (classic `controller → service → dao → db` layering) |
-| Auth | better-auth (email/password, optional Google/GitHub, admin + organization plugins, RBAC at platform and org level) |
+| Auth | better-auth (email/password, email OTP via Resend, optional Google/GitHub, admin + organization plugins, RBAC at platform and org level) |
 | Data fetching | TanStack Query + typed `hc<AppType>` client — API responses type-check end to end |
 | Routing | TanStack Router (file-based, `beforeLoad` guards, URL-as-state filters validated with zod) |
 | Validation | zod schemas shared between API and web forms (`packages/shared`) |
@@ -86,6 +86,7 @@ All optional except `BETTER_AUTH_SECRET`. Local: `apps/api/.dev.vars`; productio
 | `BETTER_AUTH_URL` | Public auth base URL. Local OAuth uses `http://localhost:5173` so providers redirect to Vite and the `/api` proxy reaches the Worker (`/api/auth/callback/github`, `/api/auth/callback/google`). Production uses the API origin, so callbacks are `${BETTER_AUTH_URL}/api/auth/callback/github` and `${BETTER_AUTH_URL}/api/auth/callback/google`. |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth. Both must be non-empty; otherwise the GitHub button is hidden. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google OAuth. Both must be non-empty; otherwise the Google button is hidden. |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Email OTP sign-in through [Resend](https://resend.com). Set both or neither; without them the code is written to the Worker console (local development only). `EMAIL_FROM` must be a verified sender, e.g. `Acme <no-reply@example.com>`. |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_BASE_URL` | S3-compatible storage for issue attachments — R2 in production, MinIO locally (see Quickstart); without it, attachment endpoints return 503 and uploads fail with a storage error. See [apps/api/README.md](apps/api/README.md) incl. bucket CORS |
 | `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | Real Stripe billing (all three or none; partial config returns 503) |
 | `BILLING_MOCK_MODE` | `true` enables simulated upgrades when Stripe is absent (intended for local/dev only) |

@@ -69,6 +69,10 @@ const auth = createAuth({
 	policy: dependencies.services.authPolicyService,
 	baseURL: env.BETTER_AUTH_URL,
 	social,
+	email: {
+		resendApiKey: env.RESEND_API_KEY,
+		from: env.EMAIL_FROM,
+	},
 });
 
 app.route("/", createRoutes({ auth, dependencies, social }));

@@ -7,6 +7,8 @@ declare global {
 			GITHUB_CLIENT_SECRET?: string;
 			GOOGLE_CLIENT_ID?: string;
 			GOOGLE_CLIENT_SECRET?: string;
+			RESEND_API_KEY?: string;
+			EMAIL_FROM?: string;
 			S3_ENDPOINT?: string;
 			S3_REGION?: string;
 			S3_ACCESS_KEY_ID?: string;
@@ -27,6 +29,8 @@ declare global {
 		GITHUB_CLIENT_SECRET?: string;
 		GOOGLE_CLIENT_ID?: string;
 		GOOGLE_CLIENT_SECRET?: string;
+		RESEND_API_KEY?: string;
+		EMAIL_FROM?: string;
 		S3_ENDPOINT?: string;
 		S3_REGION?: string;
 		S3_ACCESS_KEY_ID?: string;

@@ -6,11 +6,12 @@ import {
 	createAuthMiddleware,
 	getSessionFromCtx,
 } from "better-auth/api";
-import { admin, organization } from "better-auth/plugins";
+import { admin, emailOTP, organization } from "better-auth/plugins";
 import * as authSchema from "../db/auth-schema";
 import type { Database } from "../db/types";
 import type { AuthPolicyService } from "../services/auth-policy.service";
 import { ac, roles } from "./access";
+import { type EmailDeliveryConfig, sendOtpEmail } from "./email";
 import {
 	enabledSocialProviders,
 	type SocialProvidersConfig,
@@ -44,6 +45,7 @@ export const createAuth = ({
 	policy,
 	baseURL,
 	social,
+	email,
 }: {
 	db: Database;
 	secret: string;
@@ -51,6 +53,7 @@ export const createAuth = ({
 	policy: AuthPolicyService;
 	baseURL?: string;
 	social?: SocialProvidersConfig;
+	email?: EmailDeliveryConfig;
 }) => {
 	const providers = enabledSocialProviders(social);
 	const trimmedBaseURL = baseURL?.trim();
@@ -117,6 +120,19 @@ export const createAuth = ({
 				adminRoles: ["admin"],
 				ac,
 				roles,
+			}),
+			emailOTP({
+				otpLength: 6,
+				expiresIn: 300,
+				// Existing accounts only: unknown addresses get a silent success
+				// without an email, so this route cannot be used to enumerate
+				// users or create accounts without a name.
+				disableSignUp: true,
+				sendVerificationOTP: async ({ email: recipient, otp, type }) => {
+					await sendOtpEmail({ to: recipient, otp, type }, email ?? {}, {
+						expiresInSeconds: 300,
+					});
+				},
 			}),
 			organization({
 				schema: {

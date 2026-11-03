@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as EmailOtpRouteImport } from './routes/email-otp'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
@@ -46,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailOtpRoute = EmailOtpRouteImport.update({
+  id: '/email-otp',
+  path: '/email-otp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -196,6 +202,7 @@ const AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/email-otp': typeof EmailOtpRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/email-otp': typeof EmailOtpRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
+  '/email-otp': typeof EmailOtpRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/email-otp'
     | '/forgot-password'
     | '/invite'
     | '/login'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/email-otp'
     | '/forgot-password'
     | '/invite'
     | '/login'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_auth'
+    | '/email-otp'
     | '/forgot-password'
     | '/invite'
     | '/login'
@@ -377,6 +389,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  EmailOtpRoute: typeof EmailOtpRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
@@ -399,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-otp': {
+      id: '/email-otp'
+      path: '/email-otp'
+      fullPath: '/email-otp'
+      preLoaderRoute: typeof EmailOtpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -680,6 +700,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  EmailOtpRoute: EmailOtpRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,

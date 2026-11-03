@@ -66,6 +66,19 @@ test("password reset sending stays wired into the auth options", () => {
 	);
 });
 
+test("email OTP sign-in is registered for passwordless login", () => {
+	const auth = authFor();
+	assert.ok(
+		auth.options.plugins?.some((plugin) => plugin.id === "email-otp"),
+		"email-otp plugin should be registered",
+	);
+	assert.equal(
+		typeof auth.api.sendVerificationOTP,
+		"function",
+		"OTP endpoint should be exposed",
+	);
+});
+
 test("no social config leaves social providers unset", () => {
 	const auth = authFor();
 	assert.equal(auth.options.socialProviders, undefined);

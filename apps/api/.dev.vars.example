@@ -12,6 +12,12 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=
 
+# Email OTP sign-in through Resend. Set both or neither; without them the code
+# is written to the Worker console (fine for local development, not production).
+# EMAIL_FROM must be a verified sender, e.g. "Acme <noreply@example.com>".
+# RESEND_API_KEY=
+# EMAIL_FROM=
+
 BILLING_MOCK_MODE=true
 
 # S3-compatible storage for issue attachments (R2 in production).

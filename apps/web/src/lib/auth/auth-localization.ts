@@ -2,6 +2,7 @@ import type {
 	AuthLocalization,
 	SettingsLocalization,
 } from "@better-auth-ui/core";
+import type { EmailOtpLocalization } from "@better-auth-ui/core/plugins/email-otp";
 import type { OrganizationLocalization } from "@better-auth-ui/core/plugins/organization";
 import type { TFunction } from "i18next";
 
@@ -46,6 +47,8 @@ export function authFlowLocalization(t: TFunction): Partial<AuthLocalization> {
 		passwordWeak: t("authUi.passwordWeak"),
 		passwordsDoNotMatch: t("account.mismatch"),
 		rememberYourPassword: t("authUi.rememberYourPassword"),
+		resend: t("authUi.resend"),
+		resendIn: t("authUi.resendIn", { seconds: "{{seconds}}" }),
 		resetLinkSentTo: t("authUi.resetLinkSentTo"),
 		resetPassword: t("resetPassword.title"),
 		scanToOpenEmailProvider: t("authUi.scanToOpenEmailProvider"),
@@ -56,6 +59,27 @@ export function authFlowLocalization(t: TFunction): Partial<AuthLocalization> {
 		signUp: t("register.title"),
 		tooLong: t("form.errors.maxLength", { count: "{{max}}" }),
 		tooShort: t("form.errors.passwordMin", { count: "{{min}}" }),
+	};
+}
+
+/**
+ * Copy for the passwordless email-code view. Strings come from the app locale
+ * so the code form does not fall back to English when the UI language is
+ * Chinese.
+ */
+export function emailOtpFlowLocalization(
+	t: TFunction,
+): Partial<EmailOtpLocalization> {
+	return {
+		code: t("emailOtp.code"),
+		codeLengthMismatch: t("emailOtp.codeLengthMismatch", {
+			length: "{{length}}",
+		}),
+		codeSentTo: t("emailOtp.codeSentTo", { email: "{{email}}" }),
+		emailOtp: t("emailOtp.emailCode"),
+		sendCode: t("emailOtp.sendCode"),
+		useDifferentEmail: t("emailOtp.useDifferentEmail"),
+		verifyCode: t("emailOtp.verifyCode"),
 	};
 }
 
