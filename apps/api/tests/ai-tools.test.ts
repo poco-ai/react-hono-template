@@ -228,6 +228,33 @@ test("approvals must match a stored proposed tool call", async () => {
 	);
 });
 
+test("replayed approvals are forced to deny instead of executing again", async () => {
+	const message = approvalMessage("call-replayed", true);
+	let marked = false;
+	const lookup = {
+		findForConversation: async () => ({
+			id: "call-replayed",
+			toolName: "delete_issue",
+			status: "approved",
+		}),
+		markStatus: async () => {
+			marked = true;
+		},
+	};
+	const decisions = await verifyApprovalResponses(
+		[message],
+		lookup as never,
+		ORG_ID,
+		CONVERSATION_ID,
+	);
+	const part = message.parts[0] as {
+		approval?: { approved?: boolean };
+	};
+	assert.equal(part.approval?.approved, false);
+	assert.deepEqual(decisions, []);
+	assert.equal(marked, false);
+});
+
 test("rejected approvals are recorded but never executed", async () => {
 	const calls: { name: string; input: unknown }[] = [];
 	const marked: { id: string; status: string }[] = [];

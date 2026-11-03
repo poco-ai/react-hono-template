@@ -97,9 +97,12 @@ export const verifyApprovalResponses = async (
 			}
 
 			// Retried requests can replay an approval response after the first
-			// request already recorded it. Treat those as idempotent instead of
-			// permanently locking the conversation.
+			// request already recorded it. Force a denial so the AI SDK cannot
+			// execute the write twice (or execute a rejected/tampered replay).
 			if (stored.status !== "proposed") {
+				if ("approval" in part && part.approval) {
+					(part.approval as { approved?: boolean }).approved = false;
+				}
 				continue;
 			}
 
