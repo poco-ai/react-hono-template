@@ -34,11 +34,14 @@ export function UserDropdown({
 	user,
 	orgId,
 	orgRole,
+	size,
 	className,
 }: {
 	user: SessionUser;
 	orgId?: string;
 	orgRole?: OrgRole;
+	/** "icon" renders only the avatar, used by the collapsed sidebar rail. */
+	size?: "default" | "icon";
 	className?: string;
 }) {
 	const { t } = useTranslation();
@@ -109,6 +112,7 @@ export function UserDropdown({
 				hideSettings
 				links={links}
 				onSignOut={() => setSignOutOpen(true)}
+				size={size}
 				user={user}
 			/>
 			<AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>

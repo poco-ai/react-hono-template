@@ -149,6 +149,9 @@ const en = {
 		ai: "AI",
 		aiAssistant: "AI Assistant",
 		orgSettings: "Organization settings",
+		collapseSidebar: "Collapse sidebar",
+		expandSidebar: "Expand sidebar",
+		toggleSidebar: "Toggle sidebar",
 		signOutTitle: "Sign out?",
 		signOutDescription:
 			"You'll need to sign in again to get back into the app.",

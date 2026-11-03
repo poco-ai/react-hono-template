@@ -64,10 +64,18 @@ export function AiChatPanel() {
 		availability === "disabled" || availability === "unconfigured";
 
 	return (
-		<Sheet open={panelOpen} onOpenChange={setPanelOpen}>
+		<Sheet
+			open={panelOpen}
+			onOpenChange={setPanelOpen}
+			modal={false}
+			// Keep the panel open while the page stays interactive; without this a
+			// non-modal Base UI dialog closes as soon as focus moves to the content.
+			disablePointerDismissal
+		>
 			<SheetContent
 				side="right"
 				showCloseButton={false}
+				showOverlay={false}
 				className="w-full max-w-full gap-0 p-0 sm:max-w-md"
 			>
 				<SheetHeader className="flex-row items-center gap-1 border-b p-2 pl-3">
