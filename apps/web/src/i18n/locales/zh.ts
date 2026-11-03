@@ -152,6 +152,7 @@ const zh: typeof en = {
 		collapseSidebar: "收起侧栏",
 		expandSidebar: "展开侧栏",
 		toggleSidebar: "切换侧栏",
+		workspace: "工作区",
 		signOutTitle: "退出登录？",
 		signOutDescription: "退出后需要重新登录才能进入应用。",
 	},

@@ -15,10 +15,10 @@ import {
 	SidebarContent,
 	SidebarFooter,
 	SidebarGroup,
-	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuAction,
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -38,6 +38,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import {
 	Activity,
 	ArrowRight,
+	ChevronRight,
 	ChevronsUpDown,
 	FolderKanban,
 	Inbox,
@@ -47,7 +48,7 @@ import {
 	Snowflake,
 	Sparkles,
 } from "lucide-react";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
@@ -108,6 +109,19 @@ function SidebarLink({
 	);
 }
 
+function readSectionOpen(orgId: string, section: string) {
+	if (typeof localStorage === "undefined") return true;
+	return localStorage.getItem(`sidebar:${orgId}:${section}-open`) !== "false";
+}
+
+function writeSectionOpen(orgId: string, section: string, open: boolean) {
+	try {
+		localStorage.setItem(`sidebar:${orgId}:${section}-open`, String(open));
+	} catch {
+		// Storage can be unavailable in private mode; the section still toggles.
+	}
+}
+
 function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
@@ -118,6 +132,12 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const { role } = useOrgRole(orgId);
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [conversationsOpen, setConversationsOpen] = useState(() =>
+		readSectionOpen(orgId, "conversations"),
+	);
+	const [projectsOpen, setProjectsOpen] = useState(() =>
+		readSectionOpen(orgId, "projects"),
+	);
 	const { isMobile, setOpenMobile, state } = useSidebar();
 	const { newChat, conversations } = useAiChat();
 	// `state` tracks the desktop rail; the mobile Sheet always renders full content.
@@ -132,6 +152,12 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 		void navigate({ to: "/orgs/$orgId/ai", params: { orgId } });
 		onNavigate();
 	};
+	useEffect(() => {
+		writeSectionOpen(orgId, "conversations", conversationsOpen);
+	}, [orgId, conversationsOpen]);
+	useEffect(() => {
+		writeSectionOpen(orgId, "projects", projectsOpen);
+	}, [orgId, projectsOpen]);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 	const activeProjects = (projects.data ?? []).filter(
@@ -142,6 +168,12 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const projectMatch = matchRoute({
 		to: "/orgs/$orgId/projects/$projectId",
 	});
+	const onAiRoute =
+		Boolean(matchRoute({ to: "/orgs/$orgId/ai" })) ||
+		Boolean(matchRoute({ to: "/orgs/$orgId/ai/$conversationId" }));
+	const onProjectsRoute =
+		Boolean(matchRoute({ to: "/orgs/$orgId/projects" })) ||
+		Boolean(projectMatch);
 	const currentProject = projectMatch
 		? activeProjects.find((project) => project.id === projectMatch.projectId)
 		: undefined;
@@ -328,93 +360,102 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 				</SidebarGroup>
 				{!collapsed && recentConversations.length > 0 ? (
 					<SidebarGroup>
-						<SidebarGroupLabel className="justify-between gap-1 pr-1">
-							<Link
-								to="/orgs/$orgId/ai"
-								params={{ orgId }}
-								onClick={onNavigate}
-								className="hover:text-sidebar-foreground flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-								activeProps={{
-									className: "text-sidebar-foreground font-medium",
-								}}
-							>
-								<span className="truncate">{t("ai.conversations.title")}</span>
-								<span className="ml-auto text-muted-foreground tabular-nums">
-									{conversations.data?.items.length ?? 0}
-								</span>
-							</Link>
-							<Tooltip>
-								<TooltipTrigger
-									render={
-										<Button
-											variant="ghost"
-											size="icon-xs"
-											aria-label={t("ai.newChat")}
-											onClick={onNewChat}
-										>
-											<Plus />
-										</Button>
-									}
-								/>
-								<TooltipContent>{t("ai.newChat")}</TooltipContent>
-							</Tooltip>
-						</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								{recentConversations.map((conversation) => {
-									const title = conversation.title || t("ai.untitled");
-									return (
-										<SidebarMenuItem key={conversation.id}>
-											<Tooltip>
-												<TooltipTrigger
-													render={
-														<SidebarMenuButton
-															className="pl-8"
-															render={
-																<Link
-																	to="/orgs/$orgId/ai/$conversationId"
-																	params={{
-																		orgId,
-																		conversationId: conversation.id,
-																	}}
-																	onClick={onNavigate}
-																	activeProps={{
-																		className: ACTIVE_ITEM_CLASS,
-																	}}
-																/>
-															}
-														>
-															<span className="min-w-0 truncate">{title}</span>
-														</SidebarMenuButton>
-													}
-												/>
-												<TooltipContent>{title}</TooltipContent>
-											</Tooltip>
-										</SidebarMenuItem>
-									);
-								})}
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										className="text-muted-foreground pl-8"
+						<SidebarMenu>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									onClick={() => setConversationsOpen((open) => !open)}
+									aria-expanded={conversationsOpen}
+									isActive={onAiRoute}
+								>
+									<ChevronRight
+										className={cn(
+											"transition-transform",
+											conversationsOpen && "rotate-90",
+										)}
+									/>
+									<span className="flex-1 text-left">
+										{t("ai.conversations.title")}
+									</span>
+									<span className="text-muted-foreground tabular-nums">
+										{conversations.data?.items.length ?? 0}
+									</span>
+								</SidebarMenuButton>
+								<Tooltip>
+									<TooltipTrigger
 										render={
-											<Link
-												to="/orgs/$orgId/ai"
-												params={{ orgId }}
-												onClick={onNavigate}
-											/>
+											<SidebarMenuAction
+												aria-label={t("ai.newChat")}
+												onClick={onNewChat}
+											>
+												<Plus />
+											</SidebarMenuAction>
 										}
-									>
-										<span className="flex-1 text-left">
-											{t("ai.allConversations")}
-										</span>
-										<ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover/menu-button:opacity-100" />
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							</SidebarMenu>
-						</SidebarGroupContent>
+									/>
+									<TooltipContent>{t("ai.newChat")}</TooltipContent>
+								</Tooltip>
+							</SidebarMenuItem>
+							{conversationsOpen ? (
+								<>
+									{recentConversations.map((conversation) => {
+										const title = conversation.title || t("ai.untitled");
+										return (
+											<SidebarMenuItem key={conversation.id}>
+												<Tooltip>
+													<TooltipTrigger
+														render={
+															<SidebarMenuButton
+																className="pl-8"
+																render={
+																	<Link
+																		to="/orgs/$orgId/ai/$conversationId"
+																		params={{
+																			orgId,
+																			conversationId: conversation.id,
+																		}}
+																		onClick={onNavigate}
+																		activeProps={{
+																			className: ACTIVE_ITEM_CLASS,
+																		}}
+																	/>
+																}
+															>
+																<span className="min-w-0 truncate">
+																	{title}
+																</span>
+															</SidebarMenuButton>
+														}
+													/>
+													<TooltipContent>{title}</TooltipContent>
+												</Tooltip>
+											</SidebarMenuItem>
+										);
+									})}
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											className="text-muted-foreground pl-8"
+											render={
+												<Link
+													to="/orgs/$orgId/ai"
+													params={{ orgId }}
+													onClick={onNavigate}
+												/>
+											}
+										>
+											<span className="flex-1 text-left">
+												{t("ai.allConversations")}
+											</span>
+											<ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover/menu-button:opacity-100" />
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								</>
+							) : null}
+						</SidebarMenu>
 					</SidebarGroup>
 				) : null}
 				<SidebarGroup>
+					{!collapsed ? (
+						<SidebarGroupLabel>{t("nav.workspace")}</SidebarGroupLabel>
+					) : null}
 					<SidebarMenu>
 						<SidebarLink
 							to="/orgs/$orgId/my-issues"
@@ -443,116 +484,118 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 								<FolderKanban />
 								<span>{t("nav.projects")}</span>
 							</SidebarLink>
-						) : null}
+						) : (
+							<>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										onClick={() => setProjectsOpen((open) => !open)}
+										aria-expanded={projectsOpen}
+										isActive={onProjectsRoute}
+									>
+										<ChevronRight
+											className={cn(
+												"transition-transform",
+												projectsOpen && "rotate-90",
+											)}
+										/>
+										<span className="flex-1 text-left">
+											{t("projects.sidebarTitle")}
+										</span>
+										<span className="text-muted-foreground tabular-nums">
+											{projects.isPending || projects.isError
+												? null
+												: activeProjects.length}
+										</span>
+									</SidebarMenuButton>
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<SidebarMenuAction
+													aria-label={t("projects.create")}
+													title={frozen ? t("org.frozenBanner") : undefined}
+													disabled={frozen}
+													onClick={() => setCreateOpen(true)}
+												>
+													<Plus />
+												</SidebarMenuAction>
+											}
+										/>
+										<TooltipContent>{t("projects.create")}</TooltipContent>
+									</Tooltip>
+								</SidebarMenuItem>
+								{projectsOpen ? (
+									<>
+										{projects.isPending
+											? ["project-1", "project-2", "project-3"].map((key) => (
+													<SidebarMenuItem key={key}>
+														<SidebarMenuSkeleton showIcon />
+													</SidebarMenuItem>
+												))
+											: visibleProjects.map((project) => (
+													<SidebarMenuItem key={project.id}>
+														<SidebarMenuButton
+															className="pr-8"
+															render={
+																<Link
+																	to="/orgs/$orgId/projects/$projectId"
+																	params={{ orgId, projectId: project.id }}
+																	search={{ page: 1, sort: "updated" }}
+																	activeOptions={{ includeSearch: false }}
+																	onClick={onNavigate}
+																	activeProps={{
+																		className: ACTIVE_ITEM_CLASS,
+																	}}
+																/>
+															}
+														>
+															<span className="flex size-4 shrink-0 items-center justify-center">
+																<span
+																	className="size-2 rounded-full"
+																	style={{
+																		backgroundColor:
+																			project.color ??
+																			"var(--muted-foreground)",
+																	}}
+																/>
+															</span>
+															<span className="min-w-0 truncate">
+																{project.name}
+															</span>
+														</SidebarMenuButton>
+														{project.openIssueCount > 0 ? (
+															<SidebarMenuBadge className="text-muted-foreground font-normal">
+																{project.openIssueCount}
+															</SidebarMenuBadge>
+														) : null}
+													</SidebarMenuItem>
+												))}
+										{!projects.isPending &&
+										activeProjects.length > MAX_SIDEBAR_PROJECTS ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													className="text-muted-foreground pl-8"
+													render={
+														<Link
+															to="/orgs/$orgId/projects"
+															params={{ orgId }}
+															onClick={onNavigate}
+														/>
+													}
+												>
+													<span className="flex-1 text-left">
+														{t("projects.viewAll", {
+															count: activeProjects.length,
+														})}
+													</span>
+													<ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover/menu-button:opacity-100" />
+												</SidebarMenuButton>
+											</SidebarMenuItem>
+										) : null}
+									</>
+								) : null}
+							</>
+						)}
 					</SidebarMenu>
-					{collapsed ? null : (
-						<>
-							<SidebarGroupLabel className="justify-between gap-1 pr-1">
-								<Link
-									to="/orgs/$orgId/projects"
-									params={{ orgId }}
-									onClick={onNavigate}
-									className="hover:text-sidebar-foreground flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-									activeProps={{
-										className: "text-sidebar-foreground font-medium",
-									}}
-								>
-									<span className="truncate">{t("projects.sidebarTitle")}</span>
-									<span className="ml-auto text-muted-foreground tabular-nums">
-										{projects.isPending || projects.isError
-											? null
-											: activeProjects.length}
-									</span>
-								</Link>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<Button
-												variant="ghost"
-												size="icon-xs"
-												aria-label={t("projects.create")}
-												title={frozen ? t("org.frozenBanner") : undefined}
-												disabled={frozen}
-												onClick={() => setCreateOpen(true)}
-											>
-												<Plus />
-											</Button>
-										}
-									/>
-									<TooltipContent>{t("projects.create")}</TooltipContent>
-								</Tooltip>
-							</SidebarGroupLabel>
-							<SidebarGroupContent>
-								<SidebarMenu>
-									{projects.isPending
-										? ["project-1", "project-2", "project-3"].map((key) => (
-												<SidebarMenuItem key={key}>
-													<SidebarMenuSkeleton showIcon />
-												</SidebarMenuItem>
-											))
-										: visibleProjects.map((project) => (
-												<SidebarMenuItem key={project.id}>
-													<SidebarMenuButton
-														className="pr-8"
-														render={
-															<Link
-																to="/orgs/$orgId/projects/$projectId"
-																params={{ orgId, projectId: project.id }}
-																search={{ page: 1, sort: "updated" }}
-																activeOptions={{ includeSearch: false }}
-																onClick={onNavigate}
-																activeProps={{
-																	className: ACTIVE_ITEM_CLASS,
-																}}
-															/>
-														}
-													>
-														<span className="flex size-4 shrink-0 items-center justify-center">
-															<span
-																className="size-2 rounded-full"
-																style={{
-																	backgroundColor:
-																		project.color ?? "var(--muted-foreground)",
-																}}
-															/>
-														</span>
-														<span className="min-w-0 truncate">
-															{project.name}
-														</span>
-													</SidebarMenuButton>
-													{project.openIssueCount > 0 ? (
-														<SidebarMenuBadge className="text-muted-foreground font-normal">
-															{project.openIssueCount}
-														</SidebarMenuBadge>
-													) : null}
-												</SidebarMenuItem>
-											))}
-									{!projects.isPending &&
-									activeProjects.length > MAX_SIDEBAR_PROJECTS ? (
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												className="text-muted-foreground pl-8"
-												render={
-													<Link
-														to="/orgs/$orgId/projects"
-														params={{ orgId }}
-														onClick={onNavigate}
-													/>
-												}
-											>
-												<span className="flex-1 text-left">
-													{t("projects.viewAll", {
-														count: activeProjects.length,
-													})}
-												</span>
-												<ArrowRight className="size-3.5 opacity-0 transition-opacity group-hover/menu-button:opacity-100" />
-											</SidebarMenuButton>
-										</SidebarMenuItem>
-									) : null}
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</>
-					)}
 				</SidebarGroup>
 			</SidebarContent>
 			<SidebarFooter className={collapsed ? "items-center" : undefined}>
