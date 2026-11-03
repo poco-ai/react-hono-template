@@ -6,6 +6,7 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import {
@@ -303,15 +304,12 @@ export function OrgLayout() {
 			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 			<div className="flex min-w-0 flex-1 flex-col">
 				{frozen && (
-					<div
-						className="border-b border-amber-500/30 bg-amber-500/10 text-amber-700 sticky top-12 z-30 lg:top-0 dark:text-amber-400"
-						role="alert"
-					>
-						<p className="flex items-center gap-2 px-4 py-2 text-sm font-medium">
-							<Snowflake className="size-4 shrink-0" />
+					<Alert className="sticky top-12 z-30 rounded-none border-x-0 border-t-0 border-b-amber-500/30 bg-amber-500/10 px-4 py-2 font-medium text-amber-700 lg:top-0 dark:text-amber-400">
+						<Snowflake />
+						<AlertDescription className="text-amber-700 dark:text-amber-400">
 							{t("org.frozenBanner")}
-						</p>
-					</div>
+						</AlertDescription>
+					</Alert>
 				)}
 				<ActiveOrganizationSync orgId={orgId}>
 					<main id="main-content" className="min-w-0 flex-1">

@@ -234,7 +234,7 @@ export function IssueList({
 							))}
 						{issues.isError && (
 							<TableRow>
-								<TableCell colSpan={9} className="text-center text-red-500">
+								<TableCell colSpan={9} className="text-center text-destructive">
 									{apiErrorMessage(t, issues.error)}
 								</TableCell>
 							</TableRow>

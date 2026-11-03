@@ -1,6 +1,7 @@
 import type { AdminOrgDto, ListAdminOrgsDto } from "@api/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -29,7 +30,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { X } from "lucide-react";
+import { CircleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
@@ -137,9 +138,12 @@ export function AdminOrgsPage() {
 				</div>
 
 				{mutationError && (
-					<p className="text-sm text-red-500">
-						{apiErrorMessage(t, mutationError)}
-					</p>
+					<Alert variant="destructive">
+						<CircleAlert />
+						<AlertDescription>
+							{apiErrorMessage(t, mutationError)}
+						</AlertDescription>
+					</Alert>
 				)}
 
 				<Table>
@@ -223,7 +227,7 @@ export function AdminOrgsPage() {
 						)}
 						{orgsQuery.isError && (
 							<TableRow>
-								<TableCell colSpan={7} className="text-center text-red-500">
+								<TableCell colSpan={7} className="text-center text-destructive">
 									{apiErrorMessage(t, orgsQuery.error)}
 								</TableCell>
 							</TableRow>

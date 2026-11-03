@@ -2,7 +2,8 @@ import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import {
@@ -10,8 +11,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { cn } from "@workspace/ui/lib/utils";
-import { Check, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type Theme, useTheme } from "@/components/theme-provider";
 
@@ -22,19 +22,16 @@ export function ThemeMenuItems() {
 	const { theme, setTheme } = useTheme();
 
 	return (
-		<>
+		<DropdownMenuRadioGroup
+			value={theme}
+			onValueChange={(value) => setTheme(value as Theme)}
+		>
 			{THEMES.map((value) => (
-				<DropdownMenuItem key={value} onClick={() => setTheme(value)}>
-					<Check
-						className={cn(
-							"size-4",
-							theme === value ? "opacity-100" : "opacity-0",
-						)}
-					/>
+				<DropdownMenuRadioItem key={value} value={value}>
 					<span className="min-w-0 truncate">{t(`theme.${value}`)}</span>
-				</DropdownMenuItem>
+				</DropdownMenuRadioItem>
 			))}
-		</>
+		</DropdownMenuRadioGroup>
 	);
 }
 

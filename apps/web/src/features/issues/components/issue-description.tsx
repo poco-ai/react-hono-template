@@ -1,6 +1,7 @@
 import { Button } from "@workspace/ui/components/button";
+import { Spinner } from "@workspace/ui/components/spinner";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { Loader2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownContent } from "@/components/markdown";
@@ -49,7 +50,7 @@ export function IssueDescription({
 				/>
 				<div className="flex items-center gap-2">
 					<Button size="sm" disabled={pending} onClick={save}>
-						{pending && <Loader2 className="animate-spin" />}
+						{pending && <Spinner />}
 						{t("common.save")}
 					</Button>
 					<Button

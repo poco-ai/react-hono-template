@@ -226,7 +226,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 					)}
 					{webhooks.isError && (
 						<TableRow>
-							<TableCell colSpan={5} className="text-center text-red-500">
+							<TableCell colSpan={5} className="text-center text-destructive">
 								{apiErrorMessage(t, webhooks.error)}
 							</TableCell>
 						</TableRow>

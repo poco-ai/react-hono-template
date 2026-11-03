@@ -1,3 +1,12 @@
+import { Button } from "@workspace/ui/components/button";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
 import { Check, Copy } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
@@ -39,19 +48,19 @@ function CodeBlock({
 						{language}
 					</span>
 				)}
-				<button
+				<Button
 					type="button"
+					variant="outline"
+					size="xs"
 					onClick={() => void onCopy()}
 					className={cn(
-						"bg-background flex items-center gap-1 rounded-md border px-1.5 py-1 font-mono text-[10px] font-medium opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100",
-						copied
-							? "text-primary"
-							: "text-muted-foreground hover:text-foreground",
+						"bg-background font-mono text-[10px] opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100",
+						copied ? "text-primary" : "text-muted-foreground",
 					)}
 				>
-					{copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+					{copied ? <Check /> : <Copy />}
 					{copied ? t("common.copied") : t("markdown.copyCode")}
-				</button>
+				</Button>
 			</div>
 		</div>
 	);
@@ -118,14 +127,23 @@ const components: Components = {
 	},
 	hr: () => <hr className="my-4" />,
 	table: ({ children }) => (
-		<div className="mb-2 overflow-x-auto last:mb-0">
-			<table className="w-full border-collapse text-xs">{children}</table>
+		<div className="mb-2 last:mb-0">
+			<Table className="text-xs">{children}</Table>
 		</div>
 	),
-	th: ({ children }) => (
-		<th className="border px-2 py-1 text-left font-semibold">{children}</th>
+	thead: ({ children }) => <TableHeader>{children}</TableHeader>,
+	tbody: ({ children }) => <TableBody>{children}</TableBody>,
+	tr: ({ children }) => (
+		<TableRow className="hover:bg-transparent">{children}</TableRow>
 	),
-	td: ({ children }) => <td className="border px-2 py-1">{children}</td>,
+	th: ({ children }) => (
+		<TableHead className="h-auto border px-2 py-1">{children}</TableHead>
+	),
+	td: ({ children }) => (
+		<TableCell className="border px-2 py-1 whitespace-normal">
+			{children}
+		</TableCell>
+	),
 	img: ({ src, alt }) => (
 		<img
 			src={src}

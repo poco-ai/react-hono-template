@@ -1,12 +1,14 @@
 import type { AdminStatsDto } from "@api/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import {
 	Card,
 	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
+import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { adminStatsQuery } from "@/features/admin/data";
 
@@ -62,9 +64,12 @@ export function AdminHomePage() {
 				</p>
 			)}
 			{statsQuery.isError && (
-				<p className="py-16 text-center text-sm text-red-500">
-					{apiErrorMessage(t, statsQuery.error)}
-				</p>
+				<Alert variant="destructive" className="my-16">
+					<CircleAlert />
+					<AlertDescription>
+						{apiErrorMessage(t, statsQuery.error)}
+					</AlertDescription>
+				</Alert>
 			)}
 
 			{stats && (

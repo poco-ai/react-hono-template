@@ -2,8 +2,10 @@ import type { IssueDetailDto } from "@api/dto/issue.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
@@ -80,9 +82,12 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 					</div>
 				)}
 				{issues.isError && (
-					<p className="py-8 text-center text-sm text-red-500">
-						{apiErrorMessage(t, issues.error)}
-					</p>
+					<Alert variant="destructive" className="my-8">
+						<CircleAlert />
+						<AlertDescription>
+							{apiErrorMessage(t, issues.error)}
+						</AlertDescription>
+					</Alert>
 				)}
 				{[...grouped.entries()].map(([status, items]) => (
 					<section key={status}>

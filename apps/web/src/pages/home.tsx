@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
-import { CircleAlert, Loader2 } from "lucide-react";
+import { Spinner } from "@workspace/ui/components/spinner";
+import { CircleAlert } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { orgsQuery } from "@/features/organizations/data";
@@ -44,7 +45,7 @@ export function HomePage() {
 
 	return (
 		<div className="flex min-h-svh items-center justify-center">
-			<Loader2 className="text-muted-foreground size-6 animate-spin" />
+			<Spinner className="text-muted-foreground size-6" />
 		</div>
 	);
 }

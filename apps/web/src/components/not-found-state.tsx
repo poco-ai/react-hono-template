@@ -1,3 +1,11 @@
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@workspace/ui/components/empty";
 import { type LucideIcon, SearchX } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -13,13 +21,21 @@ export function NotFoundState({
 	icon?: LucideIcon;
 }) {
 	return (
-		<div className="flex min-h-svh flex-col items-center justify-center gap-3 p-8 text-center">
-			<Icon className="text-muted-foreground size-10" />
-			<h1 className="text-lg font-semibold">{title}</h1>
-			{description ? (
-				<p className="text-muted-foreground max-w-md text-sm">{description}</p>
-			) : null}
-			{action}
-		</div>
+		<Empty className="min-h-svh justify-center p-8">
+			<EmptyHeader>
+				<EmptyMedia>
+					<Icon className="text-muted-foreground size-10" />
+				</EmptyMedia>
+				<EmptyTitle className="text-lg font-semibold">
+					<h1>{title}</h1>
+				</EmptyTitle>
+				{description ? (
+					<EmptyDescription className="max-w-md">
+						{description}
+					</EmptyDescription>
+				) : null}
+			</EmptyHeader>
+			<EmptyContent>{action}</EmptyContent>
+		</Empty>
 	);
 }

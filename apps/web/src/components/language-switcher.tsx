@@ -2,7 +2,8 @@ import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import {
@@ -10,8 +11,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { cn } from "@workspace/ui/lib/utils";
-import { Check, Languages } from "lucide-react";
+import { Languages } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { changeLanguage, type Language, SUPPORTED_LANGUAGES } from "@/i18n";
 
@@ -24,22 +24,16 @@ export function LanguageMenuItems() {
 	const { i18n } = useTranslation();
 
 	return (
-		<>
+		<DropdownMenuRadioGroup
+			value={i18n.language}
+			onValueChange={(value) => changeLanguage(value as Language)}
+		>
 			{SUPPORTED_LANGUAGES.map((language) => (
-				<DropdownMenuItem
-					key={language}
-					onClick={() => changeLanguage(language)}
-				>
-					<Check
-						className={cn(
-							"size-4",
-							i18n.language === language ? "opacity-100" : "opacity-0",
-						)}
-					/>
+				<DropdownMenuRadioItem key={language} value={language}>
 					<span className="min-w-0 truncate">{LANGUAGE_LABELS[language]}</span>
-				</DropdownMenuItem>
+				</DropdownMenuRadioItem>
 			))}
-		</>
+		</DropdownMenuRadioGroup>
 	);
 }
 

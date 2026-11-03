@@ -1,3 +1,6 @@
+import { Badge } from "@workspace/ui/components/badge";
+import { cn } from "@workspace/ui/lib/utils";
+
 export function LabelBadge({
 	label,
 	className,
@@ -6,14 +9,12 @@ export function LabelBadge({
 	className?: string;
 }) {
 	return (
-		<span
-			className={`inline-flex h-5 w-fit shrink-0 items-center gap-1 rounded-md border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap ${className ?? ""}`}
-		>
+		<Badge variant="outline" className={cn("gap-1.5 rounded-md", className)}>
 			<span
 				className="size-2 shrink-0 rounded-full"
 				style={{ backgroundColor: label.color }}
 			/>
 			{label.name}
-		</span>
+		</Badge>
 	);
 }

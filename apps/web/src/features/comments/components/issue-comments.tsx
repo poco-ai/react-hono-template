@@ -12,9 +12,10 @@ import {
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
+import { Spinner } from "@workspace/ui/components/spinner";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { cn } from "@workspace/ui/lib/utils";
-import { CircleAlert, Loader2, Pencil, Trash2 } from "lucide-react";
+import { CircleAlert, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -181,9 +182,7 @@ export function IssueComments({
 													})
 												}
 											>
-												{updateMutation.isPending && (
-													<Loader2 className="animate-spin" />
-												)}
+												{updateMutation.isPending && <Spinner />}
 												{t("common.save")}
 											</Button>
 											<Button
@@ -214,7 +213,7 @@ export function IssueComments({
 					disabled={query.isFetchingNextPage}
 					onClick={() => query.fetchNextPage()}
 				>
-					{query.isFetchingNextPage && <Loader2 className="animate-spin" />}
+					{query.isFetchingNextPage && <Spinner />}
 					{t("common.loadMore")}
 				</Button>
 			)}
@@ -284,7 +283,7 @@ export function IssueComments({
 						disabled={frozen || !canSubmit || createMutation.isPending}
 						onClick={() => createMutation.mutate(body.trim())}
 					>
-						{createMutation.isPending && <Loader2 className="animate-spin" />}
+						{createMutation.isPending && <Spinner />}
 						{t("comments.post")}
 					</Button>
 				</div>
@@ -321,7 +320,7 @@ export function IssueComments({
 								}
 							}}
 						>
-							{deleteMutation.isPending && <Loader2 className="animate-spin" />}
+							{deleteMutation.isPending && <Spinner />}
 							{t("common.delete")}
 						</AlertDialogAction>
 					</AlertDialogFooter>

@@ -14,7 +14,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@workspace/ui/components/select";
-import { Loader2, X } from "lucide-react";
+import { Spinner } from "@workspace/ui/components/spinner";
+import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
@@ -96,9 +97,7 @@ export function BulkActionBar({
 					))}
 				</SelectContent>
 			</Select>
-			{bulkMutation.isPending && (
-				<Loader2 className="text-muted-foreground size-4 animate-spin" />
-			)}
+			{bulkMutation.isPending && <Spinner className="text-muted-foreground" />}
 			<Button
 				variant="ghost"
 				size="icon-sm"

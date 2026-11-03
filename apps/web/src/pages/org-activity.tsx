@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { badgeVariants } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -10,8 +11,9 @@ import {
 	SelectValue,
 } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "@workspace/ui/lib/utils";
-import { Loader2 } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UserAvatar } from "@/components/user-avatar";
@@ -119,9 +121,12 @@ export function OrgActivityPage({
 					</ul>
 				)}
 				{activities.isError && (
-					<p className="py-8 text-center text-sm text-red-500">
-						{apiErrorMessage(t, activities.error)}
-					</p>
+					<Alert variant="destructive" className="my-8">
+						<CircleAlert />
+						<AlertDescription>
+							{apiErrorMessage(t, activities.error)}
+						</AlertDescription>
+					</Alert>
 				)}
 				{!activities.isPending && items.length === 0 && !activities.isError && (
 					<div className="border-muted-foreground/25 rounded-xl border border-dashed py-16 text-center">
@@ -211,7 +216,7 @@ export function OrgActivityPage({
 							)
 						}
 					>
-						{activities.isFetching && <Loader2 className="animate-spin" />}
+						{activities.isFetching && <Spinner />}
 						{t("common.loadMore")}
 					</Button>
 				)}

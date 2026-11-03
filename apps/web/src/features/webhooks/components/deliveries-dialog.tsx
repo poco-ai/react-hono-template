@@ -9,6 +9,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
+import { Spinner } from "@workspace/ui/components/spinner";
 import {
 	Table,
 	TableBody,
@@ -17,7 +18,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
-import { CircleAlert, Loader2, RefreshCw } from "lucide-react";
+import { CircleAlert, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TablePagination } from "@/components/table-pagination";
@@ -128,11 +129,7 @@ export function DeliveriesDialog({
 											redeliverMutation.mutate(delivery.id);
 										}}
 									>
-										{redelivering === delivery.id ? (
-											<Loader2 className="animate-spin" />
-										) : (
-											<RefreshCw />
-										)}
+										{redelivering === delivery.id ? <Spinner /> : <RefreshCw />}
 									</Button>
 								</TableCell>
 							</TableRow>
@@ -149,7 +146,7 @@ export function DeliveriesDialog({
 						)}
 						{deliveries.isError && (
 							<TableRow>
-								<TableCell colSpan={6} className="text-center text-red-500">
+								<TableCell colSpan={6} className="text-center text-destructive">
 									{apiErrorMessage(t, deliveries.error)}
 								</TableCell>
 							</TableRow>

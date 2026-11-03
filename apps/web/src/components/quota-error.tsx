@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
+import { Button } from "@workspace/ui/components/button";
 import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isPlanLimitError } from "@/lib/api";
@@ -25,13 +26,16 @@ export function QuotaError({
 				<AlertDescription>{apiErrorMessage(t, error)}</AlertDescription>
 			</Alert>
 			{canUpgrade && isPlanLimitError(error) && (
-				<Link
-					to="/orgs/$orgId/settings/billing"
-					params={{ orgId }}
-					className="text-primary text-sm font-medium underline underline-offset-4"
+				<Button
+					variant="link"
+					size="sm"
+					className="w-fit px-0"
+					render={
+						<Link to="/orgs/$orgId/settings/billing" params={{ orgId }} />
+					}
 				>
 					{t("quota.upgrade")}
-				</Link>
+				</Button>
 			)}
 		</div>
 	);

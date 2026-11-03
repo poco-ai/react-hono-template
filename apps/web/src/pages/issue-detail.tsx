@@ -4,12 +4,12 @@ import type { UpdateIssueInput } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Separator } from "@workspace/ui/components/separator";
+import { Spinner } from "@workspace/ui/components/spinner";
 import {
 	ArrowLeft,
 	ChevronLeft,
 	ChevronRight,
 	CircleAlert,
-	Loader2,
 	Pencil,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -100,7 +100,7 @@ export function IssueDetailPage({
 	if (issue.isPending) {
 		return (
 			<div className="flex min-h-svh items-center justify-center">
-				<Loader2 className="text-muted-foreground size-6 animate-spin" />
+				<Spinner className="text-muted-foreground size-6" />
 			</div>
 		);
 	}

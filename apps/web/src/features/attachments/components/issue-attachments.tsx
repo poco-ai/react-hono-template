@@ -16,13 +16,13 @@ import {
 	AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
+import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "@workspace/ui/lib/utils";
 import {
 	CircleAlert,
 	FileArchive,
 	FileImage,
 	FileText,
-	Loader2,
 	Paperclip,
 	Trash2,
 	X,
@@ -234,7 +234,7 @@ export function IssueAttachments({
 								</span>
 							) : (
 								<>
-									<Loader2 className="text-muted-foreground size-4 shrink-0 animate-spin" />
+									<Spinner className="text-muted-foreground shrink-0" />
 									<span className="min-w-0 flex-1 truncate">
 										{t("attachments.uploading", { filename: item.filename })}
 									</span>
@@ -364,7 +364,7 @@ export function IssueAttachments({
 								}
 							}}
 						>
-							{deleteMutation.isPending && <Loader2 className="animate-spin" />}
+							{deleteMutation.isPending && <Spinner />}
 							{t("common.delete")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
