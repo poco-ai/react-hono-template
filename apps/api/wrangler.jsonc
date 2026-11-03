@@ -73,20 +73,8 @@
 	},
 	"triggers": {
 		"crons": ["*/15 * * * *"]
-	},
-	"vars": {
-		"AI_ENABLED": "true",
-		"AI_PROVIDER": "openai-compatible",
-		"AI_BASE_URL": "https://api.siliconflow.cn/v1",
-		"AI_MODEL": "deepseek-ai/DeepSeek-V4.1-Flash",
-		"AI_MODEL_ALLOWLIST": "deepseek-ai/DeepSeek-V4.1-Flash",
-		"AI_MAX_STEPS": "8",
-		"AI_MAX_OUTPUT_TOKENS": "2048",
-		"APP_WEB_URL": "https://react-hono-web.chenqiyuan1012.workers.dev",
-		"MCP_ENABLED": "true",
-		"MCP_RESOURCE": "https://react-hono-api.chenqiyuan1012.workers.dev/mcp",
-		"MCP_LOGIN_PAGE": "https://react-hono-web.chenqiyuan1012.workers.dev/login",
-		"MCP_CONSENT_PAGE": "https://react-hono-web.chenqiyuan1012.workers.dev/consent",
-		"MCP_DCR_ENABLED": "false"
 	}
+	// Production AI/MCP vars are set only after the remote D1 migration has
+	// access. Use `.github/workflows/configure-ai.yml` once the token can query
+	// `react-hono-db`; keep them out of `wrangler.jsonc` until then.
 }
