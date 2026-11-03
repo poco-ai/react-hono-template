@@ -327,6 +327,7 @@ const zh: typeof en = {
 		keyHint: "2–6 个大写字母，作为事项编号前缀。",
 		keyLockedHint: "项目标识创建后不可修改。",
 		descriptionPlaceholder: "这个项目是做什么的？",
+		noDescription: "暂无描述",
 		color: "颜色",
 		activeTab: "进行中",
 		archivedTab: "已归档",

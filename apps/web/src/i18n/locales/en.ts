@@ -340,6 +340,7 @@ const en = {
 		keyHint: "2–6 uppercase letters, used as the issue prefix.",
 		keyLockedHint: "The project key cannot be changed after creation.",
 		descriptionPlaceholder: "What is this project about?",
+		noDescription: "No description yet",
 		color: "Color",
 		activeTab: "Active",
 		archivedTab: "Archived",

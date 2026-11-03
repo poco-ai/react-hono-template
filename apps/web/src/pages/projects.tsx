@@ -96,7 +96,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	});
 
 	return (
-		<div className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6">
+		<div className="mx-auto w-full max-w-7xl px-4 py-8 lg:px-6">
 			<div className="flex items-center justify-between pb-6">
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("projects.title")}
@@ -128,26 +128,27 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 
 			{projects.isPending && (
 				<div
-					className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+					className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4"
 					aria-hidden="true"
 					aria-busy="true"
 				>
 					{["card-1", "card-2", "card-3", "card-4", "card-5", "card-6"].map(
 						(cardKey) => (
-							<Card key={cardKey} className="py-0">
-								<CardHeader>
-									<Skeleton className="h-5 w-1/2" />
+							<Card key={cardKey} className="gap-0 py-0">
+								<CardHeader className="gap-1.5 px-4 pt-4 pb-3">
+									<div className="flex items-center gap-2">
+										<Skeleton className="size-2.5 rounded-full" />
+										<Skeleton className="h-5 w-1/2" />
+										<Skeleton className="ml-auto h-5 w-12 rounded-md" />
+									</div>
 									<div className="flex flex-col gap-1.5">
 										<Skeleton className="h-4 w-full" />
 										<Skeleton className="h-4 w-2/3" />
 									</div>
 								</CardHeader>
-								<CardContent className="flex flex-col gap-2">
-									<div className="flex items-center gap-2">
-										<Skeleton className="h-5 w-16 rounded-md" />
-										<Skeleton className="h-5 w-20 rounded-md" />
-									</div>
-									<Skeleton className="h-3 w-full" />
+								<CardContent className="mt-auto flex items-center justify-between gap-2 border-t px-4 py-2.5">
+									<Skeleton className="h-4 w-32" />
+									<Skeleton className="h-3 w-14" />
 								</CardContent>
 							</Card>
 						),
@@ -202,11 +203,11 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				)}
 
 			{visibleProjects.length > 0 && (
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				<div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">
 					{visibleProjects.map((project) => (
 						<Card
 							key={project.id}
-							className="group cursor-pointer py-0 transition-all hover:bg-accent/40 hover:shadow-sm hover:ring-foreground/20"
+							className="group flex h-full cursor-pointer flex-col gap-0 py-0 transition-all hover:bg-accent/40 hover:shadow-sm hover:ring-foreground/20"
 							onClick={() =>
 								navigate({
 									to: "/orgs/$orgId/projects/$projectId",
@@ -215,9 +216,28 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 								})
 							}
 						>
-							<CardHeader>
+							<CardHeader className="gap-1.5 px-4 pt-4 pb-3">
 								<div className="flex items-start justify-between gap-2">
-									<CardTitle className="text-base">{project.name}</CardTitle>
+									<div className="flex min-w-0 flex-1 items-center gap-2">
+										<span
+											className="size-2.5 shrink-0 rounded-full"
+											style={{
+												backgroundColor:
+													project.color ?? "var(--muted-foreground)",
+											}}
+										/>
+										<CardTitle className="min-w-0 truncate text-base">
+											{project.name}
+										</CardTitle>
+										<Badge variant="outline" className="rounded-md font-mono">
+											{project.key}
+										</Badge>
+										{project.archived && (
+											<Badge variant="secondary" className="rounded-md">
+												{t("projects.archivedBadge")}
+											</Badge>
+										)}
+									</div>
 									{canManage && (
 										<DropdownMenu>
 											<Tooltip>
@@ -261,21 +281,11 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 									)}
 								</div>
 								<CardDescription className="line-clamp-2 min-h-10">
-									{project.description ?? ""}
+									{project.description?.trim() || t("projects.noDescription")}
 								</CardDescription>
 							</CardHeader>
-							<CardContent className="flex flex-col gap-2">
-								<div className="flex items-center gap-2">
-									<Badge variant="outline" className="rounded-md font-mono">
-										{project.key}
-									</Badge>
-									{project.archived && (
-										<Badge variant="secondary" className="rounded-md">
-											{t("projects.archivedBadge")}
-										</Badge>
-									)}
-								</div>
-								<div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+							<CardContent className="mt-auto flex items-center justify-between gap-2 border-t px-4 py-2.5 text-xs text-muted-foreground">
+								<div className="flex w-full items-center justify-between gap-2">
 									<span className="flex items-center gap-1 whitespace-nowrap">
 										<CircleDot className="size-3.5 shrink-0" />
 										{t("projects.openIssues", {
