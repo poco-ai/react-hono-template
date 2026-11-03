@@ -147,6 +147,8 @@ const en = {
 		account: "Account",
 		admin: "Admin",
 		ai: "AI",
+		aiAssistant: "AI Assistant",
+		orgSettings: "Organization settings",
 		signOutTitle: "Sign out?",
 		signOutDescription:
 			"You'll need to sign in again to get back into the app.",

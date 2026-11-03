@@ -17,7 +17,7 @@ import {
 	DropdownMenuSubTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { cn } from "@workspace/ui/lib/utils";
-import { Languages, Shield, User } from "lucide-react";
+import { Languages, Settings, Shield, User } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -32,10 +32,12 @@ import { apiErrorMessage } from "@/lib/errors";
 
 export function UserDropdown({
 	user,
+	orgId,
 	orgRole,
 	className,
 }: {
 	user: SessionUser;
+	orgId?: string;
 	orgRole?: OrgRole;
 	className?: string;
 }) {
@@ -59,8 +61,17 @@ export function UserDropdown({
 		label: t("nav.admin"),
 		visibility: "authenticated",
 	};
+	const orgSettingsLink: UserButtonLink | null = orgId
+		? {
+				href: `/orgs/${orgId}/settings`,
+				icon: <Settings className="text-muted-foreground" />,
+				label: t("nav.orgSettings"),
+				visibility: "authenticated",
+			}
+		: null;
 	const links: (UserButtonLink | ReactElement)[] = [
 		accountLink,
+		...(orgSettingsLink ? [orgSettingsLink] : []),
 		...(user.role === "admin" ? [adminLink] : []),
 		<DropdownMenuSeparator key="user-menu-preferences" />,
 		<DropdownMenuSub key="language">

@@ -147,6 +147,8 @@ const zh: typeof en = {
 		account: "账号",
 		admin: "管理后台",
 		ai: "AI",
+		aiAssistant: "AI 助手",
+		orgSettings: "组织设置",
 		signOutTitle: "退出登录？",
 		signOutDescription: "退出后需要重新登录才能进入应用。",
 	},

@@ -13,6 +13,7 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuAction,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
@@ -28,9 +29,12 @@ import {
 } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
 import {
+	Activity,
 	ChevronsUpDown,
+	Inbox,
 	Plus,
 	Search,
+	Settings,
 	Snowflake,
 	Sparkles,
 } from "lucide-react";
@@ -61,10 +65,7 @@ function SidebarLink({
 	to:
 		| "/orgs/$orgId/projects"
 		| "/orgs/$orgId/my-issues"
-		| "/orgs/$orgId/activity"
-		| "/orgs/$orgId/ai"
-		| "/orgs/$orgId/settings"
-		| "/api-docs";
+		| "/orgs/$orgId/activity";
 	exact?: boolean;
 	onNavigate?: () => void;
 	children: ReactNode;
@@ -76,7 +77,7 @@ function SidebarLink({
 				render={
 					<Link
 						to={to}
-						params={to === "/api-docs" ? undefined : { orgId }}
+						params={{ orgId }}
 						activeOptions={{ exact }}
 						onClick={onNavigate}
 						activeProps={{
@@ -102,11 +103,16 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 	const { isMobile, setOpenMobile } = useSidebar();
-	const { togglePanel, panelOpen } = useAiChat();
+	const { newChat } = useAiChat();
 
 	const isMac = /mac|iphone|ipad/i.test(navigator.userAgent);
 	const onNavigate = () => {
 		if (isMobile) setOpenMobile(false);
+	};
+	const onNewChat = () => {
+		newChat();
+		void navigate({ to: "/orgs/$orgId/ai", params: { orgId } });
+		onNavigate();
 	};
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
@@ -117,42 +123,65 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	return (
 		<>
 			<SidebarHeader>
-				<OrganizationSwitcher
-					align="start"
-					className="w-full"
-					hidePersonal
-					hideSettings
-					trigger={
-						<DropdownMenuTrigger
-							className={cn(
-								buttonVariants({ variant: "ghost" }),
-								"h-9 w-full justify-between px-2 text-left font-medium",
-							)}
-						>
-							{currentOrg ? (
-								<span className="min-w-0 truncate">{currentOrg.name}</span>
-							) : (
-								<Skeleton className="h-4 w-24" />
-							)}
-							<ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
-						</DropdownMenuTrigger>
-					}
-					setActive={(organization) => {
-						if (!organization) return;
-						void navigate({
-							to: "/orgs/$orgId/projects",
-							params: { orgId: organization.id },
-						});
-						onNavigate();
-					}}
-					onOrganizationCreated={(organization) => {
-						void navigate({
-							to: "/orgs/$orgId/projects",
-							params: { orgId: organization.id },
-						});
-						onNavigate();
-					}}
-				/>
+				<div className="flex items-center gap-1">
+					<OrganizationSwitcher
+						align="start"
+						hidePersonal
+						hideSettings
+						trigger={
+							<DropdownMenuTrigger
+								className={cn(
+									buttonVariants({ variant: "ghost" }),
+									"h-9 min-w-0 flex-1 justify-between px-2 text-left font-medium",
+								)}
+							>
+								{currentOrg ? (
+									<span className="min-w-0 truncate">{currentOrg.name}</span>
+								) : (
+									<Skeleton className="h-4 w-24" />
+								)}
+								<ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
+							</DropdownMenuTrigger>
+						}
+						setActive={(organization) => {
+							if (!organization) return;
+							void navigate({
+								to: "/orgs/$orgId/projects",
+								params: { orgId: organization.id },
+							});
+							onNavigate();
+						}}
+						onOrganizationCreated={(organization) => {
+							void navigate({
+								to: "/orgs/$orgId/projects",
+								params: { orgId: organization.id },
+							});
+							onNavigate();
+						}}
+					/>
+					{/* Settings stay reachable for every member; write controls are gated inside the pages. */}
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label={t("nav.orgSettings")}
+									render={
+										<Link
+											to="/orgs/$orgId/settings"
+											params={{ orgId }}
+											onClick={onNavigate}
+										/>
+									}
+								>
+									<Settings />
+								</Button>
+							}
+						/>
+						<TooltipContent>{t("nav.orgSettings")}</TooltipContent>
+					</Tooltip>
+				</div>
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
@@ -169,58 +198,81 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 								</Kbd>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
-						<SidebarLink
-							to="/orgs/$orgId/projects"
-							exact
-							onNavigate={onNavigate}
-						>
-							{t("nav.projects")}
-						</SidebarLink>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								render={
+									<Link
+										to="/orgs/$orgId/ai"
+										params={{ orgId }}
+										aria-label={t("nav.aiAssistant")}
+										onClick={onNavigate}
+										activeProps={{
+											className:
+												"bg-sidebar-accent text-sidebar-accent-foreground",
+										}}
+									/>
+								}
+								className="justify-between pr-9"
+							>
+								<Sparkles />
+								<span className="flex-1 text-left">{t("nav.aiAssistant")}</span>
+								<Kbd className="hidden sm:inline-flex">
+									{isMac ? "⌘J" : "Ctrl J"}
+								</Kbd>
+							</SidebarMenuButton>
+							<Tooltip>
+								<TooltipTrigger
+									render={
+										<SidebarMenuAction
+											aria-label={t("ai.newChat")}
+											showOnHover
+											onClick={onNewChat}
+										>
+											<Plus />
+										</SidebarMenuAction>
+									}
+								/>
+								<TooltipContent>{t("ai.newChat")}</TooltipContent>
+							</Tooltip>
+						</SidebarMenuItem>
+					</SidebarMenu>
+				</SidebarGroup>
+				<SidebarGroup>
+					<SidebarMenu>
 						<SidebarLink
 							to="/orgs/$orgId/my-issues"
 							exact
 							onNavigate={onNavigate}
 						>
-							{t("nav.myIssues")}
+							<Inbox />
+							<span>{t("nav.myIssues")}</span>
 						</SidebarLink>
 						<SidebarLink
 							to="/orgs/$orgId/activity"
 							exact
 							onNavigate={onNavigate}
 						>
-							{t("nav.activity")}
-						</SidebarLink>
-						<SidebarLink to="/orgs/$orgId/ai" onNavigate={onNavigate}>
-							<Sparkles />
-							<span>{t("nav.ai")}</span>
-						</SidebarLink>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								onClick={() => {
-									if (isMobile) setOpenMobile(false);
-									togglePanel();
-								}}
-								aria-pressed={panelOpen}
-								className="text-sidebar-foreground/80 justify-between"
-							>
-								<Sparkles />
-								<span className="flex-1 text-left">{t("ai.panel.toggle")}</span>
-								<Kbd className="hidden sm:inline-flex">
-									{isMac ? "⌘J" : "Ctrl J"}
-								</Kbd>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-						<SidebarLink to="/orgs/$orgId/settings" onNavigate={onNavigate}>
-							{t("nav.settings")}
-						</SidebarLink>
-						<SidebarLink to="/api-docs" onNavigate={onNavigate}>
-							{t("nav.apiDocs")}
+							<Activity />
+							<span>{t("nav.activity")}</span>
 						</SidebarLink>
 					</SidebarMenu>
-				</SidebarGroup>
-				<SidebarGroup>
-					<SidebarGroupLabel className="justify-between pr-1">
-						{t("projects.sidebarTitle")}
+					<SidebarGroupLabel className="justify-between gap-1 pr-1">
+						<Link
+							to="/orgs/$orgId/projects"
+							params={{ orgId }}
+							onClick={onNavigate}
+							className="hover:text-sidebar-foreground flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+							activeProps={{
+								className: "text-sidebar-foreground font-medium",
+							}}
+						>
+							<span className="truncate">{t("projects.sidebarTitle")}</span>
+							<span className="ml-auto text-muted-foreground tabular-nums">
+								{projects.isPending || projects.isError
+									? null
+									: activeProjects.length}
+							</span>
+						</Link>
 						<Tooltip>
 							<TooltipTrigger
 								render={
@@ -282,6 +334,7 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 				{session && (
 					<UserDropdown
 						user={session.user}
+						orgId={orgId}
 						orgRole={role as OrgRole | undefined}
 						className="w-full"
 					/>
