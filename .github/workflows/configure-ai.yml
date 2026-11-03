@@ -24,23 +24,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Set AI and MCP environment
+      - name: Set SiliconFlow API key
         working-directory: apps/api
-        run: |
-          printf 'true' | bunx wrangler secret put AI_ENABLED
-          printf 'openai-compatible' | bunx wrangler secret put AI_PROVIDER
-          printf 'https://api.siliconflow.cn/v1' | bunx wrangler secret put AI_BASE_URL
-          printf 'deepseek-ai/DeepSeek-V4.1-Flash' | bunx wrangler secret put AI_MODEL
-          printf 'deepseek-ai/DeepSeek-V4.1-Flash' | bunx wrangler secret put AI_MODEL_ALLOWLIST
-          printf '8' | bunx wrangler secret put AI_MAX_STEPS
-          printf '2048' | bunx wrangler secret put AI_MAX_OUTPUT_TOKENS
-          printf 'https://react-hono-web.chenqiyuan1012.workers.dev' | bunx wrangler secret put APP_WEB_URL
-          printf 'true' | bunx wrangler secret put MCP_ENABLED
-          printf 'https://react-hono-api.chenqiyuan1012.workers.dev/mcp' | bunx wrangler secret put MCP_RESOURCE
-          printf 'https://react-hono-web.chenqiyuan1012.workers.dev/login' | bunx wrangler secret put MCP_LOGIN_PAGE
-          printf 'https://react-hono-web.chenqiyuan1012.workers.dev/consent' | bunx wrangler secret put MCP_CONSENT_PAGE
-          printf 'false' | bunx wrangler secret put MCP_DCR_ENABLED
-          printf '%s' "$SILICONFLOW_API_KEY" | bunx wrangler secret put AI_API_KEY
+        run: printf '%s' "$SILICONFLOW_API_KEY" | bunx wrangler secret put AI_API_KEY
         env:
           SILICONFLOW_API_KEY: ${{ secrets.SILICONFLOW_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

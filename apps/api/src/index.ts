@@ -22,7 +22,7 @@ import { createV1App } from "./v1";
 
 const trustedOrigins = [
 	"http://localhost:5173",
-	"https://react-hono-web.chenqiyuan1012.workers.dev",
+	"https://react-hono-web.poco-ai.workers.dev",
 ];
 
 const app = new Hono<{ Bindings: Env }>();

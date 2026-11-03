@@ -26,7 +26,7 @@ Google / GitHub 登录是可选的：只有 client id 和 client secret 都非�
 bun run deploy
 ```
 
-部署到 Cloudflare Workers，线上地址：https://react-hono-api.chenqiyuan1012.workers.dev
+部署到 Cloudflare Workers，线上地址：https://react-hono-api.poco-ai.workers.dev
 
 ## 类型
 
@@ -79,7 +79,7 @@ Label 列表缓存于 `cache:v1:labels:<orgId>`（org id 经 `encodeURIComponent
 	{
 		"AllowedOrigins": [
 			"http://localhost:5173",
-			"https://react-hono-web.chenqiyuan1012.workers.dev"
+			"https://react-hono-web.poco-ai.workers.dev"
 		],
 		"AllowedMethods": ["GET", "PUT", "DELETE"],
 		"AllowedHeaders": ["content-type"],

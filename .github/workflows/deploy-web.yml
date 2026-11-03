@@ -37,7 +37,7 @@ jobs:
         working-directory: apps/web
         run: bun run build
         env:
-          VITE_API_URL: https://react-hono-api.chenqiyuan1012.workers.dev
+          VITE_API_URL: https://react-hono-api.poco-ai.workers.dev
 
       - name: Deploy
         working-directory: apps/web
