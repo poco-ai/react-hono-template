@@ -20,9 +20,15 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { NotFoundState } from "@/components/not-found-state";
 import { useTheme } from "@/components/theme-provider";
 import {
+	deleteAvatar,
 	oauthProvidersQuery,
+	uploadAvatar,
 	useRefreshSessionOnUserUpdate,
 } from "@/features/auth/data";
+import {
+	deleteOrganizationLogo,
+	uploadOrganizationLogo,
+} from "@/features/organizations/data";
 import { adminFlowLocalization } from "@/lib/auth/admin-localization";
 import { adminPlugin } from "@/lib/auth/admin-plugin";
 import {
@@ -193,7 +199,13 @@ function RootComponent() {
 			organizationPlugin({
 				slugPrefix: "",
 				allowMultipleRoles: false,
-				logo: { enabled: false },
+				logo: {
+					enabled: true,
+					size: 256,
+					extension: "webp",
+					upload: uploadOrganizationLogo,
+					delete: deleteOrganizationLogo,
+				},
 			}),
 		],
 		[t],
@@ -250,7 +262,13 @@ function RootComponent() {
 			}}
 			Link={AuthLink}
 			redirectTo={redirectTo}
-			avatar={{ enabled: false }}
+			avatar={{
+				enabled: true,
+				size: 256,
+				extension: "webp",
+				upload: uploadAvatar,
+				delete: deleteAvatar,
+			}}
 			emailAndPassword={{
 				enabled: true,
 				requireEmailVerification: false,

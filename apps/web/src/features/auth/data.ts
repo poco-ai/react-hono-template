@@ -54,6 +54,68 @@ export async function refreshAppSession(queryClient: QueryClient) {
 	queryClient.setQueryData(sessionKey(), data ?? null);
 }
 
+const imageContentType = (file: File) => {
+	const contentType = file.type === "image/jpg" ? "image/jpeg" : file.type;
+	if (
+		contentType !== "image/png" &&
+		contentType !== "image/jpeg" &&
+		contentType !== "image/webp"
+	) {
+		throw codedError(
+			`Unsupported image type ${contentType || "unknown"}`,
+			"UNSUPPORTED_MEDIA_TYPE",
+		);
+	}
+	return contentType;
+};
+
+const putImage = async (uploadUrl: string, file: File, contentType: string) => {
+	let response: Response;
+	try {
+		response = await fetch(uploadUrl, {
+			method: "PUT",
+			headers: { "Content-Type": contentType },
+			body: file,
+		});
+	} catch (error) {
+		if (
+			typeof error === "object" &&
+			error !== null &&
+			(error as { name?: unknown }).name === "AbortError"
+		) {
+			throw error;
+		}
+		throw codedError("Storage service unavailable", "STORAGE_UNAVAILABLE");
+	}
+	if (!response.ok) {
+		throw new Error(`Upload failed with status ${response.status}`);
+	}
+};
+
+export async function uploadAvatar(file: File): Promise<string> {
+	const contentType = imageContentType(file);
+	const presignResponse = await client.api.me.avatar.presign.$post({
+		json: {
+			filename: file.name || `avatar.${contentType.split("/")[1]}`,
+			contentType,
+			size: file.size,
+		},
+	});
+	if (presignResponse.status >= 500) {
+		throw codedError("Storage service unavailable", "STORAGE_UNAVAILABLE");
+	}
+	const presigned = await unwrap(presignResponse);
+	await putImage(presigned.uploadUrl, file, contentType);
+	const registered = await unwrap(
+		client.api.me.avatar.$post({ json: { key: presigned.key } }),
+	);
+	return registered.url;
+}
+
+export async function deleteAvatar(url: string): Promise<void> {
+	await unwrap(client.api.me.avatar.$delete({ json: { url } }));
+}
+
 export async function signOut() {
 	const { error } = await authClient.signOut();
 	if (error) throw codedError(error.message ?? "", error.code);

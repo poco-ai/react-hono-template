@@ -310,7 +310,9 @@ function BoardCard({
 							) : null;
 						})}
 					</span>
-					{assignee && <UserAvatar name={assignee.user.name} />}
+					{assignee && (
+						<UserAvatar name={assignee.user.name} image={assignee.user.image} />
+					)}
 				</div>
 			</div>
 		</button>

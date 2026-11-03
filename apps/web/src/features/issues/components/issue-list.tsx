@@ -168,7 +168,10 @@ export function IssueList({
 									<TableCell>
 										{assignee ? (
 											<span title={assignee.user.name} className="inline-flex">
-												<UserAvatar name={assignee.user.name} />
+												<UserAvatar
+													name={assignee.user.name}
+													image={assignee.user.image}
+												/>
 											</span>
 										) : (
 											<span className="text-muted-foreground/50">—</span>

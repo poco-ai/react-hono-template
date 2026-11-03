@@ -190,7 +190,12 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 													<DueDateLabel value={issue.dueDate} />
 												</TableCell>
 												<TableCell>
-													{session && <UserAvatar name={session.user.name} />}
+													{session && (
+														<UserAvatar
+															name={session.user.name}
+															image={session.user.image}
+														/>
+													)}
 												</TableCell>
 											</TableRow>
 										);

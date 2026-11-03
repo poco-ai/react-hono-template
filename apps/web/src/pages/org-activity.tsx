@@ -141,6 +141,7 @@ export function OrgActivityPage({
 								<li key={activity.id} className="flex gap-3">
 									<UserAvatar
 										name={activity.actor.name}
+										image={activity.actor.image}
 										className="mt-0.5 size-6 shrink-0"
 									/>
 									<div className="flex min-w-0 flex-1 flex-col gap-1">

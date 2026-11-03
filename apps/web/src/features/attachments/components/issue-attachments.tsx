@@ -305,6 +305,7 @@ export function IssueAttachments({
 												·
 												<UserAvatar
 													name={attachment.uploader.name}
+													image={attachment.uploader.image}
 													className="size-3.5"
 												/>
 												{attachment.uploader.name}

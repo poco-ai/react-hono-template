@@ -12,14 +12,16 @@ export function initialsOf(name: string): string {
 
 export function UserAvatar({
 	name,
+	image,
 	className,
 }: {
 	name: string;
+	image?: string | null;
 	className?: string;
 }) {
 	return (
 		<AuthUserAvatar
-			user={{ name }}
+			user={{ name, image }}
 			fallback={initialsOf(name)}
 			className={className ?? "size-5 text-[10px]"}
 		/>

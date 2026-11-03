@@ -4,7 +4,9 @@ import {
 	resolveContentType,
 	uploadAttachment,
 } from "../src/features/attachments/data";
+import { deleteAvatar, uploadAvatar } from "../src/features/auth/data";
 import { inviteMember } from "../src/features/members/data";
+import { uploadOrganizationLogo } from "../src/features/organizations/data";
 import { createProject, updateProject } from "../src/features/projects/data";
 import { saveWebhook } from "../src/features/webhooks/data";
 
@@ -161,6 +163,76 @@ test("failed attachment uploads never register a nonexistent attachment", () =>
 				/Upload failed/,
 			);
 			assert.equal(requests.length, 2);
+		},
+	));
+
+test("avatar uploads presign, PUT, then register the returned media URL", () =>
+	withRequests(
+		(request) => {
+			if (request.url.pathname.endsWith("/presign")) {
+				return ok({
+					key: "users/user/avatars/asset.webp",
+					uploadUrl: "https://storage.example/avatar",
+					expiresIn: 600,
+				});
+			}
+			if (request.method === "PUT") return new Response(null, { status: 200 });
+			return ok({
+				assetId: "asset",
+				url: "https://api.example.com/api/media/asset",
+			});
+		},
+		async (requests) => {
+			const file = new File(["image"], "avatar.webp", { type: "image/webp" });
+			const url = await uploadAvatar(file);
+			assert.equal(url, "https://api.example.com/api/media/asset");
+			assert.equal(requests.length, 3);
+			assert.equal(requests[0].url.pathname, "/api/me/avatar/presign");
+			assert.deepEqual(requests[0].body, {
+				filename: "avatar.webp",
+				contentType: "image/webp",
+				size: file.size,
+			});
+			assert.equal(requests[1].method, "PUT");
+			assert.equal(requests[1].body, file);
+			assert.deepEqual(requests[2].body, {
+				key: "users/user/avatars/asset.webp",
+			});
+			await deleteAvatar(url);
+			assert.equal(requests[3].method, "DELETE");
+			assert.equal(requests[3].url.pathname, "/api/me/avatar");
+			assert.deepEqual(requests[3].body, { url });
+		},
+	));
+
+test("organization logo uploads use the active organization", () =>
+	withRequests(
+		(request) => {
+			if (request.url.pathname.endsWith("/get-full-organization")) {
+				return Response.json({ id: "org-1", name: "Acme", slug: "acme" });
+			}
+			if (request.url.pathname.endsWith("/presign")) {
+				return ok({
+					key: "orgs/org-1/logo/asset.webp",
+					uploadUrl: "https://storage.example/logo",
+					expiresIn: 600,
+				});
+			}
+			if (request.method === "PUT") return new Response(null, { status: 200 });
+			return ok({
+				assetId: "logo",
+				url: "https://api.example.com/api/media/logo",
+			});
+		},
+		async (requests) => {
+			const file = new File(["image"], "logo.webp", { type: "image/webp" });
+			const url = await uploadOrganizationLogo(file);
+			assert.equal(url, "https://api.example.com/api/media/logo");
+			assert.equal(requests[1].url.pathname, "/api/orgs/org-1/logo/presign");
+			assert.equal(requests[2].method, "PUT");
+			assert.deepEqual(requests[3].body, {
+				key: "orgs/org-1/logo/asset.webp",
+			});
 		},
 	));
 

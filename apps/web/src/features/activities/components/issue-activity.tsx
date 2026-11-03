@@ -70,7 +70,10 @@ export function IssueActivityTimeline({
 								className="relative flex gap-3 pb-4 last:pb-0"
 							>
 								<span className="absolute top-5 bottom-0 left-[9px] w-px bg-border last:hidden" />
-								<UserAvatar name={activity.actor.name} />
+								<UserAvatar
+									name={activity.actor.name}
+									image={activity.actor.image}
+								/>
 								<div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-0.5">
 									<ActivitySentence
 										activity={activity}

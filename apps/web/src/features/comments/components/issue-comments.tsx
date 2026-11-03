@@ -97,6 +97,7 @@ export function IssueComments({
 						<li key={comment.id} className="group/comment flex gap-3">
 							<UserAvatar
 								name={comment.author.name}
+								image={comment.author.image}
 								className="mt-0.5 size-6 shrink-0"
 							/>
 							<div className="min-w-0 flex-1">
