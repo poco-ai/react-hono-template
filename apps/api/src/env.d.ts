@@ -15,6 +15,7 @@ declare global {
 			S3_SECRET_ACCESS_KEY?: string;
 			S3_BUCKET?: string;
 			S3_PUBLIC_BASE_URL?: string;
+			PUBLIC_API_URL?: string;
 			STRIPE_SECRET_KEY?: string;
 			STRIPE_PRICE_ID?: string;
 			STRIPE_WEBHOOK_SECRET?: string;
@@ -53,6 +54,7 @@ declare global {
 		S3_SECRET_ACCESS_KEY?: string;
 		S3_BUCKET?: string;
 		S3_PUBLIC_BASE_URL?: string;
+		PUBLIC_API_URL?: string;
 		STRIPE_SECRET_KEY?: string;
 		STRIPE_PRICE_ID?: string;
 		STRIPE_WEBHOOK_SECRET?: string;

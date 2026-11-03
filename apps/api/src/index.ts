@@ -97,6 +97,12 @@ const dependencies = createDependencies({
 		pro: env.RATE_LIMITER_PRO,
 	},
 	appWebUrl: env.APP_WEB_URL,
+	resolvePublicApiUrl: (requestUrl) => {
+		const configured =
+			env.PUBLIC_API_URL?.trim() || env.BETTER_AUTH_URL?.trim();
+		if (configured) return configured.replace(/\/+$/, "");
+		return new URL(requestUrl).origin;
+	},
 });
 
 const social: SocialProvidersConfig = {

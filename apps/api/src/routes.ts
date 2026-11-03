@@ -20,6 +20,11 @@ import { createCommentsRoutes } from "./routes/comments";
 import { createConfigRoutes } from "./routes/config";
 import { createIssuesRoutes } from "./routes/issues";
 import { createLabelsRoutes } from "./routes/labels";
+import {
+	createMediaRoutes,
+	createMeMediaRoutes,
+	createOrgLogoRoutes,
+} from "./routes/media";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectsRoutes } from "./routes/projects";
 import { createWebhooksRoutes } from "./routes/webhooks";
@@ -54,9 +59,12 @@ export const createRoutes = ({
 					500,
 				);
 			})
+			.route("/", createMediaRoutes(dependencies.services.mediaService))
 			.route("/", createBootstrapRoutes(dependencies.services.bootstrapService))
 			.route("/", createConfigRoutes(dependencies.services.configService))
 			.route("/", createOAuthRoutes(social))
+			.use("/api/me/*", requireAuth(auth))
+			.route("/", createMeMediaRoutes(dependencies.services.mediaService))
 			.use("/api/admin/*", requireAuth(auth))
 			.route(
 				"/",
@@ -83,6 +91,7 @@ export const createRoutes = ({
 				"/",
 				createAttachmentsRoutes(dependencies.services.attachmentService),
 			)
+			.route("/", createOrgLogoRoutes(dependencies.services.mediaService))
 			.route("/", createActivitiesRoutes(dependencies.services.activityService))
 			.route("/", createLabelsRoutes(dependencies.services.labelService))
 			.route("/", createApiKeysRoutes(dependencies.services.apiKeyService))

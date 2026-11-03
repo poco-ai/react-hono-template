@@ -14,6 +14,7 @@ export * from "./schemas/comment";
 export * from "./schemas/config";
 export * from "./schemas/issue";
 export * from "./schemas/label";
+export * from "./schemas/media";
 export * from "./schemas/pagination";
 export * from "./schemas/project";
 export * from "./schemas/webhook";

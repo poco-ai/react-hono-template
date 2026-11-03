@@ -84,6 +84,7 @@
 		"AI_MAX_OUTPUT_TOKENS": "2048",
 		"APP_WEB_URL": "https://react-hono-web.poco-ai.workers.dev",
 		"BETTER_AUTH_URL": "https://react-hono-api.poco-ai.workers.dev",
+		"PUBLIC_API_URL": "https://react-hono-api.poco-ai.workers.dev",
 		"BILLING_MOCK_MODE": "true",
 		"MCP_ENABLED": "true",
 		"MCP_RESOURCE": "https://react-hono-api.poco-ai.workers.dev/mcp",

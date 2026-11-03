@@ -22,6 +22,12 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 
 BILLING_MOCK_MODE=true
 
+# Stable origin baked into avatar and organization logo URLs.
+# Stored values look like ${PUBLIC_API_URL}/api/media/<assetId>, never a bucket host.
+# Local API origin. The Vite dev server proxies /api, but <img> requests should
+# hit the Worker directly so they do not depend on BETTER_AUTH_URL.
+PUBLIC_API_URL=http://localhost:8787
+
 # S3-compatible storage for issue attachments (R2 in production).
 # Without these, attachment endpoints return 503 and uploads fail with a storage
 # error. For local dev, start MinIO and create a bucket (console on :9001):

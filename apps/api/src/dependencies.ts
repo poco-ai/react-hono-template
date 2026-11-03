@@ -47,6 +47,7 @@ import { createCommentService } from "./services/comment.service";
 import { createConfigService } from "./services/config.service";
 import { createIssueService } from "./services/issue.service";
 import { createLabelService } from "./services/label.service";
+import { createMediaService } from "./services/media.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
@@ -72,6 +73,7 @@ export const createDependencies = ({
 	aiRateLimiters,
 	apiRateLimiters,
 	appWebUrl = "http://localhost:5173",
+	resolvePublicApiUrl = (requestUrl: string) => new URL(requestUrl).origin,
 }: {
 	db: Database;
 	storage: StorageAdapter | null;
@@ -86,6 +88,7 @@ export const createDependencies = ({
 		pro?: RateLimiter;
 	};
 	appWebUrl?: string;
+	resolvePublicApiUrl?: (requestUrl: string) => string;
 }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
@@ -117,6 +120,12 @@ export const createDependencies = ({
 		webhookDao,
 		deliveryDao: webhookDeliveryDao,
 		queue: webhookQueue,
+	});
+	const mediaService = createMediaService({
+		mediaAssetDao,
+		pendingUploadDao,
+		storage,
+		resolvePublicApiUrl,
 	});
 	const storageUsageService = createStorageUsageService({
 		attachmentDao,
@@ -256,6 +265,7 @@ export const createDependencies = ({
 			labelService,
 			commentService,
 			attachmentService,
+			mediaService,
 			activityService,
 			apiKeyService,
 			webhookService,

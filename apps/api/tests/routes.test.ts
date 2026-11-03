@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+	ApiError,
+	ApiErrorCode,
 	DEFAULT_RUNTIME_CONFIG,
 	type UpdateRuntimeConfigInput,
 } from "@workspace/shared";
@@ -51,6 +53,38 @@ const appFor = ({
 			configService: {
 				getConfig: async () => DEFAULT_RUNTIME_CONFIG,
 				updateConfig: async (input: UpdateRuntimeConfigInput) => input,
+			},
+			mediaService: {
+				getMedia: async (assetId: string) => {
+					if (assetId !== "asset-1") {
+						throw new ApiError(
+							404,
+							ApiErrorCode.ASSET_NOT_FOUND,
+							"Media not found",
+						);
+					}
+					return {
+						body: new ReadableStream({
+							start(controller) {
+								controller.enqueue(new TextEncoder().encode("img"));
+								controller.close();
+							},
+						}),
+						contentType: "image/webp",
+						contentLength: 3,
+						etag: null,
+					};
+				},
+				presignAvatar: async () => ({
+					key: "avatar-key",
+					uploadUrl: "https://upload.example/avatar",
+					expiresIn: 600,
+				}),
+				presignOrgLogo: async () => ({
+					key: "logo-key",
+					uploadUrl: "https://upload.example/logo",
+					expiresIn: 600,
+				}),
 			},
 		},
 	} as unknown as Dependencies;
@@ -208,6 +242,71 @@ test("resource routes retain organization and platform permission checks", async
 		403,
 		"FORBIDDEN",
 	);
+});
+
+test("public media is readable without a session and avatars require one", async () => {
+	const app = appFor({ loggedIn: false });
+	const image = await app.request("/api/media/asset-1");
+	assert.equal(image.status, 200);
+	assert.equal(image.headers.get("Content-Type"), "image/webp");
+	assert.equal(
+		image.headers.get("Cache-Control"),
+		"public, max-age=31536000, immutable",
+	);
+	assert.equal(image.headers.get("X-Content-Type-Options"), "nosniff");
+	assert.equal(await image.text(), "img");
+	await expectError(
+		await app.request("/api/media/missing"),
+		404,
+		"ASSET_NOT_FOUND",
+	);
+	await expectError(
+		await app.request("/api/me/avatar/presign", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				filename: "avatar.webp",
+				contentType: "image/webp",
+				size: 100,
+			}),
+		}),
+		401,
+		"UNAUTHORIZED",
+	);
+});
+
+test("organization logo uploads are limited to owners and admins", async () => {
+	const body = JSON.stringify({
+		filename: "logo.webp",
+		contentType: "image/webp",
+		size: 100,
+	});
+	await expectError(
+		await appFor({ orgRole: "member" }).request("/api/orgs/org/logo/presign", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body,
+		}),
+		403,
+		"FORBIDDEN",
+	);
+	const response = await appFor({ orgRole: "admin" }).request(
+		"/api/orgs/org/logo/presign",
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body,
+		},
+	);
+	assert.equal(response.status, 200);
+	assert.deepEqual(await response.json(), {
+		ok: true,
+		data: {
+			key: "logo-key",
+			uploadUrl: "https://upload.example/logo",
+			expiresIn: 600,
+		},
+	});
 });
 
 test("validation errors and typed input survive sub-app composition", async () => {
