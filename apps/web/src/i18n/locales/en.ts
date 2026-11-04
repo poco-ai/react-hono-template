@@ -342,6 +342,7 @@ const en = {
 			get_issue: { title: "Get issue" },
 			list_comments: { title: "List comments" },
 			list_labels: { title: "List labels" },
+			list_statuses: { title: "List statuses" },
 			get_issue_activity: { title: "Get issue activity" },
 			get_org_activity: { title: "Get organization activity" },
 			create_issue: { title: "Create issue" },
@@ -360,6 +361,7 @@ const en = {
 			project: "Open project",
 			org: "Open organization",
 			labels: "Open labels",
+			statuses: "Open statuses",
 		},
 		settings: {
 			description:
@@ -460,6 +462,13 @@ const en = {
 				"Some of the provided values are invalid. Please check and try again.",
 			CONFLICT:
 				"This change conflicts with the current state. Please refresh and try again.",
+			STATUS_NAME_TAKEN: "A status with this name already exists.",
+			STATUS_LAST_STATUS:
+				"An organization must keep at least one workflow status.",
+			STATUS_MIGRATION_REQUIRED:
+				"Move the issues using this status to another status before deleting it.",
+			STATUS_MIGRATION_INVALID:
+				"Choose a valid status in this organization to move the issues to.",
 		},
 		orgSettingsRequired:
 			"Only owners and admins can change organization settings.",
@@ -839,6 +848,38 @@ const en = {
 			"Labels still attached to issues cannot be deleted. Remove the label from those issues first.",
 		empty: "No labels yet.",
 	},
+	statuses: {
+		description:
+			"Workflow statuses are shared by every project in this organization. They drive board columns, filters and issue progress.",
+		create: "New status",
+		createTitle: "Create status",
+		editTitle: "Edit status",
+		createDescription: "Add a step to this organization's workflow.",
+		editDescription: "Rename, recategorize or recolor this workflow status.",
+		name: "Name",
+		namePlaceholder: "e.g. Ready for QA",
+		category: "Category",
+		color: "Color",
+		default: "Default",
+		setDefault: "Set as default",
+		edit: "Edit status",
+		moveUp: "Move up",
+		moveDown: "Move down",
+		empty: "No statuses yet.",
+		lastStatusHint: "An organization must keep at least one status.",
+		deleteTitle: "Delete status {{name}}?",
+		deleteDescription:
+			"Issues using this status are moved to the status you select below. This cannot be undone.",
+		migrateTo: "Move issues to",
+		migratePlaceholder: "Select a status",
+		categories: {
+			backlog: "Backlog",
+			unstarted: "Unstarted",
+			started: "Started",
+			completed: "Completed",
+			canceled: "Canceled",
+		},
+	},
 	account: {
 		title: "Account",
 		description: "Manage your profile and password.",
@@ -863,6 +904,7 @@ const en = {
 		general: "General",
 		members: "Members",
 		labels: "Labels",
+		statuses: "Statuses",
 		ai: "AI",
 		mcp: "MCP",
 		apiKeys: "API Keys",
@@ -1182,6 +1224,10 @@ const en = {
 		labelCreated: "Label created.",
 		labelUpdated: "Label updated.",
 		labelDeleted: "Label deleted.",
+		statusCreated: "Status created.",
+		statusUpdated: "Status updated.",
+		statusDeleted: "Status deleted.",
+		statusReordered: "Status order saved.",
 		apiKeyRevoked: "API key revoked.",
 		webhookCreated: "Webhook created.",
 		webhookUpdated: "Webhook updated.",

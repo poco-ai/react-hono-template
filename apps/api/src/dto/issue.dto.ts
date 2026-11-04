@@ -1,5 +1,6 @@
 import type { Paginated } from "@workspace/shared";
 import type { issues } from "../db/schema";
+import type { StatusDto } from "./status.dto";
 
 type IssueRow = typeof issues.$inferSelect;
 
@@ -11,6 +12,8 @@ export type IssueDto = Omit<
 	updatedAt: string;
 	dueDate: string | null;
 	deletedAt: string | null;
+	/** Resolved workflow status (id/name/category/color/position). */
+	status: StatusDto;
 };
 
 export type IssueDetailDto = IssueDto & {
@@ -25,7 +28,7 @@ export type IssueNavigationDto = {
 export type ListIssuesQueryDto = {
 	page: number;
 	pageSize: number;
-	status?: string[];
+	statusId?: string[];
 	priority?: number[];
 	assigneeId?: string;
 	labelId?: string;

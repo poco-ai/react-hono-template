@@ -16,6 +16,18 @@ const ORG_ID = "org-1";
 const USER_ID = "user-1";
 const NOW = "2026-01-01T00:00:00.000Z";
 
+const status = {
+	id: "status-todo",
+	orgId: ORG_ID,
+	name: "Todo",
+	category: "unstarted",
+	color: "#3b82f6",
+	position: 1,
+	isDefault: false,
+	createdAt: NOW,
+	updatedAt: NOW,
+};
+
 const issueDto = (overrides: Partial<IssueDetailDto> = {}): IssueDetailDto => ({
 	id: "issue-1",
 	orgId: ORG_ID,
@@ -23,7 +35,8 @@ const issueDto = (overrides: Partial<IssueDetailDto> = {}): IssueDetailDto => ({
 	number: 7,
 	title: "Login fails",
 	description: "Steps to reproduce",
-	status: "todo",
+	statusId: status.id,
+	status,
 	priority: 2,
 	assigneeId: null,
 	createdById: USER_ID,
@@ -167,6 +180,9 @@ const setup = (options: SetupOptions = {}) => {
 			activityService: {
 				listByIssue: async () => [],
 				listByOrg: async () => [],
+			},
+			statusService: {
+				listStatuses: async () => [status],
 			},
 		},
 		daos: {

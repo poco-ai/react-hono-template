@@ -41,6 +41,7 @@ import { Route as AuthOrgsOrgIdSettingsBillingRouteImport } from './routes/_auth
 import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/orgs/$orgId/settings/labels'
 import { Route as AuthOrgsOrgIdSettingsMcpRouteImport } from './routes/_auth/orgs/$orgId/settings/mcp'
 import { Route as AuthOrgsOrgIdSettingsMembersRouteImport } from './routes/_auth/orgs/$orgId/settings/members'
+import { Route as AuthOrgsOrgIdSettingsStatusesRouteImport } from './routes/_auth/orgs/$orgId/settings/statuses'
 import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_auth/orgs/$orgId/settings/webhooks'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -213,6 +214,12 @@ const AuthOrgsOrgIdSettingsMembersRoute =
     path: '/members',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
+const AuthOrgsOrgIdSettingsStatusesRoute =
+  AuthOrgsOrgIdSettingsStatusesRouteImport.update({
+    id: '/statuses',
+    path: '/statuses',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
 const AuthOrgsOrgIdSettingsWebhooksRoute =
   AuthOrgsOrgIdSettingsWebhooksRouteImport.update({
     id: '/webhooks',
@@ -261,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/orgs/$orgId/settings/statuses': typeof AuthOrgsOrgIdSettingsStatusesRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/orgs/$orgId/ai/': typeof AuthOrgsOrgIdAiIndexRoute
   '/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -294,6 +302,7 @@ export interface FileRoutesByTo {
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/orgs/$orgId/settings/statuses': typeof AuthOrgsOrgIdSettingsStatusesRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/orgs/$orgId/ai': typeof AuthOrgsOrgIdAiIndexRoute
   '/orgs/$orgId/projects': typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -332,6 +341,7 @@ export interface FileRoutesById {
   '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/_auth/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/_auth/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
+  '/_auth/orgs/$orgId/settings/statuses': typeof AuthOrgsOrgIdSettingsStatusesRoute
   '/_auth/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/_auth/orgs/$orgId/ai/': typeof AuthOrgsOrgIdAiIndexRoute
   '/_auth/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/mcp'
     | '/orgs/$orgId/settings/members'
+    | '/orgs/$orgId/settings/statuses'
     | '/orgs/$orgId/settings/webhooks'
     | '/orgs/$orgId/ai/'
     | '/orgs/$orgId/projects/'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/mcp'
     | '/orgs/$orgId/settings/members'
+    | '/orgs/$orgId/settings/statuses'
     | '/orgs/$orgId/settings/webhooks'
     | '/orgs/$orgId/ai'
     | '/orgs/$orgId/projects'
@@ -440,6 +452,7 @@ export interface FileRouteTypes {
     | '/_auth/orgs/$orgId/settings/labels'
     | '/_auth/orgs/$orgId/settings/mcp'
     | '/_auth/orgs/$orgId/settings/members'
+    | '/_auth/orgs/$orgId/settings/statuses'
     | '/_auth/orgs/$orgId/settings/webhooks'
     | '/_auth/orgs/$orgId/ai/'
     | '/_auth/orgs/$orgId/projects/'
@@ -687,6 +700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsMembersRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
+    '/_auth/orgs/$orgId/settings/statuses': {
+      id: '/_auth/orgs/$orgId/settings/statuses'
+      path: '/statuses'
+      fullPath: '/orgs/$orgId/settings/statuses'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsStatusesRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
     '/_auth/orgs/$orgId/settings/webhooks': {
       id: '/_auth/orgs/$orgId/settings/webhooks'
       path: '/webhooks'
@@ -734,6 +754,7 @@ interface AuthOrgsOrgIdSettingsRouteRouteChildren {
   AuthOrgsOrgIdSettingsLabelsRoute: typeof AuthOrgsOrgIdSettingsLabelsRoute
   AuthOrgsOrgIdSettingsMcpRoute: typeof AuthOrgsOrgIdSettingsMcpRoute
   AuthOrgsOrgIdSettingsMembersRoute: typeof AuthOrgsOrgIdSettingsMembersRoute
+  AuthOrgsOrgIdSettingsStatusesRoute: typeof AuthOrgsOrgIdSettingsStatusesRoute
   AuthOrgsOrgIdSettingsWebhooksRoute: typeof AuthOrgsOrgIdSettingsWebhooksRoute
   AuthOrgsOrgIdSettingsIndexRoute: typeof AuthOrgsOrgIdSettingsIndexRoute
 }
@@ -746,6 +767,7 @@ const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteCh
     AuthOrgsOrgIdSettingsLabelsRoute: AuthOrgsOrgIdSettingsLabelsRoute,
     AuthOrgsOrgIdSettingsMcpRoute: AuthOrgsOrgIdSettingsMcpRoute,
     AuthOrgsOrgIdSettingsMembersRoute: AuthOrgsOrgIdSettingsMembersRoute,
+    AuthOrgsOrgIdSettingsStatusesRoute: AuthOrgsOrgIdSettingsStatusesRoute,
     AuthOrgsOrgIdSettingsWebhooksRoute: AuthOrgsOrgIdSettingsWebhooksRoute,
     AuthOrgsOrgIdSettingsIndexRoute: AuthOrgsOrgIdSettingsIndexRoute,
   }

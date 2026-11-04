@@ -8,6 +8,7 @@ import { invalidateCommentQueries } from "../src/features/comments/data";
 import { invalidateLabelQueries } from "../src/features/labels/data";
 import { invalidateMemberQueries } from "../src/features/members/data";
 import { invalidateProjectQueries } from "../src/features/projects/data";
+import { invalidateStatusQueries } from "../src/features/statuses/data";
 import { invalidateWebhookQueries } from "../src/features/webhooks/data";
 
 async function verifyInvalidation(
@@ -107,6 +108,23 @@ test("label changes refresh issue displays and their own list without crossing o
 		[
 			["orgs", "other", "labels"],
 			["orgs", "other", "projects"],
+		],
+	));
+
+test("status writes refresh statuses, issue lists/details and project statistics", () =>
+	verifyInvalidation(
+		(client) => invalidateStatusQueries(client, "org"),
+		[
+			["orgs", "org", "statuses"],
+			["orgs", "org", "projects"],
+			["orgs", "org", "projects", "project", "issues", { page: 1 }],
+			["orgs", "org", "issues", { assigneeId: "user" }],
+			["orgs", "org", "projects", "project", "issues", "detail", 7],
+		],
+		[
+			["orgs", "other", "statuses"],
+			["orgs", "other", "projects"],
+			["orgs", "other", "issues", { assigneeId: "user" }],
 		],
 	));
 

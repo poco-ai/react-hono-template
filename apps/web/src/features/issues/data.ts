@@ -1,4 +1,5 @@
 import type { ListIssuesDto } from "@api/dto/issue.dto";
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	type QueryClient,
 	queryOptions,
@@ -9,7 +10,6 @@ import {
 	type CreateIssueInput,
 	ISSUE_PRIORITY,
 	type IssuePriorityName,
-	type IssueStatus,
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import { orgActivitiesRootKey } from "@/features/activities/data";
@@ -52,7 +52,7 @@ export const deleteIssue = (orgId: string, projectId: string, number: number) =>
 export type IssueSort = "updated" | "created" | "priority";
 
 export interface IssueFilters {
-	status: IssueStatus[];
+	statusId: string[];
 	priority: IssuePriorityName[];
 	assigneeId?: string;
 	labelId?: string;
@@ -67,7 +67,7 @@ export const ISSUE_PAGE_SIZE = 20;
 const buildQuery = (filters: Partial<IssueFilters>) => ({
 	page: String(filters.page ?? 1),
 	pageSize: String(filters.pageSize ?? ISSUE_PAGE_SIZE),
-	status: filters.status?.length ? filters.status : undefined,
+	statusId: filters.statusId?.length ? filters.statusId : undefined,
 	priority: filters.priority?.length
 		? filters.priority.map((name) => ISSUE_PRIORITY[name])
 		: undefined,
@@ -201,8 +201,8 @@ export function useUpdateIssue(
 				if (input.description !== undefined) {
 					next.description = input.description;
 				}
-				if (input.status !== undefined) {
-					next.status = input.status;
+				if (input.statusId !== undefined) {
+					next.statusId = input.statusId;
 				}
 				if (input.priority !== undefined) {
 					next.priority = input.priority ?? 0;
@@ -256,11 +256,21 @@ export function useMoveIssue(
 	const queryClient = useQueryClient();
 	const boardKey = projectIssuesQuery(orgId, projectId, filters).queryKey;
 	return useMutation({
-		mutationFn: (input: { id: string; number: number; status: IssueStatus }) =>
-			updateIssue(orgId, projectId, input.number, { status: input.status }),
+		mutationFn: (input: { id: string; number: number; statusId: string }) =>
+			updateIssue(orgId, projectId, input.number, {
+				statusId: input.statusId,
+			}),
 		onMutate: async (input) => {
 			await queryClient.cancelQueries({ queryKey: boardKey });
 			const previous = queryClient.getQueryData(boardKey);
+			// The statuses cache is owned by features/statuses/data; read its key
+			// directly here to keep the two data modules import-acyclic.
+			const statuses = queryClient.getQueryData<StatusDto[]>([
+				"orgs",
+				orgId,
+				"statuses",
+			]);
+			const status = statuses?.find((entry) => entry.id === input.statusId);
 			queryClient.setQueryData(boardKey, (old) => {
 				if (!old) {
 					return old;
@@ -268,7 +278,13 @@ export function useMoveIssue(
 				return {
 					...old,
 					items: old.items.map((issue) =>
-						issue.id === input.id ? { ...issue, status: input.status } : issue,
+						issue.id === input.id
+							? {
+									...issue,
+									statusId: input.statusId,
+									status: status ?? issue.status,
+								}
+							: issue,
 					),
 				};
 			});

@@ -2,6 +2,9 @@ import { z } from "zod";
 
 export const issueSearchSchema = z.object({
 	page: z.coerce.number().int().min(1).catch(1),
+	/** Selected workflow status ids (CSV). */
+	statusId: z.string().optional().catch(""),
+	/** @deprecated Legacy status names kept for old bookmarked URLs. */
 	status: z.string().optional().catch(""),
 	priority: z.string().optional().catch(""),
 	assigneeId: z.string().optional().catch(""),

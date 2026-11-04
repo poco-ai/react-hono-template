@@ -1,7 +1,7 @@
 import type { IssueDetailDto } from "@api/dto/issue.dto";
+import type { StatusDto } from "@api/dto/status.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -24,6 +24,7 @@ import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { orgIssuesQuery } from "@/features/issues/data";
 import { projectsQuery } from "@/features/projects/data";
+import { statusesQuery } from "@/features/statuses/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -57,10 +58,11 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 	const { data: session } = useSession();
 	const userId = session?.user.id;
 	const projects = useQuery(projectsQuery(orgId));
+	const statuses = useQuery(statusesQuery(orgId));
 	const issues = useQuery({
 		...orgIssuesQuery(orgId, {
 			assigneeId: userId ?? "",
-			status: [],
+			statusId: [],
 			priority: [],
 			search: "",
 			sort: "updated",
@@ -74,11 +76,11 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 		(projects.data ?? []).map((project) => [project.id, project]),
 	);
 
-	const grouped = new Map<IssueStatus, IssueDetailDto[]>();
+	const grouped = new Map<StatusDto, IssueDetailDto[]>();
 	if (issues.data) {
-		for (const status of ISSUE_STATUSES) {
+		for (const status of statuses.data ?? []) {
 			const items = issues.data.items.filter(
-				(issue) => issue.status === status,
+				(issue) => issue.statusId === status.id,
 			);
 			if (items.length > 0) {
 				grouped.set(status, items);
@@ -134,7 +136,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 						<MyIssuesTableHeader />
 						<TableBody>
 							{[...grouped.entries()].map(([status, items]) => (
-								<Fragment key={status}>
+								<Fragment key={status.id}>
 									<TableRow className="hover:bg-transparent">
 										<TableCell colSpan={6} className="bg-muted/40 py-2">
 											<div className="flex items-center gap-2">

@@ -410,6 +410,7 @@ export const AI_TOOL_TITLE_KEYS: Record<string, TranslationKey> = {
 	get_issue: "ai.capabilities.get_issue.title",
 	list_comments: "ai.capabilities.list_comments.title",
 	list_labels: "ai.capabilities.list_labels.title",
+	list_statuses: "ai.capabilities.list_statuses.title",
 	get_issue_activity: "ai.capabilities.get_issue_activity.title",
 	get_org_activity: "ai.capabilities.get_org_activity.title",
 	create_issue: "ai.capabilities.create_issue.title",
@@ -432,6 +433,7 @@ export const AI_LINK_LABEL_KEYS: Record<string, TranslationKey> = {
 	"ai.links.project": "ai.links.project",
 	"ai.links.org": "ai.links.org",
 	"ai.links.labels": "ai.links.labels",
+	"ai.links.statuses": "ai.links.statuses",
 };
 
 export const aiLinkLabelKey = (labelKey: string): TranslationKey | undefined =>

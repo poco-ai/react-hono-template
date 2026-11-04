@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
 	ISSUE_PRIORITIES,
-	ISSUE_STATUSES,
 	type IssuePriorityName,
-	type IssueStatus,
 	parseCsv,
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
@@ -42,6 +40,11 @@ import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
+import {
+	defaultStatusOf,
+	resolveStatusIds,
+	statusesQuery,
+} from "@/features/statuses/data";
 import { isNotFoundError } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
@@ -63,9 +66,12 @@ export function ProjectIssuesPage({
 	useDocumentTitle(project.data?.name);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
+	const statuses = useQuery(statusesQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
-	const [createStatus, setCreateStatus] = useState<IssueStatus>("backlog");
+	const [createStatusId, setCreateStatusId] = useState<string | undefined>(
+		undefined,
+	);
 	const [searchInput, setSearchInput] = useState(search.search ?? "");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -80,9 +86,11 @@ export function ProjectIssuesPage({
 
 	const view = search.view ?? "list";
 
-	const statusFilter = parseCsv(search.status).filter((value) =>
-		(ISSUE_STATUSES as readonly string[]).includes(value),
-	) as IssueStatus[];
+	const statusFilter = resolveStatusIds(
+		statuses.data,
+		parseCsv(search.statusId),
+		parseCsv(search.status),
+	);
 	const priorityFilter = parseCsv(search.priority).filter((value) =>
 		ISSUE_PRIORITIES.some((priority) => priority.name === value),
 	) as IssuePriorityName[];
@@ -90,7 +98,7 @@ export function ProjectIssuesPage({
 	const issues = useQuery(
 		projectIssuesQuery(orgId, projectId, {
 			page: search.page,
-			status: statusFilter,
+			statusId: statusFilter,
 			priority: priorityFilter,
 			assigneeId: search.assigneeId,
 			labelId: search.labelId,
@@ -145,8 +153,8 @@ export function ProjectIssuesPage({
 
 	const gotoPage = (next: number) => updateSearch({ page: next });
 
-	const openCreate = (status?: IssueStatus) => {
-		setCreateStatus(status ?? "backlog");
+	const openCreate = (statusId?: string) => {
+		setCreateStatusId(statusId ?? defaultStatusOf(statuses.data)?.id);
 		setCreateOpen(true);
 	};
 
@@ -155,9 +163,9 @@ export function ProjectIssuesPage({
 		if (!search.new) {
 			return;
 		}
-		setCreateStatus("backlog");
+		setCreateStatusId(defaultStatusOf(statuses.data)?.id);
 		setCreateOpen(true);
-	}, [search.new]);
+	}, [search.new, statuses.data]);
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const isDesktop = useMediaQuery("(min-width: 640px)");
@@ -302,6 +310,7 @@ export function ProjectIssuesPage({
 					<IssueFilterControls
 						variant="inline"
 						statusFilter={statusFilter}
+						statuses={statuses.data ?? []}
 						priorityFilter={priorityFilter}
 						assigneeId={search.assigneeId}
 						assigneeFilterActive={assigneeFilterActive}
@@ -345,6 +354,7 @@ export function ProjectIssuesPage({
 								<IssueFilterControls
 									variant="sheet"
 									statusFilter={statusFilter}
+									statuses={statuses.data ?? []}
 									priorityFilter={priorityFilter}
 									assigneeId={search.assigneeId}
 									assigneeFilterActive={assigneeFilterActive}
@@ -377,7 +387,7 @@ export function ProjectIssuesPage({
 						projectKey={project.data?.key ?? ""}
 						frozen={frozen}
 						filters={{
-							status: statusFilter,
+							statusId: statusFilter,
 							priority: priorityFilter,
 							assigneeId: search.assigneeId,
 							labelId: search.labelId,
@@ -386,6 +396,7 @@ export function ProjectIssuesPage({
 						}}
 						members={members.data ?? []}
 						labels={labels.data ?? []}
+						statuses={statuses.data ?? []}
 						onNewIssue={openCreate}
 					/>
 				</div>
@@ -406,6 +417,7 @@ export function ProjectIssuesPage({
 					onPageChange={gotoPage}
 					onClearFilters={() =>
 						updateSearch({
+							statusId: "",
 							status: "",
 							priority: "",
 							assigneeId: "",
@@ -423,6 +435,7 @@ export function ProjectIssuesPage({
 					orgId={orgId}
 					projectId={projectId}
 					numbers={selectedNumbers}
+					statuses={statuses.data ?? []}
 					frozen={frozen}
 					onDone={() => setSelected(new Set())}
 				/>
@@ -439,9 +452,10 @@ export function ProjectIssuesPage({
 						setSearch({ new: undefined });
 					}
 				}}
-				defaultStatus={createStatus}
+				defaultStatusId={createStatusId}
 				members={members.data ?? []}
 				labels={labels.data ?? []}
+				statuses={statuses.data ?? []}
 			/>
 		</div>
 	);

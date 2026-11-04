@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { IssueDetailDto, ListIssuesDto } from "../dto/issue.dto";
 import type { LabelDto } from "../dto/label.dto";
 import type { ProjectDto } from "../dto/project.dto";
+import type { StatusDto } from "../dto/status.dto";
 
 /**
  * OpenAPI response schemas for the public v1 API. Each schema is compile-bound
@@ -24,6 +25,20 @@ export const projectSchema = z.object({
 	updatedAt: z.string(),
 }) satisfies z.ZodType<ProjectDto>;
 
+export const statusSchema = z.object({
+	id: z.string(),
+	orgId: z.string(),
+	name: z.string(),
+	category: z
+		.string()
+		.describe("backlog | unstarted | started | completed | canceled"),
+	color: z.string(),
+	position: z.number(),
+	isDefault: z.boolean(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+}) satisfies z.ZodType<StatusDto>;
+
 export const issueSchema = z.object({
 	id: z.string(),
 	orgId: z.string(),
@@ -31,7 +46,10 @@ export const issueSchema = z.object({
 	number: z.number(),
 	title: z.string(),
 	description: z.string().nullable(),
-	status: z.string(),
+	statusId: z.string(),
+	status: statusSchema.describe(
+		"Resolved workflow status (name/category/color/position).",
+	),
 	priority: z.number(),
 	assigneeId: z.string().nullable(),
 	createdById: z.string().nullable(),

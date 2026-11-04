@@ -2,7 +2,6 @@ import type { ListIssuesDto } from "@api/dto/issue.dto";
 import type { LabelDto } from "@api/dto/label.dto";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { IssueStatus } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Skeleton } from "@workspace/ui/components/skeleton";
@@ -160,7 +159,7 @@ export function IssueList({
 										</Link>
 									</TableCell>
 									<TableCell>
-										<StatusBadge status={issue.status as IssueStatus} />
+										<StatusBadge status={issue.status} />
 									</TableCell>
 									<TableCell>
 										<PriorityBadge value={issue.priority} />

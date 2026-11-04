@@ -1,10 +1,9 @@
 import type { IssueDetailDto } from "@api/dto/issue.dto";
 import type { LabelDto } from "@api/dto/label.dto";
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	ISSUE_PRIORITIES,
-	ISSUE_STATUSES,
 	type IssuePriorityName,
-	type IssueStatus,
 	priorityName,
 	priorityValue,
 	type UpdateIssueInput,
@@ -46,6 +45,7 @@ export function IssuePropertiesPanel({
 	issue,
 	members,
 	labels,
+	statuses,
 	frozen,
 	onUpdate,
 	onDelete,
@@ -53,6 +53,7 @@ export function IssuePropertiesPanel({
 	issue: IssueDetailDto;
 	members: { userId: string; user: { name: string } }[];
 	labels: LabelDto[];
+	statuses: StatusDto[];
 	frozen: boolean;
 	onUpdate: (input: UpdateIssueInput) => void;
 	onDelete: () => void;
@@ -110,20 +111,18 @@ export function IssuePropertiesPanel({
 
 			<PropertyRow label={t("issues.status")}>
 				<Select
-					value={issue.status as IssueStatus}
+					value={issue.statusId}
 					disabled={frozen}
-					onValueChange={(v) =>
-						v && onUpdate({ status: v as (typeof ISSUE_STATUSES)[number] })
-					}
+					onValueChange={(value) => value && onUpdate({ statusId: value })}
 				>
 					<SelectTrigger className="w-full">
 						<SelectValue>
-							{t(`issues.statuses.${issue.status as IssueStatus}`)}
+							<StatusBadge status={issue.status} />
 						</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
-						{ISSUE_STATUSES.map((status) => (
-							<SelectItem key={status} value={status}>
+						{statuses.map((status) => (
+							<SelectItem key={status.id} value={status.id}>
 								<StatusBadge status={status} />
 							</SelectItem>
 						))}

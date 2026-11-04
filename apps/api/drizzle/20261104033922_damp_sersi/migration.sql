@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `issueStatuses_orgId_default_uq` ON `issue_statuses` (`org_id`) WHERE "issue_statuses"."is_default" = 1;

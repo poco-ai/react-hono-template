@@ -51,9 +51,12 @@ export function ActivitySentence({
 	const displayValue = (field: string, value: string | null): string => {
 		switch (field) {
 			case "status":
-				return (ISSUE_STATUSES as readonly string[]).includes(value ?? "")
-					? t(`issues.statuses.${value as IssueStatus}`)
-					: t("activity.emptyValue");
+				// New activities store the status name snapshot. Legacy rows used
+				// the enum code, which still translates.
+				if ((ISSUE_STATUSES as readonly string[]).includes(value ?? "")) {
+					return t(`issues.statuses.${value as IssueStatus}`);
+				}
+				return value || t("activity.emptyValue");
 			case "priority": {
 				const parsed = Number(value);
 				return Number.isInteger(parsed)

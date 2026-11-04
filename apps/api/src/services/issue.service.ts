@@ -15,7 +15,9 @@ import type {
 	IssueNavigationDto,
 	ListIssuesDto,
 } from "../dto/issue.dto";
+import type { StatusDto } from "../dto/status.dto";
 import type { BackgroundFn } from "../lib/background";
+import type { StatusService } from "./status.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const toDueDate = (
@@ -42,6 +44,7 @@ export type IssueFieldDiff = {
 export const computeIssueDiff = (
 	current: IssueDetailDto,
 	input: UpdateIssueInput,
+	resolvedStatus?: StatusDto,
 ): IssueFieldDiff[] => {
 	const diffs: IssueFieldDiff[] = [];
 	if (input.title !== undefined && input.title !== current.title) {
@@ -58,11 +61,13 @@ export const computeIssueDiff = (
 	) {
 		diffs.push({ field: "description", oldValue: null, newValue: null });
 	}
-	if (input.status !== undefined && input.status !== current.status) {
+	// Activities store status *names* so history does not drift when a status
+	// is renamed later.
+	if (resolvedStatus && resolvedStatus.id !== current.statusId) {
 		diffs.push({
 			field: "status",
-			oldValue: current.status,
-			newValue: input.status,
+			oldValue: current.status.name,
+			newValue: resolvedStatus.name,
 		});
 	}
 	if (
@@ -143,19 +148,37 @@ export const createIssueService = ({
 	labelDao,
 	projectDao,
 	memberDao,
+	statusService,
 	webhooks,
 }: {
 	issueDao: IssueDao;
 	labelDao: LabelDao;
 	projectDao: ProjectDao;
 	memberDao: MemberDao;
+	statusService: Pick<StatusService, "resolveStatus" | "resolveStatusIds">;
 	webhooks?: WebhookDispatcher;
 }) => ({
-	listIssues: (
+	listIssues: async (
 		orgId: string,
 		projectId: string | null,
 		query: IssueListQuery,
-	): Promise<ListIssuesDto> => issueDao.list(orgId, projectId, query),
+	): Promise<ListIssuesDto> => {
+		const statusId = await statusService.resolveStatusIds(orgId, {
+			statusIds: query.statusId,
+			statusNames: query.status,
+		});
+		return issueDao.list(orgId, projectId, {
+			page: query.page,
+			pageSize: query.pageSize,
+			statusId: statusId.length > 0 ? statusId : undefined,
+			priority: query.priority,
+			assigneeId: query.assigneeId,
+			labelId: query.labelId,
+			search: query.search,
+			sort: query.sort,
+			projectId: query.projectId,
+		});
+	},
 
 	getIssue: async (
 		orgId: string,
@@ -236,6 +259,10 @@ export const createIssueService = ({
 			}
 		}
 		const id = crypto.randomUUID();
+		const status = await statusService.resolveStatus(orgId, {
+			statusId: input.statusId,
+			statusName: input.status,
+		});
 		const issue = await issueDao.createWithNumber(
 			{
 				id,
@@ -243,7 +270,7 @@ export const createIssueService = ({
 				projectId,
 				title: input.title,
 				description: input.description ?? null,
-				status: input.status ?? "backlog",
+				statusId: status.id,
 				priority: input.priority ?? 0,
 				assigneeId: input.assigneeId ?? null,
 				createdById: userId,
@@ -304,7 +331,14 @@ export const createIssueService = ({
 		}
 		const currentLabelIds = await issueDao.findLabelIds(issue.id);
 		const current: IssueDetailDto = { ...issue, labelIds: currentLabelIds };
-		const diffs = computeIssueDiff(current, input);
+		const resolvedStatus =
+			input.statusId !== undefined || input.status !== undefined
+				? await statusService.resolveStatus(orgId, {
+						statusId: input.statusId,
+						statusName: input.status,
+					})
+				: undefined;
+		const diffs = computeIssueDiff(current, input, resolvedStatus);
 		const statusChanged = diffs.some((diff) => diff.field === "status");
 		const activityRows = userId
 			? diffs.map((diff) =>
@@ -324,7 +358,7 @@ export const createIssueService = ({
 			{
 				title: input.title,
 				description: "description" in input ? input.description : undefined,
-				status: input.status,
+				statusId: resolvedStatus?.id,
 				priority: "priority" in input ? (input.priority ?? 0) : undefined,
 				assigneeId: "assigneeId" in input ? input.assigneeId : undefined,
 				dueDate: "dueDate" in input ? toDueDate(input.dueDate) : undefined,
@@ -349,7 +383,16 @@ export const createIssueService = ({
 			await webhooks?.dispatch(
 				orgId,
 				"issue.status_changed",
-				{ issue: result, previousStatus: issue.status, status: updated.status },
+				{
+					issue: result,
+					previousStatus: issue.status.name,
+					previousStatusId: issue.statusId,
+					// Top-level aliases keep older consumers working while the
+					// status object carries the full workflow status.
+					statusId: updated.statusId,
+					statusName: updated.status.name,
+					status: updated.status,
+				},
 				background,
 			);
 		}

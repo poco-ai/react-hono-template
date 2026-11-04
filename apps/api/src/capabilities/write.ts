@@ -109,7 +109,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 			name: "create_issue",
 			titleKey: "ai.capabilities.create_issue.title",
 			description:
-				"Create an issue in a project. Requires the project id; uses the organization's labels and members for labelIds and assigneeId.",
+				"Create an issue in a project. Requires the project id; uses the organization's labels and members for labelIds and assigneeId. Pass statusId (preferred) or a legacy status name; defaults to the organization's default status.",
 			input: createIssueInputSchema,
 			output: z.object({ issue: issueSummarySchema }),
 			effect: "write",
@@ -126,7 +126,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 				);
 				return {
 					data: { issue: toIssueSummary(issue) },
-					summary: `Created issue #${issue.number}: ${issue.title}.`,
+					summary: `Created issue #${issue.number}: ${issue.title} (status: ${issue.status.name}).`,
 					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
 				};
 			},
@@ -135,7 +135,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 		defineCapability({
 			name: "update_issue",
 			titleKey: "ai.capabilities.update_issue.title",
-			description: `Update issue fields (title, description, status, priority, assignee, labels, due date, estimate). ${issueRefDescription}`,
+			description: `Update issue fields (title, description, statusId (or legacy status name), priority, assignee, labels, due date, estimate). ${issueRefDescription}`,
 			input: updateIssueInputSchema,
 			output: z.object({ issue: issueSummarySchema }),
 			effect: "write",
@@ -157,7 +157,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 				);
 				return {
 					data: { issue: toIssueSummary(updated) },
-					summary: `Updated issue #${updated.number}: ${updated.title}.`,
+					summary: `Updated issue #${updated.number}: ${updated.title} (status: ${updated.status.name}).`,
 					links: [issueLink(ctx, orgId, updated.projectId, updated.number)],
 				};
 			},

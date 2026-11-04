@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
-import type { IssueStatus } from "@workspace/shared";
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -339,10 +338,7 @@ export function CommandPalette({
 										<span className="min-w-0 flex-1 truncate">
 											{issue.title}
 										</span>
-										<StatusBadge
-											status={issue.status as IssueStatus}
-											className="shrink-0"
-										/>
+										<StatusBadge status={issue.status} className="shrink-0" />
 									</CommandItem>
 								);
 							})}

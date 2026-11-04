@@ -1,4 +1,4 @@
-import { and, desc, eq, type SQL } from "drizzle-orm";
+import { and, desc, eq, type SQL, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
 import { activities, issues, projects } from "../db/schema";
@@ -30,6 +30,41 @@ export const activityInsertStatement = (
 	db: Database,
 	rows: ActivityInsert[],
 ): BatchItem<"sqlite"> => db.insert(activities).values(rows);
+
+/**
+ * Set-based status-migration activity: one INSERT ... SELECT writes a
+ * `field = "status"` row for every issue still pointing at the deleted status.
+ * It stays a single statement so deleting a status with many issues does not
+ * fan out into hundreds of inserts (and webhook dispatches).
+ */
+export const statusMigrationActivityStatement = (
+	db: Database,
+	params: {
+		orgId: string;
+		statusId: string;
+		actorId: string;
+		oldStatusName: string;
+		newStatusName: string;
+	},
+): BatchItem<"sqlite"> =>
+	db.insert(activities).select(sql`
+		SELECT
+			lower(hex(randomblob(16))),
+			${issues.orgId},
+			${issues.projectId},
+			${issues.id},
+			${params.actorId},
+			'issue.updated',
+			'status',
+			${params.oldStatusName},
+			${params.newStatusName},
+			NULL,
+			NULL,
+			cast(unixepoch('subsecond') * 1000 as integer)
+		FROM ${issues}
+		WHERE ${issues.orgId} = ${params.orgId}
+			AND ${issues.statusId} = ${params.statusId}
+	`);
 
 const ACTIVITY_SELECT = {
 	id: activities.id,

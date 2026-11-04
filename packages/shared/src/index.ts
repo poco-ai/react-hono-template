@@ -17,4 +17,5 @@ export * from "./schemas/label";
 export * from "./schemas/media";
 export * from "./schemas/pagination";
 export * from "./schemas/project";
+export * from "./schemas/status";
 export * from "./schemas/webhook";

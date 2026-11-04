@@ -146,6 +146,8 @@ const buildAuth = () =>
 			dcrEnabled: mcpConfig.dcrEnabled,
 			scopes: mcpConfig.oauthScopes,
 		},
+		onOrganizationCreated: (orgId) =>
+			dependencies.services.statusService.ensureDefaultStatuses(orgId),
 	});
 
 /**

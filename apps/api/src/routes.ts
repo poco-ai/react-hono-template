@@ -27,6 +27,7 @@ import {
 } from "./routes/media";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectsRoutes } from "./routes/projects";
+import { createStatusesRoutes } from "./routes/statuses";
 import { createWebhooksRoutes } from "./routes/webhooks";
 
 export const createRoutes = ({
@@ -94,6 +95,7 @@ export const createRoutes = ({
 			.route("/", createOrgLogoRoutes(dependencies.services.mediaService))
 			.route("/", createActivitiesRoutes(dependencies.services.activityService))
 			.route("/", createLabelsRoutes(dependencies.services.labelService))
+			.route("/", createStatusesRoutes(dependencies.services.statusService))
 			.route("/", createApiKeysRoutes(dependencies.services.apiKeyService))
 			.route("/", createWebhooksRoutes(dependencies.services.webhookService))
 			.route("/", createBillingRoutes(dependencies.services.billingService))

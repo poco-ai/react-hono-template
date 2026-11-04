@@ -8,6 +8,7 @@ import type { CommentService } from "../services/comment.service";
 import type { IssueService } from "../services/issue.service";
 import type { LabelService } from "../services/label.service";
 import type { ProjectService } from "../services/project.service";
+import type { StatusService } from "../services/status.service";
 
 export type CapabilityEffect = "read" | "write" | "destructive";
 
@@ -117,6 +118,7 @@ export type CapabilityServices = {
 		LabelService,
 		"listLabels" | "createLabel" | "updateLabel" | "deleteLabel"
 	>;
+	statusService: Pick<StatusService, "listStatuses">;
 	activityService: Pick<ActivityService, "listByIssue" | "listByOrg">;
 };
 

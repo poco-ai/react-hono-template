@@ -10,6 +10,7 @@ import type { CommentDto } from "../dto/comment.dto";
 import type { IssueDetailDto } from "../dto/issue.dto";
 import type { LabelDto } from "../dto/label.dto";
 import type { ProjectWithStatsDto } from "../dto/project.dto";
+import type { StatusDto } from "../dto/status.dto";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -51,13 +52,25 @@ export const projectSummarySchema = z.object({
 	updatedAt: z.string(),
 });
 
+export const statusSummarySchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	category: z.string(),
+	color: z.string(),
+	position: z.number().int(),
+	isDefault: z.boolean(),
+});
+
 export const issueSummarySchema = z.object({
 	id: z.string(),
 	projectId: z.string(),
 	number: z.number().int(),
 	title: z.string(),
 	description: z.string().nullable(),
-	status: z.string(),
+	statusId: z.string(),
+	status: statusSummarySchema,
+	/** Convenience copy of `status.name` for model/tool output. */
+	statusName: z.string(),
 	priority: z.number().int(),
 	assigneeId: z.string().nullable(),
 	dueDate: z.string().nullable(),
@@ -126,6 +139,7 @@ type ProjectSummary = z.infer<typeof projectSummarySchema>;
 type IssueSummary = z.infer<typeof issueSummarySchema>;
 type CommentSummary = z.infer<typeof commentSummarySchema>;
 type LabelSummary = z.infer<typeof labelSummarySchema>;
+type StatusSummary = z.infer<typeof statusSummarySchema>;
 type ActivitySummary = z.infer<typeof activitySummarySchema>;
 
 export const toOrgSummary = (
@@ -178,7 +192,9 @@ export const toIssueSummary = (issue: IssueDetailDto): IssueSummary => ({
 	number: issue.number,
 	title: issue.title,
 	description: issue.description,
+	statusId: issue.statusId,
 	status: issue.status,
+	statusName: issue.status.name,
 	priority: issue.priority,
 	assigneeId: issue.assigneeId,
 	dueDate: issue.dueDate,
@@ -205,6 +221,15 @@ export const toLabelSummary = (label: LabelDto): LabelSummary => ({
 	id: label.id,
 	name: label.name,
 	color: label.color,
+});
+
+export const toStatusSummary = (status: StatusDto): StatusSummary => ({
+	id: status.id,
+	name: status.name,
+	category: status.category,
+	color: status.color,
+	position: status.position,
+	isDefault: status.isDefault,
 });
 
 export const toIssueActivitySummary = (
@@ -268,6 +293,14 @@ export const labelsLink = (
 	url: `${baseUrl(ctx)}/orgs/${segment(orgId)}/settings/labels`,
 });
 
+export const statusesLink = (
+	ctx: CapabilityContext,
+	orgId: string,
+): CapabilityLink => ({
+	labelKey: "ai.links.statuses",
+	url: `${baseUrl(ctx)}/orgs/${segment(orgId)}/settings/statuses`,
+});
+
 const uniqueLinks = (links: CapabilityLink[]): CapabilityLink[] => [
 	...new Map(links.map((link) => [link.url, link])).values(),
 ];
@@ -309,6 +342,9 @@ const issueRefWithPaginationSchema = z
 
 const listIssuesInputSchema = z.object({
 	projectId: z.string().min(1).optional(),
+	/** Preferred filter: organization status ids. */
+	statusId: z.array(z.string().min(1)).optional(),
+	/** @deprecated Legacy status names; the service maps them to ids. */
 	status: z.array(z.enum(ISSUE_STATUSES)).optional(),
 	priority: z
 		.array(z.number().int().min(ISSUE_PRIORITY.none).max(ISSUE_PRIORITY.low))
@@ -363,7 +399,7 @@ const buildListIssuesCapability = (deps: CapabilityDeps) =>
 		name: "list_issues",
 		titleKey: "ai.capabilities.list_issues.title",
 		description:
-			"List issues in the organization, optionally filtered by project, status, priority, assignee, label or free-text search. Returns paginated results newest first.",
+			"List issues in the organization, optionally filtered by project, workflow status (statusId; the legacy status name is also accepted), priority, assignee, label or free-text search. Returns paginated results newest first.",
 		input: listIssuesInputSchema,
 		output: issuesOutputSchema,
 		effect: "read",
@@ -667,6 +703,26 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 					data: { labels: labels.map(toLabelSummary) },
 					summary: `Found ${labels.length} label(s).`,
 					links: [labelsLink(ctx, orgId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_statuses",
+			titleKey: "ai.capabilities.list_statuses.title",
+			description:
+				"List the organization's workflow statuses in board order. Each status has an id, name, category (backlog/unstarted/started/completed/canceled), color, position and isDefault flag. Use the status id as statusId for issue filters and writes.",
+			input: z.object({}),
+			output: z.object({ statuses: z.array(statusSummarySchema) }),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx) => {
+				const orgId = ctx.orgId as string;
+				const statuses = await deps.services.statusService.listStatuses(orgId);
+				return {
+					data: { statuses: statuses.map(toStatusSummary) },
+					summary: `Found ${statuses.length} workflow status(es).`,
+					links: [statusesLink(ctx, orgId)],
 				};
 			},
 		}),

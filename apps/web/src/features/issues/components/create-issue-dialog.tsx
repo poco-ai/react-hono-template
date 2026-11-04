@@ -1,9 +1,8 @@
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	createIssueSchema,
 	ISSUE_PRIORITIES,
-	ISSUE_STATUSES,
 	type IssuePriorityName,
-	type IssueStatus,
 	priorityValue,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
@@ -60,22 +59,24 @@ export function CreateIssueDialog({
 	projectId,
 	open,
 	onOpenChange,
-	defaultStatus,
+	defaultStatusId,
 	members,
 	labels,
+	statuses,
 }: {
 	orgId: string;
 	projectId: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	defaultStatus: IssueStatus;
+	defaultStatusId?: string;
 	members: { userId: string; user: { name: string } }[];
 	labels: { id: string; name: string }[];
+	statuses: StatusDto[];
 }) {
 	const { t } = useTranslation();
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	const [status, setStatus] = useState<IssueStatus>(defaultStatus);
+	const [statusId, setStatusId] = useState<string | undefined>(defaultStatusId);
 	const [priority, setPriority] = useState<IssuePriorityName>("none");
 	const [assigneeId, setAssigneeId] = useState(UNASSIGNED);
 	const [labelIds, setLabelIds] = useState<string[]>([]);
@@ -94,7 +95,7 @@ export function CreateIssueDialog({
 		if (open) {
 			setTitle("");
 			setDescription("");
-			setStatus(defaultStatus);
+			setStatusId(defaultStatusId);
 			setPriority("none");
 			setAssigneeId(UNASSIGNED);
 			setLabelIds([]);
@@ -102,7 +103,7 @@ export function CreateIssueDialog({
 			setEstimate("");
 			setFieldErrors({});
 		}
-	}, [open, defaultStatus]);
+	}, [open, defaultStatusId]);
 
 	const createMutation = useCreateIssue(orgId, projectId);
 
@@ -111,7 +112,7 @@ export function CreateIssueDialog({
 		const parsed = createIssueSchema.safeParse({
 			title: title.trim(),
 			description: description.trim() || undefined,
-			status,
+			statusId,
 			priority: priorityValue(priority),
 			assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
 			labelIds: labelIds.length > 0 ? labelIds : undefined,
@@ -205,16 +206,19 @@ export function CreateIssueDialog({
 						<Field>
 							<FieldLabel>{t("issues.status")}</FieldLabel>
 							<Select
-								value={status}
-								onValueChange={(v) => v && setStatus(v as IssueStatus)}
+								value={statusId ?? null}
+								onValueChange={(value) => value && setStatusId(value)}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue>{t(`issues.statuses.${status}`)}</SelectValue>
+									<SelectValue>
+										{statuses.find((status) => status.id === statusId)?.name ??
+											t("issues.status")}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
-									{ISSUE_STATUSES.map((s) => (
-										<SelectItem key={s} value={s}>
-											<StatusBadge status={s} />
+									{statuses.map((status) => (
+										<SelectItem key={status.id} value={status.id}>
+											<StatusBadge status={status} />
 										</SelectItem>
 									))}
 								</SelectContent>

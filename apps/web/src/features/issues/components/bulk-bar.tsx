@@ -1,8 +1,7 @@
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	ISSUE_PRIORITIES,
-	ISSUE_STATUSES,
 	type IssuePriorityName,
-	type IssueStatus,
 	priorityValue,
 	type UpdateIssueInput,
 } from "@workspace/shared";
@@ -29,12 +28,14 @@ export function BulkActionBar({
 	orgId,
 	projectId,
 	numbers,
+	statuses,
 	frozen,
 	onDone,
 }: {
 	orgId: string;
 	projectId: string;
 	numbers: number[];
+	statuses: StatusDto[];
 	frozen: boolean;
 	onDone: () => void;
 }) {
@@ -61,15 +62,15 @@ export function BulkActionBar({
 			<Select
 				value={NO_ACTION}
 				disabled={frozen}
-				onValueChange={(v) => v && updateSelected({ status: v as IssueStatus })}
+				onValueChange={(v) => v && updateSelected({ statusId: v })}
 			>
 				<SelectTrigger className="h-8 w-36">
 					<SelectValue>{t("bulk.changeStatus")}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value={NO_ACTION}>{t("bulk.changeStatus")}</SelectItem>
-					{ISSUE_STATUSES.map((status) => (
-						<SelectItem key={status} value={status}>
+					{statuses.map((status) => (
+						<SelectItem key={status.id} value={status.id}>
 							<StatusBadge status={status} />
 						</SelectItem>
 					))}

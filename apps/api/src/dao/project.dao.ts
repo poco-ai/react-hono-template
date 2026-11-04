@@ -1,6 +1,6 @@
-import { TERMINAL_ISSUE_STATUSES } from "@workspace/shared";
+import { TERMINAL_STATUS_CATEGORIES } from "@workspace/shared";
 import { and, count, desc, eq, isNull, notInArray } from "drizzle-orm";
-import { issues, projects } from "../db/schema";
+import { issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ProjectDto, ProjectIssueStats } from "../dto/project.dto";
 
@@ -68,12 +68,17 @@ export const createProjectDao = (db: Database) => ({
 			.groupBy(issues.projectId)
 			.all();
 		const open = await db
-			.select({ projectId: issues.projectId, value: count() })
+			.select({
+				// Joined table columns need unique SQL names — see drizzle-orm#6038.
+				projectId: issues.projectId.as("issue_project_id"),
+				value: count(),
+			})
 			.from(issues)
+			.innerJoin(issueStatuses, eq(issueStatuses.id, issues.statusId))
 			.where(
 				and(
 					notDeleted,
-					notInArray(issues.status, [...TERMINAL_ISSUE_STATUSES]),
+					notInArray(issueStatuses.category, [...TERMINAL_STATUS_CATEGORIES]),
 				),
 			)
 			.groupBy(issues.projectId)

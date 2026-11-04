@@ -64,6 +64,7 @@ export const createAuth = ({
 	social,
 	email,
 	mcp,
+	onOrganizationCreated,
 }: {
 	db: Database;
 	secret: string;
@@ -73,6 +74,11 @@ export const createAuth = ({
 	social?: SocialProvidersConfig;
 	email?: EmailDeliveryConfig;
 	mcp?: McpAuthConfig;
+	/**
+	 * Seeds organization-owned defaults (workflow statuses). Runs inside the
+	 * better-auth organization creation hook, after the org row exists.
+	 */
+	onOrganizationCreated?: (orgId: string) => Promise<unknown>;
 }) => {
 	const providers = enabledSocialProviders(social);
 	const trimmedBaseURL = baseURL?.trim();
@@ -186,6 +192,11 @@ export const createAuth = ({
 								input: false,
 							},
 						},
+					},
+				},
+				organizationHooks: {
+					afterCreateOrganization: async ({ organization: created }) => {
+						await onOrganizationCreated?.(created.id);
 					},
 				},
 			}),

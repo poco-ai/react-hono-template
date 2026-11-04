@@ -21,7 +21,20 @@ const toNumberArray = (value: unknown) => {
 export const createIssueSchema = z.object({
 	title: z.string().trim().min(1).max(500),
 	description: z.string().max(20000).optional(),
-	status: z.enum(ISSUE_STATUSES).optional(),
+	/** Organization status id; preferred over the legacy `status` name. */
+	statusId: z
+		.string()
+		.min(1)
+		.describe("Organization workflow status id (preferred).")
+		.optional(),
+	/**
+	 * @deprecated Compatibility input: legacy status name. The service resolves
+	 * it to an organization status id.
+	 */
+	status: z
+		.enum(ISSUE_STATUSES)
+		.describe("Deprecated legacy status name; resolved to a status id.")
+		.optional(),
 	priority: z
 		.number()
 		.int()
@@ -44,7 +57,17 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
 
 export const issueListQuerySchema = z.object({
 	...paginationQueryShape(20),
-	status: z.preprocess(toArray, z.array(z.enum(ISSUE_STATUSES)).optional()),
+	/**
+	 * @deprecated Legacy status names (e.g. `in_progress`). Mapped to the
+	 * organization's status ids by the service.
+	 */
+	status: z
+		.preprocess(toArray, z.array(z.enum(ISSUE_STATUSES)).optional())
+		.describe("Deprecated legacy status names (comma separated)."),
+	/** Organization status ids. Preferred over `status`. */
+	statusId: z
+		.preprocess(toArray, z.array(z.string().min(1)).optional())
+		.describe("Organization workflow status ids (comma separated)."),
 	priority: z.preprocess(
 		toNumberArray,
 		z

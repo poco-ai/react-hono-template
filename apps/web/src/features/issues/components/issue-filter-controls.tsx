@@ -1,8 +1,7 @@
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	ISSUE_PRIORITIES,
-	ISSUE_STATUSES,
 	type IssuePriorityName,
-	type IssueStatus,
 	serializeCsv,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
@@ -31,6 +30,7 @@ const LABEL_ALL = "__all__";
 export function IssueFilterControls({
 	variant,
 	statusFilter,
+	statuses,
 	priorityFilter,
 	assigneeId,
 	assigneeFilterActive,
@@ -50,7 +50,8 @@ export function IssueFilterControls({
 	onUpdateSearch,
 }: {
 	variant: "inline" | "sheet";
-	statusFilter: IssueStatus[];
+	statusFilter: string[];
+	statuses: StatusDto[];
 	priorityFilter: IssuePriorityName[];
 	assigneeId?: string;
 	assigneeFilterActive: boolean;
@@ -78,7 +79,9 @@ export function IssueFilterControls({
 				? labels[0]
 				: `${labels[0]} +${labels.length - 1}`;
 	const statusValue = summarize(
-		statusFilter.map((status) => t(`issues.statuses.${status}`)),
+		statusFilter
+			.map((id) => statuses.find((status) => status.id === id)?.name)
+			.filter((name): name is string => Boolean(name)),
 	);
 	const priorityValue = summarize(
 		priorityFilter.map((name) => t(`issues.priorities.${name}`)),
@@ -92,12 +95,12 @@ export function IssueFilterControls({
 				triggerLabel={`${t("issues.filterStatus")}: ${statusValue}`}
 				active={statusFilter.length > 0}
 				value={statusFilter}
-				options={ISSUE_STATUSES.map((status) => ({
-					value: status,
-					label: t(`issues.statuses.${status}`),
+				options={statuses.map((status) => ({
+					value: status.id,
+					label: status.name,
 				}))}
 				onChange={(next) =>
-					onUpdateSearch({ status: serializeCsv(next), page: 1 })
+					onUpdateSearch({ statusId: serializeCsv(next), status: "", page: 1 })
 				}
 			/>
 			<MultiSelect

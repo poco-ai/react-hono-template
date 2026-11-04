@@ -1,5 +1,6 @@
 import type { IssueDetailDto } from "@api/dto/issue.dto";
 import type { LabelDto } from "@api/dto/label.dto";
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	DndContext,
 	type DragEndEvent,
@@ -12,7 +13,6 @@ import {
 } from "@dnd-kit/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ISSUE_STATUSES, type IssueStatus } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
@@ -37,6 +37,7 @@ export function BoardView({
 	frozen,
 	members,
 	labels,
+	statuses,
 	onNewIssue,
 }: {
 	orgId: string;
@@ -46,7 +47,8 @@ export function BoardView({
 	frozen: boolean;
 	members: OrgMember[];
 	labels: LabelDto[];
-	onNewIssue: (status: IssueStatus) => void;
+	statuses: StatusDto[];
+	onNewIssue: (statusId: string) => void;
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
@@ -68,12 +70,15 @@ export function BoardView({
 	const moveMutation = useMoveIssue(orgId, projectId, boardFilters);
 
 	const items = issues.data?.items ?? [];
-	const grouped = new Map<IssueStatus, IssueDetailDto[]>(
-		ISSUE_STATUSES.map((status) => [
-			status,
-			items.filter((issue) => issue.status === status),
-		]),
+	const grouped = new Map<string, IssueDetailDto[]>(
+		statuses.map((status) => [status.id, []]),
 	);
+	for (const issue of items) {
+		const column = grouped.get(issue.statusId);
+		if (column) {
+			column.push(issue);
+		}
+	}
 
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollRight, setCanScrollRight] = useState(false);
@@ -100,9 +105,9 @@ export function BoardView({
 			return;
 		}
 		const issue = items.find((item) => item.id === active.id);
-		const status = over.id as IssueStatus;
-		if (issue && issue.status !== status) {
-			moveMutation.mutate({ id: issue.id, number: issue.number, status });
+		const statusId = String(over.id);
+		if (issue && issue.statusId !== statusId) {
+			moveMutation.mutate({ id: issue.id, number: issue.number, statusId });
 		}
 	};
 
@@ -120,9 +125,12 @@ export function BoardView({
 					aria-hidden="true"
 					aria-busy="true"
 				>
-					{ISSUE_STATUSES.map((status) => (
+					{(statuses.length > 0
+						? statuses.map((status) => status.id)
+						: ["skeleton-0", "skeleton-1", "skeleton-2", "skeleton-3"]
+					).map((columnKey) => (
 						<div
-							key={status}
+							key={columnKey}
 							className="flex min-w-44 max-w-[360px] flex-1 flex-col gap-2 rounded-lg border p-2"
 						>
 							<Skeleton className="mx-1 mb-1 h-5 w-20 rounded-md" />
@@ -158,11 +166,11 @@ export function BoardView({
 						ref={scrollRef}
 						className="scroll-p-4 flex items-start gap-4 overflow-x-auto pb-4"
 					>
-						{ISSUE_STATUSES.map((status) => (
+						{statuses.map((status) => (
 							<BoardColumn
-								key={status}
+								key={status.id}
 								status={status}
-								issues={grouped.get(status) ?? []}
+								issues={grouped.get(status.id) ?? []}
 								projectKey={projectKey}
 								frozen={frozen}
 								memberById={memberById}
@@ -191,17 +199,17 @@ function BoardColumn({
 	onNewIssue,
 	onOpen,
 }: {
-	status: IssueStatus;
+	status: StatusDto;
 	issues: IssueDetailDto[];
 	projectKey: string;
 	frozen: boolean;
 	memberById: Map<string, OrgMember>;
 	labelById: Map<string, LabelDto>;
-	onNewIssue: (status: IssueStatus) => void;
+	onNewIssue: (statusId: string) => void;
 	onOpen: (issueNumber: number) => void;
 }) {
 	const { t } = useTranslation();
-	const { setNodeRef, isOver } = useDroppable({ id: status });
+	const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
 	return (
 		<div
@@ -221,7 +229,7 @@ function BoardColumn({
 					size="icon-sm"
 					aria-label={t("issues.newIssue")}
 					disabled={frozen}
-					onClick={() => onNewIssue(status)}
+					onClick={() => onNewIssue(status.id)}
 				>
 					<Plus />
 				</Button>

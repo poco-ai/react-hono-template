@@ -40,6 +40,7 @@ import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
+import { statusesQuery } from "@/features/statuses/data";
 import { isNotFoundError } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
@@ -62,6 +63,7 @@ export function IssueDetailPage({
 	);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
+	const statuses = useQuery(statusesQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 
 	const [title, setTitle] = useState("");
@@ -282,6 +284,7 @@ export function IssueDetailPage({
 					issue={data}
 					members={members.data ?? []}
 					labels={labels.data ?? []}
+					statuses={statuses.data ?? []}
 					frozen={frozen}
 					onUpdate={update}
 					onDelete={() => setDeleteOpen(true)}
