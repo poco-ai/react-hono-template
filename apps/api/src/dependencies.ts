@@ -181,6 +181,7 @@ export const createDependencies = ({
 		pendingUploadDao,
 		attachmentDao,
 		mediaAssetDao,
+		notificationDao,
 		storage,
 	});
 	const webhookService = createWebhookService({
@@ -229,6 +230,8 @@ export const createDependencies = ({
 		labelDao,
 		memberDao,
 		statusService,
+		notifications: notificationService,
+		webhooks: webhookDeliveryService,
 	});
 	const favoriteService = createFavoriteService({
 		favoriteDao,

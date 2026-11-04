@@ -805,7 +805,8 @@ export const notifications = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		// issue_assigned | issue_status_changed | issue_commented |
-		// comment_reply | comment_mention | comment_resolved
+		// comment_reply | comment_mention | comment_resolved |
+		// recurring_issue_created
 		type: text("type").notNull(),
 		issueId: text("issue_id")
 			.notNull()
@@ -831,6 +832,10 @@ export const notifications = sqliteTable(
 		),
 		index("notifications_userId_readAt_idx").on(table.userId, table.readAt),
 		index("notifications_orgId_userId_idx").on(table.orgId, table.userId),
+		// Retention cleanup scans by read time (read rows) and creation time
+		// (unread rows); without these it would full-scan every cron tick.
+		index("notifications_readAt_idx").on(table.readAt),
+		index("notifications_createdAt_idx").on(table.createdAt),
 	],
 );
 

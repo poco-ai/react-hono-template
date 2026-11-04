@@ -1214,6 +1214,7 @@ const zh: typeof en = {
 			comment_reply: "回复了你在下面的评论：",
 			comment_mention: "在评论中提到了你：",
 			comment_resolved: "将评论标记为已解决：",
+			recurring_issue_created: "自动创建了周期事项",
 		},
 		subscription: {
 			subscribe: "订阅该事项",

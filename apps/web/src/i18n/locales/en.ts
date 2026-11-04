@@ -1280,6 +1280,7 @@ const en = {
 			comment_reply: "replied to your comment on",
 			comment_mention: "mentioned you in a comment on",
 			comment_resolved: "resolved a comment on",
+			recurring_issue_created: "created a recurring issue",
 		},
 		subscription: {
 			subscribe: "Subscribe to issue",

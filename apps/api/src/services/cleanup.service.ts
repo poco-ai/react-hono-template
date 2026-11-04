@@ -2,6 +2,7 @@ import type { AiConversationDao } from "../dao/ai-conversation.dao";
 import type { AttachmentDao } from "../dao/attachment.dao";
 import type { MediaAssetDao } from "../dao/media-asset.dao";
 import type { MemberDao } from "../dao/member.dao";
+import type { NotificationDao } from "../dao/notification.dao";
 import type { PendingUploadDao } from "../dao/pending-upload.dao";
 import type { WebhookDeliveryDao } from "../dao/webhook-delivery.dao";
 import type { StorageAdapter } from "../lib/storage/types";
@@ -13,6 +14,17 @@ import {
 export const ABANDONED_DELIVERY_AGE_MS = 15 * 60 * 1000;
 export const ABANDONED_DELIVERY_ERROR = "delivery timed out";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Read notifications are kept 30 days, unread ones 90 days. */
+export const READ_NOTIFICATION_TTL_MS = 30 * DAY_MS;
+export const UNREAD_NOTIFICATION_TTL_MS = 90 * DAY_MS;
+/**
+ * Each cron tick deletes at most this many read and this many unread rows, so
+ * a large backlog is drained in bounded batches instead of one long delete.
+ */
+export const NOTIFICATION_CLEANUP_LIMIT = 500;
+
 export const createCleanupService = ({
 	memberDao,
 	deliveryDao,
@@ -20,6 +32,7 @@ export const createCleanupService = ({
 	pendingUploadDao,
 	attachmentDao,
 	mediaAssetDao,
+	notificationDao,
 	storage,
 }: {
 	memberDao: MemberDao;
@@ -34,6 +47,7 @@ export const createCleanupService = ({
 		MediaAssetDao,
 		"findSupersededBefore" | "deleteById" | "existsByKey"
 	>;
+	notificationDao?: Pick<NotificationDao, "deleteOlderThan">;
 	storage?: StorageAdapter | null;
 }) => {
 	return {
@@ -45,6 +59,13 @@ export const createCleanupService = ({
 				now,
 				ABANDONED_DELIVERY_ERROR,
 			);
+			const deletedNotifications = notificationDao
+				? await notificationDao.deleteOlderThan({
+						readBefore: new Date(now.getTime() - READ_NOTIFICATION_TTL_MS),
+						unreadBefore: new Date(now.getTime() - UNREAD_NOTIFICATION_TTL_MS),
+						limit: NOTIFICATION_CLEANUP_LIMIT,
+					})
+				: 0;
 			const deletedConversations = conversationDao
 				? await conversationDao.deleteExpired(now)
 				: 0;
@@ -106,6 +127,7 @@ export const createCleanupService = ({
 				expiredInvitations,
 				failedDeliveries,
 				deletedConversations,
+				deletedNotifications,
 				expiredPendingUploads,
 				supersededMedia,
 			};

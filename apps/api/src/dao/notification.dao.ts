@@ -3,7 +3,17 @@ import type {
 	NotificationFilter,
 	NotificationType,
 } from "@workspace/shared";
-import { and, count, desc, eq, inArray, isNull, type SQL } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	type SQL,
+} from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
 import { comments, issues, notifications, projects } from "../db/schema";
@@ -299,6 +309,63 @@ export const createNotificationDao = (db: Database) => ({
 			)
 			.returning({ id: notifications.id });
 		return rows.length > 0;
+	},
+
+	/**
+	 * Retention cleanup: deletes at most `limit` expired read rows (by
+	 * `readAt`) and `limit` expired unread rows (by `createdAt`, since an
+	 * unread row has no read timestamp) in one D1 batch. The subqueries cap
+	 * each DELETE so a large backlog is drained across several cron ticks
+	 * instead of one long transaction.
+	 */
+	deleteOlderThan: async ({
+		readBefore,
+		unreadBefore,
+		limit,
+	}: {
+		readBefore: Date;
+		unreadBefore: Date;
+		limit: number;
+	}): Promise<number> => {
+		const [readRows, unreadRows] = await db.batch([
+			db
+				.delete(notifications)
+				.where(
+					inArray(
+						notifications.id,
+						db
+							.select({ id: notifications.id })
+							.from(notifications)
+							.where(
+								and(
+									isNotNull(notifications.readAt),
+									lt(notifications.readAt, readBefore),
+								),
+							)
+							.limit(limit),
+					),
+				)
+				.returning({ id: notifications.id }),
+			db
+				.delete(notifications)
+				.where(
+					inArray(
+						notifications.id,
+						db
+							.select({ id: notifications.id })
+							.from(notifications)
+							.where(
+								and(
+									isNull(notifications.readAt),
+									lt(notifications.createdAt, unreadBefore),
+								),
+							)
+							.limit(limit),
+					),
+				)
+				.returning({ id: notifications.id }),
+		]);
+		return readRows.length + unreadRows.length;
 	},
 
 	/**

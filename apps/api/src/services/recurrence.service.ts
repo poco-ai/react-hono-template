@@ -12,7 +12,13 @@ import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { RecurrenceDao } from "../dao/recurrence.dao";
 import type { RecurrenceDto } from "../dto/recurrence.dto";
+import type { BackgroundFn } from "../lib/background";
+import {
+	bestEffortNotification,
+	type NotificationService,
+} from "./notification.service";
 import type { StatusService } from "./status.service";
+import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -87,6 +93,8 @@ export const createRecurrenceService = ({
 	labelDao,
 	memberDao,
 	statusService,
+	notifications,
+	webhooks,
 	now = () => new Date(),
 }: {
 	recurrenceDao: RecurrenceDao;
@@ -95,6 +103,8 @@ export const createRecurrenceService = ({
 	labelDao: Pick<LabelDao, "findByIds">;
 	memberDao: Pick<MemberDao, "findByOrgAndUser" | "isOrgFrozen">;
 	statusService: Pick<StatusService, "resolveStatus">;
+	notifications?: Pick<NotificationService, "onRecurrenceCreated">;
+	webhooks?: WebhookDispatcher;
 	now?: () => Date;
 }) => {
 	const assertProject = async (orgId: string, projectId: string) => {
@@ -378,10 +388,13 @@ export const createRecurrenceService = ({
 		 * deactivating it, so the recurrence resumes after unfreeze/unarchive.
 		 * If issue creation fails the claim is rolled back, keeping the run due
 		 * for the next tick. Per-recurrence failures are logged and never abort
-		 * the remaining rows.
+		 * the remaining rows. Notifications and the `issue.created` webhook are
+		 * best-effort side effects fired after the issue exists: neither can
+		 * roll back the claim nor fail the tick.
 		 */
 		processDue: async (
 			at: Date = now(),
+			background?: BackgroundFn,
 			limit?: number,
 		): Promise<RecurrenceProcessResult> => {
 			const due = await recurrenceDao.listDue(at, limit);
@@ -434,8 +447,9 @@ export const createRecurrenceService = ({
 						continue;
 					}
 
+					let created: Awaited<ReturnType<typeof createIssueFor>>;
 					try {
-						await createIssueFor(recurrence);
+						created = await createIssueFor(recurrence);
 					} catch (err) {
 						// Give the run back so the next tick retries it instead of
 						// silently losing one occurrence.
@@ -448,6 +462,25 @@ export const createRecurrenceService = ({
 						throw err;
 					}
 					result.created++;
+					await bestEffortNotification("recurrence.created", () =>
+						notifications?.onRecurrenceCreated(
+							created,
+							recurrence.createdById ?? "",
+						),
+					);
+					try {
+						await webhooks?.dispatch(
+							recurrence.orgId,
+							"issue.created",
+							created,
+							background,
+						);
+					} catch (err) {
+						console.error(
+							`[recurrence] webhook dispatch failed for ${recurrence.id}:`,
+							err,
+						);
+					}
 				} catch (err) {
 					result.failed++;
 					console.error(

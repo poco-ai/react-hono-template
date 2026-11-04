@@ -11,6 +11,7 @@ export const NOTIFICATION_TYPES = [
 	"comment_reply",
 	"comment_mention",
 	"comment_resolved",
+	"recurring_issue_created",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

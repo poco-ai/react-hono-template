@@ -793,6 +793,130 @@ test("creating an issue with an assignee notifies and subscribes them", async ()
 	assert.equal(await notificationDao.countUnread("org-1", "creator"), 0);
 });
 
+test("onRecurrenceCreated notifies a creator who is also the assignee exactly once", async () => {
+	const { sqlite, db } = setup();
+	seed(sqlite);
+	const notificationDao = createNotificationDao(db);
+	const subscriptionDao = createIssueSubscriptionDao(db);
+	const service = createNotificationService({
+		notificationDao,
+		subscriptionDao,
+	});
+
+	await service.onRecurrenceCreated(
+		{ ...issue, assigneeId: "creator" },
+		"creator",
+	);
+
+	const page = await service.listInbox("org-1", "creator", {
+		filter: "all",
+		page: 1,
+		pageSize: 20,
+	});
+	assert.equal(page.total, 1);
+	assert.equal(page.items[0]?.type, "recurring_issue_created");
+	assert.equal(page.items[0]?.actor?.id, "creator");
+	const subscription = await subscriptionDao.findByIssueAndUser(
+		"issue-1",
+		"creator",
+	);
+	assert.equal(subscription?.reason, "creator");
+});
+
+test("onRecurrenceCreated notifies creator and assignee with distinct types", async () => {
+	const { sqlite, db } = setup();
+	seed(sqlite);
+	const notificationDao = createNotificationDao(db);
+	const subscriptionDao = createIssueSubscriptionDao(db);
+	const service = createNotificationService({
+		notificationDao,
+		subscriptionDao,
+	});
+
+	await service.onRecurrenceCreated(
+		{ ...issue, assigneeId: "assignee" },
+		"creator",
+	);
+
+	assert.equal(await notificationDao.countUnread("org-1", "creator"), 1);
+	assert.equal(await notificationDao.countUnread("org-1", "assignee"), 1);
+	const creatorPage = await service.listInbox("org-1", "creator", {
+		filter: "all",
+		page: 1,
+		pageSize: 20,
+	});
+	const assigneePage = await service.listInbox("org-1", "assignee", {
+		filter: "all",
+		page: 1,
+		pageSize: 20,
+	});
+	assert.equal(creatorPage.items[0]?.type, "recurring_issue_created");
+	assert.equal(assigneePage.items[0]?.type, "issue_assigned");
+	assert.equal(
+		(await subscriptionDao.findByIssueAndUser("issue-1", "creator"))?.reason,
+		"creator",
+	);
+	assert.equal(
+		(await subscriptionDao.findByIssueAndUser("issue-1", "assignee"))?.reason,
+		"assignee",
+	);
+});
+
+test("retention cleanup deletes only expired rows and respects the limit", async () => {
+	const { sqlite, db } = setup();
+	seed(sqlite);
+	const now = new Date("2026-06-01T00:00:00.000Z");
+	const day = 24 * 60 * 60 * 1000;
+	const insert = (id: string, readAt: Date | null, createdAt: Date) => {
+		sqlite.run(
+			"INSERT INTO notifications (id, org_id, user_id, type, issue_id, read_at, created_at) VALUES (?, 'org-1', 'creator', 'issue_assigned', 'issue-1', ?, ?)",
+			id,
+			readAt ? readAt.getTime() : null,
+			createdAt.getTime(),
+		);
+	};
+	insert("read-expired-a", new Date(now.getTime() - 40 * day), now);
+	insert("read-expired-b", new Date(now.getTime() - 31 * day), now);
+	insert("read-boundary", new Date(now.getTime() - 30 * day), now);
+	insert("read-fresh", new Date(now.getTime() - 29 * day), now);
+	insert("unread-expired", null, new Date(now.getTime() - 91 * day));
+	insert("unread-boundary", null, new Date(now.getTime() - 90 * day));
+	insert("unread-fresh", null, new Date(now.getTime() - 89 * day));
+
+	const dao = createNotificationDao(db);
+	const args = {
+		readBefore: new Date(now.getTime() - 30 * day),
+		unreadBefore: new Date(now.getTime() - 90 * day),
+	};
+	// One read and one unread row per batch, regardless of the backlog.
+	assert.equal(await dao.deleteOlderThan({ ...args, limit: 1 }), 2);
+	const remaining = () =>
+		(
+			sqlite.query("SELECT id FROM notifications ORDER BY id").all() as {
+				id: string;
+			}[]
+		).map((row) => row.id);
+	const afterFirstPass = remaining();
+	assert.equal(afterFirstPass.length, 5);
+	assert.ok(afterFirstPass.includes("read-boundary"));
+	assert.ok(afterFirstPass.includes("read-fresh"));
+	assert.ok(afterFirstPass.includes("unread-boundary"));
+	assert.ok(afterFirstPass.includes("unread-fresh"));
+	assert.equal(
+		afterFirstPass.filter((id) => id.startsWith("read-expired")).length,
+		1,
+	);
+	assert.ok(!afterFirstPass.includes("unread-expired"));
+	// The second pass drains the rest; unexpired and boundary rows survive.
+	assert.equal(await dao.deleteOlderThan({ ...args, limit: 10 }), 1);
+	assert.deepEqual(remaining(), [
+		"read-boundary",
+		"read-fresh",
+		"unread-boundary",
+		"unread-fresh",
+	]);
+});
+
 test("fan-out chunks inserts under D1's bound-parameter limit", async () => {
 	const { sqlite, db, batches } = setup();
 	seed(sqlite);

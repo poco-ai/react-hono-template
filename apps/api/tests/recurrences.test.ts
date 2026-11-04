@@ -17,10 +17,13 @@ import { createIssueDao } from "../src/dao/issue.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createRecurrenceDao } from "../src/dao/recurrence.dao";
 import type { Database as AppDatabase } from "../src/db/types";
+import type { BackgroundFn } from "../src/lib/background";
+import type { NotificationService } from "../src/services/notification.service";
 import {
 	advanceNextRunAt,
 	createRecurrenceService,
 } from "../src/services/recurrence.service";
+import type { WebhookDispatcher } from "../src/services/webhook-delivery.service";
 
 /**
  * Recurring issues: cadence advancement (including month-end clamping), the
@@ -125,7 +128,14 @@ CREATE TABLE issue_recurrences (
 );
 `;
 
-const setup = (options: { archived?: boolean; frozen?: boolean } = {}) => {
+const setup = (
+	options: {
+		archived?: boolean;
+		frozen?: boolean;
+		notifications?: Pick<NotificationService, "onRecurrenceCreated">;
+		webhooks?: WebhookDispatcher;
+	} = {},
+) => {
 	const sqlite = new Database(":memory:");
 	sqlite.exec(DDL);
 	for (const [id, orgId, key, archived] of [
@@ -235,6 +245,8 @@ const setup = (options: { archived?: boolean; frozen?: boolean } = {}) => {
 		labelDao: labelDao as never,
 		memberDao: memberDao as never,
 		statusService: statusService as never,
+		notifications: options.notifications,
+		webhooks: options.webhooks,
 		now: () => NOW,
 	});
 	return {
@@ -388,6 +400,139 @@ test("processDue creates one issue, advances the schedule and is idempotent", as
 	// A second tick at the same time creates nothing.
 	const second = await service.processDue(at);
 	assert.deepEqual(second, { created: 0, skipped: 0, failed: 0 });
+});
+
+test("processDue notifies the creator and dispatches issue.created", async () => {
+	const notified: {
+		issue: {
+			id: string;
+			orgId: string;
+			number: number;
+			assigneeId: string | null;
+		};
+		creatorId: string;
+	}[] = [];
+	const events: {
+		orgId: string;
+		event: string;
+		data: unknown;
+		background?: BackgroundFn;
+	}[] = [];
+	const background: BackgroundFn = () => {};
+	const { service } = setup({
+		notifications: {
+			onRecurrenceCreated: async (issue, creatorId) => {
+				notified.push({ issue, creatorId });
+			},
+		},
+		webhooks: {
+			dispatch: async (orgId, event, data, runner) => {
+				events.push({ orgId, event, data, background: runner });
+			},
+		},
+	});
+	await createRecurrence(service, {
+		title: "Daily standup",
+		cadence: "daily",
+		nextRunAt: "2026-06-01T00:00:00.000Z",
+		assigneeId: USER,
+	});
+
+	const result = await service.processDue(
+		new Date("2026-06-01T00:15:00.000Z"),
+		background,
+	);
+	assert.deepEqual(result, { created: 1, skipped: 0, failed: 0 });
+	assert.equal(notified.length, 1);
+	assert.equal(notified[0]?.creatorId, USER);
+	assert.equal(notified[0]?.issue.assigneeId, USER);
+	assert.equal(notified[0]?.issue.number, 2);
+	assert.equal(events.length, 1);
+	const event = events[0];
+	assert.ok(event);
+	assert.equal(event.orgId, ORG);
+	assert.equal(event.event, "issue.created");
+	assert.equal((event.data as { title: string }).title, "Daily standup");
+	assert.equal(event.background, background);
+});
+
+test("a recurrence without a creator passes an empty id and keeps the assignee", async () => {
+	const creatorIds: string[] = [];
+	const { service, sqlite } = setup({
+		notifications: {
+			onRecurrenceCreated: async (_issue, creatorId) => {
+				creatorIds.push(creatorId);
+			},
+		},
+	});
+	const recurrence = await createRecurrence(service, {
+		title: "Ownerless",
+		cadence: "daily",
+		nextRunAt: "2026-06-01T00:00:00.000Z",
+		assigneeId: USER,
+	});
+	sqlite.run(
+		"UPDATE issue_recurrences SET created_by_id = NULL WHERE id = ?",
+		recurrence.id,
+	);
+
+	const result = await service.processDue(new Date("2026-06-01T00:15:00.000Z"));
+	assert.deepEqual(result, { created: 1, skipped: 0, failed: 0 });
+	assert.deepEqual(creatorIds, [""]);
+});
+
+test("notification and webhook failures do not fail or block the tick", async () => {
+	let dispatches = 0;
+	const { service, sqlite } = setup({
+		notifications: {
+			onRecurrenceCreated: async () => {
+				throw new Error("inbox down");
+			},
+		},
+		webhooks: {
+			dispatch: async () => {
+				dispatches++;
+				throw new Error("webhook down");
+			},
+		},
+	});
+	for (const title of ["First", "Second"]) {
+		await createRecurrence(service, {
+			title,
+			cadence: "daily",
+			nextRunAt: "2026-06-01T00:00:00.000Z",
+		});
+	}
+	const errors: unknown[][] = [];
+	const originalError = console.error;
+	console.error = (...args: unknown[]) => {
+		errors.push(args);
+	};
+	try {
+		const result = await service.processDue(
+			new Date("2026-06-01T00:15:00.000Z"),
+		);
+		assert.deepEqual(result, { created: 2, skipped: 0, failed: 0 });
+	} finally {
+		console.error = originalError;
+	}
+	assert.equal(dispatches, 2);
+	assert.ok(
+		errors.some((args) =>
+			String(args[0]).includes("[notifications] recurrence.created failed"),
+		),
+	);
+	assert.ok(
+		errors.some((args) =>
+			String(args[0]).includes("[recurrence] webhook dispatch failed"),
+		),
+	);
+	const created = sqlite
+		.query(
+			"SELECT count(*) AS value FROM issues WHERE title IN ('First', 'Second')",
+		)
+		.get() as { value: number };
+	assert.equal(created.value, 2);
 });
 
 test("not-yet-due and paused recurrences are skipped", async () => {

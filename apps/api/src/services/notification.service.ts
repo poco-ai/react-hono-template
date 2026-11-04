@@ -32,6 +32,8 @@ const PRIORITY: Record<NotificationType, number> = {
 	comment_reply: 2,
 	comment_mention: 3,
 	comment_resolved: 1,
+	// Same level as assignment: a recurring issue is created *and* assigned.
+	recurring_issue_created: 1,
 };
 
 /**
@@ -111,6 +113,69 @@ export const createNotificationService = ({
 		}
 	};
 
+	/**
+	 * Subscribes the creator and the initial assignee. When the assignee is
+	 * someone other than the creator they are also notified right away, in
+	 * the same transaction as the subscriptions.
+	 *
+	 * `notifyCreator` adds a notification for the creator themselves (used by
+	 * the recurrence cron, where the "actor" is the recurrence owner and no
+	 * request user is present). Recipients are deduplicated by user id with the
+	 * higher priority type winning, so a creator who is also the assignee gets
+	 * exactly one row.
+	 */
+	const onIssueCreated = async (
+		issue: NotificationIssue,
+		actorId: string,
+		options: { notifyCreator?: boolean; type?: NotificationType } = {},
+	) => {
+		const subscriptions: {
+			orgId: string;
+			issueId: string;
+			userId: string;
+			reason: IssueSubscriptionReason;
+		}[] = [];
+		if (actorId) {
+			subscriptions.push({
+				orgId: issue.orgId,
+				issueId: issue.id,
+				userId: actorId,
+				reason: "creator",
+			});
+		}
+		if (issue.assigneeId && issue.assigneeId !== actorId) {
+			subscriptions.push({
+				orgId: issue.orgId,
+				issueId: issue.id,
+				userId: issue.assigneeId,
+				reason: "assignee",
+			});
+		}
+		const recipients = new Map<string, RecipientPriority>();
+		if (options.notifyCreator && actorId) {
+			setRecipient(
+				recipients,
+				actorId,
+				options.type ?? "recurring_issue_created",
+			);
+		}
+		if (issue.assigneeId && issue.assigneeId !== actorId) {
+			setRecipient(recipients, issue.assigneeId, "issue_assigned");
+		}
+		await notificationDao.createMany(
+			[...recipients].map(([userId, { type }]) =>
+				buildRow({
+					orgId: issue.orgId,
+					userId,
+					type,
+					issueId: issue.id,
+					actorId: actorId || null,
+				}),
+			),
+			subscriptions,
+		);
+	};
+
 	return {
 		listInbox: (
 			orgId: string,
@@ -162,48 +227,18 @@ export const createNotificationService = ({
 			}
 		},
 
+		onIssueCreated,
+
 		/**
-		 * Subscribes the creator and the initial assignee. When the assignee is
-		 * someone other than the creator they are also notified right away, in
-		 * the same transaction as the subscriptions.
+		 * Cron fan-out for a materialized recurring issue: the recurrence owner
+		 * is notified even though they are the actor, and the assignee keeps the
+		 * normal assignment notification.
 		 */
-		onIssueCreated: async (issue: NotificationIssue, actorId: string) => {
-			const subscriptions: {
-				orgId: string;
-				issueId: string;
-				userId: string;
-				reason: IssueSubscriptionReason;
-			}[] = [];
-			if (actorId) {
-				subscriptions.push({
-					orgId: issue.orgId,
-					issueId: issue.id,
-					userId: actorId,
-					reason: "creator",
-				});
-			}
-			if (issue.assigneeId && issue.assigneeId !== actorId) {
-				subscriptions.push({
-					orgId: issue.orgId,
-					issueId: issue.id,
-					userId: issue.assigneeId,
-					reason: "assignee",
-				});
-			}
-			const rows =
-				issue.assigneeId && issue.assigneeId !== actorId
-					? [
-							buildRow({
-								orgId: issue.orgId,
-								userId: issue.assigneeId,
-								type: "issue_assigned",
-								issueId: issue.id,
-								actorId: actorId || null,
-							}),
-						]
-					: [];
-			await notificationDao.createMany(rows, subscriptions);
-		},
+		onRecurrenceCreated: (issue: NotificationIssue, creatorId: string) =>
+			onIssueCreated(issue, creatorId, {
+				notifyCreator: true,
+				type: "recurring_issue_created",
+			}),
 
 		/**
 		 * Fans out a status change to every subscriber and notifies a newly

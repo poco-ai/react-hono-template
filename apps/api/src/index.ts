@@ -207,9 +207,14 @@ export default {
 	fetch: app.fetch,
 	queue: (batch: MessageBatch<{ deliveryId: string }>) =>
 		handleWebhookQueue(batch, dependencies.services.webhookDeliveryService),
-	scheduled: () =>
+	scheduled: (
+		_controller: ScheduledController,
+		_env: Env,
+		ctx: ExecutionContext,
+	) =>
 		handleScheduled(
 			dependencies.services.cleanupService,
 			dependencies.services.recurrenceService,
+			(task) => ctx.waitUntil(task()),
 		),
 };

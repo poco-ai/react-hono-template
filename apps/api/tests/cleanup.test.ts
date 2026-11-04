@@ -4,12 +4,16 @@ import type { MediaAssetDao } from "../src/dao/media-asset.dao";
 import type { MemberDao } from "../src/dao/member.dao";
 import type { PendingUploadDao } from "../src/dao/pending-upload.dao";
 import type { WebhookDeliveryDao } from "../src/dao/webhook-delivery.dao";
+import type { BackgroundFn } from "../src/lib/background";
 import type { StorageAdapter } from "../src/lib/storage/types";
 import { handleScheduled } from "../src/scheduled";
 import {
 	ABANDONED_DELIVERY_AGE_MS,
 	ABANDONED_DELIVERY_ERROR,
 	createCleanupService,
+	NOTIFICATION_CLEANUP_LIMIT,
+	READ_NOTIFICATION_TTL_MS,
+	UNREAD_NOTIFICATION_TTL_MS,
 } from "../src/services/cleanup.service";
 
 type InvitationRow = {
@@ -174,6 +178,7 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 					expiredInvitations: 2,
 					failedDeliveries: 1,
 					deletedConversations: 3,
+					deletedNotifications: 6,
 					expiredPendingUploads: 4,
 					supersededMedia: 5,
 				}),
@@ -184,7 +189,7 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 			logs.some(
 				(args) =>
 					args[0] ===
-					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 expiredPendingUploads=4 supersededMedia=5",
+					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 deletedNotifications=6 expiredPendingUploads=4 supersededMedia=5",
 			),
 		);
 		await handleScheduled(
@@ -202,6 +207,61 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 		console.log = originalLog;
 		console.error = originalError;
 	}
+});
+
+test("scheduled handler forwards the background runner to recurrences", async () => {
+	const background: BackgroundFn = () => {};
+	let received: BackgroundFn | undefined;
+	await handleScheduled(
+		{
+			cleanup: async () => ({
+				expiredInvitations: 0,
+				failedDeliveries: 0,
+				deletedConversations: 0,
+				deletedNotifications: 0,
+				expiredPendingUploads: 0,
+				supersededMedia: 0,
+			}),
+		},
+		{
+			processDue: async (_at?: Date, runner?: BackgroundFn) => {
+				received = runner;
+				return { created: 0, skipped: 0, failed: 0 };
+			},
+		},
+		background,
+	);
+	assert.equal(received, background);
+});
+
+test("cleanup applies 30/90-day notification retention in bounded batches", async () => {
+	const now = new Date("2026-10-20T12:00:00.000Z");
+	const day = 24 * 60 * 60 * 1000;
+	let received:
+		| { readBefore: Date; unreadBefore: Date; limit: number }
+		| undefined;
+	const counts = await createCleanupService({
+		memberDao: {
+			deleteExpiredPending: async () => 0,
+		} as unknown as MemberDao,
+		deliveryDao: {
+			failNeverAttempted: async () => 0,
+		} as unknown as WebhookDeliveryDao,
+		notificationDao: {
+			deleteOlderThan: async (args) => {
+				received = args;
+				return 7;
+			},
+		},
+	}).cleanup(now);
+
+	assert.equal(READ_NOTIFICATION_TTL_MS, 30 * day);
+	assert.equal(UNREAD_NOTIFICATION_TTL_MS, 90 * day);
+	assert.equal(NOTIFICATION_CLEANUP_LIMIT, 500);
+	assert.equal(counts.deletedNotifications, 7);
+	assert.equal(received?.readBefore.getTime(), now.getTime() - 30 * day);
+	assert.equal(received?.unreadBefore.getTime(), now.getTime() - 90 * day);
+	assert.equal(received?.limit, NOTIFICATION_CLEANUP_LIMIT);
 });
 
 test("cleanup removes expired pending objects but keeps registered ones", async () => {
