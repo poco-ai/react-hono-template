@@ -18,6 +18,7 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
@@ -35,6 +36,7 @@ import {
 import { cn } from "@workspace/ui/lib/utils";
 import {
 	Activity,
+	Bell,
 	ChevronsUpDown,
 	Folder,
 	FolderKanban,
@@ -54,6 +56,7 @@ import { AiChatProvider, useAiChat } from "@/features/ai/chat-provider";
 import { AiChatPanel } from "@/features/ai/components/chat-panel";
 import { useSession } from "@/features/auth/data";
 import type { OrgRole } from "@/features/members/data";
+import { unreadCountQuery } from "@/features/notifications/data";
 import { ActiveOrganizationSync } from "@/features/organizations/active-organization";
 import { orgsQuery } from "@/features/organizations/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
@@ -69,15 +72,19 @@ function SidebarLink({
 	exact,
 	tooltip,
 	onNavigate,
+	badge,
 	children,
 }: {
 	to:
 		| "/orgs/$orgId/projects"
 		| "/orgs/$orgId/my-issues"
-		| "/orgs/$orgId/activity";
+		| "/orgs/$orgId/activity"
+		| "/orgs/$orgId/inbox";
 	exact?: boolean;
 	tooltip?: string;
 	onNavigate?: () => void;
+	/** Optional trailing badge rendered next to the menu button. */
+	badge?: ReactNode;
 	children: ReactNode;
 }) {
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
@@ -99,6 +106,7 @@ function SidebarLink({
 			>
 				{children}
 			</SidebarMenuButton>
+			{badge}
 		</SidebarMenuItem>
 	);
 }
@@ -149,6 +157,13 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
+	const unread = useQuery({
+		...unreadCountQuery(orgId),
+		// The layout can render before the session resolves; never poll the
+		// inbox for signed-out or org-less visitors.
+		enabled: Boolean(orgId) && Boolean(session),
+	});
+	const unreadCount = unread.data?.unread ?? 0;
 	const { role } = useOrgRole(orgId);
 	const { isMobile, setOpenMobile, state } = useSidebar();
 	const { newChat, conversations } = useAiChat();
@@ -363,6 +378,22 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 						<SidebarGroupLabel>{t("nav.workspace")}</SidebarGroupLabel>
 					) : null}
 					<SidebarMenu>
+						<SidebarLink
+							to="/orgs/$orgId/inbox"
+							exact
+							tooltip={t("nav.inbox")}
+							onNavigate={onNavigate}
+							badge={
+								unreadCount > 0 ? (
+									<SidebarMenuBadge>
+										{unreadCount > 99 ? "99+" : unreadCount}
+									</SidebarMenuBadge>
+								) : undefined
+							}
+						>
+							<Bell />
+							<span>{t("nav.inbox")}</span>
+						</SidebarLink>
 						<SidebarLink
 							to="/orgs/$orgId/my-issues"
 							exact

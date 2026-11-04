@@ -4,7 +4,11 @@ import { QueryClient } from "@tanstack/react-query";
 import { invalidateApiKeyQueries } from "../src/features/api-keys/data";
 import { invalidateAttachmentQueries } from "../src/features/attachments/data";
 import { invalidateBillingQueries } from "../src/features/billing/data";
-import { invalidateCommentQueries } from "../src/features/comments/data";
+import {
+	invalidateCommentQueries,
+	invalidateCommentReactions,
+	invalidateCommentResolution,
+} from "../src/features/comments/data";
 import { invalidateLabelQueries } from "../src/features/labels/data";
 import { invalidateMemberQueries } from "../src/features/members/data";
 import { invalidateProjectQueries } from "../src/features/projects/data";
@@ -33,6 +37,60 @@ async function verifyInvalidation(
 		client.clear();
 	}
 }
+
+test("resolving a thread refreshes comments and both activity feeds but not billing", () =>
+	verifyInvalidation(
+		(client) => invalidateCommentResolution(client, "org", "project", 1),
+		[
+			["orgs", "org", "projects", "project", "issues", "detail", 1, "comments"],
+			[
+				"orgs",
+				"org",
+				"projects",
+				"project",
+				"issues",
+				"detail",
+				1,
+				"activities",
+			],
+			["orgs", "org", "activities", { limit: 50 }],
+		],
+		[
+			["orgs", "org", "billing"],
+			["orgs", "other", "activities"],
+			["orgs", "org", "projects", "project", "issues", "detail", 2, "comments"],
+		],
+	));
+
+test("reaction toggles invalidate only the thread, never activity feeds", () =>
+	verifyInvalidation(
+		(client) => invalidateCommentReactions(client, "org", "project", 1),
+		[["orgs", "org", "projects", "project", "issues", "detail", 1, "comments"]],
+		[
+			[
+				"orgs",
+				"org",
+				"projects",
+				"project",
+				"issues",
+				"detail",
+				1,
+				"activities",
+			],
+			["orgs", "org", "activities", { limit: 50 }],
+			["orgs", "org", "billing"],
+			[
+				"orgs",
+				"other",
+				"projects",
+				"project",
+				"issues",
+				"detail",
+				1,
+				"comments",
+			],
+		],
+	));
 
 test("project writes invalidate every project list/detail variant within their organization", () =>
 	verifyInvalidation(

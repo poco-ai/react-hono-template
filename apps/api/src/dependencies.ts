@@ -14,10 +14,14 @@ import { createApiKeyDao } from "./dao/api-key.dao";
 import { createAttachmentDao } from "./dao/attachment.dao";
 import { createBillingDao } from "./dao/billing.dao";
 import { createCommentDao } from "./dao/comment.dao";
+import { createCommentMentionDao } from "./dao/comment-mention.dao";
+import { createCommentReactionDao } from "./dao/comment-reaction.dao";
 import { createIssueDao } from "./dao/issue.dao";
+import { createIssueSubscriptionDao } from "./dao/issue-subscription.dao";
 import { createLabelDao } from "./dao/label.dao";
 import { createMediaAssetDao } from "./dao/media-asset.dao";
 import { createMemberDao } from "./dao/member.dao";
+import { createNotificationDao } from "./dao/notification.dao";
 import { createOrgAiSettingsDao } from "./dao/org-ai-settings.dao";
 import { createOrganizationDao } from "./dao/organization.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
@@ -49,8 +53,10 @@ import { createCleanupService } from "./services/cleanup.service";
 import { createCommentService } from "./services/comment.service";
 import { createConfigService } from "./services/config.service";
 import { createIssueService } from "./services/issue.service";
+import { createIssueSubscriptionService } from "./services/issue-subscription.service";
 import { createLabelService } from "./services/label.service";
 import { createMediaService } from "./services/media.service";
+import { createNotificationService } from "./services/notification.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
@@ -110,6 +116,10 @@ export const createDependencies = ({
 	const statusDao = createStatusDao(db);
 	const viewDao = createViewDao(db);
 	const commentDao = createCommentDao(db);
+	const commentReactionDao = createCommentReactionDao(db);
+	const commentMentionDao = createCommentMentionDao(db);
+	const issueSubscriptionDao = createIssueSubscriptionDao(db);
+	const notificationDao = createNotificationDao(db);
 	const attachmentDao = createAttachmentDao(db);
 	const pendingUploadDao = createPendingUploadDao(db);
 	const mediaAssetDao = createMediaAssetDao(db);
@@ -165,6 +175,10 @@ export const createDependencies = ({
 		plans: planService,
 	});
 	const statusService = createStatusService(statusDao);
+	const notificationService = createNotificationService({
+		notificationDao,
+		subscriptionDao: issueSubscriptionDao,
+	});
 	const issueService = createIssueService({
 		issueDao,
 		labelDao,
@@ -172,6 +186,7 @@ export const createDependencies = ({
 		memberDao,
 		statusService,
 		webhooks: webhookDeliveryService,
+		notifications: notificationService,
 	});
 	const labelService = createLabelService(labelDao, cache);
 	const relationService = createRelationService({
@@ -197,6 +212,14 @@ export const createDependencies = ({
 		projectDao,
 		webhooks: webhookDeliveryService,
 		files: attachmentService,
+		notifications: notificationService,
+		memberDao,
+		reactionDao: commentReactionDao,
+		mentionDao: commentMentionDao,
+	});
+	const issueSubscriptionService = createIssueSubscriptionService({
+		issueDao,
+		subscriptionDao: issueSubscriptionDao,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
 	const apiKeyService = createApiKeyService(apiKeyDao);
@@ -284,6 +307,10 @@ export const createDependencies = ({
 			aiToolCallDao,
 			aiUsageDao,
 			orgAiSettingsDao,
+			issueSubscriptionDao,
+			notificationDao,
+			commentReactionDao,
+			commentMentionDao,
 		},
 		ai: {
 			provider: aiProviderInfo,
@@ -298,10 +325,12 @@ export const createDependencies = ({
 			labelService,
 			statusService,
 			commentService,
+			issueSubscriptionService,
 			attachmentService,
 			relationService,
 			mediaService,
 			activityService,
+			notificationService,
 			apiKeyService,
 			webhookService,
 			webhookDeliveryService,

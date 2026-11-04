@@ -1,4 +1,10 @@
-import { commentListQuerySchema, createCommentSchema } from "@workspace/shared";
+import {
+	commentListQuerySchema,
+	commentReactionSchema,
+	createCommentSchema,
+	resolveCommentSchema,
+	updateCommentSchema,
+} from "@workspace/shared";
 import { Hono } from "hono";
 import { createCommentController } from "../controllers/comment.controller";
 import { validate } from "../lib/validation";
@@ -21,11 +27,21 @@ export const createCommentsRoutes = (service: CommentService) => {
 		)
 		.patch(
 			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId",
-			validate(createCommentSchema, "json"),
+			validate(updateCommentSchema, "json"),
 			(c) => commentController.update(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId",
 			(c) => commentController.remove(c),
+		)
+		.put(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId/resolve",
+			validate(resolveCommentSchema, "json"),
+			(c) => commentController.resolve(c, c.req.valid("json")),
+		)
+		.post(
+			"/api/orgs/:orgId/projects/:projectId/issues/:number/comments/:commentId/reactions",
+			validate(commentReactionSchema, "json"),
+			(c) => commentController.react(c, c.req.valid("json")),
 		);
 };

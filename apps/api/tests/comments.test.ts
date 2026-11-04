@@ -44,6 +44,7 @@ const commentDto = (overrides: Partial<CommentDto> = {}): CommentDto => ({
 	id: "comment-1",
 	orgId: "org",
 	issueId: "issue-1",
+	parentId: null,
 	body: "Looks good",
 	author: {
 		id: "author-1",
@@ -53,7 +54,11 @@ const commentDto = (overrides: Partial<CommentDto> = {}): CommentDto => ({
 	},
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",
+	resolvedAt: null,
+	resolvedById: null,
 	attachments: [],
+	reactions: [],
+	mentions: [],
 	...overrides,
 });
 
@@ -189,6 +194,57 @@ test("comments from other issues answer 404", async () => {
 			body: "Edit",
 		}),
 		isCommentError(404, ApiErrorCode.COMMENT_NOT_FOUND),
+	);
+});
+
+test("replies only target top-level comments", async () => {
+	const { service, calls } = serviceFor();
+	const reply = await service.createComment("org", "project-1", 7, "author-1", {
+		body: "Same here",
+		parentId: "comment-1",
+	});
+	assert.equal(reply.id, "comment-1");
+	assert.equal(calls.commented[0]?.data.parentId, "comment-1");
+
+	const nested = serviceFor({
+		comment: commentDto({ parentId: "comment-root" }),
+	});
+	await assert.rejects(
+		nested.service.createComment("org", "project-1", 7, "author-1", {
+			body: "Too deep",
+			parentId: "comment-1",
+		}),
+		isCommentError(400, ApiErrorCode.COMMENT_THREAD_DEPTH),
+	);
+	assert.equal(nested.calls.commented.length, 0);
+
+	const foreign = serviceFor({
+		comment: commentDto({ issueId: "issue-2" }),
+	});
+	await assert.rejects(
+		foreign.service.createComment("org", "project-1", 7, "author-1", {
+			body: "Wrong issue",
+			parentId: "comment-1",
+		}),
+		isCommentError(400, ApiErrorCode.COMMENT_PARENT_INVALID),
+	);
+	assert.equal(foreign.calls.commented.length, 0);
+});
+
+test("replies cannot be resolved directly", async () => {
+	const { service } = serviceFor({
+		comment: commentDto({ parentId: "comment-root" }),
+	});
+	await assert.rejects(
+		service.resolveComment(
+			"org",
+			"project-1",
+			7,
+			"comment-1",
+			"author-1",
+			true,
+		),
+		isCommentError(400, ApiErrorCode.COMMENT_THREAD_DEPTH),
 	);
 });
 

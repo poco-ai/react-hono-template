@@ -1,6 +1,7 @@
 import {
 	ApiError,
 	ApiErrorCode,
+	commentReactionSchema,
 	createCommentSchema,
 	createIssueSchema,
 	createLabelSchema,
@@ -73,6 +74,7 @@ const updateIssueInputSchema = issueRef(updateIssueSchema.shape);
 
 const createCommentInputSchema = issueRef({
 	body: createCommentSchema.shape.body,
+	parentId: createCommentSchema.shape.parentId,
 });
 
 const updateCommentInputSchema = issueRef({
@@ -82,6 +84,16 @@ const updateCommentInputSchema = issueRef({
 
 const deleteCommentInputSchema = issueRef({
 	commentId: z.string().min(1),
+});
+
+const resolveCommentInputSchema = issueRef({
+	commentId: z.string().min(1),
+	resolved: z.boolean(),
+});
+
+const toggleCommentReactionInputSchema = issueRef({
+	commentId: z.string().min(1),
+	emoji: commentReactionSchema.shape.emoji,
 });
 
 const deleteIssueInputSchema = z.object(issueRefShape).refine(resolveRef, {
@@ -273,7 +285,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 		defineCapability({
 			name: "create_comment",
 			titleKey: "ai.capabilities.create_comment.title",
-			description: `Add a comment to an issue as the signed-in user. ${issueRefDescription}`,
+			description: `Add a comment to an issue as the signed-in user. Pass parentId (a top-level comment id) to reply in the thread; threads are one level deep. Mention members with the @[Display Name](user:USER_ID) markup. ${issueRefDescription}`,
 			input: createCommentInputSchema,
 			output: z.object({ comment: commentSummarySchema }),
 			effect: "write",
@@ -287,7 +299,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 					issue.projectId,
 					issue.number,
 					userId,
-					{ body: input.body },
+					{ body: input.body, parentId: input.parentId },
 					ctx.background,
 				);
 				return {
@@ -348,6 +360,73 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 				return {
 					data: { id: input.commentId, deleted: true },
 					summary: `Deleted comment ${input.commentId} on issue #${issue.number}.`,
+					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "resolve_comment",
+			titleKey: "ai.capabilities.resolve_comment.title",
+			description: `Resolve or reopen a top-level comment thread (resolved: true/false). Replies cannot be resolved on their own. ${issueRefDescription}`,
+			input: resolveCommentInputSchema,
+			output: z.object({ comment: commentSummarySchema }),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const userId = requireUserId(ctx);
+				const orgId = ctx.orgId as string;
+				const issue = await resolveIssueRef(deps, orgId, input);
+				const comment = await deps.services.commentService.resolveComment(
+					orgId,
+					issue.projectId,
+					issue.number,
+					input.commentId,
+					userId,
+					input.resolved,
+				);
+				return {
+					data: { comment: toCommentSummary(comment) },
+					summary: input.resolved
+						? `Resolved comment thread ${comment.id} on issue #${issue.number}.`
+						: `Reopened comment thread ${comment.id} on issue #${issue.number}.`,
+					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "toggle_comment_reaction",
+			titleKey: "ai.capabilities.toggle_comment_reaction.title",
+			description: `Toggle one emoji reaction (👍, 👎, 🎉, ❤️, 🚀, 👀) on a comment for the signed-in user. Calling again with the same emoji removes it. ${issueRefDescription}`,
+			input: toggleCommentReactionInputSchema,
+			output: z.object({
+				commentId: z.string(),
+				reactions: z.array(
+					z.object({
+						emoji: z.string(),
+						count: z.number(),
+						mine: z.boolean(),
+					}),
+				),
+			}),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const userId = requireUserId(ctx);
+				const orgId = ctx.orgId as string;
+				const issue = await resolveIssueRef(deps, orgId, input);
+				const result = await deps.services.commentService.toggleReaction(
+					orgId,
+					issue.projectId,
+					issue.number,
+					input.commentId,
+					userId,
+					{ emoji: input.emoji },
+				);
+				return {
+					data: result,
+					summary: `Toggled ${input.emoji} on comment ${input.commentId} (issue #${issue.number}).`,
 					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
 				};
 			},

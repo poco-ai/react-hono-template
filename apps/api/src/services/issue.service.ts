@@ -22,6 +22,10 @@ import type {
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
 import type { BackgroundFn } from "../lib/background";
+import {
+	bestEffortNotification,
+	type NotificationService,
+} from "./notification.service";
 import type { StatusService } from "./status.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
@@ -228,6 +232,7 @@ export const createIssueService = ({
 	memberDao,
 	statusService,
 	webhooks,
+	notifications,
 }: {
 	issueDao: IssueDao;
 	labelDao: LabelDao;
@@ -235,6 +240,10 @@ export const createIssueService = ({
 	memberDao: MemberDao;
 	statusService: Pick<StatusService, "resolveStatus" | "resolveStatusIds">;
 	webhooks?: WebhookDispatcher;
+	notifications?: Pick<
+		NotificationService,
+		"onIssueCreated" | "onIssueUpdated"
+	>;
 }) => ({
 	listIssues: async (
 		orgId: string,
@@ -401,6 +410,9 @@ export const createIssueService = ({
 			activities,
 		);
 		const result = { ...issue, labelIds };
+		await bestEffortNotification("issue.created", () =>
+			notifications?.onIssueCreated(result, userId ?? ""),
+		);
 		await webhooks?.dispatch(orgId, "issue.created", result, background);
 		return result;
 	},
@@ -541,6 +553,18 @@ export const createIssueService = ({
 					status: updated.status,
 				},
 				background,
+			);
+		}
+		if (userId) {
+			const assigneeChanged = diffs.some((diff) => diff.field === "assigneeId");
+			await bestEffortNotification("issue.updated", () =>
+				notifications?.onIssueUpdated({
+					issue: result,
+					actorId: userId,
+					statusChanged,
+					assignedUserId:
+						assigneeChanged && updated.assigneeId ? updated.assigneeId : null,
+				}),
 			);
 		}
 		return result;

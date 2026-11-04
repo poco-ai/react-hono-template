@@ -1,4 +1,10 @@
-import type { CommentListQuery, CreateCommentInput } from "@workspace/shared";
+import type {
+	CommentListQuery,
+	CommentReactionInput,
+	CreateCommentInput,
+	ResolveCommentInput,
+	UpdateCommentInput,
+} from "@workspace/shared";
 import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
 import {
@@ -22,6 +28,7 @@ export const createCommentController = (service: CommentService) => ({
 				requireProjectId(c),
 				requireIssueNumber(c),
 				query,
+				c.get("session").user.id,
 			),
 		),
 
@@ -38,7 +45,7 @@ export const createCommentController = (service: CommentService) => ({
 			),
 		),
 
-	update: async (c: Context<Env>, input: CreateCommentInput) =>
+	update: async (c: Context<Env>, input: UpdateCommentInput) =>
 		ok(
 			c,
 			await service.updateComment(
@@ -61,4 +68,30 @@ export const createCommentController = (service: CommentService) => ({
 		);
 		return ok(c, { deleted: true });
 	},
+
+	resolve: async (c: Context<Env>, input: ResolveCommentInput) =>
+		ok(
+			c,
+			await service.resolveComment(
+				c.get("orgMember").orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireParam(c, "commentId"),
+				c.get("session").user.id,
+				input.resolved,
+			),
+		),
+
+	react: async (c: Context<Env>, input: CommentReactionInput) =>
+		ok(
+			c,
+			await service.toggleReaction(
+				c.get("orgMember").orgId,
+				requireProjectId(c),
+				requireIssueNumber(c),
+				requireParam(c, "commentId"),
+				c.get("session").user.id,
+				input,
+			),
+		),
 });

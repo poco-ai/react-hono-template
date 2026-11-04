@@ -114,7 +114,12 @@ export type CapabilityServices = {
 	>;
 	commentService: Pick<
 		CommentService,
-		"listComments" | "createComment" | "updateComment" | "deleteComment"
+		| "listComments"
+		| "createComment"
+		| "updateComment"
+		| "deleteComment"
+		| "resolveComment"
+		| "toggleReaction"
 	>;
 	labelService: Pick<
 		LabelService,

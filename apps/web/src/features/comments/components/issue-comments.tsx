@@ -1,37 +1,46 @@
 import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
 import type { CommentDto } from "@api/dto/comment.dto";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useLocation } from "@tanstack/react-router";
 import {
 	ATTACHMENT_CONTENT_TYPES,
 	ATTACHMENT_MAX_SIZE,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
+import {
+	Empty,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@workspace/ui/components/empty";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { Paperclip, Pencil, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { MessageSquare, Paperclip, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { MarkdownContent } from "@/components/markdown";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { MutationError } from "@/components/mutation-error";
-import { UserAvatar } from "@/components/user-avatar";
 import {
 	attachmentUploadErrorKey,
 	resolveContentType,
 } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
 import { billingQuery } from "@/features/billing/data";
+import { CommentCard } from "@/features/comments/components/comment-card";
 import {
 	commentsQuery,
+	groupCommentThreads,
 	useDeleteComment,
 	useDeleteCommentAttachment,
 	usePostComment,
+	useResolveComment,
+	useToggleCommentReaction,
 	useUpdateComment,
 } from "@/features/comments/data";
 import { membersQuery } from "@/features/members/data";
-import { formatBytes, formatDateTime, formatRelativeTime } from "@/lib/format";
 
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
 
@@ -42,6 +51,18 @@ interface SelectedFile {
 }
 
 const COMMENT_MAX_LENGTH = 10000;
+/** Stop expanding a deep link after this many pages to bound requests. */
+const DEEP_LINK_MAX_PAGES = 6;
+const COMMENT_HASH_PREFIX = "comment-";
+
+const commentIdFromHash = (hash: string) => {
+	const value = hash.replace(/^#/, "");
+	if (!value.startsWith(COMMENT_HASH_PREFIX)) {
+		return null;
+	}
+	const id = value.slice(COMMENT_HASH_PREFIX.length);
+	return id.length > 0 ? id : null;
+};
 
 export function IssueComments({
 	orgId,
@@ -55,6 +76,7 @@ export function IssueComments({
 	frozen: boolean;
 }) {
 	const { t } = useTranslation();
+	const location = useLocation();
 
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
@@ -62,26 +84,127 @@ export function IssueComments({
 	const maxSize = billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
 	const [body, setBody] = useState("");
 	const [editorResetKey, setEditorResetKey] = useState(0);
-	const [editingId, setEditingId] = useState<string | null>(null);
-	const [editBody, setEditBody] = useState("");
+	const [focusRequest, setFocusRequest] = useState(0);
+	const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(
+		null,
+	);
 	const [deleting, setDeleting] = useState<CommentDto | null>(null);
 	const [deletingFile, setDeletingFile] = useState<{
 		commentId: string;
 		attachment: AttachmentWithUrlDto;
 	} | null>(null);
+	const [scrollTarget, setScrollTarget] = useState<{
+		id: string;
+		deepLink: boolean;
+	} | null>(null);
+	const [highlightedId, setHighlightedId] = useState<string | null>(null);
+	const [deepLinkMissing, setDeepLinkMissing] = useState(false);
 	const [selected, setSelected] = useState<SelectedFile[]>([]);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const abortRef = useRef<AbortController | null>(null);
 
+	const currentUserId = session?.user.id;
 	const currentRole = members.data?.find(
-		(member) => member.userId === session?.user.id,
+		(member) => member.userId === currentUserId,
 	)?.role;
 	const isAdmin = currentRole === "owner" || currentRole === "admin";
 
 	const query = useInfiniteQuery(commentsQuery(orgId, projectId, issueNumber));
 
-	const comments = query.data?.pages.flatMap((page) => page.items) ?? [];
+	const comments = useMemo(
+		() => query.data?.pages.flatMap((page) => page.items) ?? [],
+		[query.data],
+	);
+	const threads = useMemo(() => groupCommentThreads(comments), [comments]);
 	const total = query.data?.pages[0]?.total ?? 0;
+
+	const mentionCandidates = useMemo(
+		() =>
+			(members.data ?? []).map((member) => ({
+				id: member.user.id,
+				name: member.user.name,
+				email: member.user.email,
+				image: member.user.image,
+			})),
+		[members.data],
+	);
+
+	const {
+		fetchNextPage,
+		hasNextPage,
+		isFetching: commentsFetching,
+		isFetchNextPageError,
+		isFetchingNextPage,
+		isPending: commentsPending,
+	} = query;
+	const loadedPages = query.data?.pages.length ?? 0;
+
+	// Deep links from notifications (`#comment-<id>`) and freshly posted
+	// comments share this target. Both may live on a page that is not loaded yet.
+	useEffect(() => {
+		const id = commentIdFromHash(location.hash);
+		if (!id) {
+			setDeepLinkMissing(false);
+			return;
+		}
+		setDeepLinkMissing(false);
+		setScrollTarget({ id, deepLink: true });
+	}, [location.hash]);
+
+	useEffect(() => {
+		if (!scrollTarget) {
+			return;
+		}
+		const element = comments.some((comment) => comment.id === scrollTarget.id)
+			? document.getElementById(`comment-${scrollTarget.id}`)
+			: null;
+		if (element) {
+			element.scrollIntoView({ block: "center" });
+			setHighlightedId(scrollTarget.id);
+			setDeepLinkMissing(false);
+			setScrollTarget(null);
+			return;
+		}
+		const canLoadMore =
+			Boolean(hasNextPage) && loadedPages < DEEP_LINK_MAX_PAGES;
+		// A posted comment is only visible after the invalidation refetch; wait
+		// for it instead of racing the fetched pages.
+		if (
+			canLoadMore &&
+			!isFetchingNextPage &&
+			!isFetchNextPageError &&
+			(scrollTarget.deepLink || !commentsFetching)
+		) {
+			void fetchNextPage();
+			return;
+		}
+		if (!commentsPending && !isFetchingNextPage && !commentsFetching) {
+			if (scrollTarget.deepLink) {
+				setDeepLinkMissing(true);
+			} else {
+				setScrollTarget(null);
+			}
+		}
+	}, [
+		scrollTarget,
+		comments,
+		commentsFetching,
+		commentsPending,
+		fetchNextPage,
+		hasNextPage,
+		isFetchNextPageError,
+		isFetchingNextPage,
+		loadedPages,
+	]);
+
+	// Brief highlight so the jump target is easy to spot.
+	useEffect(() => {
+		if (!highlightedId) {
+			return;
+		}
+		const timer = window.setTimeout(() => setHighlightedId(null), 2200);
+		return () => window.clearTimeout(timer);
+	}, [highlightedId]);
 
 	const createMutation = usePostComment(orgId, projectId, issueNumber, {
 		onSuccess: (result) => {
@@ -95,7 +218,12 @@ export function IssueComments({
 			}
 			setBody("");
 			setSelected([]);
+			setReplyTo(null);
 			setEditorResetKey((key) => key + 1);
+			// The refetched pages contain the new comment; the shared scroll
+			// target finds it (loading more pages if necessary) without a timer.
+			setDeepLinkMissing(false);
+			setScrollTarget({ id: result.comment.id, deepLink: false });
 		},
 	});
 
@@ -103,11 +231,24 @@ export function IssueComments({
 		return () => abortRef.current?.abort();
 	}, []);
 
-	const updateMutation = useUpdateComment(orgId, projectId, issueNumber, {
-		onSuccess: () => {
-			setEditingId(null);
+	const updateMutation = useUpdateComment(orgId, projectId, issueNumber);
+	const resolveMutation = useResolveComment(orgId, projectId, issueNumber, {
+		onSuccess: (_comment, input) => {
+			toast.success(
+				input.resolved
+					? t("toast.commentResolved")
+					: t("toast.commentReopened"),
+			);
 		},
 	});
+	const reactionMutation = useToggleCommentReaction(
+		orgId,
+		projectId,
+		issueNumber,
+		{
+			onError: () => toast.error(t("toast.reactionFailed")),
+		},
+	);
 
 	const deleteMutation = useDeleteComment(orgId, projectId, issueNumber, {
 		onSuccess: () => {
@@ -127,6 +268,11 @@ export function IssueComments({
 
 	const canSubmit = body.trim().length > 0 && body.length <= COMMENT_MAX_LENGTH;
 
+	const startReply = (comment: CommentDto) => {
+		setReplyTo({ id: comment.id, name: comment.author.name });
+		setFocusRequest((value) => value + 1);
+	};
+
 	const addFiles = (list: FileList | File[]) => {
 		const next: SelectedFile[] = [];
 		for (const file of Array.from(list)) {
@@ -144,6 +290,42 @@ export function IssueComments({
 		setSelected((prev) => [...prev, ...next]);
 	};
 
+	const renderingComments = (
+		comment: CommentDto,
+		options?: { orphan?: boolean },
+	) => {
+		return (
+			<CommentCard
+				key={comment.id}
+				comment={comment}
+				own={currentUserId === comment.author.id}
+				isAdmin={isAdmin}
+				currentUserId={currentUserId}
+				frozen={frozen}
+				orphan={options?.orphan}
+				highlighted={highlightedId === comment.id}
+				resolving={
+					resolveMutation.isPending &&
+					resolveMutation.variables?.commentId === comment.id
+				}
+				onReply={startReply}
+				onResolve={(target, resolved) =>
+					resolveMutation.mutate({ commentId: target.id, resolved })
+				}
+				onDelete={setDeleting}
+				onSave={(target, nextBody) =>
+					updateMutation.mutateAsync({ commentId: target.id, body: nextBody })
+				}
+				onToggleReaction={(target, emoji) =>
+					reactionMutation.mutate({ commentId: target.id, emoji })
+				}
+				onDeleteAttachment={(target, attachment) =>
+					setDeletingFile({ commentId: target.id, attachment })
+				}
+			/>
+		);
+	};
+
 	return (
 		<section className="flex flex-col gap-4">
 			<h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -154,171 +336,50 @@ export function IssueComments({
 			</h2>
 
 			{query.isPending && (
-				<p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+				<div className="flex flex-col gap-3">
+					<div className="flex gap-3">
+						<Skeleton className="size-6 rounded-full" />
+						<div className="flex flex-1 flex-col gap-2">
+							<Skeleton className="h-3 w-32" />
+							<Skeleton className="h-3 w-3/4" />
+						</div>
+					</div>
+				</div>
 			)}
 			{query.isError && <MutationError error={query.error} />}
 
 			{!query.isPending && comments.length === 0 && !query.isError && (
-				<p className="text-muted-foreground text-sm">{t("comments.empty")}</p>
+				<Empty className="border">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<MessageSquare />
+						</EmptyMedia>
+						<EmptyTitle>{t("comments.title")}</EmptyTitle>
+						<EmptyDescription>{t("comments.empty")}</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
 			)}
 
 			<ul className="flex flex-col gap-5">
-				{comments.map((comment) => {
-					const own = session?.user.id === comment.author.id;
-					const editing = editingId === comment.id;
-					return (
-						<li key={comment.id} className="group/comment flex gap-3">
-							<UserAvatar
-								name={comment.author.name}
-								image={comment.author.image}
-								className="mt-0.5 size-6 shrink-0"
-							/>
-							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-2">
-									<span className="text-sm font-medium">
-										{comment.author.name}
-									</span>
-									<time
-										dateTime={comment.createdAt}
-										title={formatDateTime(comment.createdAt)}
-										className="text-muted-foreground text-xs"
-									>
-										{formatRelativeTime(comment.createdAt)}
-									</time>
-									{comment.updatedAt !== comment.createdAt && (
-										<span className="text-muted-foreground text-xs">
-											({t("comments.edited")})
-										</span>
-									)}
-									{own && !editing && (
-										<span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/comment:opacity-100 group-focus-within/comment:opacity-100 pointer-coarse:opacity-100 max-sm:opacity-100">
-											<Button
-												variant="ghost"
-												size="icon-sm"
-												aria-label={t("common.edit")}
-												disabled={frozen}
-												onClick={() => {
-													setEditingId(comment.id);
-													setEditBody(comment.body);
-												}}
-											>
-												<Pencil />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon-sm"
-												aria-label={t("common.delete")}
-												className="text-destructive hover:text-destructive"
-												disabled={frozen}
-												onClick={() => setDeleting(comment)}
-											>
-												<Trash2 />
-											</Button>
-										</span>
-									)}
-								</div>
-								{editing ? (
-									<div className="mt-2 flex flex-col gap-2">
-										<Textarea
-											value={editBody}
-											placeholder={t("comments.placeholder")}
-											onChange={(e) => setEditBody(e.target.value)}
-											rows={4}
-											maxLength={COMMENT_MAX_LENGTH}
-										/>
-										<div className="flex items-center gap-2">
-											<Button
-												size="sm"
-												disabled={
-													frozen ||
-													updateMutation.isPending ||
-													editBody.trim().length === 0
-												}
-												onClick={() =>
-													updateMutation.mutate({
-														commentId: comment.id,
-														body: editBody.trim(),
-													})
-												}
-											>
-												{updateMutation.isPending && <Spinner />}
-												{t("common.save")}
-											</Button>
-											<Button
-												size="sm"
-												variant="ghost"
-												onClick={() => setEditingId(null)}
-											>
-												{t("common.cancel")}
-											</Button>
-										</div>
-									</div>
-								) : (
-									<div className="mt-1 max-w-3xl">
-										<MarkdownContent>{comment.body}</MarkdownContent>
-									</div>
-								)}
-								{comment.attachments.length > 0 && (
-									<ul className="mt-2 flex max-w-3xl flex-col gap-1">
-										{comment.attachments.map((attachment) => {
-											const canDelete =
-												isAdmin ||
-												own ||
-												attachment.uploader?.id === session?.user.id;
-											return (
-												<li
-													key={attachment.id}
-													className="flex items-center gap-2 text-sm"
-												>
-													{attachment.contentType.startsWith("image/") &&
-													attachment.url ? (
-														<img
-															src={attachment.url}
-															alt={attachment.filename}
-															className="size-8 rounded object-cover"
-															loading="lazy"
-														/>
-													) : (
-														<Paperclip className="text-muted-foreground size-3.5 shrink-0" />
-													)}
-													<a
-														href={attachment.url ?? undefined}
-														target="_blank"
-														rel="noreferrer"
-														className="min-w-0 truncate hover:underline"
-													>
-														{attachment.filename}
-													</a>
-													<span className="text-muted-foreground shrink-0 text-xs">
-														{formatBytes(attachment.size)}
-													</span>
-													{canDelete && (
-														<Button
-															variant="ghost"
-															size="icon-sm"
-															aria-label={t("common.delete")}
-															className="text-destructive hover:text-destructive"
-															disabled={frozen}
-															onClick={() =>
-																setDeletingFile({
-																	commentId: comment.id,
-																	attachment,
-																})
-															}
-														>
-															<Trash2 />
-														</Button>
-													)}
-												</li>
-											);
-										})}
-									</ul>
-								)}
-							</div>
-						</li>
-					);
-				})}
+				{threads.map((thread) => (
+					<li key={thread.comment.id} className="flex flex-col gap-3">
+						{renderingComments(thread.comment, { orphan: thread.orphan })}
+						{!thread.orphan && thread.replies.length > 0 && (
+							<ul className="ml-4 flex flex-col gap-4 border-l pl-4">
+								{thread.replies.map((reply) => (
+									<li key={reply.id}>{renderingComments(reply)}</li>
+								))}
+							</ul>
+						)}
+					</li>
+				))}
 			</ul>
+
+			{deepLinkMissing && (
+				<p className="text-muted-foreground text-xs" role="status">
+					{t("comments.deepLinkMissing")}
+				</p>
+			)}
 
 			{query.hasNextPage && (
 				<Button
@@ -334,17 +395,42 @@ export function IssueComments({
 			)}
 
 			{updateMutation.isError && <MutationError error={updateMutation.error} />}
+			{resolveMutation.isError && (
+				<MutationError error={resolveMutation.error} />
+			)}
 
 			<MarkdownEditor
 				value={body}
 				onChange={setBody}
 				resetKey={editorResetKey}
-				placeholder={t("comments.placeholder")}
+				placeholder={
+					replyTo
+						? t("comments.replyPlaceholder", { name: replyTo.name })
+						: t("comments.placeholder")
+				}
 				disabled={frozen}
 				rows={4}
 				maxLength={COMMENT_MAX_LENGTH}
+				mentions={mentionCandidates}
+				focusRequest={focusRequest}
 				footer={
 					<div className="flex flex-col gap-2 border-t px-3 py-2">
+						{replyTo && (
+							<div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+								<span className="truncate">
+									{t("comments.replyingTo", { name: replyTo.name })}
+								</span>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-xs"
+									aria-label={t("comments.cancelReply")}
+									onClick={() => setReplyTo(null)}
+								>
+									<X />
+								</Button>
+							</div>
+						)}
 						{selected.length > 0 && (
 							<ul className="flex flex-col gap-1">
 								{selected.map((item) => (
@@ -416,6 +502,7 @@ export function IssueComments({
 									abortRef.current = controller;
 									createMutation.mutate({
 										body: body.trim(),
+										parentId: replyTo?.id ?? null,
 										files: selected
 											.filter((item) => !item.error)
 											.map((item) => item.file),
@@ -424,7 +511,7 @@ export function IssueComments({
 								}}
 							>
 								{createMutation.isPending && <Spinner />}
-								{t("comments.post")}
+								{replyTo ? t("comments.reply") : t("comments.post")}
 							</Button>
 						</div>
 					</div>

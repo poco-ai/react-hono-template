@@ -41,6 +41,7 @@ import {
 } from "@/features/issues/data";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
+import { IssueSubscriptionButton } from "@/features/notifications/components/issue-subscription-button";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
 import { statusesQuery } from "@/features/statuses/data";
@@ -182,6 +183,12 @@ export function IssueDetailPage({
 							</BreadcrumbPage>
 						</BreadcrumbItem>
 						<BreadcrumbItem className="ml-auto">
+							<IssueSubscriptionButton
+								orgId={orgId}
+								projectId={projectId}
+								issueNumber={data.number}
+								disabled={frozen}
+							/>
 							<Button
 								variant="ghost"
 								size="icon-sm"

@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNotNull, lt } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, lt } from "drizzle-orm";
 import { invitation, member, organization, user } from "../db/auth-schema";
 import { subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
@@ -88,6 +88,23 @@ export const createMemberDao = (db: Database) => ({
 			.orderBy(asc(user.name), asc(member.userId))
 			.all();
 		return rows;
+	},
+
+	/** Restricts a candidate id list to actual organization members. */
+	filterMemberIds: async (
+		orgId: string,
+		userIds: string[],
+	): Promise<string[]> => {
+		if (userIds.length === 0) {
+			return [];
+		}
+		const rows = await db
+			.select({ userId: member.userId })
+			.from(member)
+			.where(
+				and(eq(member.organizationId, orgId), inArray(member.userId, userIds)),
+			);
+		return rows.map((row) => row.userId);
 	},
 
 	countByOrg: async (orgId: string): Promise<number> => {

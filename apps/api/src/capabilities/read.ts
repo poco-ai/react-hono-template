@@ -96,6 +96,14 @@ export const commentSummarySchema = z.object({
 		name: z.string(),
 		image: z.string().nullable(),
 	}),
+	/** Reply target; null for top-level comments. Optional for compatibility. */
+	parentId: z.string().nullable().optional(),
+	/** Set on resolved top-level threads. Optional for compatibility. */
+	resolvedAt: z.string().nullable().optional(),
+	mentions: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+	reactions: z
+		.array(z.object({ emoji: z.string(), count: z.number().int() }))
+		.optional(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
@@ -255,6 +263,16 @@ export const toCommentSummary = (comment: CommentDto): CommentSummary => ({
 		name: comment.author.name,
 		image: comment.author.image,
 	},
+	parentId: comment.parentId,
+	resolvedAt: comment.resolvedAt,
+	mentions: comment.mentions.map((mention) => ({
+		id: mention.id,
+		name: mention.name,
+	})),
+	reactions: comment.reactions.map((reaction) => ({
+		emoji: reaction.emoji,
+		count: reaction.count,
+	})),
 	createdAt: comment.createdAt,
 	updatedAt: comment.updatedAt,
 });

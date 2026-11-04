@@ -5,6 +5,10 @@ import { comments } from "../db/schema";
 import type { Database } from "../db/types";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
+import {
+	commentMentionDeleteStatement,
+	commentMentionInsertStatement,
+} from "./comment-mention.dao";
 
 // D1 batch rows are keyed by column name, so joined columns colliding with
 // comments columns (e.g. both tables have "id") shift values. Alias the user
@@ -13,9 +17,12 @@ const COMMENT_SELECT = {
 	id: comments.id,
 	orgId: comments.orgId,
 	issueId: comments.issueId,
+	parentId: comments.parentId,
 	body: comments.body,
 	createdAt: comments.createdAt,
 	updatedAt: comments.updatedAt,
+	resolvedAt: comments.resolvedAt,
+	resolvedById: comments.resolvedById,
 	author: {
 		id: user.id.as("author_user_id"),
 		name: user.name.as("author_user_name"),
@@ -28,9 +35,12 @@ const toCommentDto = (row: {
 	id: string;
 	orgId: string;
 	issueId: string;
+	parentId: string | null;
 	body: string;
 	createdAt: Date;
 	updatedAt: Date;
+	resolvedAt: Date | null;
+	resolvedById: string | null;
 	author: {
 		id: string;
 		name: string;
@@ -41,7 +51,10 @@ const toCommentDto = (row: {
 	...row,
 	createdAt: row.createdAt.toISOString(),
 	updatedAt: row.updatedAt.toISOString(),
+	resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
 	attachments: [],
+	reactions: [],
+	mentions: [],
 });
 
 export const createCommentDao = (db: Database) => ({
@@ -78,8 +91,10 @@ export const createCommentDao = (db: Database) => ({
 			issueId: string;
 			authorId: string;
 			body: string;
+			parentId?: string | null;
 		},
 		activity?: ActivityInsert,
+		mentions?: { commentId: string; userId: string }[],
 	): Promise<CommentDto> => {
 		const statements = [db.insert(comments).values(data)] as [
 			BatchItem<"sqlite">,
@@ -87,6 +102,9 @@ export const createCommentDao = (db: Database) => ({
 		];
 		if (activity) {
 			statements.push(activityInsertStatement(db, [activity]));
+		}
+		if (mentions && mentions.length > 0) {
+			statements.push(commentMentionInsertStatement(db, mentions));
 		}
 		await db.batch(statements);
 		const created = await db
@@ -111,26 +129,38 @@ export const createCommentDao = (db: Database) => ({
 		return row ? toCommentDto(row) : null;
 	},
 
+	/**
+	 * Rewrites the body and, in the same batch, replaces the mention rows so
+	 * the stored mentions always match the current text.
+	 */
 	update: async (
 		orgId: string,
 		id: string,
 		body: string,
+		mentions?: { commentId: string; userId: string }[],
 	): Promise<CommentDto | null> => {
-		const rows = await db
-			.update(comments)
-			.set({ body })
-			.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-			.returning({ id: comments.id });
+		const statements = [
+			db
+				.update(comments)
+				.set({ body })
+				.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
+				.returning({ id: comments.id }),
+			commentMentionDeleteStatement(db, id),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+		if (mentions && mentions.length > 0) {
+			statements.push(commentMentionInsertStatement(db, mentions));
+		}
+		const [rows] = (await db.batch(statements)) as [{ id: string }[]];
 		if (rows.length === 0) {
 			return null;
 		}
-		return await db
+		const row = await db
 			.select(COMMENT_SELECT)
 			.from(comments)
 			.innerJoin(user, eq(user.id, comments.authorId))
 			.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-			.get()
-			.then((row) => (row ? toCommentDto(row) : null));
+			.get();
+		return row ? toCommentDto(row) : null;
 	},
 
 	delete: async (orgId: string, id: string): Promise<boolean> => {
@@ -139,6 +169,27 @@ export const createCommentDao = (db: Database) => ({
 			.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
 			.returning({ id: comments.id });
 		return rows.length > 0;
+	},
+
+	setResolution: async (
+		orgId: string,
+		id: string,
+		resolvedAt: Date | null,
+		resolvedById: string | null,
+		activity?: ActivityInsert,
+	): Promise<boolean> => {
+		const statements = [
+			db
+				.update(comments)
+				.set({ resolvedAt, resolvedById })
+				.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
+				.returning({ id: comments.id }),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+		if (activity) {
+			statements.push(activityInsertStatement(db, [activity]));
+		}
+		const [rows] = (await db.batch(statements)) as [{ id: string }[], unknown?];
+		return (rows?.length ?? 0) > 0;
 	},
 });
 

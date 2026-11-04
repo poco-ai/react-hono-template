@@ -1,3 +1,4 @@
+import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Table,
@@ -8,12 +9,30 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
-import { Check, Copy } from "lucide-react";
+import { AtSign, Check, Copy } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Components } from "react-markdown";
-import Markdown from "react-markdown";
+import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+	MENTION_HREF_PREFIX,
+	mentionUserIdFromHref,
+	renderMentionMarkup,
+} from "@/lib/mention";
+
+/** Rendered `@[Name](user:ID)` mentions — never a clickable external link. */
+function MentionLabel({ children }: { children: ReactNode }) {
+	return (
+		<Badge
+			variant="secondary"
+			className="mx-0.5 bg-primary/10 align-baseline text-primary"
+		>
+			<AtSign />
+			{children}
+		</Badge>
+	);
+}
 
 function CodeBlock({
 	children,
@@ -87,16 +106,26 @@ const components: Components = {
 		<ol className="mb-2 list-decimal pl-5 last:mb-0">{children}</ol>
 	),
 	li: ({ children }) => <li className="mb-0.5 last:mb-0">{children}</li>,
-	a: ({ href, children }) => (
-		<a
-			href={href}
-			target="_blank"
-			rel="noreferrer"
-			className="text-primary hover:underline"
-		>
-			{children}
-		</a>
-	),
+	a: ({ href, children }) => {
+		if (mentionUserIdFromHref(href)) {
+			return <MentionLabel>{children}</MentionLabel>;
+		}
+		// Unsafe schemes (including hand-written `user:` links) are stripped by
+		// the url transform; never render them as anchors.
+		if (!href) {
+			return <span className="font-medium">{children}</span>;
+		}
+		return (
+			<a
+				href={href}
+				target="_blank"
+				rel="noreferrer"
+				className="text-primary hover:underline"
+			>
+				{children}
+			</a>
+		);
+	},
 	blockquote: ({ children }) => (
 		<blockquote className="border-l-2 pl-3 italic">{children}</blockquote>
 	),
@@ -159,8 +188,14 @@ const components: Components = {
 export function MarkdownContent({ children }: { children: string }) {
 	return (
 		<div className="text-sm leading-relaxed break-words">
-			<Markdown remarkPlugins={[remarkGfm]} components={components}>
-				{children}
+			<Markdown
+				remarkPlugins={[remarkGfm]}
+				components={components}
+				urlTransform={(url) =>
+					url.startsWith(MENTION_HREF_PREFIX) ? url : defaultUrlTransform(url)
+				}
+			>
+				{renderMentionMarkup(children)}
 			</Markdown>
 		</div>
 	);

@@ -6,7 +6,11 @@ import {
 	uploadCommentAttachment,
 } from "../src/features/attachments/data";
 import { deleteAvatar, uploadAvatar } from "../src/features/auth/data";
-import { createComment } from "../src/features/comments/data";
+import {
+	createComment,
+	resolveComment,
+	toggleCommentReaction,
+} from "../src/features/comments/data";
 import { inviteMember } from "../src/features/members/data";
 import { uploadOrganizationLogo } from "../src/features/organizations/data";
 import { createProject, updateProject } from "../src/features/projects/data";
@@ -187,6 +191,47 @@ test("comment files are uploaded only after the comment exists", () =>
 				requests[3]?.url.pathname,
 				"/api/orgs/org/projects/project/issues/4/comments/comment-1/attachments",
 			);
+		},
+	));
+
+test("replies send their parent while top-level comments omit the field", () =>
+	withRequests(
+		() => ok({ id: "comment-1" }),
+		async (requests) => {
+			await createComment("org", "project", 4, "Top level");
+			await createComment("org", "project", 4, "A reply", "comment-1");
+			assert.deepEqual(requests[0].body, { body: "Top level" });
+			assert.deepEqual(requests[1].body, {
+				body: "A reply",
+				parentId: "comment-1",
+			});
+		},
+	));
+
+test("resolve and reaction mutations send only validated variables", () =>
+	withRequests(
+		() => ok({ commentId: "comment-1", reactions: [] }),
+		async (requests) => {
+			await resolveComment("org", "project", 4, {
+				commentId: "comment-1",
+				resolved: true,
+			});
+			await toggleCommentReaction("org", "project", 4, {
+				commentId: "comment-1",
+				emoji: "👍",
+			});
+			assert.equal(
+				requests[0].url.pathname,
+				"/api/orgs/org/projects/project/issues/4/comments/comment-1/resolve",
+			);
+			assert.equal(requests[0].method, "PUT");
+			assert.deepEqual(requests[0].body, { resolved: true });
+			assert.equal(
+				requests[1].url.pathname,
+				"/api/orgs/org/projects/project/issues/4/comments/comment-1/reactions",
+			);
+			assert.equal(requests[1].method, "POST");
+			assert.deepEqual(requests[1].body, { emoji: "👍" });
 		},
 	));
 

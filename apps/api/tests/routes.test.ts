@@ -227,6 +227,22 @@ test("freeze checks still allow reads and billing while blocking writes", async 
 			.status,
 		200,
 	);
+	// New collaboration writes are covered by the same org freeze guard.
+	for (const [path, method] of [
+		["/api/orgs/org/projects/p/issues/1/subscription", "PUT"],
+		["/api/orgs/org/projects/p/issues/1/comments/c/resolve", "PUT"],
+		["/api/orgs/org/projects/p/issues/1/comments/c/reactions", "POST"],
+	] as const) {
+		await expectError(
+			await app.request(path, {
+				method,
+				headers: { "content-type": "application/json" },
+				body: "{}",
+			}),
+			403,
+			"ORG_FROZEN",
+		);
+	}
 });
 
 test("resource routes retain organization and platform permission checks", async () => {

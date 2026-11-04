@@ -209,7 +209,17 @@ export const comments = sqliteTable(
 		authorId: text("author_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		// Replies are one level deep only: the parent must be a top-level
+		// comment (the service rejects replies to replies).
+		parentId: text("parent_id").references((): AnySQLiteColumn => comments.id, {
+			onDelete: "cascade",
+		}),
 		body: text("body").notNull(),
+		// Thread resolution (top-level comments only).
+		resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+		resolvedById: text("resolved_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
 		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
@@ -218,7 +228,10 @@ export const comments = sqliteTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 	},
-	(table) => [index("comments_issueId_idx").on(table.issueId)],
+	(table) => [
+		index("comments_issueId_idx").on(table.issueId),
+		index("comments_parentId_idx").on(table.parentId),
+	],
 );
 
 export const attachments = sqliteTable(
@@ -652,5 +665,122 @@ export const views = sqliteTable(
 		uniqueIndex("views_orgId_ownerId_default_uq")
 			.on(table.orgId, table.ownerId)
 			.where(sql`${table.isDefault} = 1`),
+	],
+);
+
+/**
+ * Who follows an issue and why. Automatic reasons are recorded when the event
+ * happens (creator/assignee/commenter/mention); `manual` comes from the
+ * subscription toggle. `muted` keeps the subscription but suppresses
+ * notifications.
+ */
+export const issueSubscriptions = sqliteTable(
+	"issue_subscriptions",
+	{
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		// creator | assignee | commenter | mention | manual
+		reason: text("reason").notNull().default("manual"),
+		muted: integer("muted", { mode: "boolean" }).notNull().default(false),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.issueId, table.userId] }),
+		index("issueSubscriptions_orgId_userId_idx").on(table.orgId, table.userId),
+		index("issueSubscriptions_issueId_idx").on(table.issueId),
+	],
+);
+
+/**
+ * Personal inbox. Notifications are owner-scoped: every read/write filters by
+ * both orgId and userId, so a notification id never leaks across users.
+ */
+export const notifications = sqliteTable(
+	"notifications",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		// issue_assigned | issue_status_changed | issue_commented |
+		// comment_reply | comment_mention | comment_resolved
+		type: text("type").notNull(),
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		commentId: text("comment_id").references(() => comments.id, {
+			onDelete: "set null",
+		}),
+		activityId: text("activity_id").references(() => activities.id, {
+			onDelete: "set null",
+		}),
+		actorId: text("actor_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		readAt: integer("read_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("notifications_userId_createdAt_idx").on(
+			table.userId,
+			sql`${table.createdAt} desc`,
+		),
+		index("notifications_userId_readAt_idx").on(table.userId, table.readAt),
+		index("notifications_orgId_userId_idx").on(table.orgId, table.userId),
+	],
+);
+
+/** One row per (comment, user, emoji); toggled by the reactions endpoint. */
+export const commentReactions = sqliteTable(
+	"comment_reactions",
+	{
+		commentId: text("comment_id")
+			.notNull()
+			.references(() => comments.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		emoji: text("emoji").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.commentId, table.userId, table.emoji] }),
+		index("commentReactions_commentId_idx").on(table.commentId),
+	],
+);
+
+/**
+ * Mentions resolved from `@[name](user:ID)` markup at write time. Only
+ * organization members are stored; unknown ids are ignored.
+ */
+export const commentMentions = sqliteTable(
+	"comment_mentions",
+	{
+		commentId: text("comment_id")
+			.notNull()
+			.references(() => comments.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		primaryKey({ columns: [table.commentId, table.userId] }),
+		index("commentMentions_userId_idx").on(table.userId),
 	],
 );

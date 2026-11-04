@@ -45,6 +45,8 @@ export function ActivitySentence({
 				return t("activity.fields.estimate");
 			case "parent":
 				return t("activity.fields.parent");
+			case "comment_resolved":
+				return t("activity.fields.commentResolved");
 			case "relation:blocks":
 				return t("activity.fields.relationBlocks");
 			case "relation:blocked_by":
@@ -117,6 +119,11 @@ export function ActivitySentence({
 			name,
 			filename: activity.newValue ?? "",
 		});
+	} else if (
+		activity.action === "issue.updated" &&
+		activity.field === "comment_resolved"
+	) {
+		sentence = t("activity.issue.commentResolved", { name });
 	} else if (activity.action === "issue.updated" && activity.field) {
 		const field = activity.field;
 		const relationType = field.startsWith("relation:")

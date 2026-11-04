@@ -18,6 +18,7 @@ import { createBillingRoutes } from "./routes/billing";
 import { createBootstrapRoutes } from "./routes/bootstrap";
 import { createCommentsRoutes } from "./routes/comments";
 import { createConfigRoutes } from "./routes/config";
+import { createIssueSubscriptionsRoutes } from "./routes/issue-subscriptions";
 import { createIssuesRoutes } from "./routes/issues";
 import { createLabelsRoutes } from "./routes/labels";
 import {
@@ -25,6 +26,7 @@ import {
 	createMeMediaRoutes,
 	createOrgLogoRoutes,
 } from "./routes/media";
+import { createNotificationsRoutes } from "./routes/notifications";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectsRoutes } from "./routes/projects";
 import { createRelationsRoutes } from "./routes/relations";
@@ -89,6 +91,16 @@ export const createRoutes = ({
 			.route("/", createMcpRoutes({ config: mcp }))
 			.route("/", createProjectsRoutes(dependencies.services.projectService))
 			.route("/", createIssuesRoutes(dependencies.services.issueService))
+			.route(
+				"/",
+				createIssueSubscriptionsRoutes(
+					dependencies.services.issueSubscriptionService,
+				),
+			)
+			.route(
+				"/",
+				createNotificationsRoutes(dependencies.services.notificationService),
+			)
 			.route("/", createRelationsRoutes(dependencies.services.relationService))
 			.route("/", createCommentsRoutes(dependencies.services.commentService))
 			.route(
