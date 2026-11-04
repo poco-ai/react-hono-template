@@ -37,7 +37,7 @@ import {
 	toProjectUpdateSummary,
 	toViewSummary,
 	viewSummarySchema,
-} from "./read";
+} from "./projections";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -47,7 +47,6 @@ import {
 const requireUserId = (ctx: CapabilityContext): string => {
 	if (!ctx.actor.userId) {
 		throw new ApiError(
-			403,
 			ApiErrorCode.FORBIDDEN,
 			"A signed-in user is required for this action.",
 		);

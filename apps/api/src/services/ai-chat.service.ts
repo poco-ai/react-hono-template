@@ -154,7 +154,6 @@ export const createAiChatService = ({
 		);
 		if (clientMessages.length === 0) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.AI_MESSAGE_INVALID,
 				"Chat messages are not valid UI messages.",
 			);
@@ -164,14 +163,12 @@ export const createAiChatService = ({
 		const providerInfo = provider.info;
 		if (!providerInfo.enabled || !settings.enabled) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.AI_DISABLED,
 				"AI is disabled for this organization.",
 			);
 		}
 		if (!providerInfo.configured) {
 			throw new ApiError(
-				503,
 				ApiErrorCode.AI_NOT_CONFIGURED,
 				"AI provider is not configured.",
 			);
@@ -251,11 +248,7 @@ export const createAiChatService = ({
 
 		const org = await organizationDao.findById(orgId);
 		if (!org) {
-			throw new ApiError(
-				404,
-				ApiErrorCode.NOT_FOUND,
-				"Organization not found.",
-			);
+			throw new ApiError(ApiErrorCode.NOT_FOUND, "Organization not found.");
 		}
 
 		const capabilityContext: CapabilityContext = {
@@ -289,7 +282,6 @@ export const createAiChatService = ({
 			});
 		} catch {
 			throw new ApiError(
-				400,
 				ApiErrorCode.AI_MESSAGE_INVALID,
 				"Chat messages are not valid UI messages.",
 			);
@@ -421,7 +413,38 @@ export const createAiChatService = ({
 		});
 	};
 
-	return { chat };
+	return {
+		chat,
+		/**
+		 * Aggregate view for the usage panel: the month summary, the plan
+		 * limits, provider info and the organization enablement.
+		 */
+		usageOverview: async (orgId: string) => {
+			const [summary, orgSettings] = await Promise.all([
+				usageService.monthSummary(orgId, await plans.getPlanForOrg(orgId)),
+				settingsService.get(orgId),
+			]);
+			return {
+				...summary,
+				provider: provider.info,
+				enabled: orgSettings.enabled,
+			};
+		},
+
+		/** Aggregate view for the settings panel (settings + usage + provider). */
+		settingsOverview: async (orgId: string) => {
+			const [orgSettings, summary] = await Promise.all([
+				settingsService.get(orgId),
+				usageService.monthSummary(orgId, await plans.getPlanForOrg(orgId)),
+			]);
+			return {
+				settings: orgSettings,
+				provider: provider.info,
+				usage: summary,
+				enabled: orgSettings.enabled,
+			};
+		},
+	};
 };
 
 export type AiChatService = ReturnType<typeof createAiChatService>;

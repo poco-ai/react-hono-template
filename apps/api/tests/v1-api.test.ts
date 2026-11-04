@@ -125,7 +125,6 @@ const setup = ({
 				},
 				getProject: async (_orgId: string, projectId: string) => {
 					throw new ApiError(
-						404,
 						ApiErrorCode.PROJECT_NOT_FOUND,
 						`Project ${projectId} not found`,
 					);

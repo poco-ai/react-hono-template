@@ -78,7 +78,15 @@ const appFor = (role: string) => {
 		"/",
 		createAiRoutes({
 			conversations: {} as AiConversationService,
-			chat: {} as AiChatService,
+			chat: {
+				settingsOverview: async () => ({
+					settings: await settings.get(ORG_ID),
+					provider: { kind: "mock" },
+					usage: {},
+					enabled: true,
+				}),
+				usageOverview: async () => ({}),
+			} as unknown as AiChatService,
 			usage: usageService(),
 			settings,
 			plans: {

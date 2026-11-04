@@ -17,7 +17,6 @@ const isAdmin = (role: string) => ADMIN_ROLES.has(role);
 const assertLayout = (layout: string) => {
 	if (!(ISSUE_QUERY_LAYOUTS as readonly string[]).includes(layout)) {
 		throw new ApiError(
-			400,
 			ApiErrorCode.VALIDATION,
 			`Layout must be one of ${ISSUE_QUERY_LAYOUTS.join(", ")}`,
 		);
@@ -31,7 +30,7 @@ export const createViewService = ({
 }: {
 	viewDao: ViewDao;
 	projectDao: Pick<ProjectDao, "findById">;
-	plans: Pick<PlanService, "getLimitsForOrg">;
+	plans: Pick<PlanService, "getLimitsForOrg" | "assertQuota">;
 }) => {
 	const assertProjectInOrg = async (
 		orgId: string,
@@ -43,7 +42,6 @@ export const createViewService = ({
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
@@ -57,7 +55,6 @@ export const createViewService = ({
 		const view = await viewDao.findById(orgId, viewId);
 		if (!view) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.VIEW_NOT_FOUND,
 				`View ${viewId} not found`,
 			);
@@ -79,13 +76,11 @@ export const createViewService = ({
 				return;
 			}
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"Only the owner or an organization owner/admin can modify a shared view",
 			);
 		}
 		throw new ApiError(
-			404,
 			ApiErrorCode.VIEW_NOT_FOUND,
 			`View ${view.id} not found`,
 		);
@@ -94,7 +89,6 @@ export const createViewService = ({
 	const assertShareAllowed = (role: string) => {
 		if (!isAdmin(role)) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"Only organization owners or admins can share views",
 			);
@@ -106,20 +100,17 @@ export const createViewService = ({
 	 * so turning a shared view back into a personal one (or creating one) must
 	 * go through the same check; otherwise the limit is trivially bypassed.
 	 */
-	const assertPersonalQuota = async (orgId: string, ownerId: string) => {
-		const limits = await plans.getLimitsForOrg(orgId);
-		if (limits.savedViews < 0) {
-			return;
-		}
-		const current = await viewDao.countPersonal(orgId, ownerId);
-		if (current >= limits.savedViews) {
-			throw new ApiError(
-				403,
-				ApiErrorCode.VIEW_LIMIT_REACHED,
-				`Your plan allows up to ${limits.savedViews} personal views. Upgrade to save more, or ask an owner/admin to share one.`,
-			);
-		}
-	};
+	const assertPersonalQuota = (orgId: string, ownerId: string) =>
+		plans.assertQuota(
+			orgId,
+			"savedViews",
+			() => viewDao.countPersonal(orgId, ownerId),
+			{
+				code: ApiErrorCode.VIEW_LIMIT_REACHED,
+				message: (_plan, limit) =>
+					`Your plan allows up to ${limit} personal views. Upgrade to save more, or ask an owner/admin to share one.`,
+			},
+		);
 
 	return {
 		listViews: async (
@@ -169,7 +160,6 @@ export const createViewService = ({
 			assertCanMutate(view, userId, role);
 			if (input.isDefault !== undefined && view.ownerId !== userId) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the view owner can change the default view",
 				);
@@ -205,7 +195,6 @@ export const createViewService = ({
 			});
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.VIEW_NOT_FOUND,
 					`View ${viewId} not found`,
 				);
@@ -223,13 +212,11 @@ export const createViewService = ({
 			if (view.ownerId !== userId) {
 				if (!view.shared) {
 					throw new ApiError(
-						404,
 						ApiErrorCode.VIEW_NOT_FOUND,
 						`View ${viewId} not found`,
 					);
 				}
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the view owner can change the default view",
 				);
@@ -242,7 +229,6 @@ export const createViewService = ({
 			);
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.VIEW_NOT_FOUND,
 					`View ${viewId} not found`,
 				);
@@ -260,13 +246,11 @@ export const createViewService = ({
 			if (view.ownerId !== userId) {
 				if (!view.shared) {
 					throw new ApiError(
-						404,
 						ApiErrorCode.VIEW_NOT_FOUND,
 						`View ${viewId} not found`,
 					);
 				}
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the view owner can change the default view",
 				);
@@ -285,7 +269,6 @@ export const createViewService = ({
 			const deleted = await viewDao.delete(orgId, view.id);
 			if (!deleted) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.VIEW_NOT_FOUND,
 					`View ${viewId} not found`,
 				);

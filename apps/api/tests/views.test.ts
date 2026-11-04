@@ -17,6 +17,7 @@ import {
 } from "../src/capabilities";
 import { createViewDao } from "../src/dao/view.dao";
 import type { Database as AppDatabase } from "../src/db/types";
+import type { PlanService } from "../src/services/plan.service";
 import {
 	createViewService,
 	type ViewService,
@@ -124,6 +125,25 @@ const setup = (options: { savedViews?: number } = {}) => {
 	const limits = {
 		savedViews: options.savedViews ?? PLANS.free.savedViews,
 	} as unknown as PlanLimits;
+	// Test double of PlanService.assertQuota driven by the mocked limits.
+	const assertQuota: PlanService["assertQuota"] = async (
+		_orgId,
+		kind,
+		count,
+		opts = {},
+	) => {
+		const limit = kind === "savedViews" ? limits.savedViews : PLANS.free[kind];
+		if (limit < 0) return;
+		const current = typeof count === "function" ? await count() : count;
+		if (current >= limit) {
+			throw new ApiError(
+				opts.code ?? ApiErrorCode.PLAN_LIMIT_EXCEEDED,
+				typeof opts.message === "function"
+					? opts.message("free", limit)
+					: (opts.message ?? "Plan limit reached"),
+			);
+		}
+	};
 	const service = createViewService({
 		viewDao,
 		projectDao: {
@@ -151,6 +171,7 @@ const setup = (options: { savedViews?: number } = {}) => {
 		},
 		plans: {
 			getLimitsForOrg: async () => limits,
+			assertQuota,
 		},
 	});
 	return { sqlite, viewDao, service, limits, db };

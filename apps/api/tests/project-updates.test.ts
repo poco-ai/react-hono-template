@@ -287,11 +287,11 @@ test("updateProject validates that the lead is an organization member", async ()
 			return { ...projectDto(), ...patch };
 		},
 	} as unknown as ProjectDao;
-	const service = createProjectService(
-		dao,
-		{} as PlanService,
-		{ findByOrgAndUser: async () => undefined } as never,
-	);
+	const service = createProjectService({
+		projectDao: dao,
+		plans: {} as PlanService,
+		memberDao: { findByOrgAndUser: async () => undefined } as never,
+	});
 	await assert.rejects(
 		service.updateProject(ORG, PROJECT, { leadId: "stranger" }),
 		isApiError(400, ApiErrorCode.VALIDATION),
@@ -318,11 +318,11 @@ test("updateProject persists lead, health and target date for members", async ()
 			};
 		},
 	} as unknown as ProjectDao;
-	const service = createProjectService(
-		dao,
-		{} as PlanService,
-		{ findByOrgAndUser: async () => ({ role: "member" }) } as never,
-	);
+	const service = createProjectService({
+		projectDao: dao,
+		plans: {} as PlanService,
+		memberDao: { findByOrgAndUser: async () => ({ role: "member" }) } as never,
+	});
 	const updated = await service.updateProject(ORG, PROJECT, {
 		leadId: "member-1",
 		health: "at_risk",

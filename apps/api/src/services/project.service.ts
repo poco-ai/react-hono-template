@@ -2,7 +2,6 @@ import {
 	ApiError,
 	ApiErrorCode,
 	type CreateProjectInput,
-	PLANS,
 	type UpdateProjectInput,
 } from "@workspace/shared";
 import type { MemberDao } from "../dao/member.dao";
@@ -10,18 +9,22 @@ import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
 import type { PlanService } from "./plan.service";
 
-export const createProjectService = (
-	dao: ProjectDao,
-	plans: PlanService,
-	memberDao: Pick<MemberDao, "findByOrgAndUser">,
-) => ({
+export const createProjectService = ({
+	projectDao,
+	plans,
+	memberDao,
+}: {
+	projectDao: ProjectDao;
+	plans: PlanService;
+	memberDao: Pick<MemberDao, "findByOrgAndUser">;
+}) => ({
 	listProjects: async (
 		orgId: string,
 		options?: { includeArchived?: boolean },
 	): Promise<ProjectWithStatsDto[]> => {
 		const [projects, counts] = await Promise.all([
-			dao.listByOrg(orgId, options),
-			dao.listIssueCountsByOrg(orgId),
+			projectDao.listByOrg(orgId, options),
+			projectDao.listIssueCountsByOrg(orgId),
 		]);
 		return projects.map((project) => ({
 			...project,
@@ -31,10 +34,9 @@ export const createProjectService = (
 	},
 
 	getProject: async (orgId: string, projectId: string): Promise<ProjectDto> => {
-		const project = await dao.findById(orgId, projectId);
+		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
@@ -46,23 +48,18 @@ export const createProjectService = (
 		orgId: string,
 		input: CreateProjectInput,
 	): Promise<ProjectDto> => {
-		const plan = await plans.getPlanForOrg(orgId);
-		plans.assertWithinLimit(
-			"projects",
-			await dao.countByOrg(orgId),
-			PLANS[plan].projects,
-			plan,
+		await plans.assertQuota(orgId, "projects", () =>
+			projectDao.countByOrg(orgId),
 		);
-		const existing = await dao.findByKey(orgId, input.key);
+		const existing = await projectDao.findByKey(orgId, input.key);
 		if (existing) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.PROJECT_KEY_TAKEN,
 				`Project key "${input.key}" is already used in this organization`,
 			);
 		}
 		try {
-			return await dao.create({
+			return await projectDao.create({
 				id: crypto.randomUUID(),
 				orgId,
 				name: input.name,
@@ -73,7 +70,6 @@ export const createProjectService = (
 		} catch (err) {
 			if (err instanceof Error && /unique constraint/i.test(err.message)) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.PROJECT_KEY_TAKEN,
 					`Project key "${input.key}" is already used in this organization`,
 				);
@@ -87,19 +83,17 @@ export const createProjectService = (
 		projectId: string,
 		input: UpdateProjectInput,
 	): Promise<ProjectDto> => {
-		const project = await dao.findById(orgId, projectId);
+		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
 		}
 		if (input.key && input.key !== project.key) {
-			const existing = await dao.findByKey(orgId, input.key);
+			const existing = await projectDao.findByKey(orgId, input.key);
 			if (existing && existing.id !== project.id) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.PROJECT_KEY_TAKEN,
 					`Project key "${input.key}" is already used in this organization`,
 				);
@@ -109,14 +103,13 @@ export const createProjectService = (
 			const member = await memberDao.findByOrgAndUser(orgId, input.leadId);
 			if (!member) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Project lead must be a member of this organization",
 				);
 			}
 		}
 		try {
-			const updated = await dao.update(orgId, projectId, {
+			const updated = await projectDao.update(orgId, projectId, {
 				name: input.name,
 				key: input.key,
 				description: "description" in input ? input.description : undefined,
@@ -133,7 +126,6 @@ export const createProjectService = (
 			});
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.PROJECT_NOT_FOUND,
 					`Project ${projectId} not found`,
 				);
@@ -142,7 +134,6 @@ export const createProjectService = (
 		} catch (err) {
 			if (err instanceof Error && /unique constraint/i.test(err.message)) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.PROJECT_KEY_TAKEN,
 					`Project key "${input.key}" is already used in this organization`,
 				);

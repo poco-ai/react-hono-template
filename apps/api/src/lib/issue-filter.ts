@@ -1,4 +1,6 @@
 import {
+	ApiError,
+	ApiErrorCode,
 	ISSUE_FILTER_MAX_LIST_LENGTH,
 	type IssueFilterField,
 	type IssueFilterNode,
@@ -104,8 +106,12 @@ const toMs = (value: IssueFilterScalar): number => {
 	}
 	const parsed = Date.parse(value);
 	if (Number.isNaN(parsed)) {
-		// Schema validation rejects this; the guard keeps the compiler total.
-		throw new Error(`Invalid date filter value: ${value}`);
+		// Schema validation rejects this first; the guard keeps the compiler
+		// total and maps to 400 should a caller ever bypass validation.
+		throw new ApiError(
+			ApiErrorCode.VALIDATION,
+			`Invalid date filter value: ${value}`,
+		);
 	}
 	return parsed;
 };

@@ -4,6 +4,7 @@ import type { CapabilityDeps, CapabilityEntry } from "./types";
 import { createWriteCapabilities } from "./write";
 
 export * from "./executor";
+export * from "./projections";
 export * from "./read";
 export * from "./types";
 export * from "./write";

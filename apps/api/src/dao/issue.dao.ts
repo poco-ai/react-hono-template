@@ -21,6 +21,7 @@ import type {
 	TriageIssueDto,
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 import { compileIssueFilter, issueSortOrderBy } from "../lib/issue-filter";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 import { deleteRelationsForIssueStatement } from "./relation.dao";
@@ -52,9 +53,6 @@ const requireStatus = (map: Map<string, StatusDto>, statusId: string) => {
 	}
 	return status;
 };
-
-const isConstraintViolation = (err: unknown) =>
-	err instanceof Error && /constraint failed/i.test(err.message);
 
 const MAX_INSERT_ATTEMPTS = 3;
 
@@ -219,7 +217,7 @@ export const createIssueDao = (db: Database) => {
 					return toIssueDto(inserted[0], toStatusDto(status));
 				} catch (err) {
 					lastError = err;
-					if (!isConstraintViolation(err)) {
+					if (!isUniqueConstraintViolation(err)) {
 						throw err;
 					}
 				}
@@ -286,7 +284,7 @@ export const createIssueDao = (db: Database) => {
 					return;
 				} catch (err) {
 					lastError = err;
-					if (!isConstraintViolation(err)) {
+					if (!isUniqueConstraintViolation(err)) {
 						throw err;
 					}
 				}

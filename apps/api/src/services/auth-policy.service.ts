@@ -16,7 +16,7 @@ export const createAuthPolicyService = ({
 		| "countByOrg"
 		| "countPendingInvitationsByOrg"
 	>;
-	plans: Pick<PlanService, "getPlanForOrg">;
+	plans: Pick<PlanService, "getPlanForOrg" | "assertQuota">;
 }) => ({
 	assertAdminUserMutation: async (
 		actorId: string,
@@ -25,18 +25,13 @@ export const createAuthPolicyService = ({
 	) => {
 		if (actorId === targetId)
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"You cannot change your own role or ban yourself",
 			);
 		if (action === "ban-user") {
 			const target = await adminUserDao.findById(targetId);
 			if (target?.role?.split(",").includes("admin"))
-				throw new ApiError(
-					403,
-					ApiErrorCode.FORBIDDEN,
-					"You cannot ban an admin",
-				);
+				throw new ApiError(ApiErrorCode.FORBIDDEN, "You cannot ban an admin");
 		}
 	},
 
@@ -48,7 +43,6 @@ export const createAuthPolicyService = ({
 		const plan = orgPlans.includes("pro") ? "pro" : "free";
 		if (orgPlans.length >= PLANS[plan].orgs) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.PLAN_LIMIT_EXCEEDED,
 				`Plan limit reached: the ${plan} plan allows belonging to ${PLANS[plan].orgs} organization(s). Upgrade to create more organizations.`,
 			);
@@ -60,29 +54,30 @@ export const createAuthPolicyService = ({
 			? await memberDao.findInvitationOrgId(invitationId)
 			: null;
 		if (!orgId) return;
-		const plan = await plans.getPlanForOrg(orgId);
-		const memberCount = await memberDao.countByOrg(orgId);
-		if (memberCount >= PLANS[plan].members) {
-			throw new ApiError(
-				403,
-				ApiErrorCode.PLAN_LIMIT_EXCEEDED,
-				`Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members and this organization is full.`,
-			);
-		}
+		await plans.assertQuota(
+			orgId,
+			"members",
+			() => memberDao.countByOrg(orgId),
+			{
+				message: (plan, limit) =>
+					`Plan limit reached: the ${plan} plan allows up to ${limit} members and this organization is full.`,
+			},
+		);
 	},
 
 	assertCanInviteMember: async (orgId: string) => {
-		const plan = await plans.getPlanForOrg(orgId);
-		const memberCount =
-			(await memberDao.countByOrg(orgId)) +
-			(await memberDao.countPendingInvitationsByOrg(orgId));
-		if (memberCount >= PLANS[plan].members) {
-			throw new ApiError(
-				403,
-				ApiErrorCode.PLAN_LIMIT_EXCEEDED,
-				`Plan limit reached: the ${plan} plan allows up to ${PLANS[plan].members} members (including pending invitations). Upgrade to invite more members.`,
-			);
-		}
+		// Seats include pending invitations so invites cannot reserve beyond the limit.
+		await plans.assertQuota(
+			orgId,
+			"members",
+			async () =>
+				(await memberDao.countByOrg(orgId)) +
+				(await memberDao.countPendingInvitationsByOrg(orgId)),
+			{
+				message: (plan, limit) =>
+					`Plan limit reached: the ${plan} plan allows up to ${limit} members (including pending invitations). Upgrade to invite more members.`,
+			},
+		);
 	},
 });
 

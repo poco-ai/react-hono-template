@@ -41,9 +41,7 @@ export const createAiRoutes = ({
 	const controller = createAiController({
 		conversations,
 		chat,
-		usage,
 		settings,
-		plans,
 		provider,
 	});
 

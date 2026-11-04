@@ -7,6 +7,7 @@ import {
 	type PlanName,
 } from "@workspace/shared";
 import { createAuthPolicyService } from "../src/services/auth-policy.service";
+import { type QuotaAssert, quotaAssertFor } from "../src/services/plan.service";
 
 const policyFor = ({
 	users = 1,
@@ -26,6 +27,8 @@ const policyFor = ({
 		},
 		plans: {
 			getPlanForOrg: async () => plan,
+			assertQuota: async (_orgId: string, ...args: Parameters<QuotaAssert>) =>
+				quotaAssertFor(plan)(...args),
 		},
 	});
 
@@ -111,7 +114,11 @@ test("auth admin endpoints preserve self-role and administrator-ban restrictions
 			countByOrg: async () => 0,
 			countPendingInvitationsByOrg: async () => 0,
 		},
-		plans: { getPlanForOrg: async () => "free" },
+		plans: {
+			getPlanForOrg: async () => "free",
+			assertQuota: async (_orgId: string, ...args: Parameters<QuotaAssert>) =>
+				quotaAssertFor("free")(...args),
+		},
 	});
 	await assert.rejects(
 		adminPolicy.assertAdminUserMutation("actor", "admin", "ban-user"),

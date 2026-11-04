@@ -15,9 +15,7 @@ import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import type { AiChatService } from "../services/ai-chat.service";
 import type { AiConversationService } from "../services/ai-conversation.service";
-import type { AiUsageService } from "../services/ai-usage.service";
 import type { OrgAiSettingsService } from "../services/org-ai-settings.service";
-import type { PlanService } from "../services/plan.service";
 
 type Env = SessionEnv & OrgEnv;
 
@@ -29,16 +27,12 @@ const localeFrom = (c: Context<Env>): "en" | "zh" =>
 export const createAiController = ({
 	conversations,
 	chat,
-	usage,
 	settings,
-	plans,
 	provider,
 }: {
 	conversations: AiConversationService;
 	chat: AiChatService;
-	usage: AiUsageService;
 	settings: OrgAiSettingsService;
-	plans: PlanService;
 	provider: AiProviderInfo;
 }) => ({
 	createConversation: async (
@@ -111,34 +105,11 @@ export const createAiController = ({
 			abortSignal: c.req.raw.signal,
 		}),
 
-	usage: async (c: Context<Env>) => {
-		const orgId = c.get("orgMember").orgId;
-		const plan = await plans.getPlanForOrg(orgId);
-		const [summary, orgSettings] = await Promise.all([
-			usage.monthSummary(orgId, plan),
-			settings.get(orgId),
-		]);
-		return ok(c, {
-			...summary,
-			provider,
-			enabled: orgSettings.enabled,
-		});
-	},
+	usage: async (c: Context<Env>) =>
+		ok(c, await chat.usageOverview(c.get("orgMember").orgId)),
 
-	getSettings: async (c: Context<Env>) => {
-		const orgId = c.get("orgMember").orgId;
-		const plan = await plans.getPlanForOrg(orgId);
-		const [orgSettings, summary] = await Promise.all([
-			settings.get(orgId),
-			usage.monthSummary(orgId, plan),
-		]);
-		return ok(c, {
-			settings: orgSettings,
-			provider,
-			usage: summary,
-			enabled: orgSettings.enabled,
-		});
-	},
+	getSettings: async (c: Context<Env>) =>
+		ok(c, await chat.settingsOverview(c.get("orgMember").orgId)),
 
 	updateSettings: async (c: Context<Env>, input: UpdateOrgAiSettingsInput) =>
 		ok(

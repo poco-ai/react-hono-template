@@ -5,6 +5,7 @@ import {
 	scopeSatisfies,
 } from "@workspace/shared";
 import type { MemberDao } from "../dao/member.dao";
+import { roleSatisfies } from "./access";
 import type {
 	CapabilityContext,
 	CapabilityEntry,
@@ -24,15 +25,6 @@ export type CapabilityMemberDao = Pick<
 	"findByOrgAndUser" | "isOrgFrozen"
 >;
 
-const roleSatisfies = (
-	role: string,
-	minRole: "owner" | "admin" | undefined,
-): boolean => {
-	if (!minRole) return true;
-	if (minRole === "owner") return role === "owner";
-	return role === "owner" || role === "admin";
-};
-
 const missingScopes = (
 	granted: readonly ApiKeyScope[],
 	required: readonly ApiKeyScope[],
@@ -40,7 +32,6 @@ const missingScopes = (
 
 const invalidInput = (name: string, message: string): never => {
 	throw new ApiError(
-		400,
 		ApiErrorCode.VALIDATION,
 		`Invalid input for capability "${name}": ${message}`,
 	);
@@ -72,7 +63,6 @@ export const createCapabilityExecutor = ({
 		const denied = missingScopes(ctx.actor.scopes, capability.scopes);
 		if (denied.length > 0) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.MCP_FORBIDDEN_SCOPE,
 				`This action requires the ${denied.join(", ")} API key scope.`,
 			);
@@ -81,7 +71,6 @@ export const createCapabilityExecutor = ({
 		const orgScoped = capability.orgScoped !== false;
 		if (orgScoped && !ctx.orgId) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.MCP_ORG_REQUIRED,
 				"This capability requires an organization context.",
 			);
@@ -96,7 +85,6 @@ export const createCapabilityExecutor = ({
 				);
 				if (!membership) {
 					throw new ApiError(
-						404,
 						ApiErrorCode.NOT_FOUND,
 						"Organization not found or you are not a member.",
 					);
@@ -106,7 +94,6 @@ export const createCapabilityExecutor = ({
 					!roleSatisfies(membership.role, capability.minOrgRole)
 				) {
 					throw new ApiError(
-						403,
 						ApiErrorCode.FORBIDDEN,
 						`This action requires the ${capability.minOrgRole} organization role.`,
 					);
@@ -119,7 +106,6 @@ export const createCapabilityExecutor = ({
 					!ctx.actor.scopes.includes("admin")
 				) {
 					throw new ApiError(
-						403,
 						ApiErrorCode.FORBIDDEN,
 						"This action requires a signed-in organization owner or admin.",
 					);
@@ -129,14 +115,12 @@ export const createCapabilityExecutor = ({
 			if (capability.effect !== "read") {
 				if (!ctx.canWrite) {
 					throw new ApiError(
-						403,
 						ApiErrorCode.FORBIDDEN,
 						"Writes are not allowed in this conversation.",
 					);
 				}
 				if (await memberDao.isOrgFrozen(orgId)) {
 					throw new ApiError(
-						403,
 						ApiErrorCode.ORG_FROZEN,
 						"Organization is frozen and cannot be modified.",
 					);
@@ -153,7 +137,6 @@ export const createCapabilityExecutor = ({
 		const capability = registry.get(name);
 		if (!capability) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.NOT_FOUND,
 				`Unknown capability "${name}".`,
 			);
@@ -183,7 +166,6 @@ export const createCapabilityExecutor = ({
 			}
 			console.error(`[capabilities] ${name} failed:`, err);
 			throw new ApiError(
-				500,
 				ApiErrorCode.AI_TOOL_FAILED,
 				`Capability "${name}" failed.`,
 			);
@@ -197,7 +179,6 @@ export const createCapabilityExecutor = ({
 					parsedOutput.error.message,
 				);
 				throw new ApiError(
-					500,
 					ApiErrorCode.AI_TOOL_FAILED,
 					`Capability "${name}" returned an invalid payload.`,
 				);

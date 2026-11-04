@@ -1,5 +1,4 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import type { ApiOk } from "@workspace/shared";
 import {
 	ApiError,
 	ApiErrorCode,
@@ -7,11 +6,10 @@ import {
 	scopeSatisfies,
 } from "@workspace/shared";
 import type { Context } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { z } from "zod";
 import type { Dependencies } from "../dependencies";
 import { backgroundFromContext } from "../lib/background";
-import { fail } from "../lib/response";
+import { createErrorHandler } from "../lib/on-error";
+import { fail, ok } from "../lib/response";
 import { formatZodError } from "../lib/validation";
 import {
 	type ApiKeyEnv,
@@ -37,9 +35,6 @@ type V1Env = {
 	Variables: ApiKeyEnv["Variables"];
 };
 
-const okV1 = <T, S extends 200 | 201>(c: Context<V1Env>, data: T, status: S) =>
-	c.json<ApiOk<T>, S>({ ok: true, data }, status);
-
 /**
  * Scope check for public API endpoints. Scopes are cumulative, so a `write`
  * key can also read and an `admin` key can do everything.
@@ -47,7 +42,6 @@ const okV1 = <T, S extends 200 | 201>(c: Context<V1Env>, data: T, status: S) =>
 const assertScope = (c: Context<V1Env>, scope: ApiKeyScope) => {
 	if (!scopeSatisfies(c.get("apiKeyAuth").scopes, scope)) {
 		throw new ApiError(
-			403,
 			ApiErrorCode.MCP_FORBIDDEN_SCOPE,
 			`This endpoint requires the ${scope} API key scope.`,
 		);
@@ -79,7 +73,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	app.openapi(listProjectsRoute, async (c) => {
 		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
-		return okV1(
+		return ok(
 			c,
 			await projectService.listProjects(orgId, { includeArchived: false }),
 			200,
@@ -89,7 +83,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	app.openapi(createProjectRoute, async (c) => {
 		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
-		return okV1(
+		return ok(
 			c,
 			await projectService.createProject(orgId, c.req.valid("json")),
 			201,
@@ -99,7 +93,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	app.openapi(getProjectRoute, async (c) => {
 		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
-		return okV1(
+		return ok(
 			c,
 			await projectService.getProject(orgId, c.req.param("projectId")),
 			200,
@@ -116,13 +110,13 @@ export const createV1App = (dependencies: Dependencies) => {
 			c.req.valid("json"),
 			backgroundFromContext(c),
 		);
-		return okV1(c, issue, 201);
+		return ok(c, issue, 201);
 	});
 
 	app.openapi(listIssuesRoute, async (c) => {
 		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
-		return okV1(
+		return ok(
 			c,
 			await issueService.listIssues(orgId, null, c.req.valid("query")),
 			200,
@@ -132,7 +126,7 @@ export const createV1App = (dependencies: Dependencies) => {
 	app.openapi(getIssueRoute, async (c) => {
 		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
-		return okV1(
+		return ok(
 			c,
 			await issueService.getIssueById(orgId, c.req.param("issueId")),
 			200,
@@ -142,42 +136,32 @@ export const createV1App = (dependencies: Dependencies) => {
 	app.openapi(updateIssueRoute, async (c) => {
 		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
-		const existing = await issueService.getIssueById(
+		const updated = await issueService.updateIssueById(
 			orgId,
 			c.req.param("issueId"),
-		);
-		const updated = await issueService.updateIssue(
-			orgId,
-			existing.projectId,
-			existing.number,
 			null,
 			c.req.valid("json"),
 			backgroundFromContext(c),
 		);
-		return okV1(c, updated, 200);
+		return ok(c, updated, 200);
 	});
 
 	app.openapi(deleteIssueRoute, async (c) => {
 		assertScope(c, "write");
 		const orgId = c.get("apiKeyAuth").orgId;
-		const existing = await issueService.getIssueById(
+		await issueService.deleteIssueById(
 			orgId,
 			c.req.param("issueId"),
-		);
-		await issueService.deleteIssue(
-			orgId,
-			existing.projectId,
-			existing.number,
 			null,
 			backgroundFromContext(c),
 		);
-		return okV1(c, { deleted: true }, 200);
+		return ok(c, { deleted: true }, 200);
 	});
 
 	app.openapi(listLabelsRoute, async (c) => {
 		assertScope(c, "read");
 		const orgId = c.get("apiKeyAuth").orgId;
-		return okV1(c, await labelService.listLabels(orgId), 200);
+		return ok(c, await labelService.listLabels(orgId), 200);
 	});
 
 	app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
@@ -198,16 +182,7 @@ export const createV1App = (dependencies: Dependencies) => {
 		security: [{ bearerAuth: [] }],
 	});
 
-	app.onError((err, c) => {
-		if (err instanceof ApiError) {
-			return fail(c, err.code, err.message, err.status as ContentfulStatusCode);
-		}
-		if (err instanceof z.ZodError) {
-			return fail(c, ApiErrorCode.VALIDATION, formatZodError(err), 400);
-		}
-		console.error("[v1] Unhandled error:", err);
-		return fail(c, ApiErrorCode.INTERNAL_ERROR, "Internal Server Error", 500);
-	});
+	app.onError(createErrorHandler("v1"));
 
 	return app;
 };

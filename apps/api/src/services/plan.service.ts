@@ -19,6 +19,14 @@ type PlanCacheEntry = {
 	fetchedAt: number;
 };
 
+/** Count quotas mirrored from `PLANS`; a `-1` limit means unlimited. */
+export type QuotaKind =
+	| "orgs"
+	| "members"
+	| "projects"
+	| "webhooks"
+	| "savedViews";
+
 const limitsFor = (plan: PlanName): PlanLimits => PLANS[plan];
 
 const isPlanName = (value: unknown): value is PlanName =>
@@ -30,15 +38,64 @@ export const planCacheKey = (orgId: string) =>
 export type PlanService = {
 	getPlanForOrg: (orgId: string) => Promise<PlanName>;
 	getLimitsForOrg: (orgId: string) => Promise<PlanLimits>;
-	assertWithinLimit: (
-		kind: string,
-		currentCount: number,
-		limit: number,
-		plan?: PlanName,
-		message?: string,
-	) => void;
+	/**
+	 * Asserts a count quota against the plan limit. `count` is only evaluated
+	 * when the plan actually limits the kind (-1 means unlimited), so
+	 * unmetered plans skip the counting query entirely. `message` may be a
+	 * string or a `(plan, limit)` function when the copy needs the numbers.
+	 */
+	assertQuota: (
+		orgId: string,
+		kind: QuotaKind,
+		count: number | (() => Promise<number>),
+		options?: {
+			code?: ApiErrorCode;
+			message?: string | ((plan: PlanName, limit: number) => string);
+			/** Copy used when the limit is 0 (the feature is Pro-only). */
+			zeroLimitMessage?: string;
+		},
+	) => Promise<void>;
 	invalidatePlanCache: (orgId: string) => Promise<void>;
 };
+
+export type QuotaAssert = (
+	kind: QuotaKind,
+	count: number | (() => Promise<number>),
+	options?: {
+		code?: ApiErrorCode;
+		message?: string | ((plan: PlanName, limit: number) => string);
+		/** Copy used when the limit is 0 (the feature is Pro-only). */
+		zeroLimitMessage?: string;
+	},
+) => Promise<void>;
+
+/**
+ * Pure quota assertion for a known plan — the single implementation shared by
+ * the service (which resolves the plan from the cache) and tests.
+ */
+export const quotaAssertFor =
+	(plan: PlanName): QuotaAssert =>
+	async (kind, count, options = {}) => {
+		const limit = limitsFor(plan)[kind];
+		if (limit < 0) {
+			return; // unlimited
+		}
+		const current = typeof count === "function" ? await count() : count;
+		if (current < limit) {
+			return;
+		}
+		const message =
+			limit === 0 && options.zeroLimitMessage
+				? options.zeroLimitMessage
+				: typeof options.message === "function"
+					? options.message(plan, limit)
+					: (options.message ??
+						`Plan limit reached: the ${plan} plan allows up to ${limit} ${kind}. Upgrade to increase this limit.`);
+		throw new ApiError(
+			options.code ?? ApiErrorCode.PLAN_LIMIT_EXCEEDED,
+			message,
+		);
+	};
 
 export const createPlanService = (
 	billingDao: BillingDao,
@@ -80,16 +137,8 @@ export const createPlanService = (
 		getPlanForOrg,
 		getLimitsForOrg: async (orgId) => limitsFor(await getPlanForOrg(orgId)),
 
-		assertWithinLimit: (kind, currentCount, limit, plan = "free", message) => {
-			if (currentCount >= limit) {
-				throw new ApiError(
-					403,
-					ApiErrorCode.PLAN_LIMIT_EXCEEDED,
-					message ??
-						`Plan limit reached: the ${plan} plan allows up to ${limit} ${kind}. Upgrade to increase this limit.`,
-				);
-			}
-		},
+		assertQuota: async (orgId, kind, count, options) =>
+			quotaAssertFor(await getPlanForOrg(orgId))(kind, count, options),
 
 		invalidatePlanCache: async (orgId) => {
 			planCache.delete(orgId);

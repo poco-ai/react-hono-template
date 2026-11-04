@@ -191,11 +191,11 @@ export const createDependencies = ({
 		deliveries: webhookDeliveryService,
 	});
 
-	const projectService = createProjectService(
+	const projectService = createProjectService({
 		projectDao,
-		planService,
+		plans: planService,
 		memberDao,
-	);
+	});
 	const projectUpdateService = createProjectUpdateService({
 		updateDao: projectUpdateDao,
 		projectDao,

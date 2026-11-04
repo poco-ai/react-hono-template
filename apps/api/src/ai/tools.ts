@@ -1,16 +1,8 @@
 import { scopeSatisfies } from "@workspace/shared";
 import { type ToolSet, tool } from "ai";
+import { roleSatisfies } from "../capabilities/access";
 import type { CapabilityExecutor } from "../capabilities/executor";
 import type { CapabilityContext, CapabilityEntry } from "../capabilities/types";
-
-const roleSatisfies = (
-	role: string | undefined,
-	minRole: "owner" | "admin" | undefined,
-): boolean => {
-	if (!minRole) return true;
-	if (minRole === "owner") return role === "owner";
-	return role === "owner" || role === "admin";
-};
 
 /** Capabilities the chat actor may invoke, before the executor re-checks. */
 export const filterChatCapabilities = (
