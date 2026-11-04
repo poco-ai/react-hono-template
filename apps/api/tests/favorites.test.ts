@@ -355,6 +355,62 @@ test("list_favorites is registered as a read capability", () => {
 	assert.equal(entry?.orgScoped, undefined);
 });
 
+test("hydrating 150+ favorites chunks id lookups under D1's limit", async () => {
+	const { sqlite, favoriteService } = setup();
+	const issueCount = 150;
+	const projectCount = 120;
+	for (let index = 0; index < issueCount; index++) {
+		sqlite.run(
+			"INSERT INTO issues (id, org_id, project_id, number, title, status_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 's-backlog', 0, 0)",
+			`fi-${index}`,
+			ORG,
+			PROJECT,
+			100 + index,
+			`Favorite issue ${index}`,
+		);
+		sqlite.run(
+			"INSERT INTO favorites (id, org_id, user_id, entity_type, entity_id, created_at) VALUES (?, ?, ?, 'issue', ?, 0)",
+			`f-issue-${index}`,
+			ORG,
+			USER,
+			`fi-${index}`,
+		);
+	}
+	for (let index = 0; index < projectCount; index++) {
+		sqlite.run(
+			"INSERT INTO projects (id, org_id, name, key, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 0)",
+			`fp-${index}`,
+			ORG,
+			`Favorite project ${index}`,
+			`FP${index}`,
+		);
+		sqlite.run(
+			"INSERT INTO favorites (id, org_id, user_id, entity_type, entity_id, created_at) VALUES (?, ?, ?, 'project', ?, 0)",
+			`f-project-${index}`,
+			ORG,
+			USER,
+			`fp-${index}`,
+		);
+	}
+
+	const list = await favoriteService.listFavorites(ORG, USER);
+	assert.equal(list.length, issueCount + projectCount);
+	assert.equal(
+		list.filter((item) => item.entityType === "issue").length,
+		issueCount,
+	);
+	assert.equal(
+		list.filter((item) => item.entityType === "project").length,
+		projectCount,
+	);
+	// Issue favorites still resolve their project key.
+	assert.ok(
+		list.every(
+			(item) => item.entityType !== "issue" || item.issue?.projectKey === "WEB",
+		),
+	);
+});
+
 // ---------------------------------------------------------------------------
 // Route middleware: org scoping and freeze handling
 // ---------------------------------------------------------------------------

@@ -365,17 +365,23 @@ const en = {
 			list_views: { title: "List saved views" },
 			get_issue_activity: { title: "Get issue activity" },
 			get_org_activity: { title: "Get organization activity" },
+			list_cycles: { title: "List cycles" },
+			list_project_updates: { title: "List project updates" },
 			create_issue: { title: "Create issue" },
 			update_issue: { title: "Update issue" },
 			delete_issue: { title: "Delete issue" },
 			create_comment: { title: "Create comment" },
 			update_comment: { title: "Update comment" },
 			delete_comment: { title: "Delete comment" },
+			resolve_comment: { title: "Resolve comment thread" },
+			toggle_comment_reaction: { title: "Toggle comment reaction" },
 			create_project: { title: "Create project" },
 			create_label: { title: "Create label" },
 			update_label: { title: "Update label" },
 			delete_label: { title: "Delete label" },
 			create_view: { title: "Create saved view" },
+			create_cycle: { title: "Create cycle" },
+			create_project_update: { title: "Post project update" },
 			list_favorites: { title: "List favorites" },
 			list_issue_templates: { title: "List issue templates" },
 			list_recurrences: { title: "List recurring issues" },
@@ -503,6 +509,8 @@ const en = {
 			ISSUE_RELATION_EXISTS: "These issues are already linked this way.",
 			ISSUE_RELATION_CYCLE:
 				"Blocking relations cannot form a cycle. Remove or change one of the blocking links first.",
+			PROJECT_ARCHIVED:
+				"This project is archived and read-only. Restore it from project settings to make changes.",
 			CYCLE_OVERLAP:
 				"These dates overlap with another cycle. Choose a range that doesn't overlap.",
 			CYCLE_RANGE_INVALID:

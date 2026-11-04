@@ -448,6 +448,28 @@ test("list_issues and search_issues forward filter, sorts and grouping", async (
 	);
 });
 
+test("list_issues documents its filters, sorting, grouping and archive rules", () => {
+	const [entry] = createCapabilityRegistry(setup().deps).filter(
+		(capability) => capability.name === "list_issues",
+	);
+	assert.ok(entry);
+	for (const token of [
+		"filter",
+		"sort",
+		"groupBy",
+		"includeArchived",
+		"cycleId",
+		"archived",
+	]) {
+		assert.ok(
+			entry.description.includes(token),
+			`description should mention ${token}`,
+		);
+	}
+	// Archived issues remain editable; the description must not claim otherwise.
+	assert.equal(entry.description.includes("read-only"), false);
+});
+
 test("issue summaries expose archivedAt so tools can spot archived issues", async () => {
 	const active = createCapabilityLayer(setup().deps);
 	const activeResult = await active.execute<{

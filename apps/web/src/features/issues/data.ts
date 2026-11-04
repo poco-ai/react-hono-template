@@ -342,6 +342,10 @@ export const deleteIssueRelation = (
 
 export type { ListIssuesDto };
 
+/** Triage queue root; owned here so issue writes can invalidate it without an import cycle. */
+export const triageRootKey = (orgId: string) =>
+	["orgs", orgId, "triage"] as const;
+
 export const invalidateIssueQueries = (
 	queryClient: QueryClient,
 	orgId: string,
@@ -353,6 +357,9 @@ export const invalidateIssueQueries = (
 		// Issue writes change roadmap progress (open/total counts) and
 		// archive/restore hides or reveals timeline entries.
 		queryClient.invalidateQueries({ queryKey: roadmapRootKey(orgId) }),
+		// The triage queue filters on backlog-category issues without an
+		// assignee, so status/assignee/archive writes add or remove rows.
+		queryClient.invalidateQueries({ queryKey: triageRootKey(orgId) }),
 		// Favorite rows are hydrated with issue titles/status, and archived or
 		// deleted issues are dropped from that list by the API.
 		invalidateFavoriteQueries(queryClient, orgId),

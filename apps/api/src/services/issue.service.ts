@@ -124,7 +124,7 @@ export const computeIssueDiff = (
 	if (
 		"assigneeId" in input &&
 		input.assigneeId !== undefined &&
-		input.assigneeId !== (current.assigneeId ?? "")
+		(input.assigneeId ?? null) !== current.assigneeId
 	) {
 		diffs.push({
 			field: "assigneeId",

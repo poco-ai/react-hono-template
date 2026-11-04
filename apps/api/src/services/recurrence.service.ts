@@ -331,7 +331,7 @@ export const createRecurrenceService = ({
 					"nextRunAt must be in the future",
 				);
 			}
-			const updated = await recurrenceDao.update(orgId, projectId, id, {
+			const patch = {
 				cadence: input.cadence,
 				active: input.active,
 				nextRunAt: input.nextRunAt ? new Date(input.nextRunAt) : undefined,
@@ -339,7 +339,13 @@ export const createRecurrenceService = ({
 				anchorDay: input.nextRunAt
 					? new Date(input.nextRunAt).getUTCDate()
 					: undefined,
-			});
+			};
+			// An empty PATCH is a no-op, not a missing row: return the current
+			// recurrence instead of letting the DAO answer null (404).
+			if (Object.values(patch).every((value) => value === undefined)) {
+				return recurrence;
+			}
+			const updated = await recurrenceDao.update(orgId, projectId, id, patch);
 			if (!updated) {
 				throw new ApiError(
 					404,

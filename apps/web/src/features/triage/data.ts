@@ -12,6 +12,7 @@ import {
 	BULK_PARTIAL_FAILURE,
 	invalidateIssueQueries,
 	issueDetailRootKey,
+	triageRootKey,
 	updateIssue,
 } from "@/features/issues/data";
 import { client, unwrap } from "@/lib/api";
@@ -40,11 +41,12 @@ export const resolveTriageProjectFilter = (
 		? search.projectId
 		: undefined;
 
-export const triageRootKey = (orgId: string) =>
-	["orgs", orgId, "triage"] as const;
-
 export const triageKey = (orgId: string, projectId?: string) =>
 	[...triageRootKey(orgId), projectId ?? "all"] as const;
+
+// The root key lives in features/issues/data because issue writes invalidate
+// the queue; re-export it here so triage consumers keep one entry point.
+export { triageRootKey };
 
 /**
  * Triage queue: backlog-category issues without an assignee, newest first and

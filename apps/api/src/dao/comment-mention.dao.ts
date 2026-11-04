@@ -38,11 +38,32 @@ export const createCommentMentionDao = (db: Database) => ({
 	},
 });
 
-export const commentMentionInsertStatement = (
+/**
+ * D1 caps bound parameters per statement (~100). A mention row binds 2
+ * columns, so 25 rows (50 params) stay safely under the limit while the
+ * chunks still ride in the caller's single `db.batch` transaction.
+ */
+export const COMMENT_MENTION_INSERT_CHUNK = 25;
+
+export const commentMentionInsertStatements = (
 	db: Database,
 	rows: { commentId: string; userId: string }[],
-): BatchItem<"sqlite"> =>
-	db.insert(commentMentions).values(rows).onConflictDoNothing();
+): BatchItem<"sqlite">[] => {
+	const statements: BatchItem<"sqlite">[] = [];
+	for (
+		let start = 0;
+		start < rows.length;
+		start += COMMENT_MENTION_INSERT_CHUNK
+	) {
+		statements.push(
+			db
+				.insert(commentMentions)
+				.values(rows.slice(start, start + COMMENT_MENTION_INSERT_CHUNK))
+				.onConflictDoNothing(),
+		);
+	}
+	return statements;
+};
 
 /** Clears one comment's mentions; used when an edit rewrites the body. */
 export const commentMentionDeleteStatement = (

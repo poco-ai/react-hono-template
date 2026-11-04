@@ -191,6 +191,29 @@ test("creating an update requires an existing project", async () => {
 	);
 });
 
+test("archived projects reject creating, editing and deleting updates", async () => {
+	const { service, created, patches, deleted } = updateServiceFor({
+		project: { ...projectDto(), archived: true },
+	});
+	const archived = isApiError(409, ApiErrorCode.PROJECT_ARCHIVED);
+	const actor = { userId: "author-1", role: "member" };
+	await assert.rejects(
+		service.createUpdate(ORG, PROJECT, "author-1", { body: "On track" }),
+		archived,
+	);
+	await assert.rejects(
+		service.updateUpdate(ORG, PROJECT, "update-1", actor, { body: "Edited" }),
+		archived,
+	);
+	await assert.rejects(
+		service.deleteUpdate(ORG, PROJECT, "update-1", actor),
+		archived,
+	);
+	assert.equal(created.length, 0);
+	assert.equal(patches.length, 0);
+	assert.equal(deleted.length, 0);
+});
+
 test("only the author or an org admin/owner can edit or delete an update", async () => {
 	const other = updateServiceFor();
 	await assert.rejects(

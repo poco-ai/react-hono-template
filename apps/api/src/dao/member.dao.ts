@@ -98,13 +98,24 @@ export const createMemberDao = (db: Database) => ({
 		if (userIds.length === 0) {
 			return [];
 		}
-		const rows = await db
-			.select({ userId: member.userId })
-			.from(member)
-			.where(
-				and(eq(member.organizationId, orgId), inArray(member.userId, userIds)),
-			);
-		return rows.map((row) => row.userId);
+		const found: string[] = [];
+		// D1 caps bound parameters per statement (~100); 2 params per row, so
+		// query in chunks of 50 to stay far below the limit.
+		for (let start = 0; start < userIds.length; start += 50) {
+			const rows = await db
+				.select({ userId: member.userId })
+				.from(member)
+				.where(
+					and(
+						eq(member.organizationId, orgId),
+						inArray(member.userId, userIds.slice(start, start + 50)),
+					),
+				);
+			for (const row of rows) {
+				found.push(row.userId);
+			}
+		}
+		return found;
 	},
 
 	countByOrg: async (orgId: string): Promise<number> => {

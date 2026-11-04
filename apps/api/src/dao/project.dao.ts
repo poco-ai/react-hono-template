@@ -45,10 +45,22 @@ export const createProjectDao = (db: Database) => ({
 		if (ids.length === 0) {
 			return [];
 		}
-		const rows = await db
-			.select()
-			.from(projects)
-			.where(and(eq(projects.orgId, orgId), inArray(projects.id, ids)));
+		// D1 caps bound parameters per statement (~100); chunk large id lists
+		// (e.g. hundreds of favorites) to avoid an overflow error.
+		const rows: (typeof projects.$inferSelect)[] = [];
+		for (let start = 0; start < ids.length; start += 50) {
+			rows.push(
+				...(await db
+					.select()
+					.from(projects)
+					.where(
+						and(
+							eq(projects.orgId, orgId),
+							inArray(projects.id, ids.slice(start, start + 50)),
+						),
+					)),
+			);
+		}
 		return rows.map(toProjectDto);
 	},
 

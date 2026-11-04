@@ -68,6 +68,9 @@ const ISSUE_INSERT_CHUNK = 6;
 const LABEL_LINK_INSERT_CHUNK = 40;
 const ACTIVITY_INSERT_CHUNK = 8;
 
+/** `inArray` id lookups bind one param per id; 50 stays well under D1's ~100. */
+const IDS_QUERY_CHUNK = 50;
+
 /**
  * Upper bound for the serialized SQL payload of one bulk statement. D1 rejects
  * oversized statements; a single 20k-character description per row means the
@@ -374,17 +377,30 @@ export const createIssueDao = (db: Database) => {
 			if (ids.length === 0) {
 				return [];
 			}
+			// D1 caps bound parameters per statement (~100): query in chunks so
+			// large favorite/relation hydration never overflows.
 			const [rows, statusRows] = await Promise.all([
-				db
-					.select()
-					.from(issues)
-					.where(
-						and(
-							eq(issues.orgId, orgId),
-							inArray(issues.id, ids),
-							isNull(issues.deletedAt),
-						),
-					),
+				(async () => {
+					const found: IssueRow[] = [];
+					for (let start = 0; start < ids.length; start += IDS_QUERY_CHUNK) {
+						found.push(
+							...(await db
+								.select()
+								.from(issues)
+								.where(
+									and(
+										eq(issues.orgId, orgId),
+										inArray(
+											issues.id,
+											ids.slice(start, start + IDS_QUERY_CHUNK),
+										),
+										isNull(issues.deletedAt),
+									),
+								)),
+						);
+					}
+					return found;
+				})(),
 				db.select().from(issueStatuses).where(eq(issueStatuses.orgId, orgId)),
 			]);
 			const statusById = new Map(
@@ -503,6 +519,21 @@ export const createIssueDao = (db: Database) => {
 			}
 			if (query.projectId) {
 				conditions.push(eq(issues.projectId, query.projectId));
+			}
+			// Organization-wide lists hide issues of archived projects; a
+			// project-scoped list keeps showing them for that project.
+			if (!projectId && !query.projectId) {
+				conditions.push(
+					inArray(
+						issues.projectId,
+						db
+							.select({ id: projects.id })
+							.from(projects)
+							.where(
+								and(eq(projects.orgId, orgId), eq(projects.archived, false)),
+							),
+					),
+				);
 			}
 			if (query.cycleId) {
 				conditions.push(eq(issues.cycleId, query.cycleId));

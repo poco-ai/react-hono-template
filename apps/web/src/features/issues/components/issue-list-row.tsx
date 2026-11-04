@@ -9,6 +9,7 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -173,16 +174,18 @@ export function IssueListRow({
 							}
 						/>
 						<DropdownMenuContent align="start">
-							<DropdownMenuLabel>{t("issues.status")}</DropdownMenuLabel>
-							{statuses.map((status) => (
-								<DropdownMenuItem
-									key={status.id}
-									disabled={status.id === issue.statusId}
-									onClick={() => commit({ statusId: status.id })}
-								>
-									<StatusBadge status={status} />
-								</DropdownMenuItem>
-							))}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>{t("issues.status")}</DropdownMenuLabel>
+								{statuses.map((status) => (
+									<DropdownMenuItem
+										key={status.id}
+										disabled={status.id === issue.statusId}
+										onClick={() => commit({ statusId: status.id })}
+									>
+										<StatusBadge status={status} />
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				);
@@ -203,16 +206,18 @@ export function IssueListRow({
 							}
 						/>
 						<DropdownMenuContent align="start">
-							<DropdownMenuLabel>{t("issues.priority")}</DropdownMenuLabel>
-							{ISSUE_PRIORITIES.map(({ value }) => (
-								<DropdownMenuItem
-									key={value}
-									disabled={value === issue.priority}
-									onClick={() => commit({ priority: value })}
-								>
-									<PriorityBadge value={value} />
-								</DropdownMenuItem>
-							))}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>{t("issues.priority")}</DropdownMenuLabel>
+								{ISSUE_PRIORITIES.map(({ value }) => (
+									<DropdownMenuItem
+										key={value}
+										disabled={value === issue.priority}
+										onClick={() => commit({ priority: value })}
+									>
+										<PriorityBadge value={value} />
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				);
@@ -247,13 +252,15 @@ export function IssueListRow({
 							}
 						/>
 						<DropdownMenuContent align="start" className="min-w-44">
-							<DropdownMenuLabel>{t("issues.assignee")}</DropdownMenuLabel>
-							<DropdownMenuItem
-								disabled={issue.assigneeId === null}
-								onClick={() => commit({ assigneeId: null })}
-							>
-								{t("common.unassigned")}
-							</DropdownMenuItem>
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>{t("issues.assignee")}</DropdownMenuLabel>
+								<DropdownMenuItem
+									disabled={issue.assigneeId === null}
+									onClick={() => commit({ assigneeId: null })}
+								>
+									{t("common.unassigned")}
+								</DropdownMenuItem>
+							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							{members.map((member) => (
 								<DropdownMenuItem
@@ -411,9 +418,11 @@ export function IssueListRow({
 							}
 						/>
 						<DropdownMenuContent align="end" className="min-w-44">
-							<DropdownMenuLabel>
-								{projectKey}-{issue.number}
-							</DropdownMenuLabel>
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>
+									{projectKey}-{issue.number}
+								</DropdownMenuLabel>
+							</DropdownMenuGroup>
 							<DropdownMenuSub>
 								<DropdownMenuSubTrigger disabled={frozen}>
 									{t("bulk.changeStatus")}

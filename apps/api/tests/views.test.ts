@@ -482,6 +482,40 @@ test("the free plan caps personal views but not shared ones", async () => {
 	assert.equal((await proService.listViews(ORG_ID, USER_ID)).length, 5);
 });
 
+test("turning a shared view back into a personal one respects the quota", async () => {
+	const { service } = setup({ savedViews: 1 });
+	const shared = await service.createView(
+		ORG_ID,
+		USER_ID,
+		"owner",
+		createInput({ name: "Team triage", shared: true }),
+	);
+	// Fill the single personal slot.
+	await service.createView(
+		ORG_ID,
+		USER_ID,
+		"owner",
+		createInput({ name: "Mine" }),
+	);
+
+	await assert.rejects(
+		service.updateView(ORG_ID, USER_ID, "owner", shared.id, { shared: false }),
+		isViewError(403, ApiErrorCode.VIEW_LIMIT_REACHED),
+	);
+	// Editing without un-sharing is unaffected.
+	const renamed = await service.updateView(
+		ORG_ID,
+		USER_ID,
+		"owner",
+		shared.id,
+		{
+			name: "Team triage v2",
+		},
+	);
+	assert.equal(renamed.name, "Team triage v2");
+	assert.equal(renamed.shared, true);
+});
+
 test("views expose capabilities with scope and role enforcement", async () => {
 	const { service } = setup();
 	const deps = capabilityDeps(service);

@@ -127,7 +127,7 @@ export const issueSummarySchema = z.object({
 	labelIds: z.array(z.string()),
 	parentId: z.string().nullable(),
 	cycleId: z.string().nullable(),
-	/** Set while archived; archived issues are read-only and hidden from lists. */
+	/** Set while archived; archived issues stay editable but are hidden from lists. */
 	archivedAt: z.string().nullable().optional(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
@@ -644,7 +644,7 @@ const buildListIssuesCapability = (deps: CapabilityDeps) =>
 		name: "list_issues",
 		titleKey: "ai.capabilities.list_issues.title",
 		description:
-			"List issues in the organization, optionally filtered by project, workflow status (statusId; the legacy status name is also accepted), priority, assignee, label or free-text search. Returns paginated results newest first.",
+			'List issues in the organization or one project, paginated and newest first. Filters: projectId, statusId (workflow status; the legacy status name is also accepted), priority, assigneeId (or "none" for unassigned), labelId, cycleId, free-text search, and a structured filter tree (AND-combined with the flat filters; same fields as views). sort accepts updated/created/priority or up to three {field, direction} keys; groupBy (status/assignee/priority/label) is a client presentation hint and rows stay flat. Archived issues are hidden unless includeArchived is true, and organization-wide lists hide issues of archived projects.',
 		input: listIssuesInputSchema,
 		output: issuesOutputSchema,
 		effect: "read",

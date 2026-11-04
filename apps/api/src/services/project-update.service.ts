@@ -41,6 +41,19 @@ export const createProjectUpdateService = ({
 		return project;
 	};
 
+	/** Archived projects are read-only: updates cannot be posted or changed. */
+	const requireWritableProject = async (orgId: string, projectId: string) => {
+		const project = await requireProject(orgId, projectId);
+		if (project.archived) {
+			throw new ApiError(
+				409,
+				ApiErrorCode.PROJECT_ARCHIVED,
+				"Project is archived and read-only",
+			);
+		}
+		return project;
+	};
+
 	const requireUpdate = async (
 		orgId: string,
 		projectId: string,
@@ -86,7 +99,7 @@ export const createProjectUpdateService = ({
 			userId: string | null,
 			input: CreateProjectUpdateInput,
 		): Promise<ProjectUpdateDto> => {
-			await requireProject(orgId, projectId);
+			await requireWritableProject(orgId, projectId);
 			return updateDao.create({
 				id: crypto.randomUUID(),
 				orgId,
@@ -104,6 +117,7 @@ export const createProjectUpdateService = ({
 			actor: { userId: string; role: string },
 			input: UpdateProjectUpdateInput,
 		): Promise<ProjectUpdateDto> => {
+			await requireWritableProject(orgId, projectId);
 			const update = await requireUpdate(orgId, projectId, updateId);
 			assertCanManage(update, actor);
 			const updated = await updateDao.update(orgId, projectId, update.id, {
@@ -122,6 +136,7 @@ export const createProjectUpdateService = ({
 			updateId: string,
 			actor: { userId: string; role: string },
 		): Promise<void> => {
+			await requireWritableProject(orgId, projectId);
 			const update = await requireUpdate(orgId, projectId, updateId);
 			assertCanManage(update, actor);
 			const deleted = await updateDao.delete(orgId, projectId, update.id);

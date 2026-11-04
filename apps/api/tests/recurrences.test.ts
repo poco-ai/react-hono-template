@@ -418,6 +418,25 @@ test("not-yet-due and paused recurrences are skipped", async () => {
 	);
 });
 
+test("an empty recurrence PATCH returns the current row instead of 404", async () => {
+	const { service } = setup();
+	const recurrence = await createRecurrence(service, {
+		title: "No-op patch",
+		cadence: "weekly",
+		nextRunAt: "2026-06-02T00:00:00.000Z",
+	});
+	const unchanged = await service.updateRecurrence(
+		ORG,
+		PROJECT,
+		recurrence.id,
+		{},
+	);
+	assert.equal(unchanged.id, recurrence.id);
+	assert.equal(unchanged.title, recurrence.title);
+	assert.equal(unchanged.nextRunAt, recurrence.nextRunAt);
+	assert.equal(unchanged.cadence, "weekly");
+});
+
 test("claim is compare-and-set so concurrent workers create one issue", async () => {
 	const { service, recurrenceDao, sqlite } = setup();
 	const recurrence = await createRecurrence(service, {

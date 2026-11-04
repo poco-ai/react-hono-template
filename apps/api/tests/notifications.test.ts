@@ -5,11 +5,15 @@ import {
 	ApiError,
 	ApiErrorCode,
 	commentReactionSchema,
+	MAX_COMMENT_MENTIONS,
 	parseMentionUserIds,
 } from "@workspace/shared";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createCommentDao } from "../src/dao/comment.dao";
-import { createCommentMentionDao } from "../src/dao/comment-mention.dao";
+import {
+	commentMentionInsertStatements,
+	createCommentMentionDao,
+} from "../src/dao/comment-mention.dao";
 import { createCommentReactionDao } from "../src/dao/comment-reaction.dao";
 import type { IssueDao } from "../src/dao/issue.dao";
 import { createIssueSubscriptionDao } from "../src/dao/issue-subscription.dao";
@@ -202,6 +206,59 @@ test("mentions inside fenced and inline code are examples, not mentions", () => 
 		["u2"],
 	);
 	assert.deepEqual(parseMentionUserIds("@[Ada](user:u1)"), ["u1"]);
+});
+
+test("comment mentions are capped so 101 mentions never overflow D1", async () => {
+	// The parser truncates unique ids, keeping the first ones in document order.
+	const many = Array.from(
+		{ length: 101 },
+		(_, index) => `@[U${index}](user:user-${index})`,
+	).join(" ");
+	const parsed = parseMentionUserIds(many);
+	assert.equal(parsed.length, MAX_COMMENT_MENTIONS);
+	assert.equal(parsed[0], "user-0");
+
+	// Even with more rows than the cap, the insert helper chunks under the
+	// ~100 bound-parameter limit (2 params per row, 25 rows per statement).
+	const { sqlite, db, batches } = setup();
+	seed(sqlite);
+	const calls = { commentNotifications: [] as never[] };
+	const { service } = commentServiceFor(db, calls);
+	const comment = await service.createComment(
+		"org-1",
+		"project-1",
+		7,
+		"creator",
+		{
+			body: many,
+		},
+	);
+	const stored = sqlite
+		.query(
+			"SELECT count(*) AS count FROM comment_mentions WHERE comment_id = ?",
+		)
+		.get(comment.id) as { count: number };
+	assert.equal(stored.count, MAX_COMMENT_MENTIONS);
+	assert.equal(
+		(calls.commentNotifications[0] as { mentionUserIds: string[] })
+			.mentionUserIds.length,
+		MAX_COMMENT_MENTIONS,
+	);
+
+	const rows = Array.from({ length: 101 }, (_, index) => ({
+		commentId: comment.id,
+		userId: `user-${index}`,
+	}));
+	const statements = commentMentionInsertStatements(db, rows);
+	assert.equal(statements.length, Math.ceil(101 / 25));
+	for (const statement of statements) {
+		const { params } = (
+			statement as unknown as { toSQL: () => { params: unknown[] } }
+		).toSQL();
+		assert.ok(params.length <= 100, `statement binds ${params.length} params`);
+	}
+	// Keep the batch spy referenced so it is obviously exercised above.
+	assert.ok(batches.length > 0);
 });
 
 test("reaction emoji whitelist rejects unknown emoji", () => {
@@ -787,6 +844,29 @@ test("fan-out chunks inserts under D1's bound-parameter limit", async () => {
 			.get(),
 		{ n: 50, s: 50 },
 	);
+});
+
+test("notifications for soft-deleted issues leave the inbox", async () => {
+	const { sqlite, db } = setup();
+	seed(sqlite);
+	const notificationDao = createNotificationDao(db);
+	sqlite.run(
+		"INSERT INTO notifications (id, org_id, user_id, type, issue_id, created_at) VALUES ('n1', 'org-1', 'watcher', 'issue_commented', 'issue-1', 1)",
+	);
+	assert.equal(await notificationDao.countUnread("org-1", "watcher"), 1);
+
+	// The issue page 404s after a soft delete, so its notifications must not
+	// stay in the inbox (neither as rows nor in the totals/unread badge).
+	sqlite.run("UPDATE issues SET deleted_at = 1 WHERE id = 'issue-1'");
+	const page = await notificationDao.listByUser("org-1", "watcher", {
+		filter: "all",
+		page: 1,
+		pageSize: 20,
+	});
+	assert.deepEqual(page.items, []);
+	assert.equal(page.total, 0);
+	assert.equal(page.unread, 0);
+	assert.equal(await notificationDao.countUnread("org-1", "watcher"), 0);
 });
 
 test("notification DTOs carry a plain-text comment excerpt", async () => {

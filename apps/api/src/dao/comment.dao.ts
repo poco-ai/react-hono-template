@@ -7,7 +7,7 @@ import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 import {
 	commentMentionDeleteStatement,
-	commentMentionInsertStatement,
+	commentMentionInsertStatements,
 } from "./comment-mention.dao";
 
 // D1 batch rows are keyed by column name, so joined columns colliding with
@@ -104,7 +104,7 @@ export const createCommentDao = (db: Database) => ({
 			statements.push(activityInsertStatement(db, [activity]));
 		}
 		if (mentions && mentions.length > 0) {
-			statements.push(commentMentionInsertStatement(db, mentions));
+			statements.push(...commentMentionInsertStatements(db, mentions));
 		}
 		await db.batch(statements);
 		const created = await db
@@ -148,7 +148,7 @@ export const createCommentDao = (db: Database) => ({
 			commentMentionDeleteStatement(db, id),
 		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 		if (mentions && mentions.length > 0) {
-			statements.push(commentMentionInsertStatement(db, mentions));
+			statements.push(...commentMentionInsertStatements(db, mentions));
 		}
 		const [rows] = (await db.batch(statements)) as [{ id: string }[]];
 		if (rows.length === 0) {

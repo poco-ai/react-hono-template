@@ -142,6 +142,9 @@ These are deliberate template-level simplifications. Each works correctly for de
 - **Activity feeds** are capped at the latest 100 entries per issue/org.
 - **Password reset email** is not sent out of the box: with no email provider configured, better-auth's `sendResetPassword` writes the reset link to the Worker console (`wrangler dev` / `wrangler tail`). This is fine for local dev, but production deployments must wire `sendResetPassword` to a real email provider — otherwise users never receive the link.
 - **Runtime config** lives in KV (`config:global`) behind a 60s in-isolate cache: writes refresh the writing isolate immediately, while other isolates converge within ~60s (KV eventual consistency). `GET /api/config` is public — never store secrets there.
+- **CSV export/import** run in a single request: export is capped at 2000 active issues and import at 100 rows. Larger projects need chunked exports or a queued job.
+- **Full-text search** uses FTS5 trigram indexes, which cannot serve terms shorter than three characters — 1–2 character queries fall back to an unindexed `instr()` scan over the organization's issues/comments. The web command palette keeps the common case indexed by requiring two characters, but short CJK/ASCII terms are the most expensive query path.
+- **Recurring issues** are materialized by the 15-minute cron, so a recurrence can appear up to ~15 minutes after its scheduled slot; the generated issues do not send notifications or webhook events (only an activity row with `source: recurrence`). Notifications themselves have no retention period: only conversation retention is enforced by the cleanup cron.
 
 ## Deploying
 
@@ -156,3 +159,25 @@ First production setup:
 3. Stripe: create a subscription price, set the three secrets, add a webhook endpoint `<api-url>/api/stripe/webhook` (events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`)
 
 See [apps/web/README.md](apps/web/README.md) for the web-side notes.
+
+## Release checklist / 发布前
+
+Run this before pushing to `main` when the release includes API changes:
+
+1. Apply migrations to the production D1 **first** — a Worker that expects new columns or triggers fails on the old schema:
+   ```sh
+   cd apps/api
+   bunx wrangler d1 migrations apply react-hono-db --remote
+   ```
+2. Verify the six full-text search triggers survived. SQLite table rebuilds (D1 implements them as create/copy/drop/rename) silently drop triggers on `issues`/`comments`, and search then returns stale or empty results:
+   ```sh
+   bunx wrangler d1 execute react-hono-db --remote --command \
+     "select name from sqlite_master where type='trigger' and name like '%_search_a%' order by name"
+   ```
+   Expect `comment_search_ad`, `comment_search_ai`, `comment_search_au`, `issue_search_ad`, `issue_search_ai`, `issue_search_au`.
+3. If that release rebuilt `issues` or `comments` (any migration that copied or recreated either table), re-run the re-index script to restore the triggers and rebuild the index:
+   ```sh
+   bunx wrangler d1 execute react-hono-db --remote --file=drizzle/fts/search_fts.sql
+   ```
+   `apps/api/tests/search*.test.ts` check the same six triggers locally, so run `bun run test` before deploying.
+4. Push to `main`; the CI `quality` job (lint, typecheck, tests) must pass before either Worker deploys.

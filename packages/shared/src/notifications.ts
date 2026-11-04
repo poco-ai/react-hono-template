@@ -80,6 +80,14 @@ export const stripCodeForMentions = (body: string): string =>
 		.replace(/~~~[\s\S]*?~~~/g, " ")
 		.replace(/`[^`\n]*`/g, " ");
 
+/**
+ * Upper bound on unique users a single comment may mention. D1 caps bound
+ * parameters per statement (~100) and the fan-out inserts one mention row per
+ * recipient (2 columns each), so the list is truncated instead of growing
+ * unbounded: the first mentions in document order win.
+ */
+export const MAX_COMMENT_MENTIONS = 20;
+
 export const parseMentionUserIds = (body: string): string[] => {
 	const users = new Set<string>();
 	for (const match of stripCodeForMentions(body).matchAll(
@@ -88,6 +96,9 @@ export const parseMentionUserIds = (body: string): string[] => {
 		const userId = match[2]?.trim();
 		if (userId) {
 			users.add(userId);
+			if (users.size >= MAX_COMMENT_MENTIONS) {
+				break;
+			}
 		}
 	}
 	return [...users];

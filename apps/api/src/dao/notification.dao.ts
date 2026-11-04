@@ -155,6 +155,16 @@ export const createNotificationDao = (db: Database) => ({
 		const conditions: SQL[] = [
 			eq(notifications.orgId, orgId),
 			eq(notifications.userId, userId),
+			// Soft-deleted issues disappear from the issue page; keeping their
+			// notifications would lead the inbox to a 404. Filter (rather than
+			// join-drop) so the pagination totals stay consistent.
+			inArray(
+				notifications.issueId,
+				db
+					.select({ id: issues.id })
+					.from(issues)
+					.where(isNull(issues.deletedAt)),
+			),
 		];
 		if (query.filter === "unread") {
 			conditions.push(isNull(notifications.readAt));
@@ -175,6 +185,13 @@ export const createNotificationDao = (db: Database) => ({
 						eq(notifications.orgId, orgId),
 						eq(notifications.userId, userId),
 						isNull(notifications.readAt),
+						inArray(
+							notifications.issueId,
+							db
+								.select({ id: issues.id })
+								.from(issues)
+								.where(isNull(issues.deletedAt)),
+						),
 					),
 				),
 		]);
@@ -222,6 +239,14 @@ export const createNotificationDao = (db: Database) => ({
 					eq(notifications.orgId, orgId),
 					eq(notifications.userId, userId),
 					isNull(notifications.readAt),
+					// Deleted issues are not reachable from the inbox.
+					inArray(
+						notifications.issueId,
+						db
+							.select({ id: issues.id })
+							.from(issues)
+							.where(isNull(issues.deletedAt)),
+					),
 				),
 			);
 		return row?.value ?? 0;

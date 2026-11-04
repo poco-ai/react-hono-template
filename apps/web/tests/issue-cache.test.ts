@@ -21,9 +21,14 @@ test("issue writes invalidate lists, details and activities only in their organi
 		["orgs", "org", "issues"],
 		["orgs", "org", "activities", { limit: 50 }],
 		["orgs", "org", "roadmap"],
+		// Triage filters on status/assignee and archived state, so every issue
+		// write can add or remove queue rows.
+		["orgs", "org", "triage", "all"],
+		["orgs", "org", "triage", "project"],
 	];
 	const unaffected = [
 		["orgs", "other", "projects"],
+		["orgs", "other", "triage", "all"],
 		["orgs", "org", "members"],
 	];
 	for (const key of [...affected, ...unaffected]) client.setQueryData(key, {});

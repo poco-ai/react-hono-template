@@ -628,6 +628,31 @@ test("parent changes write activity with issue keys", async () => {
 	assert.equal(detach?.newValue, null);
 });
 
+test("setting an unassigned issue to null writes no activity", async () => {
+	const current = issue({ id: "issue-1", number: 1, assigneeId: null });
+	const { service, state } = issueServiceFor({ issues: [current] });
+
+	await service.updateIssue("org", "project-1", 1, "user-1", {
+		assigneeId: null,
+	});
+	assert.equal(
+		state.updatedActivities[0]?.some(
+			(activity) => activity.field === "assigneeId",
+		),
+		false,
+	);
+
+	// A real assignment still records history.
+	await service.updateIssue("org", "project-1", 1, "user-1", {
+		assigneeId: "user-2",
+	});
+	const diff = state.updatedActivities[1]?.find(
+		(activity) => activity.field === "assigneeId",
+	);
+	assert.equal(diff?.oldValue, "");
+	assert.equal(diff?.newValue, "user-2");
+});
+
 test("issue detail exposes parent summary and terminal sub-issue progress", async () => {
 	const parent = issue({ id: "parent", number: 2, title: "Parent" });
 	const childDone = issue({

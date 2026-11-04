@@ -12,7 +12,9 @@ import {
 } from "@workspace/shared";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
+	type CapabilityContext,
 	type CapabilityDeps,
+	createCapabilityLayer,
 	createCapabilityRegistry,
 } from "../src/capabilities";
 import { createCycleDao } from "../src/dao/cycle.dao";
@@ -638,6 +640,34 @@ test("issue list supports cycleId eq/in/isNull filters", async () => {
 	assert.deepEqual(legacy.items.map((issue) => issue.id).sort(), ["i1", "i4"]);
 });
 
+test("archived projects reject cycle writes", async () => {
+	const { cycleService, sqlite } = setup();
+	sqlite.run("UPDATE projects SET archived = 1 WHERE id = ?", PROJECT);
+	const archived = isApiError(409, ApiErrorCode.PROJECT_ARCHIVED);
+	await assert.rejects(
+		cycleService.createCycle(ORG, PROJECT, "user-1", {
+			name: "Sprint",
+			startsAt: "2026-09-01T00:00:00Z",
+			endsAt: "2026-09-10T00:00:00Z",
+		}),
+		archived,
+	);
+	await assert.rejects(
+		cycleService.updateCycle(ORG, PROJECT, "c-current", { name: "Renamed" }),
+		archived,
+	);
+	await assert.rejects(
+		cycleService.deleteCycle(ORG, PROJECT, "c-current", "user-1"),
+		archived,
+	);
+	await assert.rejects(
+		cycleService.rolloverCycle(ORG, PROJECT, "c-current", "user-1", {
+			targetCycleId: "c-upcoming",
+		}),
+		archived,
+	);
+});
+
 test("cycle and issue schemas accept cycleId and reject bad ranges", () => {
 	assert.equal(
 		createCycleSchema.safeParse({
@@ -713,8 +743,121 @@ test("cycle capabilities are registered as read/write tools", () => {
 	assert.deepEqual(byName.get("list_cycles")?.scopes, ["read"]);
 	assert.equal(byName.get("create_cycle")?.effect, "write");
 	assert.deepEqual(byName.get("create_cycle")?.scopes, ["write"]);
+	assert.equal(byName.get("create_cycle")?.minOrgRole, "admin");
 	assert.equal(byName.get("list_project_updates")?.effect, "read");
 	assert.equal(byName.get("create_project_update")?.effect, "write");
+	// REST allows any member to post an update.
+	assert.equal(byName.get("create_project_update")?.minOrgRole, undefined);
+});
+
+/**
+ * Regression: the capability role matrix must match the REST role matrix.
+ * POST cycles is owner/admin only, while posting a project update is open to
+ * every member — the capability layer must not silently diverge.
+ */
+const capabilityLayerFor = (role: string) => {
+	const cycle = {
+		id: "c1",
+		orgId: ORG,
+		projectId: PROJECT,
+		name: "Sprint 1",
+		number: 1,
+		startsAt: "2026-06-01T00:00:00.000Z",
+		endsAt: "2026-06-14T00:00:00.000Z",
+		status: "current" as const,
+		progress: { total: 0, terminal: 0, percent: 0 },
+		createdById: null,
+		createdAt: "2026-06-01T00:00:00.000Z",
+		updatedAt: "2026-06-01T00:00:00.000Z",
+	};
+	const update = {
+		id: "u1",
+		orgId: ORG,
+		projectId: PROJECT,
+		authorId: "user-1",
+		body: "On track",
+		health: null,
+		createdAt: "2026-06-01T00:00:00.000Z",
+		updatedAt: "2026-06-01T00:00:00.000Z",
+		author: null,
+	};
+	const deps = {
+		services: {
+			cycleService: {
+				listCycles: async () => ({
+					items: [],
+					total: 0,
+					page: 1,
+					pageSize: 20,
+				}),
+				createCycle: async () => cycle,
+			},
+			projectUpdateService: {
+				listUpdates: async () => ({
+					items: [],
+					total: 0,
+					page: 1,
+					pageSize: 20,
+				}),
+				createUpdate: async () => update,
+			},
+		},
+		daos: {
+			memberDao: {
+				findByOrgAndUser: async () => ({ role, frozen: false }),
+				isOrgFrozen: async () => false,
+			},
+		},
+	} as unknown as CapabilityDeps;
+	const ctx: CapabilityContext = {
+		orgId: ORG,
+		actor: {
+			userId: "user-1",
+			surface: "chat",
+			scopes: ["read", "write"],
+			role: role as CapabilityContext["actor"]["role"],
+		},
+		canWrite: true,
+		locale: "en",
+		webBaseUrl: "https://app.example.com",
+		background: (task) => {
+			void task().catch(() => undefined);
+		},
+	};
+	return { layer: createCapabilityLayer(deps), ctx };
+};
+
+test("create_cycle requires admin, create_project_update does not", async () => {
+	const input = {
+		projectId: PROJECT,
+		name: "Sprint 1",
+		startsAt: "2026-06-01T00:00:00.000Z",
+		endsAt: "2026-06-14T00:00:00.000Z",
+	};
+
+	const member = capabilityLayerFor("member");
+	await assert.rejects(
+		member.layer.execute("create_cycle", member.ctx, input),
+		(error: unknown) =>
+			error instanceof ApiError &&
+			error.status === 403 &&
+			error.code === ApiErrorCode.FORBIDDEN,
+	);
+	// Matches POST /projects/:id/updates: any member may post.
+	const update = await member.layer.execute<{ update: { id: string } }>(
+		"create_project_update",
+		member.ctx,
+		{ projectId: PROJECT, body: "On track" },
+	);
+	assert.equal(update.data.update.id, "u1");
+
+	const admin = capabilityLayerFor("admin");
+	const cycle = await admin.layer.execute<{ cycle: { id: string } }>(
+		"create_cycle",
+		admin.ctx,
+		input,
+	);
+	assert.equal(cycle.data.cycle.id, "c1");
 });
 
 // ---------------------------------------------------------------------------

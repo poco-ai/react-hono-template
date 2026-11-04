@@ -101,6 +101,26 @@ export const createViewService = ({
 		}
 	};
 
+	/**
+	 * Personal views count against the plan quota. Shared views are unmetered,
+	 * so turning a shared view back into a personal one (or creating one) must
+	 * go through the same check; otherwise the limit is trivially bypassed.
+	 */
+	const assertPersonalQuota = async (orgId: string, ownerId: string) => {
+		const limits = await plans.getLimitsForOrg(orgId);
+		if (limits.savedViews < 0) {
+			return;
+		}
+		const current = await viewDao.countPersonal(orgId, ownerId);
+		if (current >= limits.savedViews) {
+			throw new ApiError(
+				403,
+				ApiErrorCode.VIEW_LIMIT_REACHED,
+				`Your plan allows up to ${limits.savedViews} personal views. Upgrade to save more, or ask an owner/admin to share one.`,
+			);
+		}
+	};
+
 	return {
 		listViews: async (
 			orgId: string,
@@ -121,17 +141,7 @@ export const createViewService = ({
 			}
 			await assertProjectInOrg(orgId, input.projectId);
 			if (!shared) {
-				const limits = await plans.getLimitsForOrg(orgId);
-				if (limits.savedViews >= 0) {
-					const current = await viewDao.countPersonal(orgId, userId);
-					if (current >= limits.savedViews) {
-						throw new ApiError(
-							403,
-							ApiErrorCode.VIEW_LIMIT_REACHED,
-							`Your plan allows up to ${limits.savedViews} personal views. Upgrade to save more, or ask an owner/admin to share one.`,
-						);
-					}
-				}
+				await assertPersonalQuota(orgId, userId);
 			}
 			assertLayout(input.layout);
 			return viewDao.create({
@@ -170,6 +180,11 @@ export const createViewService = ({
 				} else if (view.ownerId !== userId) {
 					// Only the owner or an admin may hide a shared view again.
 					assertShareAllowed(role);
+				}
+				if (!input.shared) {
+					// Un-sharing turns the view personal again, so it must fit
+					// the owner's personal-view quota.
+					await assertPersonalQuota(orgId, view.ownerId);
 				}
 			}
 			if (input.projectId !== undefined) {

@@ -7,6 +7,7 @@ import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
@@ -15,6 +16,7 @@ import {
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { Columns3, Group, Rows3, Rows4 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	ISSUE_LIST_COLUMNS,
@@ -58,10 +60,12 @@ export function IssueListToolbar({
 	onToggleColumn: (column: IssueListColumn, checked: boolean) => void;
 }) {
 	const { t } = useTranslation();
+	const [groupOpen, setGroupOpen] = useState(false);
+	const [densityOpen, setDensityOpen] = useState(false);
 
 	return (
 		<div className="flex items-center gap-1">
-			<DropdownMenu>
+			<DropdownMenu open={groupOpen} onOpenChange={setGroupOpen}>
 				<DropdownMenuTrigger
 					render={
 						<Button variant="outline" size="sm">
@@ -73,28 +77,31 @@ export function IssueListToolbar({
 					}
 				/>
 				<DropdownMenuContent align="start" className="min-w-40">
-					<DropdownMenuLabel>{t("issues.groupBy")}</DropdownMenuLabel>
-					<DropdownMenuRadioGroup
-						value={groupBy ?? "none"}
-						onValueChange={(value) =>
-							onGroupByChange(
-								value === "none" ? undefined : (value as IssueQueryGroupBy),
-							)
-						}
-					>
-						<DropdownMenuRadioItem value="none">
-							{t("issues.group.none")}
-						</DropdownMenuRadioItem>
-						{ISSUE_QUERY_GROUP_BY.map((value) => (
-							<DropdownMenuRadioItem key={value} value={value}>
-								{t(GROUP_LABEL[value])}
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{t("issues.groupBy")}</DropdownMenuLabel>
+						<DropdownMenuRadioGroup
+							value={groupBy ?? "none"}
+							onValueChange={(value) => {
+								onGroupByChange(
+									value === "none" ? undefined : (value as IssueQueryGroupBy),
+								);
+								setGroupOpen(false);
+							}}
+						>
+							<DropdownMenuRadioItem value="none">
+								{t("issues.group.none")}
 							</DropdownMenuRadioItem>
-						))}
-					</DropdownMenuRadioGroup>
+							{ISSUE_QUERY_GROUP_BY.map((value) => (
+								<DropdownMenuRadioItem key={value} value={value}>
+									{t(GROUP_LABEL[value])}
+								</DropdownMenuRadioItem>
+							))}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuGroup>
 				</DropdownMenuContent>
 			</DropdownMenu>
 
-			<DropdownMenu>
+			<DropdownMenu open={densityOpen} onOpenChange={setDensityOpen}>
 				<DropdownMenuTrigger
 					render={
 						<Button
@@ -108,20 +115,23 @@ export function IssueListToolbar({
 					}
 				/>
 				<DropdownMenuContent align="start" className="min-w-36">
-					<DropdownMenuLabel>{t("issues.density.label")}</DropdownMenuLabel>
-					<DropdownMenuRadioGroup
-						value={density}
-						onValueChange={(value) =>
-							onDensityChange(value as IssueListDensity)
-						}
-					>
-						<DropdownMenuRadioItem value="comfortable">
-							{t("issues.density.comfortable")}
-						</DropdownMenuRadioItem>
-						<DropdownMenuRadioItem value="compact">
-							{t("issues.density.compact")}
-						</DropdownMenuRadioItem>
-					</DropdownMenuRadioGroup>
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{t("issues.density.label")}</DropdownMenuLabel>
+						<DropdownMenuRadioGroup
+							value={density}
+							onValueChange={(value) => {
+								onDensityChange(value as IssueListDensity);
+								setDensityOpen(false);
+							}}
+						>
+							<DropdownMenuRadioItem value="comfortable">
+								{t("issues.density.comfortable")}
+							</DropdownMenuRadioItem>
+							<DropdownMenuRadioItem value="compact">
+								{t("issues.density.compact")}
+							</DropdownMenuRadioItem>
+						</DropdownMenuRadioGroup>
+					</DropdownMenuGroup>
 				</DropdownMenuContent>
 			</DropdownMenu>
 
@@ -135,22 +145,24 @@ export function IssueListToolbar({
 					}
 				/>
 				<DropdownMenuContent align="end" className="min-w-44">
-					<DropdownMenuLabel>{t("issues.columns.label")}</DropdownMenuLabel>
-					<DropdownMenuSeparator />
-					{ISSUE_LIST_COLUMNS.map((column) => {
-						const checked = columns.includes(column);
-						return (
-							<DropdownMenuCheckboxItem
-								key={column}
-								checked={checked}
-								closeOnClick={false}
-								disabled={checked && columns.length <= 1}
-								onCheckedChange={(value) => onToggleColumn(column, value)}
-							>
-								{t(COLUMN_LABEL[column])}
-							</DropdownMenuCheckboxItem>
-						);
-					})}
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{t("issues.columns.label")}</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						{ISSUE_LIST_COLUMNS.map((column) => {
+							const checked = columns.includes(column);
+							return (
+								<DropdownMenuCheckboxItem
+									key={column}
+									checked={checked}
+									closeOnClick={false}
+									disabled={checked && columns.length <= 1}
+									onCheckedChange={(value) => onToggleColumn(column, value)}
+								>
+									{t(COLUMN_LABEL[column])}
+								</DropdownMenuCheckboxItem>
+							);
+						})}
+					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem disabled className="text-xs">
 						{t("issues.columns.hint")}

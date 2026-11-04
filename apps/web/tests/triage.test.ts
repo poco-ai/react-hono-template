@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
 	BULK_PARTIAL_FAILURE,
 	bulkPartialFailure,
+	triageRootKey as issueTriageRootKey,
 } from "../src/features/issues/data";
 import type { TriageIssueDto } from "../src/features/triage/data";
 import {
@@ -14,6 +15,7 @@ import {
 	triageActionInput,
 	triageAvailability,
 	triageKey,
+	triageRootKey,
 	triageSearchSchema,
 } from "../src/features/triage/data";
 import { errorCode } from "../src/lib/errors";
@@ -188,4 +190,7 @@ test("URL project filter falls back when the project is gone", () => {
 test("triage cache key separates the project filter", () => {
 	assert.deepEqual(triageKey("org"), ["orgs", "org", "triage", "all"]);
 	assert.deepEqual(triageKey("org", "p1"), ["orgs", "org", "triage", "p1"]);
+	// Issue writes invalidate the same root, so both modules must agree on it.
+	assert.deepEqual(triageRootKey("org"), ["orgs", "org", "triage"]);
+	assert.equal(triageRootKey, issueTriageRootKey);
 });

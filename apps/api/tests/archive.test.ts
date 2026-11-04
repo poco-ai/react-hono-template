@@ -330,6 +330,41 @@ test("issue lists hide archived issues unless includeArchived is set", async () 
 	assert.equal(viaService.total, 6);
 });
 
+test("org-wide lists hide issues of archived projects", async () => {
+	const { issueDao } = setup();
+	const orgWide = await issueDao.list(ORG, null, {
+		page: 1,
+		pageSize: 50,
+		sort: "updated",
+	});
+	assert.equal(ids(orgWide.items).includes("i5"), false);
+	assert.equal(orgWide.total, orgWide.items.length);
+
+	// A project-scoped list (and query.projectId) still shows that project.
+	const scoped = await issueDao.list(ORG, OLD_PROJECT, {
+		page: 1,
+		pageSize: 50,
+		sort: "updated",
+	});
+	assert.deepEqual(ids(scoped.items), ["i5"]);
+	const byQuery = await issueDao.list(ORG, null, {
+		page: 1,
+		pageSize: 50,
+		sort: "updated",
+		projectId: OLD_PROJECT,
+	});
+	assert.deepEqual(ids(byQuery.items), ["i5"]);
+});
+
+test("archived issues stay editable and only hide from lists", async () => {
+	const { issueService } = setup();
+	const updated = await issueService.updateIssue(ORG, PROJECT, 2, USER, {
+		title: "Renamed archived issue",
+	});
+	assert.equal(updated.title, "Renamed archived issue");
+	assert.notEqual(updated.archivedAt, null);
+});
+
 test("FTS search and the short-token fallback exclude archived issues", async () => {
 	const { searchDao } = setup();
 	const longTerm = await searchDao.searchIssues(

@@ -100,6 +100,19 @@ export const createCycleService = ({
 		return project;
 	};
 
+	/** Archived projects are read-only: cycles cannot be created or changed. */
+	const requireWritableProject = async (orgId: string, projectId: string) => {
+		const project = await requireProject(orgId, projectId);
+		if (project.archived) {
+			throw new ApiError(
+				409,
+				ApiErrorCode.PROJECT_ARCHIVED,
+				"Project is archived and read-only",
+			);
+		}
+		return project;
+	};
+
 	const toCycleWithProgress = (
 		cycle: CycleDto,
 		progress?: { total: number; terminal: number },
@@ -182,7 +195,7 @@ export const createCycleService = ({
 			userId: string | null,
 			input: CreateCycleInput,
 		): Promise<CycleWithProgressDto> => {
-			await requireProject(orgId, projectId);
+			await requireWritableProject(orgId, projectId);
 			const startsAt = new Date(input.startsAt);
 			const endsAt = new Date(input.endsAt);
 			assertRange(startsAt, endsAt);
@@ -222,6 +235,7 @@ export const createCycleService = ({
 			cycleId: string,
 			input: UpdateCycleInput,
 		): Promise<CycleWithProgressDto> => {
+			await requireWritableProject(orgId, projectId);
 			const cycle = await cycleDao.findForProject(orgId, projectId, cycleId);
 			if (!cycle) {
 				throw cycleNotFound(cycleId);
@@ -259,6 +273,7 @@ export const createCycleService = ({
 			cycleId: string,
 			userId: string,
 		): Promise<void> => {
+			await requireWritableProject(orgId, projectId);
 			const cycle = await cycleDao.findForProject(orgId, projectId, cycleId);
 			if (!cycle) {
 				throw cycleNotFound(cycleId);
@@ -283,6 +298,7 @@ export const createCycleService = ({
 			userId: string,
 			input: RolloverCycleInput,
 		): Promise<CycleRolloverDto> => {
+			await requireWritableProject(orgId, projectId);
 			const source = await cycleDao.findForProject(orgId, projectId, cycleId);
 			if (!source) {
 				throw cycleNotFound(cycleId);

@@ -21,6 +21,7 @@ import {
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -257,25 +258,31 @@ export function ViewSwitcher({
 						</div>
 					) : (
 						<>
-							<DropdownMenuLabel>
-								{t("issues.views.personal")}
-							</DropdownMenuLabel>
-							{personal.length > 0 ? (
-								personal.map(viewItem)
-							) : (
-								<p className="text-muted-foreground px-1.5 py-1 text-xs">
-									{t("issues.views.noPersonal")}
-								</p>
-							)}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>
+									{t("issues.views.personal")}
+								</DropdownMenuLabel>
+								{personal.length > 0 ? (
+									personal.map(viewItem)
+								) : (
+									<p className="text-muted-foreground px-1.5 py-1 text-xs">
+										{t("issues.views.noPersonal")}
+									</p>
+								)}
+							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
-							<DropdownMenuLabel>{t("issues.views.shared")}</DropdownMenuLabel>
-							{shared.length > 0 ? (
-								shared.map(viewItem)
-							) : (
-								<p className="text-muted-foreground px-1.5 py-1 text-xs">
-									{t("issues.views.noShared")}
-								</p>
-							)}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>
+									{t("issues.views.shared")}
+								</DropdownMenuLabel>
+								{shared.length > 0 ? (
+									shared.map(viewItem)
+								) : (
+									<p className="text-muted-foreground px-1.5 py-1 text-xs">
+										{t("issues.views.noShared")}
+									</p>
+								)}
+							</DropdownMenuGroup>
 							{views.length === 0 && (
 								<Empty className="border-0 p-2">
 									<EmptyHeader>

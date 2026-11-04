@@ -567,13 +567,14 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 			name: "create_cycle",
 			titleKey: "ai.capabilities.create_cycle.title",
 			description:
-				"Create a planning cycle in a project. Dates must not overlap another cycle of the same project; the cycle number is assigned automatically. Use create_issue/update_issue with cycleId to plan issues.",
+				"Create a planning cycle in a project. Dates must not overlap another cycle of the same project; the cycle number is assigned automatically. Use create_issue/update_issue with cycleId to plan issues. Requires an organization owner/admin.",
 			input: createCycleSchema.extend({
 				projectId: z.string().min(1),
 			}),
 			output: z.object({ cycle: cycleSummarySchema }),
 			effect: "write",
 			scopes: ["write"],
+			minOrgRole: "admin",
 			execute: async (ctx, input) => {
 				const orgId = ctx.orgId as string;
 				const { projectId, ...createInput } = input;
