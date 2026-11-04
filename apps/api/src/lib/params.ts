@@ -21,6 +21,10 @@ export const requireParam = (c: Context<Env>, name: string) => {
 export const requireProjectId = (c: Context<Env>) =>
 	requireParam(c, "projectId");
 
+export const requireCycleId = (c: Context<Env>) => requireParam(c, "cycleId");
+
+export const requireUpdateId = (c: Context<Env>) => requireParam(c, "updateId");
+
 export const requireIssueNumber = (c: Context<Env>) => {
 	const raw = c.req.param("number");
 	const number = Number(raw);

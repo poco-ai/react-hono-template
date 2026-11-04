@@ -5,9 +5,11 @@ import type { OrganizationDao } from "../dao/organization.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ActivityService } from "../services/activity.service";
 import type { CommentService } from "../services/comment.service";
+import type { CycleService } from "../services/cycle.service";
 import type { IssueService } from "../services/issue.service";
 import type { LabelService } from "../services/label.service";
 import type { ProjectService } from "../services/project.service";
+import type { ProjectUpdateService } from "../services/project-update.service";
 import type { RelationService } from "../services/relation.service";
 import type { StatusService } from "../services/status.service";
 import type { ViewService } from "../services/view.service";
@@ -132,6 +134,11 @@ export type CapabilityServices = {
 		"listRelations" | "createRelation" | "deleteRelation"
 	>;
 	viewService: Pick<ViewService, "listViews" | "createView">;
+	cycleService: Pick<CycleService, "listCycles" | "createCycle">;
+	projectUpdateService: Pick<
+		ProjectUpdateService,
+		"listUpdates" | "createUpdate"
+	>;
 };
 
 export type CapabilityDaos = {

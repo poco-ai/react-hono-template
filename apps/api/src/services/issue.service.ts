@@ -8,6 +8,7 @@ import {
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import type { ActivityInsert } from "../dao/activity.dao";
+import type { CycleDao } from "../dao/cycle.dao";
 import type { IssueDao } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
@@ -22,6 +23,7 @@ import type {
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
 import type { BackgroundFn } from "../lib/background";
+import { assertCycleAssignable } from "./cycle.service";
 import {
 	bestEffortNotification,
 	type NotificationService,
@@ -230,6 +232,7 @@ export const createIssueService = ({
 	labelDao,
 	projectDao,
 	memberDao,
+	cycleDao,
 	statusService,
 	webhooks,
 	notifications,
@@ -238,6 +241,7 @@ export const createIssueService = ({
 	labelDao: LabelDao;
 	projectDao: ProjectDao;
 	memberDao: MemberDao;
+	cycleDao: Pick<CycleDao, "findById">;
 	statusService: Pick<StatusService, "resolveStatus" | "resolveStatusIds">;
 	webhooks?: WebhookDispatcher;
 	notifications?: Pick<
@@ -266,6 +270,7 @@ export const createIssueService = ({
 			sorts: normalizeIssueSorts(query.sort),
 			filter: query.filter,
 			projectId: query.projectId,
+			cycleId: query.cycleId,
 		});
 	},
 
@@ -371,6 +376,9 @@ export const createIssueService = ({
 					parentId: input.parentId,
 				})
 			: null;
+		if (input.cycleId) {
+			await assertCycleAssignable(cycleDao, orgId, projectId, input.cycleId);
+		}
 		const id = crypto.randomUUID();
 		const status = await statusService.resolveStatus(orgId, {
 			statusId: input.statusId,
@@ -405,6 +413,7 @@ export const createIssueService = ({
 				dueDate: input.dueDate ? new Date(input.dueDate) : null,
 				estimate: input.estimate ?? null,
 				parentId: parent?.id ?? null,
+				cycleId: input.cycleId ?? null,
 			},
 			labelIds,
 			activities,
@@ -461,6 +470,14 @@ export const createIssueService = ({
 		}
 		const currentLabelIds = await issueDao.findLabelIds(issue.id);
 		const current: IssueDetailDto = { ...issue, labelIds: currentLabelIds };
+		if (input.cycleId) {
+			await assertCycleAssignable(
+				cycleDao,
+				orgId,
+				issue.projectId,
+				input.cycleId,
+			);
+		}
 		const resolvedStatus =
 			input.statusId !== undefined || input.status !== undefined
 				? await statusService.resolveStatus(orgId, {
@@ -498,6 +515,24 @@ export const createIssueService = ({
 			}
 		}
 		const statusChanged = diffs.some((diff) => diff.field === "status");
+		const cycleChanged =
+			"cycleId" in input &&
+			input.cycleId !== undefined &&
+			(input.cycleId ?? null) !== (issue.cycleId ?? null);
+		if (cycleChanged) {
+			// Activities store cycle *names* so history survives cycle deletion.
+			const oldCycle = issue.cycleId
+				? await cycleDao.findById(orgId, issue.cycleId)
+				: null;
+			const newCycle = input.cycleId
+				? await cycleDao.findById(orgId, input.cycleId)
+				: null;
+			diffs.push({
+				field: "cycle",
+				oldValue: oldCycle?.name ?? null,
+				newValue: newCycle?.name ?? null,
+			});
+		}
 		const activityRows = userId
 			? diffs.map((diff) =>
 					buildActivity(
@@ -522,6 +557,7 @@ export const createIssueService = ({
 				dueDate: "dueDate" in input ? toDueDate(input.dueDate) : undefined,
 				estimate: "estimate" in input ? input.estimate : undefined,
 				parentId: "parentId" in input ? input.parentId : undefined,
+				cycleId: "cycleId" in input ? input.cycleId : undefined,
 			},
 			input.labelIds,
 			activityRows,

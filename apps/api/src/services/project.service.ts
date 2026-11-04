@@ -5,11 +5,16 @@ import {
 	PLANS,
 	type UpdateProjectInput,
 } from "@workspace/shared";
+import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
 import type { PlanService } from "./plan.service";
 
-export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
+export const createProjectService = (
+	dao: ProjectDao,
+	plans: PlanService,
+	memberDao: Pick<MemberDao, "findByOrgAndUser">,
+) => ({
 	listProjects: async (
 		orgId: string,
 		options?: { includeArchived?: boolean },
@@ -100,6 +105,16 @@ export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
 				);
 			}
 		}
+		if (input.leadId) {
+			const member = await memberDao.findByOrgAndUser(orgId, input.leadId);
+			if (!member) {
+				throw new ApiError(
+					400,
+					ApiErrorCode.VALIDATION,
+					"Project lead must be a member of this organization",
+				);
+			}
+		}
 		try {
 			const updated = await dao.update(orgId, projectId, {
 				name: input.name,
@@ -107,6 +122,14 @@ export const createProjectService = (dao: ProjectDao, plans: PlanService) => ({
 				description: "description" in input ? input.description : undefined,
 				color: "color" in input ? input.color : undefined,
 				archived: input.archived,
+				health: "health" in input ? (input.health ?? null) : undefined,
+				targetDate:
+					"targetDate" in input
+						? input.targetDate
+							? new Date(input.targetDate)
+							: null
+						: undefined,
+				leadId: "leadId" in input ? (input.leadId ?? null) : undefined,
 			});
 			if (!updated) {
 				throw new ApiError(

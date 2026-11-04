@@ -43,6 +43,7 @@ export interface IssueSearchLike {
 	filter?: string;
 	groupBy?: string;
 	viewId?: string;
+	cycleId?: string;
 }
 
 export interface IssueQueryState {
@@ -50,6 +51,8 @@ export interface IssueQueryState {
 	sorts: IssueQuerySort[];
 	groupBy?: IssueQueryGroupBy;
 	search: string;
+	/** Flat cycle filter; never merged into `filter`. */
+	cycleId?: string;
 }
 
 export const DEFAULT_ISSUE_SORT: IssueQuerySort = {
@@ -329,6 +332,7 @@ export const resolveIssueQuery = (
 		sorts,
 		groupBy: viewQuery ? viewGroupBy : urlGroupBy,
 		search: (search.search ?? "").trim(),
+		cycleId: (search.cycleId ?? "").trim() || undefined,
 	};
 };
 
@@ -384,6 +388,7 @@ export const buildIssueListParams = ({
 	search,
 	page,
 	pageSize,
+	cycleId,
 }: IssueQueryState & { page: number; pageSize: number }) => ({
 	page: String(page),
 	pageSize: String(pageSize),
@@ -391,6 +396,7 @@ export const buildIssueListParams = ({
 	filter: serializeIssueFilter(filter),
 	sort: JSON.stringify(sorts.length > 0 ? sorts : [DEFAULT_ISSUE_SORT]),
 	groupBy,
+	cycleId,
 });
 
 /** Canonical cache-key fragment covering the complete query. */
@@ -399,12 +405,14 @@ export const issueQueryKey = ({
 	sorts,
 	groupBy,
 	search,
+	cycleId,
 }: IssueQueryState) => ({
 	filter:
 		filter && filter.children.length > 0 ? normalizeFilterTree(filter) : null,
 	sort: sorts.length > 0 ? sorts : [DEFAULT_ISSUE_SORT],
 	groupBy: groupBy ?? null,
 	search: search ?? "",
+	cycleId: cycleId ?? null,
 });
 
 export const isNullOperator = (operator: IssueFilterOperator): boolean =>

@@ -39,6 +39,7 @@ const TEXT_FIELDS = new Set<IssueFilterField>([
 	"assigneeId",
 	"createdById",
 	"projectId",
+	"cycleId",
 ]);
 
 const NUMBER_FIELDS = new Set<IssueFilterField>(["priority", "estimate"]);
@@ -54,6 +55,7 @@ const TEXT_COLUMNS: Partial<Record<IssueFilterField, AnySQLiteColumn>> = {
 	assigneeId: issues.assigneeId,
 	createdById: issues.createdById,
 	projectId: issues.projectId,
+	cycleId: issues.cycleId,
 };
 
 const NUMBER_COLUMNS: Partial<Record<IssueFilterField, AnySQLiteColumn>> = {

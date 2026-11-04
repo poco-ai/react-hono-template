@@ -21,6 +21,9 @@ export const projectSchema = z.object({
 	color: z.string().nullable(),
 	archived: z.boolean(),
 	nextNumber: z.number(),
+	health: z.string().nullable(),
+	targetDate: z.string().nullable(),
+	leadId: z.string().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 }) satisfies z.ZodType<ProjectDto>;
@@ -62,6 +65,7 @@ export const issueSchema = z.object({
 			"Parent issue id for sub-issues. Relation endpoints are available in the app API but not exposed here yet.",
 		),
 	deletedAt: z.string().nullable(),
+	cycleId: z.string().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 	labelIds: z.array(z.string()),

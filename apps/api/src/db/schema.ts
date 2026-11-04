@@ -24,6 +24,10 @@ export const projects = sqliteTable(
 		color: text("color"),
 		archived: integer("archived", { mode: "boolean" }).notNull().default(false),
 		nextNumber: integer("next_number").notNull().default(1),
+		// Project health rollup: on_track | at_risk | off_track (null = unset).
+		health: text("health"),
+		targetDate: integer("target_date", { mode: "timestamp_ms" }),
+		leadId: text("lead_id").references(() => user.id, { onDelete: "set null" }),
 		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
@@ -35,6 +39,42 @@ export const projects = sqliteTable(
 	(table) => [
 		uniqueIndex("projects_orgId_key_uq").on(table.orgId, table.key),
 		index("projects_orgId_idx").on(table.orgId),
+	],
+);
+
+/**
+ * Time-boxed planning periods per project (Linear-style cycles). `number` is
+ * per-project and never reused. The derived state (upcoming/current/past) is
+ * computed from the dates at read time and never stored.
+ */
+export const cycles = sqliteTable(
+	"cycles",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		projectId: text("project_id")
+			.notNull()
+			.references(() => projects.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		number: integer("number").notNull(),
+		startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull(),
+		endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+		createdById: text("created_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("cycles_projectId_number_uq").on(table.projectId, table.number),
+		index("cycles_projectId_startsAt_idx").on(table.projectId, table.startsAt),
 	],
 );
 
@@ -93,6 +133,10 @@ export const issues = sqliteTable(
 		statusId: text("status_id")
 			.notNull()
 			.references(() => issueStatuses.id, { onDelete: "restrict" }),
+		// Planning cycle; deleting a cycle detaches its issues (set null).
+		cycleId: text("cycle_id").references(() => cycles.id, {
+			onDelete: "set null",
+		}),
 		priority: integer("priority").notNull().default(0),
 		assigneeId: text("assignee_id").references(() => user.id, {
 			onDelete: "set null",
@@ -117,6 +161,7 @@ export const issues = sqliteTable(
 		index("issues_orgId_statusId_idx").on(table.orgId, table.statusId),
 		index("issues_orgId_assigneeId_idx").on(table.orgId, table.assigneeId),
 		index("issues_orgId_parentId_idx").on(table.orgId, table.parentId),
+		index("issues_orgId_cycleId_idx").on(table.orgId, table.cycleId),
 	],
 );
 
@@ -193,6 +238,43 @@ export const issueRelations = sqliteTable(
 		),
 		index("issueRelations_orgId_idx").on(table.orgId),
 		index("issueRelations_relatedIssueId_idx").on(table.relatedIssueId),
+	],
+);
+
+/**
+ * Project status updates: short posts written by members to report progress
+ * and (optionally) the project health at that point in time.
+ */
+export const projectUpdates = sqliteTable(
+	"project_updates",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		projectId: text("project_id")
+			.notNull()
+			.references(() => projects.id, { onDelete: "cascade" }),
+		authorId: text("author_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		body: text("body").notNull(),
+		// on_track | at_risk | off_track (null = no health reported)
+		health: text("health"),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("projectUpdates_projectId_createdAt_idx").on(
+			table.projectId,
+			sql`${table.createdAt} desc`,
+		),
+		index("projectUpdates_orgId_idx").on(table.orgId),
 	],
 );
 

@@ -1,7 +1,8 @@
+import { TERMINAL_STATUS_CATEGORIES } from "@workspace/shared";
 import { and, desc, eq, type SQL, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
-import { activities, issues, projects } from "../db/schema";
+import { activities, issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ActivityDto, OrgActivityDto } from "../dto/activity.dto";
 
@@ -64,6 +65,89 @@ export const statusMigrationActivityStatement = (
 		FROM ${issues}
 		WHERE ${issues.orgId} = ${params.orgId}
 			AND ${issues.statusId} = ${params.statusId}
+	`);
+
+/**
+ * Shared terminal-category filter for set-based activity statements so the
+ * INSERT ... SELECT and the following UPDATE can never drift apart.
+ */
+const terminalCategoryList = sql.join(
+	TERMINAL_STATUS_CATEGORIES.map((category) => sql`${category}`),
+	sql`, `,
+);
+
+/**
+ * Set-based cycle rollover activity: one INSERT ... SELECT writes a
+ * `field = "cycle"` row for every non-terminal issue still assigned to the
+ * source cycle. It must run before the rollover UPDATE in the same batch.
+ */
+export const cycleRolloverActivityStatement = (
+	db: Database,
+	params: {
+		orgId: string;
+		projectId: string;
+		sourceCycleId: string;
+		actorId: string;
+		sourceName: string;
+		targetName: string;
+	},
+): BatchItem<"sqlite"> =>
+	db.insert(activities).select(sql`
+		SELECT
+			lower(hex(randomblob(16))),
+			${issues.orgId},
+			${issues.projectId},
+			${issues.id},
+			${params.actorId},
+			'issue.updated',
+			'cycle',
+			${params.sourceName},
+			${params.targetName},
+			NULL,
+			NULL,
+			cast(unixepoch('subsecond') * 1000 as integer)
+		FROM ${issues}
+		INNER JOIN ${issueStatuses}
+			ON ${issueStatuses.id} = ${issues.statusId}
+		WHERE ${issues.orgId} = ${params.orgId}
+			AND ${issues.projectId} = ${params.projectId}
+			AND ${issues.cycleId} = ${params.sourceCycleId}
+			AND ${issues.deletedAt} IS NULL
+			AND ${issueStatuses.category} NOT IN (${terminalCategoryList})
+	`);
+
+/**
+ * Set-based cycle deletion activity: one `field = "cycle"` row per issue still
+ * attached to the deleted cycle, with a null new value. Runs before the detach
+ * UPDATE in the same batch, so it still sees the old assignment.
+ */
+export const cycleDetachActivityStatement = (
+	db: Database,
+	params: {
+		orgId: string;
+		sourceCycleId: string;
+		actorId: string;
+		sourceName: string;
+	},
+): BatchItem<"sqlite"> =>
+	db.insert(activities).select(sql`
+		SELECT
+			lower(hex(randomblob(16))),
+			${issues.orgId},
+			${issues.projectId},
+			${issues.id},
+			${params.actorId},
+			'issue.updated',
+			'cycle',
+			${params.sourceName},
+			NULL,
+			NULL,
+			NULL,
+			cast(unixepoch('subsecond') * 1000 as integer)
+		FROM ${issues}
+		WHERE ${issues.orgId} = ${params.orgId}
+			AND ${issues.cycleId} = ${params.sourceCycleId}
+			AND ${issues.deletedAt} IS NULL
 	`);
 
 const ACTIVITY_SELECT = {

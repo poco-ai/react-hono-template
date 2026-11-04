@@ -91,6 +91,8 @@ export const createIssueSchema = z.object({
 	estimate: z.number().int().min(0).max(100).optional(),
 	/** Parent issue id; the parent must live in the same project. */
 	parentId: z.string().min(1).optional(),
+	/** Planning cycle id; must belong to the same organization and project. */
+	cycleId: z.string().min(1).optional(),
 });
 
 export const updateIssueSchema = createIssueSchema.partial().extend({
@@ -101,6 +103,8 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
 	estimate: z.number().int().min(0).max(100).nullish(),
 	/** Pass null to detach the issue from its parent. */
 	parentId: z.string().min(1).nullish(),
+	/** Pass null to remove the issue from its cycle. */
+	cycleId: z.string().min(1).nullish(),
 });
 
 export const issueListQuerySchema = z.object({
@@ -149,6 +153,8 @@ export const issueListQuerySchema = z.object({
 			"updated|created|priority, or a JSON array of {field,direction} sort keys.",
 		),
 	projectId: z.string().min(1).optional(),
+	/** Planning cycle id; the web client resolves `current` to a cycle id. */
+	cycleId: z.string().min(1).optional(),
 	/** Structured filter tree (JSON string). Combines with the flat params via AND. */
 	filter: z
 		.preprocess(parseFilterQuery, issueFilterNodeSchema.optional())

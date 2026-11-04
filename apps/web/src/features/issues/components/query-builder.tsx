@@ -49,6 +49,7 @@ import { DateField } from "./date-field";
 type MemberOption = { userId: string; user: { name: string } };
 type LabelOption = { id: string; name: string };
 type ProjectOption = Pick<ProjectDto, "id" | "name" | "key">;
+type CycleOption = { id: string; name: string };
 
 const FIELD_LABEL_KEYS: Record<IssueFilterField, TranslationKey> = {
 	statusId: "issues.filterFields.statusId",
@@ -57,6 +58,7 @@ const FIELD_LABEL_KEYS: Record<IssueFilterField, TranslationKey> = {
 	createdById: "issues.filterFields.createdById",
 	labelId: "issues.filterFields.labelId",
 	projectId: "issues.filterFields.projectId",
+	cycleId: "issues.filterFields.cycleId",
 	dueDate: "issues.filterFields.dueDate",
 	createdAt: "issues.filterFields.createdAt",
 	updatedAt: "issues.filterFields.updatedAt",
@@ -101,7 +103,7 @@ const toScalar = (field: IssueFilterField, raw: string): IssueFilterScalar =>
 
 const listOptions = (
 	field: IssueFilterField,
-	{ statuses, members, labels, projects }: FilterValueSources,
+	{ statuses, members, labels, projects, cycles }: FilterValueSources,
 ) => {
 	if (field === "statusId") {
 		return statuses.map((status) => ({ value: status.id, label: status.name }));
@@ -121,6 +123,9 @@ const listOptions = (
 	if (field === "labelId") {
 		return labels.map((label) => ({ value: label.id, label: label.name }));
 	}
+	if (field === "cycleId") {
+		return cycles.map((cycle) => ({ value: cycle.id, label: cycle.name }));
+	}
 	return projects.map((project) => ({
 		value: project.id,
 		label: `${project.key} · ${project.name}`,
@@ -132,6 +137,7 @@ type FilterValueSources = {
 	members: MemberOption[];
 	labels: LabelOption[];
 	projects: ProjectOption[];
+	cycles: CycleOption[];
 };
 
 /** Builds a valid condition with a sensible default value for the field. */
@@ -692,13 +698,20 @@ export function IssueQueryBuilder({
 	members,
 	labels,
 	projects,
+	cycles,
 	onChange,
 	stacked,
 }: QueryBuilderProps) {
 	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 	const [draft, setDraft] = useState<IssueFilterGroup>(filter ?? emptyFilter());
-	const sources: FilterValueSources = { statuses, members, labels, projects };
+	const sources: FilterValueSources = {
+		statuses,
+		members,
+		labels,
+		projects,
+		cycles,
+	};
 	const appliedKey = JSON.stringify(filter ?? emptyFilter());
 
 	useEffect(() => {
@@ -906,6 +919,7 @@ export function IssueFilterChips({
 	members,
 	labels,
 	projects,
+	cycles,
 	onChange,
 	className,
 }: FilterValueSources & {
@@ -926,6 +940,7 @@ export function IssueFilterChips({
 				`${project.key} · ${project.name}`,
 			]),
 		),
+		cycles: new Map(cycles.map((cycle) => [cycle.id, cycle.name])),
 	};
 
 	const valueLabel = (condition: IssueFilterCondition) => {
@@ -951,6 +966,9 @@ export function IssueFilterChips({
 			}
 			if (field === "projectId") {
 				return sourceMaps.projects.get(raw) ?? raw;
+			}
+			if (field === "cycleId") {
+				return sourceMaps.cycles.get(raw) ?? raw;
 			}
 			if (field === "priority") {
 				return t(`issues.priorities.${priorityName(Number(value))}`);

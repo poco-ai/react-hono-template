@@ -34,6 +34,7 @@ const issueDto = (overrides: Partial<IssueDto> = {}): IssueDto => ({
 	dueDate: null,
 	estimate: null,
 	parentId: null,
+	cycleId: null,
 	deletedAt: null,
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",

@@ -139,6 +139,9 @@ const setup = (options: { savedViews?: number } = {}) => {
 						color: null,
 						archived: false,
 						nextNumber: 1,
+						health: null,
+						targetDate: null,
+						leadId: null,
 						createdAt: NOW,
 						updatedAt: NOW,
 					};

@@ -48,8 +48,13 @@ import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { EditProjectDialog } from "@/features/projects/components/edit-project-dialog";
 import { projectsQuery, useArchiveProject } from "@/features/projects/data";
+import {
+	PROJECT_HEALTH_META,
+	projectHealthOf,
+	projectTargetDateStatus,
+} from "@/features/projects/utils";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatRelativeTime } from "@/lib/format";
+import { formatDate, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function ProjectsPage({ orgId }: { orgId: string }) {
@@ -211,105 +216,135 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 
 			{visibleProjects.length > 0 && (
 				<div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">
-					{visibleProjects.map((project) => (
-						<Card
-							key={project.id}
-							className="group flex h-full cursor-pointer flex-col gap-0 py-0 transition-all hover:bg-accent/40 hover:shadow-sm hover:ring-foreground/20"
-							onClick={() =>
-								navigate({
-									to: "/orgs/$orgId/projects/$projectId",
-									params: { orgId, projectId: project.id },
-									search: { page: 1, sort: "updated" },
-								})
-							}
-						>
-							<CardHeader className="gap-1.5 px-4 pt-4 pb-3">
-								<div className="flex items-start justify-between gap-2">
-									<div className="flex min-w-0 flex-1 items-center gap-2">
-										<span
-											className="size-2.5 shrink-0 rounded-full"
-											style={{
-												backgroundColor:
-													project.color ?? "var(--muted-foreground)",
-											}}
-										/>
-										<CardTitle className="min-w-0 truncate text-base">
-											{project.name}
-										</CardTitle>
-										<Badge variant="outline" className="rounded-md font-mono">
-											{project.key}
-										</Badge>
-										{project.archived && (
-											<Badge variant="secondary" className="rounded-md">
-												{t("projects.archivedBadge")}
+					{visibleProjects.map((project) => {
+						const health = projectHealthOf(project.health);
+						const healthMeta = health ? PROJECT_HEALTH_META[health] : null;
+						const targetStatus = projectTargetDateStatus(project.targetDate);
+						return (
+							<Card
+								key={project.id}
+								className="group flex h-full cursor-pointer flex-col gap-0 py-0 transition-all hover:bg-accent/40 hover:shadow-sm hover:ring-foreground/20"
+								onClick={() =>
+									navigate({
+										to: "/orgs/$orgId/projects/$projectId",
+										params: { orgId, projectId: project.id },
+										search: { page: 1, sort: "updated" },
+									})
+								}
+							>
+								<CardHeader className="gap-1.5 px-4 pt-4 pb-3">
+									<div className="flex items-start justify-between gap-2">
+										<div className="flex min-w-0 flex-1 items-center gap-2">
+											<span
+												className="size-2.5 shrink-0 rounded-full"
+												style={{
+													backgroundColor:
+														project.color ?? "var(--muted-foreground)",
+												}}
+											/>
+											<CardTitle className="min-w-0 truncate text-base">
+												{project.name}
+											</CardTitle>
+											<Badge variant="outline" className="rounded-md font-mono">
+												{project.key}
 											</Badge>
+											{project.archived && (
+												<Badge variant="secondary" className="rounded-md">
+													{t("projects.archivedBadge")}
+												</Badge>
+											)}
+											{health && healthMeta && (
+												<span
+													role="img"
+													title={t(`projects.healthValues.${health}`)}
+													aria-label={t(`projects.healthValues.${health}`)}
+													className={`size-2 shrink-0 rounded-full ${healthMeta.dotClassName}`}
+												/>
+											)}
+										</div>
+										{canManage && (
+											<DropdownMenu>
+												<Tooltip>
+													<TooltipTrigger
+														render={
+															<DropdownMenuTrigger
+																render={
+																	<Button
+																		variant="ghost"
+																		size="icon-sm"
+																		aria-label={t("common.actions")}
+																		disabled={frozen}
+																		onClick={(e) => e.stopPropagation()}
+																	>
+																		<MoreHorizontal />
+																	</Button>
+																}
+															/>
+														}
+													/>
+													<TooltipContent>{t("common.actions")}</TooltipContent>
+												</Tooltip>
+												<DropdownMenuContent
+													align="end"
+													onClick={(e) => e.stopPropagation()}
+												>
+													<DropdownMenuItem
+														onClick={() => setEditTarget(project)}
+													>
+														{t("common.edit")}
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() => setArchiveTarget(project)}
+													>
+														{project.archived
+															? t("projects.unarchive")
+															: t("projects.archive")}
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
 										)}
 									</div>
-									{canManage && (
-										<DropdownMenu>
-											<Tooltip>
-												<TooltipTrigger
-													render={
-														<DropdownMenuTrigger
-															render={
-																<Button
-																	variant="ghost"
-																	size="icon-sm"
-																	aria-label={t("common.actions")}
-																	disabled={frozen}
-																	onClick={(e) => e.stopPropagation()}
-																>
-																	<MoreHorizontal />
-																</Button>
-															}
-														/>
-													}
-												/>
-												<TooltipContent>{t("common.actions")}</TooltipContent>
-											</Tooltip>
-											<DropdownMenuContent
-												align="end"
-												onClick={(e) => e.stopPropagation()}
-											>
-												<DropdownMenuItem
-													onClick={() => setEditTarget(project)}
-												>
-													{t("common.edit")}
-												</DropdownMenuItem>
-												<DropdownMenuItem
-													onClick={() => setArchiveTarget(project)}
-												>
-													{project.archived
-														? t("projects.unarchive")
-														: t("projects.archive")}
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
-									)}
-								</div>
-								<CardDescription className="line-clamp-2 min-h-10">
-									{project.description?.trim() || t("projects.noDescription")}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="mt-auto flex items-center justify-between gap-2 border-t px-4 py-2.5 text-xs text-muted-foreground">
-								<div className="flex w-full items-center justify-between gap-2">
-									<span className="flex items-center gap-1 whitespace-nowrap">
-										<CircleDot className="size-3.5 shrink-0" />
-										{t("projects.openIssues", {
-											count: project.openIssueCount,
-										})}{" "}
-										·{" "}
-										{t("projects.totalIssues", {
-											count: project.totalIssueCount,
-										})}
-									</span>
-									<span className="shrink-0">
-										{formatRelativeTime(project.updatedAt)}
-									</span>
-								</div>
-							</CardContent>
-						</Card>
-					))}
+									<CardDescription className="line-clamp-2 min-h-10">
+										{project.description?.trim() || t("projects.noDescription")}
+									</CardDescription>
+								</CardHeader>
+								<CardContent className="mt-auto flex items-center justify-between gap-2 border-t px-4 py-2.5 text-xs text-muted-foreground">
+									<div className="flex w-full items-center justify-between gap-2">
+										<span className="flex items-center gap-1 whitespace-nowrap">
+											<CircleDot className="size-3.5 shrink-0" />
+											{t("projects.openIssues", {
+												count: project.openIssueCount,
+											})}{" "}
+											·{" "}
+											{t("projects.totalIssues", {
+												count: project.totalIssueCount,
+											})}
+											{project.targetDate && (
+												<>
+													{" · "}
+													<span
+														className={
+															targetStatus === "overdue"
+																? "text-destructive font-medium"
+																: targetStatus === "soon"
+																	? "text-amber-600 dark:text-amber-400 font-medium"
+																	: undefined
+														}
+														title={t("projects.targetDate")}
+													>
+														{formatDate(project.targetDate)}
+													</span>
+												</>
+											)}
+										</span>
+										<span className="shrink-0">
+											{formatRelativeTime(project.updatedAt)}
+										</span>
+									</div>
+								</CardContent>
+							</Card>
+						);
+					})}
 				</div>
 			)}
 

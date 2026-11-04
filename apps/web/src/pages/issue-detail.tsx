@@ -29,6 +29,7 @@ import { NotFoundState } from "@/components/not-found-state";
 import { IssueActivityTimeline } from "@/features/activities/components/issue-activity";
 import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
 import { IssueComments } from "@/features/comments/components/issue-comments";
+import { cyclesQuery } from "@/features/cycles/data";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
 import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
@@ -68,6 +69,7 @@ export function IssueDetailPage({
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
 	const statuses = useQuery(statusesQuery(orgId));
+	const cycles = useQuery(cyclesQuery(orgId, projectId));
 	const frozen = useOrgFrozen(orgId);
 
 	const [title, setTitle] = useState("");
@@ -341,6 +343,7 @@ export function IssueDetailPage({
 					members={members.data ?? []}
 					labels={labels.data ?? []}
 					statuses={statuses.data ?? []}
+					cycles={cycles.data?.items ?? []}
 					frozen={frozen}
 					onUpdate={update}
 					onDelete={() => setDeleteOpen(true)}

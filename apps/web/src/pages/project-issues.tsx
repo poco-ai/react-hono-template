@@ -16,8 +16,10 @@ import {
 } from "@workspace/ui/components/toggle-group";
 import {
 	ArrowLeft,
+	CalendarRange,
 	Columns3,
 	List,
+	Megaphone,
 	Plus,
 	SlidersHorizontal,
 } from "lucide-react";
@@ -26,6 +28,9 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NotFoundState } from "@/components/not-found-state";
 import { useSession } from "@/features/auth/data";
+import { CurrentCycleCard } from "@/features/cycles/components/current-cycle-card";
+import { CycleFilterBadge } from "@/features/cycles/components/cycle-filter-badge";
+import { cyclesQuery } from "@/features/cycles/data";
 import { BoardView } from "@/features/issues/components/board-view";
 import { BulkActionBar } from "@/features/issues/components/bulk-bar";
 import { CreateIssueDialog } from "@/features/issues/components/create-issue-dialog";
@@ -48,6 +53,8 @@ import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
+import { ProjectUpdatesSheet } from "@/features/project-updates/components/project-updates-sheet";
+import { ProjectMeta } from "@/features/projects/components/project-meta";
 import { projectQuery, projectsQuery } from "@/features/projects/data";
 import { defaultStatusOf, statusesQuery } from "@/features/statuses/data";
 import { ViewSwitcher } from "@/features/views/components/view-switcher";
@@ -75,8 +82,10 @@ export function ProjectIssuesPage({
 	const labels = useQuery(labelsQuery(orgId));
 	const projects = useQuery(projectsQuery(orgId));
 	const statuses = useQuery(statusesQuery(orgId));
+	const cycles = useQuery(cyclesQuery(orgId, projectId));
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [updatesOpen, setUpdatesOpen] = useState(false);
 	const [createStatusId, setCreateStatusId] = useState<string | undefined>(
 		undefined,
 	);
@@ -129,6 +138,7 @@ export function ProjectIssuesPage({
 			sorts: resolved.sorts,
 			groupBy: resolved.groupBy,
 			search: resolved.search,
+			cycleId: resolved.cycleId,
 			page: search.page,
 		}),
 	);
@@ -138,6 +148,7 @@ export function ProjectIssuesPage({
 		sorts: resolved.sorts,
 		groupBy: resolved.groupBy,
 		search: resolved.search,
+		cycleId: resolved.cycleId,
 		page: search.page,
 	};
 
@@ -156,8 +167,14 @@ export function ProjectIssuesPage({
 
 	const result: ListIssuesDto | undefined = issues.data;
 	const filterCount = filterConditionCount(effectiveFilter);
-	const hasFilters = filterCount > 0 || resolved.search !== "";
-	const activeFilterCount = filterCount + (resolved.search !== "" ? 1 : 0);
+	const cycleFilterId = resolved.cycleId;
+	const cycleFilterCycle = cycleFilterId
+		? cycles.data?.items.find((cycle) => cycle.id === cycleFilterId)
+		: undefined;
+	const hasFilters =
+		filterCount > 0 || resolved.search !== "" || Boolean(cycleFilterId);
+	const activeFilterCount =
+		filterCount + (resolved.search !== "" ? 1 : 0) + (cycleFilterId ? 1 : 0);
 
 	/**
 	 * Leaves the applied view (when there is one) while keeping its resolved
@@ -232,6 +249,7 @@ export function ProjectIssuesPage({
 			priority: "",
 			assigneeId: "",
 			labelId: "",
+			cycleId: "",
 			page: 1,
 			view: next.layout === "board" ? "board" : "list",
 		});
@@ -250,14 +268,28 @@ export function ProjectIssuesPage({
 			priority: "",
 			assigneeId: "",
 			labelId: "",
+			cycleId: "",
 			page: 1,
 		});
 	};
 
 	// Clearing filters keeps the user's sort/grouping (and a view's resolved
-	// ones) intact; it is not the same as resetting to defaults.
+	// ones) intact; it is not the same as resetting to defaults. The flat cycle
+	// filter is cleared here too, in the same navigation.
 	const clearFilters = () => {
-		detachView(undefined, { search: "" });
+		setSelected(new Set());
+		if (currentView) {
+			setDirtyView(currentView);
+		}
+		setSearch({
+			...detachedFilterSearch({
+				view: currentView?.query,
+				resolved,
+				filter: undefined,
+				search: "",
+			}),
+			cycleId: "",
+		});
 	};
 
 	const savedQuery: IssueQuery = {
@@ -401,8 +433,31 @@ export function ProjectIssuesPage({
 								{project.data.description}
 							</p>
 						)}
+						{project.data && (
+							<ProjectMeta
+								className="mt-2"
+								project={project.data}
+								members={members.data ?? []}
+							/>
+						)}
 					</div>
 					<div className="flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setUpdatesOpen(true)}
+						>
+							<Megaphone className="size-4" />
+							{t("projectUpdates.title")}
+						</Button>
+						<Link
+							to="/orgs/$orgId/projects/$projectId/cycles"
+							params={{ orgId, projectId }}
+							className={buttonVariants({ variant: "outline", size: "sm" })}
+						>
+							<CalendarRange className="size-4" />
+							{t("cycles.title")}
+						</Link>
 						{view === "list" && (
 							<IssueListToolbar
 								groupBy={resolved.groupBy}
@@ -463,8 +518,18 @@ export function ProjectIssuesPage({
 				</div>
 			</header>
 
+			<div className="border-b px-4 py-3 empty:hidden lg:px-6">
+				<CurrentCycleCard orgId={orgId} projectId={projectId} />
+			</div>
+
 			{isDesktop ? (
 				<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
+					{cycleFilterCycle && (
+						<CycleFilterBadge
+							name={cycleFilterCycle.name}
+							onClear={() => setSearch({ cycleId: "", page: 1 })}
+						/>
+					)}
 					<IssueFilterControls
 						variant="inline"
 						filter={effectiveFilter}
@@ -472,6 +537,7 @@ export function ProjectIssuesPage({
 						members={members.data ?? []}
 						labels={labels.data ?? []}
 						projects={projects.data ?? []}
+						cycles={cycles.data?.items ?? []}
 						showSort={view === "list"}
 						sort={sortField}
 						searchInput={searchInput}
@@ -486,6 +552,12 @@ export function ProjectIssuesPage({
 				</div>
 			) : (
 				<div className="border-b flex items-center gap-2 px-4 py-3 lg:px-6">
+					{cycleFilterCycle && (
+						<CycleFilterBadge
+							name={cycleFilterCycle.name}
+							onClear={() => setSearch({ cycleId: "", page: 1 })}
+						/>
+					)}
 					<Button
 						variant="outline"
 						size="sm"
@@ -512,6 +584,7 @@ export function ProjectIssuesPage({
 									members={members.data ?? []}
 									labels={labels.data ?? []}
 									projects={projects.data ?? []}
+									cycles={cycles.data?.items ?? []}
 									showSort={view === "list"}
 									sort={sortField}
 									searchInput={searchInput}
@@ -541,6 +614,7 @@ export function ProjectIssuesPage({
 							sorts: resolved.sorts,
 							groupBy: resolved.groupBy,
 							search: resolved.search,
+							cycleId: resolved.cycleId,
 						}}
 						members={members.data ?? []}
 						labels={labels.data ?? []}
@@ -598,9 +672,19 @@ export function ProjectIssuesPage({
 					}
 				}}
 				defaultStatusId={createStatusId}
+				defaultCycleId={resolved.cycleId}
 				members={members.data ?? []}
 				labels={labels.data ?? []}
 				statuses={statuses.data ?? []}
+				cycles={cycles.data?.items ?? []}
+			/>
+
+			<ProjectUpdatesSheet
+				orgId={orgId}
+				projectId={projectId}
+				open={updatesOpen}
+				onOpenChange={setUpdatesOpen}
+				frozen={frozen}
 			/>
 		</div>
 	);

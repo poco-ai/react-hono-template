@@ -21,6 +21,9 @@ const project = {
 	color: null,
 	archived: false,
 	nextNumber: 1,
+	health: null,
+	targetDate: null,
+	leadId: null,
 	createdAt: NOW.toISOString(),
 	updatedAt: NOW.toISOString(),
 };
@@ -50,6 +53,7 @@ const issue = {
 	dueDate: null,
 	estimate: null,
 	parentId: null,
+	cycleId: null,
 	deletedAt: null,
 	createdAt: NOW.toISOString(),
 	updatedAt: NOW.toISOString(),

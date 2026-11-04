@@ -45,6 +45,11 @@ export const issueSearchSchema = z.object({
 	assigneeId: z.string().optional().catch(""),
 	labelId: z.string().optional().catch(""),
 	search: z.string().optional().catch(""),
+	/**
+	 * Flat planning-cycle filter. Kept out of the structured `filter` JSON so
+	 * the cycle card, query builders and saved views never have two sources.
+	 */
+	cycleId: z.string().optional().catch(""),
 	sort: sortParam,
 	/** Structured filter tree as a JSON string; invalid values fall back. */
 	filter: z.string().optional().catch(""),

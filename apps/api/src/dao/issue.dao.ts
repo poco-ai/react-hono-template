@@ -84,6 +84,7 @@ export const createIssueDao = (db: Database) => {
 				dueDate: Date | null;
 				estimate: number | null;
 				parentId: string | null;
+				cycleId: string | null;
 			},
 			labelIds: string[],
 			activityRows: ActivityInsert[] = [],
@@ -323,6 +324,9 @@ export const createIssueDao = (db: Database) => {
 			if (query.projectId) {
 				conditions.push(eq(issues.projectId, query.projectId));
 			}
+			if (query.cycleId) {
+				conditions.push(eq(issues.cycleId, query.cycleId));
+			}
 			if (query.statusId?.length) {
 				conditions.push(inArray(issues.statusId, query.statusId));
 			}
@@ -425,6 +429,7 @@ export const createIssueDao = (db: Database) => {
 				dueDate: Date | null;
 				estimate: number | null;
 				parentId: string | null;
+				cycleId: string | null;
 			}>,
 			labelIds?: string[],
 			activityRows: ActivityInsert[] = [],

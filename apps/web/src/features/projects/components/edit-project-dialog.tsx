@@ -1,5 +1,6 @@
 import type { ProjectDto } from "@api/dto/project.dto";
-import { updateProjectSchema } from "@workspace/shared";
+import { useQuery } from "@tanstack/react-query";
+import { type ProjectHealth, updateProjectSchema } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
@@ -17,25 +18,39 @@ import {
 	FieldLabel,
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@workspace/ui/components/select";
 import { Textarea } from "@workspace/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MutationError } from "@/components/mutation-error";
+import { membersQuery } from "@/features/members/data";
 import { useUpdateProject } from "@/features/projects/data";
-
+import { projectHealthOf } from "@/features/projects/utils";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
+import { fromDateInputValue, toDateInputValue } from "@/lib/format";
+import { ProjectHealthSelect } from "./project-health-select";
 
 const DEFAULT_COLOR = "#6366f1";
+const NO_LEAD = "__no_lead__";
 
 const INPUT_IDS = {
 	name: "edit-project-name",
 	description: "edit-project-description",
+	targetDate: "edit-project-target-date",
+	leadId: "edit-project-lead",
+	health: "edit-project-health",
 };
 
 export function EditProjectDialog({
@@ -50,10 +65,14 @@ export function EditProjectDialog({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { t } = useTranslation();
+	const members = useQuery(membersQuery(orgId));
 
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [color, setColor] = useState(DEFAULT_COLOR);
+	const [targetDate, setTargetDate] = useState("");
+	const [leadId, setLeadId] = useState(NO_LEAD);
+	const [health, setHealth] = useState<ProjectHealth | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	const updateMutation = useUpdateProject(orgId, {
@@ -70,6 +89,9 @@ export function EditProjectDialog({
 			setName(project.name);
 			setDescription(project.description ?? "");
 			setColor(project.color ?? DEFAULT_COLOR);
+			setTargetDate(toDateInputValue(project.targetDate));
+			setLeadId(project.leadId ?? NO_LEAD);
+			setHealth(projectHealthOf(project.health));
 			setFieldErrors({});
 		}
 	}, [open, project, updateMutation.reset]);
@@ -82,6 +104,9 @@ export function EditProjectDialog({
 			name: name.trim(),
 			description: description.trim() || null,
 			color,
+			targetDate: fromDateInputValue(targetDate),
+			leadId: leadId === NO_LEAD ? null : leadId,
+			health,
 		});
 		if (!parsed.success) {
 			const errors = fieldErrorsFromZod(parsed.error, t);
@@ -168,6 +193,75 @@ export function EditProjectDialog({
 						<FieldError id="edit-project-description-error">
 							{fieldErrors.description}
 						</FieldError>
+					</Field>
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<Field data-invalid={fieldErrors.targetDate ? true : undefined}>
+							<FieldLabel htmlFor="edit-project-target-date">
+								{t("projects.targetDate")}
+								<span className="text-muted-foreground">
+									{" "}
+									({t("common.optional")})
+								</span>
+							</FieldLabel>
+							<Input
+								id="edit-project-target-date"
+								type="date"
+								value={targetDate}
+								onChange={(e) => {
+									setTargetDate(e.target.value);
+									setFieldErrors((prev) =>
+										withoutFieldError(prev, "targetDate"),
+									);
+								}}
+								aria-invalid={fieldErrors.targetDate ? true : undefined}
+							/>
+							<FieldError>{fieldErrors.targetDate}</FieldError>
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="edit-project-lead">
+								{t("projects.lead")}
+								<span className="text-muted-foreground">
+									{" "}
+									({t("common.optional")})
+								</span>
+							</FieldLabel>
+							<Select
+								value={leadId}
+								disabled={members.isPending}
+								onValueChange={(value) => value && setLeadId(value)}
+							>
+								<SelectTrigger id="edit-project-lead" className="w-full">
+									<SelectValue>
+										{leadId === NO_LEAD
+											? t("projects.noLead")
+											: (members.data?.find(
+													(member) => member.userId === leadId,
+												)?.user.name ?? t("projects.noLead"))}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={NO_LEAD}>
+										{t("projects.noLead")}
+									</SelectItem>
+									{(members.data ?? []).map((member) => (
+										<SelectItem key={member.userId} value={member.userId}>
+											{member.user.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</Field>
+					</div>
+					<Field>
+						<FieldLabel htmlFor="edit-project-health">
+							{t("projects.health")}
+						</FieldLabel>
+						<ProjectHealthSelect
+							id="edit-project-health"
+							value={health}
+							onChange={setHealth}
+							className="w-full sm:w-48"
+						/>
 					</Field>
 					<Field>
 						<FieldLabel>

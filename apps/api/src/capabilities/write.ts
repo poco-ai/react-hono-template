@@ -3,9 +3,11 @@ import {
 	ApiErrorCode,
 	commentReactionSchema,
 	createCommentSchema,
+	createCycleSchema,
 	createIssueSchema,
 	createLabelSchema,
 	createProjectSchema,
+	createProjectUpdateSchema,
 	createViewSchema,
 	ISSUE_RELATION_INPUT_TYPES,
 	updateIssueSchema,
@@ -14,6 +16,7 @@ import {
 import { z } from "zod";
 import {
 	commentSummarySchema,
+	cycleSummarySchema,
 	issueLink,
 	issueRefShape,
 	issueSummarySchema,
@@ -22,12 +25,15 @@ import {
 	orgLink,
 	projectLink,
 	projectSummarySchema,
+	projectUpdateSummarySchema,
 	resolveIssueRef,
 	resolveRef,
 	toCommentSummary,
+	toCycleSummary,
 	toIssueSummary,
 	toLabelSummary,
 	toProjectSummary,
+	toProjectUpdateSummary,
 	toViewSummary,
 	viewSummarySchema,
 } from "./read";
@@ -134,7 +140,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 			name: "create_issue",
 			titleKey: "ai.capabilities.create_issue.title",
 			description:
-				"Create an issue in a project. Requires the project id; uses the organization's labels and members for labelIds and assigneeId. Pass statusId (preferred) or a legacy status name; defaults to the organization's default status. Pass parentId to create a sub-issue: the parent must be a top-level issue in the same project (sub-issues are two levels deep).",
+				"Create an issue in a project. Requires the project id; uses the organization's labels and members for labelIds and assigneeId. Pass statusId (preferred) or a legacy status name; defaults to the organization's default status. Pass parentId to create a sub-issue: the parent must be a top-level issue in the same project (sub-issues are two levels deep). Pass cycleId (see list_cycles) to plan the issue in a cycle of the same project.",
 			input: createIssueInputSchema,
 			output: z.object({ issue: issueSummarySchema }),
 			effect: "write",
@@ -160,7 +166,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 		defineCapability({
 			name: "update_issue",
 			titleKey: "ai.capabilities.update_issue.title",
-			description: `Update issue fields (title, description, statusId (or legacy status name), priority, assignee, labels, due date, estimate, parentId). parentId moves the issue under a top-level issue in the same project; pass parentId: null to detach it. Issues that already have sub-issues cannot become sub-issues (two levels max). ${issueRefDescription}`,
+			description: `Update issue fields (title, description, statusId (or legacy status name), priority, assignee, labels, due date, estimate, parentId, cycleId). parentId moves the issue under a top-level issue in the same project; pass parentId: null to detach it. Issues that already have sub-issues cannot become sub-issues (two levels max). cycleId assigns the issue to a planning cycle of the same project; pass cycleId: null to remove it. ${issueRefDescription}`,
 			input: updateIssueInputSchema,
 			output: z.object({ issue: issueSummarySchema }),
 			effect: "write",
@@ -553,6 +559,61 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 					data: { id: input.labelId, deleted: true },
 					summary: `Deleted label ${input.labelId}.`,
 					links: [labelsLink(ctx, orgId), orgLink(ctx, orgId)],
+				};
+			},
+		}),
+		defineCapability({
+			name: "create_cycle",
+			titleKey: "ai.capabilities.create_cycle.title",
+			description:
+				"Create a planning cycle in a project. Dates must not overlap another cycle of the same project; the cycle number is assigned automatically. Use create_issue/update_issue with cycleId to plan issues.",
+			input: createCycleSchema.extend({
+				projectId: z.string().min(1),
+			}),
+			output: z.object({ cycle: cycleSummarySchema }),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const { projectId, ...createInput } = input;
+				const cycle = await deps.services.cycleService.createCycle(
+					orgId,
+					projectId,
+					ctx.actor.userId ?? null,
+					createInput,
+				);
+				return {
+					data: { cycle: toCycleSummary(cycle) },
+					summary: `Created cycle #${cycle.number} "${cycle.name}" (${cycle.startsAt} - ${cycle.endsAt}).`,
+					links: [projectLink(ctx, orgId, projectId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "create_project_update",
+			titleKey: "ai.capabilities.create_project_update.title",
+			description:
+				"Post a status update on a project. body is 1-5000 characters; health optionally reports on_track, at_risk or off_track. Any organization member can post.",
+			input: createProjectUpdateSchema.extend({
+				projectId: z.string().min(1),
+			}),
+			output: z.object({ update: projectUpdateSummarySchema }),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const { projectId, ...createInput } = input;
+				const update = await deps.services.projectUpdateService.createUpdate(
+					orgId,
+					projectId,
+					ctx.actor.userId ?? null,
+					createInput,
+				);
+				return {
+					data: { update: toProjectUpdateSummary(update) },
+					summary: `Posted a project update${update.health ? ` (${update.health})` : ""}.`,
+					links: [projectLink(ctx, orgId, projectId)],
 				};
 			},
 		}),

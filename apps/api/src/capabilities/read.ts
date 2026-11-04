@@ -1,6 +1,7 @@
 import {
 	ApiError,
 	ApiErrorCode,
+	cycleListQuerySchema,
 	ISSUE_PRIORITY,
 	ISSUE_QUERY_GROUP_BY,
 	ISSUE_QUERY_MAX_SORTS,
@@ -8,6 +9,7 @@ import {
 	issueFilterNodeSchema,
 	issueQuerySchema,
 	issueQuerySortSchema,
+	projectUpdateListQuerySchema,
 } from "@workspace/shared";
 import { z } from "zod";
 import type { ActivityDto, OrgActivityDto } from "../dto/activity.dto";
@@ -15,6 +17,7 @@ import type { CommentDto } from "../dto/comment.dto";
 import type { IssueDetailDto } from "../dto/issue.dto";
 import type { LabelDto } from "../dto/label.dto";
 import type { ProjectWithStatsDto } from "../dto/project.dto";
+import type { ProjectUpdateDto } from "../dto/project-update.dto";
 import type { StatusDto } from "../dto/status.dto";
 import type { ViewDto } from "../dto/view.dto";
 import {
@@ -54,6 +57,43 @@ export const projectSummarySchema = z.object({
 	color: z.string().nullable(),
 	archived: z.boolean(),
 	nextNumber: z.number().int(),
+	health: z.string().nullable(),
+	targetDate: z.string().nullable(),
+	leadId: z.string().nullable(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+export const cycleSummarySchema = z.object({
+	id: z.string(),
+	projectId: z.string(),
+	name: z.string(),
+	number: z.number().int(),
+	startsAt: z.string(),
+	endsAt: z.string(),
+	status: z.enum(["upcoming", "current", "past"]),
+	progress: z.object({
+		total: z.number().int(),
+		terminal: z.number().int(),
+		percent: z.number().int(),
+	}),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+export const projectUpdateSummarySchema = z.object({
+	id: z.string(),
+	projectId: z.string(),
+	body: z.string(),
+	health: z.string().nullable(),
+	author: z
+		.object({
+			id: z.string(),
+			name: z.string(),
+			email: z.string(),
+			image: z.string().nullable(),
+		})
+		.nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
@@ -83,6 +123,7 @@ export const issueSummarySchema = z.object({
 	estimate: z.number().int().nullable(),
 	labelIds: z.array(z.string()),
 	parentId: z.string().nullable(),
+	cycleId: z.string().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
@@ -184,6 +225,8 @@ const commentsOutputSchema = z.object({
 type OrgSummary = z.infer<typeof orgSummarySchema>;
 type MemberSummary = z.infer<typeof memberSummarySchema>;
 type ProjectSummary = z.infer<typeof projectSummarySchema>;
+type CycleSummary = z.infer<typeof cycleSummarySchema>;
+type ProjectUpdateSummary = z.infer<typeof projectUpdateSummarySchema>;
 type IssueSummary = z.infer<typeof issueSummarySchema>;
 type CommentSummary = z.infer<typeof commentSummarySchema>;
 type LabelSummary = z.infer<typeof labelSummarySchema>;
@@ -220,6 +263,9 @@ export const toProjectSummary = (
 				color: string | null;
 				archived: boolean;
 				nextNumber: number;
+				health: string | null;
+				targetDate: string | null;
+				leadId: string | null;
 				createdAt: string;
 				updatedAt: string;
 		  },
@@ -231,8 +277,47 @@ export const toProjectSummary = (
 	color: project.color,
 	archived: project.archived,
 	nextNumber: project.nextNumber,
+	health: project.health,
+	targetDate: project.targetDate,
+	leadId: project.leadId,
 	createdAt: project.createdAt,
 	updatedAt: project.updatedAt,
+});
+
+export const toCycleSummary = (cycle: {
+	id: string;
+	projectId: string;
+	name: string;
+	number: number;
+	startsAt: string;
+	endsAt: string;
+	status: "upcoming" | "current" | "past";
+	progress: { total: number; terminal: number; percent: number };
+	createdAt: string;
+	updatedAt: string;
+}): CycleSummary => ({
+	id: cycle.id,
+	projectId: cycle.projectId,
+	name: cycle.name,
+	number: cycle.number,
+	startsAt: cycle.startsAt,
+	endsAt: cycle.endsAt,
+	status: cycle.status,
+	progress: cycle.progress,
+	createdAt: cycle.createdAt,
+	updatedAt: cycle.updatedAt,
+});
+
+export const toProjectUpdateSummary = (
+	update: ProjectUpdateDto,
+): ProjectUpdateSummary => ({
+	id: update.id,
+	projectId: update.projectId,
+	body: update.body,
+	health: update.health,
+	author: update.author,
+	createdAt: update.createdAt,
+	updatedAt: update.updatedAt,
 });
 
 export const toIssueSummary = (issue: IssueDetailDto): IssueSummary => ({
@@ -250,6 +335,7 @@ export const toIssueSummary = (issue: IssueDetailDto): IssueSummary => ({
 	estimate: issue.estimate,
 	labelIds: issue.labelIds,
 	parentId: issue.parentId,
+	cycleId: issue.cycleId,
 	createdAt: issue.createdAt,
 	updatedAt: issue.updatedAt,
 });
@@ -427,6 +513,8 @@ const listIssuesInputSchema = z.object({
 	assigneeId: z.string().min(1).optional(),
 	labelId: z.string().min(1).optional(),
 	search: z.string().trim().max(100).optional(),
+	/** Planning cycle id (assign issues of one cycle to the list). */
+	cycleId: z.string().min(1).optional(),
 	/** Structured filter tree; AND-combined with the flat filters above. */
 	filter: issueFilterNodeSchema.optional(),
 	...paginationInputShape,
@@ -971,6 +1059,75 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 								: [],
 						),
 					]),
+				};
+			},
+		}),
+		defineCapability({
+			name: "list_cycles",
+			titleKey: "ai.capabilities.list_cycles.title",
+			description:
+				"List a project's planning cycles (time-boxed iterations) with their derived status (upcoming/current/past), dates and issue progress (total, terminal, percent). Filter by status (current/upcoming/past/all) and paginate. Cycles never overlap in time.",
+			input: cycleListQuerySchema.extend({
+				projectId: z.string().min(1),
+			}),
+			output: z.object({
+				cycles: z.array(cycleSummarySchema),
+				...pageMetaSchema,
+			}),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const { projectId, ...query } = input;
+				const page = await deps.services.cycleService.listCycles(
+					orgId,
+					projectId,
+					query,
+				);
+				return {
+					data: {
+						cycles: page.items.map(toCycleSummary),
+						total: page.total,
+						page: page.page,
+						pageSize: page.pageSize,
+					},
+					summary: `Found ${page.total} cycle(s); showing page ${page.page}.`,
+					links: [projectLink(ctx, orgId, projectId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_project_updates",
+			titleKey: "ai.capabilities.list_project_updates.title",
+			description:
+				"List a project's status updates (newest first), each with its body, reported health (on_track/at_risk/off_track or null) and author.",
+			input: projectUpdateListQuerySchema.extend({
+				projectId: z.string().min(1),
+			}),
+			output: z.object({
+				updates: z.array(projectUpdateSummarySchema),
+				...pageMetaSchema,
+			}),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const { projectId, ...query } = input;
+				const page = await deps.services.projectUpdateService.listUpdates(
+					orgId,
+					projectId,
+					query,
+				);
+				return {
+					data: {
+						updates: page.items.map(toProjectUpdateSummary),
+						total: page.total,
+						page: page.page,
+						pageSize: page.pageSize,
+					},
+					summary: `Project has ${page.total} update(s); showing page ${page.page}.`,
+					links: [projectLink(ctx, orgId, projectId)],
 				};
 			},
 		}),

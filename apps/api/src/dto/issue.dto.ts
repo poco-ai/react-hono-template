@@ -70,6 +70,7 @@ export type ListIssuesQueryDto = {
 	/** Structured filter tree, AND-combined with the flat filters. */
 	filter?: IssueFilterNode;
 	projectId?: string;
+	cycleId?: string;
 };
 
 export type ListIssuesDto = Paginated<IssueDetailDto>;

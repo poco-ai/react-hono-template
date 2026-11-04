@@ -15,6 +15,8 @@ export type CreateIssueFormState = {
 	labelIds: string[];
 	dueDate: string;
 	estimate: string;
+	/** Optional planning cycle of the same project. */
+	cycleId?: string;
 };
 
 /**
@@ -55,6 +57,7 @@ export const buildCreateIssueInput = (
 			estimate !== undefined && Number.isInteger(estimate) && estimate >= 0
 				? estimate
 				: undefined,
+		cycleId: form.cycleId || undefined,
 		parentId,
 	};
 };

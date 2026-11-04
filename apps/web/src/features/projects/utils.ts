@@ -1,3 +1,64 @@
+import { PROJECT_HEALTH_VALUES, type ProjectHealth } from "@workspace/shared";
+
+/** Visual treatment for each project health rollup. */
+export const PROJECT_HEALTH_META = {
+	on_track: {
+		className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+		dotClassName: "bg-emerald-500",
+	},
+	at_risk: {
+		className: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+		dotClassName: "bg-amber-500",
+	},
+	off_track: {
+		className: "bg-red-500/10 text-red-600 dark:text-red-400",
+		dotClassName: "bg-red-500",
+	},
+} as const satisfies Record<
+	ProjectHealth,
+	{ className: string; dotClassName: string }
+>;
+
+/** Narrows an API health value (a plain text column) to the known rollups. */
+export function projectHealthOf(
+	value: string | null | undefined,
+): ProjectHealth | null {
+	return value && (PROJECT_HEALTH_VALUES as readonly string[]).includes(value)
+		? (value as ProjectHealth)
+		: null;
+}
+
+export function projectHealthMeta(value: string | null | undefined) {
+	const health = projectHealthOf(value);
+	return health ? PROJECT_HEALTH_META[health] : null;
+}
+
+export type ProjectTargetDateStatus = "overdue" | "soon" | "upcoming";
+
+/** Calendar-day distance used for the overdue/soon target date styling. */
+export function projectTargetDateStatus(
+	value: string | null | undefined,
+	now: Date = new Date(),
+): ProjectTargetDateStatus | null {
+	if (!value) {
+		return null;
+	}
+	const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+	const date = match
+		? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+		: new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return null;
+	}
+	const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+	const target = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+	const days = Math.round((target - today) / 86_400_000);
+	if (days < 0) {
+		return "overdue";
+	}
+	return days <= 7 ? "soon" : "upcoming";
+}
+
 export function projectKeyFromName(name: string): string {
 	const words = name
 		.toUpperCase()

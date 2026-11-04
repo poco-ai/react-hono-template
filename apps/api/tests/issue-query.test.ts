@@ -493,6 +493,7 @@ test("legacy flat params and the structured filter merge with AND", async () => 
 		labelDao: {} as LabelDao,
 		projectDao: {} as ProjectDao,
 		memberDao: {} as MemberDao,
+		cycleDao: { findById: async () => null },
 		statusService: {
 			resolveStatusIds: async (
 				_orgId: string,

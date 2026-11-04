@@ -33,6 +33,7 @@ import { MoreHorizontal, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
+import type { CycleWithProgressDto } from "@/features/cycles/data";
 import { DateField } from "@/features/issues/components/date-field";
 import {
 	ParentIssueField,
@@ -44,6 +45,7 @@ import { LabelBadge } from "@/features/labels/components/label-badge";
 import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 
 const UNASSIGNED = "__unassigned__";
+const NO_CYCLE = "__no_cycle__";
 
 export function IssuePropertiesPanel({
 	orgId,
@@ -55,6 +57,7 @@ export function IssuePropertiesPanel({
 	members,
 	labels,
 	statuses,
+	cycles,
 	frozen,
 	onUpdate,
 	onDelete,
@@ -70,6 +73,8 @@ export function IssuePropertiesPanel({
 	members: { userId: string; user: { name: string } }[];
 	labels: LabelDto[];
 	statuses: StatusDto[];
+	/** Cycles of the issue's project. */
+	cycles: CycleWithProgressDto[];
 	frozen: boolean;
 	onUpdate: (input: UpdateIssueInput) => void;
 	onDelete: () => void;
@@ -135,6 +140,33 @@ export function IssuePropertiesPanel({
 				frozen={frozen}
 				onChange={(parentId) => onUpdate({ parentId })}
 			/>
+
+			<PropertyRow label={t("issues.cycle")}>
+				<Select
+					value={issue.cycleId ?? NO_CYCLE}
+					disabled={frozen || cycles.length === 0}
+					onValueChange={(value) =>
+						value && onUpdate({ cycleId: value === NO_CYCLE ? null : value })
+					}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue>
+							{issue.cycleId
+								? (cycles.find((cycle) => cycle.id === issue.cycleId)?.name ??
+									t("issues.noCycle"))
+								: t("issues.noCycle")}
+						</SelectValue>
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value={NO_CYCLE}>{t("issues.noCycle")}</SelectItem>
+						{cycles.map((cycle) => (
+							<SelectItem key={cycle.id} value={cycle.id}>
+								{cycle.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</PropertyRow>
 
 			<PropertyRow label={t("issues.status")}>
 				<Select

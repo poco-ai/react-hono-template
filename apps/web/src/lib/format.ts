@@ -12,6 +12,24 @@ export function formatDate(value: string | null | undefined): string {
 	return value ? parseDateValue(value).toLocaleDateString(i18n.language) : "";
 }
 
+/**
+ * Formats the UTC calendar day of a timestamp. Cycle ranges are stored as UTC
+ * days (`endsAt` is `23:59:59.999Z`), so local formatting would show the end
+ * date as the next day in UTC+ time zones.
+ */
+export function formatUtcDate(value: string | null | undefined): string {
+	if (!value) {
+		return "";
+	}
+	const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+	const date = match
+		? new Date(
+				Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+			)
+		: new Date(value);
+	return date.toLocaleDateString(i18n.language, { timeZone: "UTC" });
+}
+
 export function formatDateTime(value: string | null | undefined): string {
 	return value ? new Date(value).toLocaleString(i18n.language) : "";
 }
@@ -109,14 +127,25 @@ export function formatBytes(size: number): string {
 	return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Date-input value (`YYYY-MM-DD`) for an ISO timestamp. Uses the UTC day so a
+ * stored `23:59:59.999Z` end date does not shift into the next day locally.
+ */
 export function toDateInputValue(iso: string | null | undefined): string {
 	if (!iso) {
 		return "";
 	}
-	const date = parseDateValue(iso.slice(0, 10));
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	return `${date.getFullYear()}-${month}-${day}`;
+	const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+	if (match) {
+		return `${match[1]}-${match[2]}-${match[3]}`;
+	}
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) {
+		return "";
+	}
+	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(date.getUTCDate()).padStart(2, "0");
+	return `${date.getUTCFullYear()}-${month}-${day}`;
 }
 
 export function fromDateInputValue(value: string): string | null {

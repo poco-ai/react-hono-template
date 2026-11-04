@@ -16,6 +16,7 @@ import { createBillingDao } from "./dao/billing.dao";
 import { createCommentDao } from "./dao/comment.dao";
 import { createCommentMentionDao } from "./dao/comment-mention.dao";
 import { createCommentReactionDao } from "./dao/comment-reaction.dao";
+import { createCycleDao } from "./dao/cycle.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createIssueSubscriptionDao } from "./dao/issue-subscription.dao";
 import { createLabelDao } from "./dao/label.dao";
@@ -26,6 +27,7 @@ import { createOrgAiSettingsDao } from "./dao/org-ai-settings.dao";
 import { createOrganizationDao } from "./dao/organization.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
+import { createProjectUpdateDao } from "./dao/project-update.dao";
 import { createRelationDao } from "./dao/relation.dao";
 import { createStatusDao } from "./dao/status.dao";
 import { createViewDao } from "./dao/view.dao";
@@ -52,6 +54,7 @@ import { createBootstrapService } from "./services/bootstrap.service";
 import { createCleanupService } from "./services/cleanup.service";
 import { createCommentService } from "./services/comment.service";
 import { createConfigService } from "./services/config.service";
+import { createCycleService } from "./services/cycle.service";
 import { createIssueService } from "./services/issue.service";
 import { createIssueSubscriptionService } from "./services/issue-subscription.service";
 import { createLabelService } from "./services/label.service";
@@ -60,6 +63,7 @@ import { createNotificationService } from "./services/notification.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
+import { createProjectUpdateService } from "./services/project-update.service";
 import { createRelationService } from "./services/relation.service";
 import { createStatusService } from "./services/status.service";
 import { createStorageUsageService } from "./services/storage-usage.service";
@@ -110,6 +114,8 @@ export const createDependencies = ({
 
 	const memberDao = createMemberDao(db);
 	const projectDao = createProjectDao(db);
+	const projectUpdateDao = createProjectUpdateDao(db);
+	const cycleDao = createCycleDao(db);
 	const issueDao = createIssueDao(db);
 	const relationDao = createRelationDao(db);
 	const labelDao = createLabelDao(db);
@@ -168,7 +174,16 @@ export const createDependencies = ({
 		deliveries: webhookDeliveryService,
 	});
 
-	const projectService = createProjectService(projectDao, planService);
+	const projectService = createProjectService(
+		projectDao,
+		planService,
+		memberDao,
+	);
+	const projectUpdateService = createProjectUpdateService({
+		updateDao: projectUpdateDao,
+		projectDao,
+	});
+	const cycleService = createCycleService({ cycleDao, projectDao });
 	const viewService = createViewService({
 		viewDao,
 		projectDao,
@@ -184,6 +199,7 @@ export const createDependencies = ({
 		labelDao,
 		projectDao,
 		memberDao,
+		cycleDao,
 		statusService,
 		webhooks: webhookDeliveryService,
 		notifications: notificationService,
@@ -247,6 +263,8 @@ export const createDependencies = ({
 			activityService,
 			relationService,
 			viewService,
+			cycleService,
+			projectUpdateService,
 		},
 		daos: {
 			memberDao,
@@ -296,6 +314,8 @@ export const createDependencies = ({
 			apiKeyDao,
 			organizationDao,
 			projectDao,
+			projectUpdateDao,
+			cycleDao,
 			issueDao,
 			relationDao,
 			commentDao,
@@ -320,6 +340,8 @@ export const createDependencies = ({
 			adminUserService,
 			adminOrgService,
 			projectService,
+			projectUpdateService,
+			cycleService,
 			viewService,
 			issueService,
 			labelService,

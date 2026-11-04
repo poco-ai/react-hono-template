@@ -68,6 +68,8 @@ export interface IssueFilters {
 	sorts?: IssueQuerySort[];
 	groupBy?: IssueQueryGroupBy;
 	search: string;
+	/** Flat cycle filter applied by the API alongside the structured filter. */
+	cycleId?: string;
 	page: number;
 	pageSize?: number;
 }
@@ -79,6 +81,7 @@ const normalizedQuery = (filters: IssueFilters) => ({
 	sorts: filters.sorts?.length ? filters.sorts : [DEFAULT_ISSUE_SORT],
 	groupBy: filters.groupBy,
 	search: filters.search ?? "",
+	cycleId: filters.cycleId || undefined,
 });
 
 const buildQuery = (filters: IssueFilters) =>
@@ -307,6 +310,9 @@ export function useUpdateIssue(
 				if (input.labelIds !== undefined) {
 					next.labelIds = input.labelIds;
 				}
+				if (input.cycleId !== undefined) {
+					next.cycleId = input.cycleId;
+				}
 				return next;
 			});
 			return { previous };
@@ -431,6 +437,9 @@ export function applyIssueUpdate<T extends IssueDetailDto>(
 	}
 	if (input.labelIds !== undefined) {
 		next.labelIds = input.labelIds;
+	}
+	if (input.cycleId !== undefined) {
+		next.cycleId = input.cycleId;
 	}
 	return next;
 }

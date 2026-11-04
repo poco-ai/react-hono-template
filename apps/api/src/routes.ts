@@ -18,6 +18,7 @@ import { createBillingRoutes } from "./routes/billing";
 import { createBootstrapRoutes } from "./routes/bootstrap";
 import { createCommentsRoutes } from "./routes/comments";
 import { createConfigRoutes } from "./routes/config";
+import { createCyclesRoutes } from "./routes/cycles";
 import { createIssueSubscriptionsRoutes } from "./routes/issue-subscriptions";
 import { createIssuesRoutes } from "./routes/issues";
 import { createLabelsRoutes } from "./routes/labels";
@@ -28,6 +29,7 @@ import {
 } from "./routes/media";
 import { createNotificationsRoutes } from "./routes/notifications";
 import { createOAuthRoutes } from "./routes/oauth";
+import { createProjectUpdatesRoutes } from "./routes/project-updates";
 import { createProjectsRoutes } from "./routes/projects";
 import { createRelationsRoutes } from "./routes/relations";
 import { createStatusesRoutes } from "./routes/statuses";
@@ -90,6 +92,11 @@ export const createRoutes = ({
 			// session-authenticated; a route registered before `use` bypasses it.
 			.route("/", createMcpRoutes({ config: mcp }))
 			.route("/", createProjectsRoutes(dependencies.services.projectService))
+			.route(
+				"/",
+				createProjectUpdatesRoutes(dependencies.services.projectUpdateService),
+			)
+			.route("/", createCyclesRoutes(dependencies.services.cycleService))
 			.route("/", createIssuesRoutes(dependencies.services.issueService))
 			.route(
 				"/",

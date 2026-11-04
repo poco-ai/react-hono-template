@@ -16,6 +16,7 @@ export const ISSUE_FILTER_FIELDS = [
 	"createdById",
 	"labelId",
 	"projectId",
+	"cycleId",
 	"dueDate",
 	"createdAt",
 	"updatedAt",
@@ -50,6 +51,7 @@ export const ISSUE_FILTER_TEXT_FIELDS = [
 	"createdById",
 	"labelId",
 	"projectId",
+	"cycleId",
 ] as const satisfies readonly IssueFilterField[];
 
 /** Numeric fields support range comparisons. */
@@ -87,6 +89,7 @@ const FIELD_OPERATORS: Record<
 	createdById: ["eq", "neq", "in", "notIn", "isNull", "isNotNull", "contains"],
 	labelId: ["eq", "neq", "in", "notIn", "isNull", "isNotNull", "contains"],
 	projectId: ["eq", "neq", "in", "notIn", "isNull", "isNotNull", "contains"],
+	cycleId: ["eq", "neq", "in", "notIn", "isNull", "isNotNull", "contains"],
 	dueDate: [
 		"eq",
 		"neq",

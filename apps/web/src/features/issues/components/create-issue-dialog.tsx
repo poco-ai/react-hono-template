@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { MultiSelect } from "@/components/multi-select";
 import { MutationError } from "@/components/mutation-error";
+import type { CycleWithProgressDto } from "@/features/cycles/data";
 import { DateField } from "@/features/issues/components/date-field";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
@@ -52,6 +53,7 @@ import {
 import { useCreateIssue } from "../data";
 
 const UNASSIGNED = "__unassigned__";
+const NO_CYCLE = "__no_cycle__";
 
 export function CreateIssueDialog({
 	orgId,
@@ -59,21 +61,30 @@ export function CreateIssueDialog({
 	open,
 	onOpenChange,
 	defaultStatusId,
+	defaultCycleId,
 	parentId,
 	members,
 	labels,
 	statuses,
+	cycles,
 }: {
 	orgId: string;
 	projectId: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	defaultStatusId?: string;
+	/**
+	 * Preselected cycle (e.g. when the list is filtered by a cycle), so the new
+	 * issue stays visible in the current list.
+	 */
+	defaultCycleId?: string;
 	/** When set, the new issue is created as a sub-issue of this issue. */
 	parentId?: string;
 	members: { userId: string; user: { name: string } }[];
 	labels: { id: string; name: string }[];
 	statuses: StatusDto[];
+	/** Project cycles offered for planning; omitted by callers without them. */
+	cycles?: CycleWithProgressDto[];
 }) {
 	const { t } = useTranslation();
 	const [title, setTitle] = useState("");
@@ -84,6 +95,7 @@ export function CreateIssueDialog({
 	const [labelIds, setLabelIds] = useState<string[]>([]);
 	const [dueDate, setDueDate] = useState("");
 	const [estimate, setEstimate] = useState("");
+	const [cycleId, setCycleId] = useState(defaultCycleId ?? NO_CYCLE);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	const estimateNumber = estimate === "" ? undefined : Number(estimate);
@@ -103,9 +115,10 @@ export function CreateIssueDialog({
 			setLabelIds([]);
 			setDueDate("");
 			setEstimate("");
+			setCycleId(defaultCycleId ?? NO_CYCLE);
 			setFieldErrors({});
 		}
-	}, [open, defaultStatusId]);
+	}, [open, defaultStatusId, defaultCycleId]);
 
 	const createMutation = useCreateIssue(orgId, projectId);
 
@@ -121,6 +134,7 @@ export function CreateIssueDialog({
 					labelIds,
 					dueDate,
 					estimate,
+					cycleId: cycleId === NO_CYCLE ? undefined : cycleId,
 				},
 				{ parentId },
 			),
@@ -304,6 +318,34 @@ export function CreateIssueDialog({
 							)}
 						</Field>
 					</div>
+					{cycles && cycles.length > 0 && (
+						<Field>
+							<FieldLabel>{t("issues.cycle")}</FieldLabel>
+							<Select
+								value={cycleId}
+								onValueChange={(value) => value && setCycleId(value)}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue>
+										{cycleId === NO_CYCLE
+											? t("issues.noCycle")
+											: (cycles.find((cycle) => cycle.id === cycleId)?.name ??
+												t("issues.noCycle"))}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={NO_CYCLE}>
+										{t("issues.noCycle")}
+									</SelectItem>
+									{cycles.map((cycle) => (
+										<SelectItem key={cycle.id} value={cycle.id}>
+											{cycle.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</Field>
+					)}
 					<Field>
 						<FieldLabel>{t("issues.labels")}</FieldLabel>
 						<MultiSelect

@@ -46,6 +46,7 @@ import { Route as AuthOrgsOrgIdSettingsStatusesRouteImport } from './routes/_aut
 import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_auth/orgs/$orgId/settings/webhooks'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
+import { Route as AuthOrgsOrgIdProjectsProjectIdCyclesRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/cycles'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -244,6 +245,12 @@ const AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute =
     path: '/projects/$projectId/$issueNumber',
     getParentRoute: () => AuthOrgsOrgIdRoute,
   } as any)
+const AuthOrgsOrgIdProjectsProjectIdCyclesRoute =
+  AuthOrgsOrgIdProjectsProjectIdCyclesRouteImport.update({
+    id: '/projects/$projectId/cycles',
+    path: '/projects/$projectId/cycles',
+    getParentRoute: () => AuthOrgsOrgIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  '/orgs/$orgId/projects/$projectId/cycles': typeof AuthOrgsOrgIdProjectsProjectIdCyclesRoute
   '/orgs/$orgId/projects/$projectId/': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -316,6 +324,7 @@ export interface FileRoutesByTo {
   '/orgs/$orgId/projects': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  '/orgs/$orgId/projects/$projectId/cycles': typeof AuthOrgsOrgIdProjectsProjectIdCyclesRoute
   '/orgs/$orgId/projects/$projectId': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
@@ -356,6 +365,7 @@ export interface FileRoutesById {
   '/_auth/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
   '/_auth/orgs/$orgId/settings/': typeof AuthOrgsOrgIdSettingsIndexRoute
   '/_auth/orgs/$orgId/projects/$projectId/$issueNumber': typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  '/_auth/orgs/$orgId/projects/$projectId/cycles': typeof AuthOrgsOrgIdProjectsProjectIdCyclesRoute
   '/_auth/orgs/$orgId/projects/$projectId/': typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/projects/'
     | '/orgs/$orgId/settings/'
     | '/orgs/$orgId/projects/$projectId/$issueNumber'
+    | '/orgs/$orgId/projects/$projectId/cycles'
     | '/orgs/$orgId/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -431,6 +442,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/projects'
     | '/orgs/$orgId/settings'
     | '/orgs/$orgId/projects/$projectId/$issueNumber'
+    | '/orgs/$orgId/projects/$projectId/cycles'
     | '/orgs/$orgId/projects/$projectId'
   id:
     | '__root__'
@@ -470,6 +482,7 @@ export interface FileRouteTypes {
     | '/_auth/orgs/$orgId/projects/'
     | '/_auth/orgs/$orgId/settings/'
     | '/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
+    | '/_auth/orgs/$orgId/projects/$projectId/cycles'
     | '/_auth/orgs/$orgId/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
@@ -747,6 +760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport
       parentRoute: typeof AuthOrgsOrgIdRoute
     }
+    '/_auth/orgs/$orgId/projects/$projectId/cycles': {
+      id: '/_auth/orgs/$orgId/projects/$projectId/cycles'
+      path: '/projects/$projectId/cycles'
+      fullPath: '/orgs/$orgId/projects/$projectId/cycles'
+      preLoaderRoute: typeof AuthOrgsOrgIdProjectsProjectIdCyclesRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
   }
 }
 
@@ -806,6 +826,7 @@ interface AuthOrgsOrgIdRouteChildren {
   AuthOrgsOrgIdAiIndexRoute: typeof AuthOrgsOrgIdAiIndexRoute
   AuthOrgsOrgIdProjectsIndexRoute: typeof AuthOrgsOrgIdProjectsIndexRoute
   AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute: typeof AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute
+  AuthOrgsOrgIdProjectsProjectIdCyclesRoute: typeof AuthOrgsOrgIdProjectsProjectIdCyclesRoute
   AuthOrgsOrgIdProjectsProjectIdIndexRoute: typeof AuthOrgsOrgIdProjectsProjectIdIndexRoute
 }
 
@@ -820,6 +841,8 @@ const AuthOrgsOrgIdRouteChildren: AuthOrgsOrgIdRouteChildren = {
   AuthOrgsOrgIdProjectsIndexRoute: AuthOrgsOrgIdProjectsIndexRoute,
   AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute:
     AuthOrgsOrgIdProjectsProjectIdIssueNumberRoute,
+  AuthOrgsOrgIdProjectsProjectIdCyclesRoute:
+    AuthOrgsOrgIdProjectsProjectIdCyclesRoute,
   AuthOrgsOrgIdProjectsProjectIdIndexRoute:
     AuthOrgsOrgIdProjectsProjectIdIndexRoute,
 }

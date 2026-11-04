@@ -63,6 +63,7 @@ const issue = (
 	dueDate: null,
 	estimate: null,
 	parentId: null,
+	cycleId: null,
 	deletedAt: null,
 	createdAt: NOW,
 	updatedAt: NOW,
@@ -499,6 +500,7 @@ const issueServiceFor = ({
 		memberDao: {
 			findByOrgAndUser: async () => ({ role: "member" }),
 		} as unknown as MemberDao,
+		cycleDao: { findById: async () => null },
 		statusService: {
 			resolveStatus: async () => todo,
 			resolveStatusIds: async () => [],

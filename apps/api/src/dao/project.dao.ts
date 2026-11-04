@@ -8,6 +8,7 @@ type ProjectRow = typeof projects.$inferSelect;
 
 export const toProjectDto = (row: ProjectRow): ProjectDto => ({
 	...row,
+	targetDate: row.targetDate ? row.targetDate.toISOString() : null,
 	createdAt: row.createdAt.toISOString(),
 	updatedAt: row.updatedAt.toISOString(),
 });
@@ -120,6 +121,9 @@ export const createProjectDao = (db: Database) => ({
 			description: string | null;
 			color: string | null;
 			archived: boolean;
+			health: string | null;
+			targetDate: Date | null;
+			leadId: string | null;
 		}>,
 	): Promise<ProjectDto | null> => {
 		const patchEntries = Object.fromEntries(

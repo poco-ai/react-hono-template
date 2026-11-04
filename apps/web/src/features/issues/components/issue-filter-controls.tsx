@@ -40,6 +40,7 @@ type FilterFieldSources = {
 	members: { userId: string; user: { name: string } }[];
 	labels: { id: string; name: string }[];
 	projects: Pick<ProjectDto, "id" | "name" | "key">[];
+	cycles: { id: string; name: string }[];
 };
 
 const singleCondition = (
@@ -66,6 +67,7 @@ export function IssueFilterControls({
 	members,
 	labels,
 	projects,
+	cycles,
 	showSort,
 	sort,
 	searchInput,
@@ -145,6 +147,7 @@ export function IssueFilterControls({
 				members={members}
 				labels={labels}
 				projects={projects}
+				cycles={cycles}
 				stacked={stacked}
 				onChange={onFilterChange}
 			/>
@@ -333,6 +336,7 @@ export function IssueFilterControls({
 				members={members}
 				labels={labels}
 				projects={projects}
+				cycles={cycles}
 				onChange={onFilterChange}
 				className={cn("w-full", !stacked && "mt-1")}
 			/>

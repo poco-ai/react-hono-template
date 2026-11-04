@@ -45,6 +45,8 @@ export function ActivitySentence({
 				return t("activity.fields.estimate");
 			case "parent":
 				return t("activity.fields.parent");
+			case "cycle":
+				return t("activity.fields.cycle");
 			case "comment_resolved":
 				return t("activity.fields.commentResolved");
 			case "relation:blocks":
@@ -92,6 +94,9 @@ export function ActivitySentence({
 			case "dueDate":
 				return formatDueDate(value) || t("activity.emptyValue");
 			case "estimate":
+				return value || t("activity.emptyValue");
+			case "cycle":
+				// Activities store cycle names, so history survives deletion.
 				return value || t("activity.emptyValue");
 			case "parent":
 				// Attaching a parent has no previous value; render "none" instead

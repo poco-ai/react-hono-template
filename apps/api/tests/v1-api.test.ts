@@ -61,6 +61,9 @@ const projectDto = (id: string): ProjectDto => ({
 	color: null,
 	archived: false,
 	nextNumber: 1,
+	health: null,
+	targetDate: null,
+	leadId: null,
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",
 });
