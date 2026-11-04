@@ -1,6 +1,11 @@
 import type { CleanupService } from "./services/cleanup.service";
+import type { RecurrenceService } from "./services/recurrence.service";
 
-export const handleScheduled = async (cleanup: CleanupService) => {
+export const handleScheduled = async (
+	cleanup: Pick<CleanupService, "cleanup">,
+	recurrences: Pick<RecurrenceService, "processDue">,
+	now: Date = new Date(),
+) => {
 	try {
 		const counts = await cleanup.cleanup();
 		console.log(
@@ -8,5 +13,16 @@ export const handleScheduled = async (cleanup: CleanupService) => {
 		);
 	} catch (err) {
 		console.error("[cron] cleanup failed:", err);
+	}
+
+	// Runs are independent of cleanup: a broken recurrence must not stop the
+	// other scheduled work (and vice versa).
+	try {
+		const counts = await recurrences.processDue(now);
+		console.log(
+			`[cron] recurrences created=${counts.created} skipped=${counts.skipped} failed=${counts.failed}`,
+		);
+	} catch (err) {
+		console.error("[cron] recurrence processing failed:", err);
 	}
 };

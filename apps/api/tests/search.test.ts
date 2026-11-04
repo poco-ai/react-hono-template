@@ -40,6 +40,7 @@ CREATE TABLE issues (
 	priority integer NOT NULL DEFAULT 0,
 	assignee_id text,
 	deleted_at integer,
+	archived_at integer,
 	updated_at integer NOT NULL
 );
 CREATE TABLE projects (

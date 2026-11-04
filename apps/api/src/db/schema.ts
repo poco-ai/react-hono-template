@@ -146,7 +146,14 @@ export const issues = sqliteTable(
 		}),
 		dueDate: integer("due_date", { mode: "timestamp_ms" }),
 		estimate: integer("estimate"),
+		/** Soft delete (not restorable through the API). */
 		deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+		/**
+		 * Archival: hidden from lists, search, statistics and cycle/sub-issue
+		 * progress, but the detail page stays reachable and `restore` clears it.
+		 * Distinct from `deletedAt`, which stays a one-way soft delete.
+		 */
+		archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
 		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
@@ -162,6 +169,7 @@ export const issues = sqliteTable(
 		index("issues_orgId_assigneeId_idx").on(table.orgId, table.assigneeId),
 		index("issues_orgId_parentId_idx").on(table.orgId, table.parentId),
 		index("issues_orgId_cycleId_idx").on(table.orgId, table.cycleId),
+		index("issues_orgId_archivedAt_idx").on(table.orgId, table.archivedAt),
 	],
 );
 
@@ -864,5 +872,152 @@ export const commentMentions = sqliteTable(
 	(table) => [
 		primaryKey({ columns: [table.commentId, table.userId] }),
 		index("commentMentions_userId_idx").on(table.userId),
+	],
+);
+
+/**
+ * Per-user favorites ("pinned" issues/projects). Owner-scoped: every read and
+ * write filters by both orgId and userId, so one member's favorites never leak
+ * to another. The unique index also makes POST idempotent.
+ */
+export const favorites = sqliteTable(
+	"favorites",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		// issue | project
+		entityType: text("entity_type").notNull(),
+		entityId: text("entity_id").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("favorites_userId_entityType_entityId_uq").on(
+			table.userId,
+			table.entityType,
+			table.entityId,
+		),
+		index("favorites_orgId_userId_idx").on(table.orgId, table.userId),
+	],
+);
+
+/**
+ * Reusable issue prefills. Templates carry creation-time defaults only; creating
+ * an issue from a template stays a client-side action. A null projectId makes
+ * the template organization-wide (the partial unique index keeps those names
+ * unique too, since SQLite treats NULLs as distinct in the composite index).
+ */
+export const issueTemplates = sqliteTable(
+	"issue_templates",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		projectId: text("project_id").references(() => projects.id, {
+			onDelete: "cascade",
+		}),
+		name: text("name").notNull(),
+		title: text("title").notNull(),
+		description: text("description"),
+		statusId: text("status_id").references(() => issueStatuses.id, {
+			onDelete: "set null",
+		}),
+		priority: integer("priority"),
+		labelIds: text("label_ids", { mode: "json" })
+			.$type<string[]>()
+			.notNull()
+			.default(sql`'[]'`),
+		estimate: integer("estimate"),
+		createdById: text("created_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("issueTemplates_orgId_projectId_name_uq").on(
+			table.orgId,
+			table.projectId,
+			table.name,
+		),
+		uniqueIndex("issueTemplates_orgId_name_orgLevel_uq")
+			.on(table.orgId, table.name)
+			.where(sql`${table.projectId} is null`),
+		index("issueTemplates_orgId_idx").on(table.orgId),
+	],
+);
+
+/**
+ * Recurring issue templates: a snapshot of issue fields plus a cadence. The
+ * scheduled handler promotes each due row into a real issue and advances
+ * `nextRunAt`. Source issues are only read when the recurrence is created, so
+ * editing or deleting the source issue never affects the recurrence.
+ */
+export const issueRecurrences = sqliteTable(
+	"issue_recurrences",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		projectId: text("project_id")
+			.notNull()
+			.references(() => projects.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		description: text("description"),
+		// Deleting the status detaches it; issue creation falls back to the
+		// organization default status.
+		statusId: text("status_id").references(() => issueStatuses.id, {
+			onDelete: "set null",
+		}),
+		priority: integer("priority").notNull().default(0),
+		assigneeId: text("assignee_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		labelIds: text("label_ids", { mode: "json" })
+			.$type<string[]>()
+			.notNull()
+			.default(sql`'[]'`),
+		estimate: integer("estimate"),
+		/** daily | weekly | monthly */
+		cadence: text("cadence").notNull(),
+		nextRunAt: integer("next_run_at", { mode: "timestamp_ms" }).notNull(),
+		/**
+		 * UTC day-of-month that monthly runs anchor to (1-31). Monthly advances
+		 * clamp to the target month but return to this day, so Jan 31 →
+		 * Feb 28 → Mar 31 instead of drifting to the 28th forever.
+		 */
+		anchorDay: integer("anchor_day").notNull().default(1),
+		lastRunAt: integer("last_run_at", { mode: "timestamp_ms" }),
+		active: integer("active", { mode: "boolean" }).notNull().default(true),
+		createdById: text("created_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("issueRecurrences_orgId_nextRunAt_idx").on(
+			table.orgId,
+			table.nextRunAt,
+		),
+		index("issueRecurrences_projectId_idx").on(table.projectId),
 	],
 );

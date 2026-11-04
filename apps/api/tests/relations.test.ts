@@ -500,7 +500,7 @@ const issueServiceFor = ({
 		memberDao: {
 			findByOrgAndUser: async () => ({ role: "member" }),
 		} as unknown as MemberDao,
-		cycleDao: { findById: async () => null },
+		cycleDao: { findById: async () => null, listAllByProject: async () => [] },
 		statusService: {
 			resolveStatus: async () => todo,
 			resolveStatusIds: async () => [],

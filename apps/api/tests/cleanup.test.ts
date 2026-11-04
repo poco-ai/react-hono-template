@@ -152,6 +152,10 @@ test("cleanup deletes expired pending invitations and fails never-attempted stal
 	);
 });
 
+const recurrencesStub = {
+	processDue: async () => ({ created: 0, skipped: 0, failed: 0 }),
+};
+
 test("scheduled handler logs cleanup counts and swallows failures", async () => {
 	const logs: unknown[][] = [];
 	const errors: unknown[][] = [];
@@ -164,15 +168,18 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 		errors.push(args);
 	};
 	try {
-		await handleScheduled({
-			cleanup: async () => ({
-				expiredInvitations: 2,
-				failedDeliveries: 1,
-				deletedConversations: 3,
-				expiredPendingUploads: 4,
-				supersededMedia: 5,
-			}),
-		});
+		await handleScheduled(
+			{
+				cleanup: async () => ({
+					expiredInvitations: 2,
+					failedDeliveries: 1,
+					deletedConversations: 3,
+					expiredPendingUploads: 4,
+					supersededMedia: 5,
+				}),
+			},
+			recurrencesStub,
+		);
 		assert.ok(
 			logs.some(
 				(args) =>
@@ -180,11 +187,14 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 expiredPendingUploads=4 supersededMedia=5",
 			),
 		);
-		await handleScheduled({
-			cleanup: async () => {
-				throw new Error("db down");
+		await handleScheduled(
+			{
+				cleanup: async () => {
+					throw new Error("db down");
+				},
 			},
-		});
+			recurrencesStub,
+		);
 		const failure = errors.find((args) => args[0] === "[cron] cleanup failed:");
 		assert.ok(failure);
 		assert.equal((failure[1] as Error).message, "db down");

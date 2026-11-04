@@ -1,4 +1,5 @@
 import type { StatusDto } from "@api/dto/status.dto";
+import { useQuery } from "@tanstack/react-query";
 import {
 	createIssueSchema,
 	ISSUE_PRIORITIES,
@@ -45,6 +46,11 @@ import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { buildCreateIssueInput } from "@/features/issues/create-issue-input";
 import {
+	applyIssueTemplate,
+	templatesForProject,
+} from "@/features/templates/apply";
+import { issueTemplatesQuery } from "@/features/templates/data";
+import {
 	type FieldErrors,
 	fieldErrorsFromZod,
 	focusFirstInvalidField,
@@ -54,6 +60,7 @@ import { useCreateIssue } from "../data";
 
 const UNASSIGNED = "__unassigned__";
 const NO_CYCLE = "__no_cycle__";
+const NO_TEMPLATE = "__no_template__";
 
 export function CreateIssueDialog({
 	orgId,
@@ -96,7 +103,50 @@ export function CreateIssueDialog({
 	const [dueDate, setDueDate] = useState("");
 	const [estimate, setEstimate] = useState("");
 	const [cycleId, setCycleId] = useState(defaultCycleId ?? NO_CYCLE);
+	const [templateId, setTemplateId] = useState(NO_TEMPLATE);
+	const [appliedTemplateName, setAppliedTemplateName] = useState<string | null>(
+		null,
+	);
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+	const templates = useQuery({
+		...issueTemplatesQuery(orgId),
+		enabled: open,
+	});
+	const projectTemplates = templatesForProject(templates.data, projectId);
+
+	/** Selecting a template overrides the prefill fields; every field stays editable. */
+	const onTemplateChange = (value: string) => {
+		setTemplateId(value);
+		const template = projectTemplates.find((item) => item.id === value);
+		if (!template) {
+			setAppliedTemplateName(null);
+			return;
+		}
+		const next = applyIssueTemplate(
+			{
+				title,
+				description,
+				statusId,
+				priority,
+				assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
+				labelIds,
+				dueDate,
+				estimate,
+				cycleId: cycleId === NO_CYCLE ? undefined : cycleId,
+			},
+			template,
+			{ availableLabelIds: labels.map((label) => label.id) },
+		);
+		setTitle(next.title);
+		setDescription(next.description);
+		setStatusId(next.statusId);
+		setPriority(next.priority);
+		setLabelIds(next.labelIds);
+		setEstimate(next.estimate);
+		setAppliedTemplateName(template.name);
+		setFieldErrors({});
+	};
 
 	const estimateNumber = estimate === "" ? undefined : Number(estimate);
 	const estimateValid =
@@ -116,6 +166,8 @@ export function CreateIssueDialog({
 			setDueDate("");
 			setEstimate("");
 			setCycleId(defaultCycleId ?? NO_CYCLE);
+			setTemplateId(NO_TEMPLATE);
+			setAppliedTemplateName(null);
 			setFieldErrors({});
 		}
 	}, [open, defaultStatusId, defaultCycleId]);
@@ -179,6 +231,44 @@ export function CreateIssueDialog({
 						onSubmit();
 					}}
 				>
+					{projectTemplates.length > 0 && (
+						<Field>
+							<FieldLabel>{t("issues.templates.label")}</FieldLabel>
+							<Select
+								value={templateId}
+								onValueChange={(value) => value && onTemplateChange(value)}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue>
+										{templateId === NO_TEMPLATE
+											? t("issues.templates.none")
+											: (projectTemplates.find(
+													(template) => template.id === templateId,
+												)?.name ?? t("issues.templates.none"))}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={NO_TEMPLATE}>
+										{t("issues.templates.none")}
+									</SelectItem>
+									{projectTemplates.map((template) => (
+										<SelectItem key={template.id} value={template.id}>
+											{template.projectId === null
+												? `${template.name} · ${t("templates.orgWide")}`
+												: template.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							{appliedTemplateName && (
+								<FieldDescription>
+									{t("issues.templates.applied", {
+										name: appliedTemplateName,
+									})}
+								</FieldDescription>
+							)}
+						</Field>
+					)}
 					<Field data-invalid={fieldErrors.title ? true : undefined}>
 						<FieldLabel htmlFor="issue-title">
 							{t("issues.titleField")}

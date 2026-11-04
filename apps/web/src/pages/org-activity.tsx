@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
@@ -13,14 +13,12 @@ import {
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { CircleAlert } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import {
-	ORG_ACTIVITY_MAX_LIMIT,
-	ORG_ACTIVITY_PAGE_SIZE,
-	orgActivitiesQuery,
+	flattenActivityPages,
+	orgActivitiesInfiniteQuery,
 } from "@/features/activities/data";
 import {
 	activityDayLabel,
@@ -47,20 +45,15 @@ export function OrgActivityPage({
 }) {
 	const { t } = useTranslation();
 	useDocumentTitle(t("activityFeed.title"));
-	const [limit, setLimit] = useState(ORG_ACTIVITY_PAGE_SIZE);
 	const projects = useQuery(projectsQuery(orgId));
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
-	const activities = useQuery(
-		orgActivitiesQuery(orgId, {
-			projectId: projectId || undefined,
-			limit,
-		}),
+	const activities = useInfiniteQuery(
+		orgActivitiesInfiniteQuery(orgId, { projectId: projectId || undefined }),
 	);
 
-	const items = activities.data ?? [];
+	const items = flattenActivityPages(activities.data?.pages);
 	const groups = groupActivitiesByDay(items);
-	const canLoadMore = limit < ORG_ACTIVITY_MAX_LIMIT && items.length >= limit;
 
 	return (
 		<div className="mx-auto w-full max-w-4xl px-6 py-8">
@@ -203,19 +196,17 @@ export function OrgActivityPage({
 						</ul>
 					</section>
 				))}
-				{canLoadMore && (
+				{activities.hasNextPage && (
 					<Button
 						variant="outline"
 						size="sm"
 						className="self-start"
-						disabled={activities.isFetching}
-						onClick={() =>
-							setLimit((prev) =>
-								Math.min(ORG_ACTIVITY_MAX_LIMIT, prev + ORG_ACTIVITY_PAGE_SIZE),
-							)
-						}
+						disabled={activities.isFetchingNextPage}
+						onClick={() => {
+							void activities.fetchNextPage();
+						}}
 					>
-						{activities.isFetching && <Spinner />}
+						{activities.isFetchingNextPage && <Spinner />}
 						{t("common.loadMore")}
 					</Button>
 				)}

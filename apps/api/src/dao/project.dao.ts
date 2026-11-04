@@ -1,5 +1,5 @@
 import { TERMINAL_STATUS_CATEGORIES } from "@workspace/shared";
-import { and, count, desc, eq, isNull, notInArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ProjectDto, ProjectIssueStats } from "../dto/project.dto";
@@ -41,6 +41,17 @@ export const createProjectDao = (db: Database) => ({
 		return row ? toProjectDto(row) : null;
 	},
 
+	findByIds: async (orgId: string, ids: string[]): Promise<ProjectDto[]> => {
+		if (ids.length === 0) {
+			return [];
+		}
+		const rows = await db
+			.select()
+			.from(projects)
+			.where(and(eq(projects.orgId, orgId), inArray(projects.id, ids)));
+		return rows.map(toProjectDto);
+	},
+
 	findByKey: async (orgId: string, key: string): Promise<ProjectDto | null> => {
 		const row = await db
 			.select()
@@ -61,7 +72,12 @@ export const createProjectDao = (db: Database) => ({
 	listIssueCountsByOrg: async (
 		orgId: string,
 	): Promise<Map<string, ProjectIssueStats>> => {
-		const notDeleted = and(eq(issues.orgId, orgId), isNull(issues.deletedAt));
+		const notDeleted = and(
+			eq(issues.orgId, orgId),
+			isNull(issues.deletedAt),
+			// Archived issues are excluded from project statistics.
+			isNull(issues.archivedAt),
+		);
 		const totals = await db
 			.select({ projectId: issues.projectId, value: count() })
 			.from(issues)

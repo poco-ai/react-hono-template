@@ -6,10 +6,13 @@ import type { ProjectDao } from "../dao/project.dao";
 import type { ActivityService } from "../services/activity.service";
 import type { CommentService } from "../services/comment.service";
 import type { CycleService } from "../services/cycle.service";
+import type { FavoriteService } from "../services/favorite.service";
 import type { IssueService } from "../services/issue.service";
+import type { IssueTemplateService } from "../services/issue-template.service";
 import type { LabelService } from "../services/label.service";
 import type { ProjectService } from "../services/project.service";
 import type { ProjectUpdateService } from "../services/project-update.service";
+import type { RecurrenceService } from "../services/recurrence.service";
 import type { RelationService } from "../services/relation.service";
 import type { SearchService } from "../services/search.service";
 import type { StatusService } from "../services/status.service";
@@ -141,6 +144,12 @@ export type CapabilityServices = {
 		"listUpdates" | "createUpdate"
 	>;
 	searchService: Pick<SearchService, "searchAll">;
+	favoriteService: Pick<FavoriteService, "listFavorites">;
+	issueTemplateService: Pick<IssueTemplateService, "listTemplates">;
+	recurrenceService: Pick<
+		RecurrenceService,
+		"listRecurrences" | "createRecurrence"
+	>;
 };
 
 export type CapabilityDaos = {

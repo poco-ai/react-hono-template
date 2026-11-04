@@ -127,6 +127,8 @@ export const issueSummarySchema = z.object({
 	labelIds: z.array(z.string()),
 	parentId: z.string().nullable(),
 	cycleId: z.string().nullable(),
+	/** Set while archived; archived issues are read-only and hidden from lists. */
+	archivedAt: z.string().nullable().optional(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
@@ -398,6 +400,8 @@ export const toIssueSummary = (issue: IssueDetailDto): IssueSummary => ({
 	labelIds: issue.labelIds,
 	parentId: issue.parentId,
 	cycleId: issue.cycleId,
+	// Present (null when active) so models can tell an archived issue apart.
+	archivedAt: issue.archivedAt ?? null,
 	createdAt: issue.createdAt,
 	updatedAt: issue.updatedAt,
 });
@@ -593,6 +597,8 @@ const listIssuesInputSchema = z.object({
 	 * groups). It is not reflected in the response.
 	 */
 	groupBy: z.enum(ISSUE_QUERY_GROUP_BY).optional(),
+	/** Include archived issues (hidden from lists by default). */
+	includeArchived: z.boolean().default(false),
 });
 
 type IssueRefInput = z.infer<typeof issueRefSchema>;
@@ -1140,6 +1146,7 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 			input: z.object({
 				projectId: z.string().min(1).optional(),
 				limit: z.number().int().min(1).max(100).default(50),
+				offset: z.number().int().min(0).max(10000).default(0),
 			}),
 			output: z.object({ activities: z.array(activitySummarySchema) }),
 			effect: "read",
@@ -1148,7 +1155,11 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 				const orgId = ctx.orgId as string;
 				const activities = await deps.services.activityService.listByOrg(
 					orgId,
-					{ projectId: input.projectId, limit: input.limit },
+					{
+						projectId: input.projectId,
+						limit: input.limit,
+						offset: input.offset,
+					},
 				);
 				return {
 					data: { activities: activities.map(toIssueActivitySummary) },
@@ -1237,6 +1248,203 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 					},
 					summary: `Project has ${page.total} update(s); showing page ${page.page}.`,
 					links: [projectLink(ctx, orgId, projectId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_favorites",
+			titleKey: "ai.capabilities.list_favorites.title",
+			description:
+				"List the caller's favorited issues and projects in the current organization. Issue entries include their project key, number and status; project entries include name and health.",
+			input: z.object({}),
+			output: z.object({
+				favorites: z.array(
+					z.object({
+						id: z.string(),
+						entityType: z.enum(["issue", "project"]),
+						entityId: z.string(),
+						createdAt: z.string(),
+						issue: z
+							.object({
+								id: z.string(),
+								projectId: z.string(),
+								projectKey: z.string(),
+								number: z.number().int(),
+								identifier: z.string(),
+								title: z.string(),
+								statusId: z.string(),
+								statusName: z.string(),
+								statusCategory: z.string(),
+								statusColor: z.string(),
+							})
+							.nullable(),
+						project: z
+							.object({
+								id: z.string(),
+								name: z.string(),
+								key: z.string(),
+								health: z.string().nullable(),
+								archived: z.boolean(),
+							})
+							.nullable(),
+					}),
+				),
+			}),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx) => {
+				const orgId = ctx.orgId as string;
+				const favorites = await deps.services.favoriteService.listFavorites(
+					orgId,
+					ctx.actor.userId ?? "",
+				);
+				return {
+					data: {
+						favorites: favorites.map((favorite) => ({
+							id: favorite.id,
+							entityType: favorite.entityType,
+							entityId: favorite.entityId,
+							createdAt: favorite.createdAt,
+							issue: favorite.issue,
+							project: favorite.project,
+						})),
+					},
+					summary: `Found ${favorites.length} favorite(s).`,
+					links: uniqueLinks(
+						favorites.flatMap((favorite) =>
+							favorite.issue
+								? [
+										issueLink(
+											ctx,
+											orgId,
+											favorite.issue.projectId,
+											favorite.issue.number,
+										),
+									]
+								: favorite.project
+									? [projectLink(ctx, orgId, favorite.project.id)]
+									: [],
+						),
+					),
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_issue_templates",
+			titleKey: "ai.capabilities.list_issue_templates.title",
+			description:
+				"List the organization's issue templates (prefills for new issues), optionally limited to one project. Templates hold a title, description, statusId, priority, labels and estimate.",
+			input: z.object({ projectId: z.string().min(1).optional() }),
+			output: z.object({
+				templates: z.array(
+					z.object({
+						id: z.string(),
+						projectId: z.string().nullable(),
+						name: z.string(),
+						title: z.string(),
+						description: z.string().nullable(),
+						statusId: z.string().nullable(),
+						priority: z.number().int().nullable(),
+						labelIds: z.array(z.string()),
+						estimate: z.number().int().nullable(),
+						createdAt: z.string(),
+						updatedAt: z.string(),
+					}),
+				),
+			}),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const templates =
+					await deps.services.issueTemplateService.listTemplates(orgId, {
+						projectId: input.projectId,
+					});
+				return {
+					data: {
+						templates: templates.map((template) => ({
+							id: template.id,
+							projectId: template.projectId,
+							name: template.name,
+							title: template.title,
+							description: template.description,
+							statusId: template.statusId,
+							priority: template.priority,
+							labelIds: template.labelIds,
+							estimate: template.estimate,
+							createdAt: template.createdAt,
+							updatedAt: template.updatedAt,
+						})),
+					},
+					summary: `Found ${templates.length} issue template(s).`,
+					links: [orgLink(ctx, orgId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_recurrences",
+			titleKey: "ai.capabilities.list_recurrences.title",
+			description:
+				"List a project's recurring issue templates with their cadence (daily/weekly/monthly), next run time, last run time and active state. Recurring templates create a new issue on each due run.",
+			input: z.object({ projectId: z.string().min(1) }),
+			output: z.object({
+				recurrences: z.array(
+					z.object({
+						id: z.string(),
+						projectId: z.string(),
+						title: z.string(),
+						description: z.string().nullable(),
+						statusId: z.string().nullable(),
+						priority: z.number().int(),
+						assigneeId: z.string().nullable(),
+						labelIds: z.array(z.string()),
+						estimate: z.number().int().nullable(),
+						cadence: z.enum(["daily", "weekly", "monthly"]),
+						nextRunAt: z.string(),
+						/** UTC day-of-month monthly runs anchor to (1-31). */
+						anchorDay: z.number().int().optional(),
+						lastRunAt: z.string().nullable(),
+						active: z.boolean(),
+						createdAt: z.string(),
+						updatedAt: z.string(),
+					}),
+				),
+			}),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const recurrences =
+					await deps.services.recurrenceService.listRecurrences(
+						orgId,
+						input.projectId,
+					);
+				return {
+					data: {
+						recurrences: recurrences.map((recurrence) => ({
+							id: recurrence.id,
+							projectId: recurrence.projectId,
+							title: recurrence.title,
+							description: recurrence.description,
+							statusId: recurrence.statusId,
+							priority: recurrence.priority,
+							assigneeId: recurrence.assigneeId,
+							labelIds: recurrence.labelIds,
+							estimate: recurrence.estimate,
+							cadence: recurrence.cadence,
+							nextRunAt: recurrence.nextRunAt,
+							anchorDay: recurrence.anchorDay,
+							lastRunAt: recurrence.lastRunAt,
+							active: recurrence.active,
+							createdAt: recurrence.createdAt,
+							updatedAt: recurrence.updatedAt,
+						})),
+					},
+					summary: `Found ${recurrences.length} recurring issue(s).`,
+					links: [projectLink(ctx, orgId, input.projectId)],
 				};
 			},
 		}),

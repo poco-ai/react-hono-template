@@ -22,6 +22,7 @@ function SettingsLayout() {
 		{ to: "/orgs/$orgId/settings/members", label: t("settings.members") },
 		{ to: "/orgs/$orgId/settings/labels", label: t("settings.labels") },
 		{ to: "/orgs/$orgId/settings/statuses", label: t("settings.statuses") },
+		{ to: "/orgs/$orgId/settings/templates", label: t("settings.templates") },
 		{ to: "/orgs/$orgId/settings/ai", label: t("settings.ai") },
 		...(canManage
 			? [

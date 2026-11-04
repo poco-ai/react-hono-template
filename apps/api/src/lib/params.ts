@@ -25,6 +25,9 @@ export const requireCycleId = (c: Context<Env>) => requireParam(c, "cycleId");
 
 export const requireUpdateId = (c: Context<Env>) => requireParam(c, "updateId");
 
+export const requireRecurrenceId = (c: Context<Env>) =>
+	requireParam(c, "recurrenceId");
+
 export const requireIssueNumber = (c: Context<Env>) => {
 	const raw = c.req.param("number");
 	const number = Number(raw);

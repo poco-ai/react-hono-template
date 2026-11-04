@@ -29,9 +29,12 @@ import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
 import { Route as AuthOrgsOrgIdRouteImport } from './routes/_auth/orgs/$orgId'
 import { Route as AuthOrgsOrgIdIndexRouteImport } from './routes/_auth/orgs/$orgId/index'
 import { Route as AuthOrgsOrgIdActivityRouteImport } from './routes/_auth/orgs/$orgId/activity'
+import { Route as AuthOrgsOrgIdFavoritesRouteImport } from './routes/_auth/orgs/$orgId/favorites'
 import { Route as AuthOrgsOrgIdInboxRouteImport } from './routes/_auth/orgs/$orgId/inbox'
 import { Route as AuthOrgsOrgIdMyIssuesRouteImport } from './routes/_auth/orgs/$orgId/my-issues'
+import { Route as AuthOrgsOrgIdRoadmapRouteImport } from './routes/_auth/orgs/$orgId/roadmap'
 import { Route as AuthOrgsOrgIdSettingsRouteRouteImport } from './routes/_auth/orgs/$orgId/settings/route'
+import { Route as AuthOrgsOrgIdTriageRouteImport } from './routes/_auth/orgs/$orgId/triage'
 import { Route as AuthOrgsOrgIdAiIndexRouteImport } from './routes/_auth/orgs/$orgId/ai.index'
 import { Route as AuthOrgsOrgIdAiConversationIdRouteImport } from './routes/_auth/orgs/$orgId/ai.$conversationId'
 import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/orgs/$orgId/projects.index'
@@ -43,6 +46,7 @@ import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/
 import { Route as AuthOrgsOrgIdSettingsMcpRouteImport } from './routes/_auth/orgs/$orgId/settings/mcp'
 import { Route as AuthOrgsOrgIdSettingsMembersRouteImport } from './routes/_auth/orgs/$orgId/settings/members'
 import { Route as AuthOrgsOrgIdSettingsStatusesRouteImport } from './routes/_auth/orgs/$orgId/settings/statuses'
+import { Route as AuthOrgsOrgIdSettingsTemplatesRouteImport } from './routes/_auth/orgs/$orgId/settings/templates'
 import { Route as AuthOrgsOrgIdSettingsWebhooksRouteImport } from './routes/_auth/orgs/$orgId/settings/webhooks'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIndexRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId.index'
 import { Route as AuthOrgsOrgIdProjectsProjectIdIssueNumberRouteImport } from './routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber'
@@ -147,6 +151,11 @@ const AuthOrgsOrgIdActivityRoute = AuthOrgsOrgIdActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => AuthOrgsOrgIdRoute,
 } as any)
+const AuthOrgsOrgIdFavoritesRoute = AuthOrgsOrgIdFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
 const AuthOrgsOrgIdInboxRoute = AuthOrgsOrgIdInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -157,12 +166,22 @@ const AuthOrgsOrgIdMyIssuesRoute = AuthOrgsOrgIdMyIssuesRouteImport.update({
   path: '/my-issues',
   getParentRoute: () => AuthOrgsOrgIdRoute,
 } as any)
+const AuthOrgsOrgIdRoadmapRoute = AuthOrgsOrgIdRoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
 const AuthOrgsOrgIdSettingsRouteRoute =
   AuthOrgsOrgIdSettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
     getParentRoute: () => AuthOrgsOrgIdRoute,
   } as any)
+const AuthOrgsOrgIdTriageRoute = AuthOrgsOrgIdTriageRouteImport.update({
+  id: '/triage',
+  path: '/triage',
+  getParentRoute: () => AuthOrgsOrgIdRoute,
+} as any)
 const AuthOrgsOrgIdAiIndexRoute = AuthOrgsOrgIdAiIndexRouteImport.update({
   id: '/ai/',
   path: '/ai/',
@@ -227,6 +246,12 @@ const AuthOrgsOrgIdSettingsStatusesRoute =
     path: '/statuses',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
+const AuthOrgsOrgIdSettingsTemplatesRoute =
+  AuthOrgsOrgIdSettingsTemplatesRouteImport.update({
+    id: '/templates',
+    path: '/templates',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
 const AuthOrgsOrgIdSettingsWebhooksRoute =
   AuthOrgsOrgIdSettingsWebhooksRouteImport.update({
     id: '/webhooks',
@@ -272,8 +297,11 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthAdminIndexRoute
   '/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
+  '/orgs/$orgId/favorites': typeof AuthOrgsOrgIdFavoritesRoute
   '/orgs/$orgId/inbox': typeof AuthOrgsOrgIdInboxRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
+  '/orgs/$orgId/roadmap': typeof AuthOrgsOrgIdRoadmapRoute
+  '/orgs/$orgId/triage': typeof AuthOrgsOrgIdTriageRoute
   '/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
   '/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
   '/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
@@ -283,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/orgs/$orgId/settings/statuses': typeof AuthOrgsOrgIdSettingsStatusesRoute
+  '/orgs/$orgId/settings/templates': typeof AuthOrgsOrgIdSettingsTemplatesRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/orgs/$orgId/ai/': typeof AuthOrgsOrgIdAiIndexRoute
   '/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -308,8 +337,11 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthAdminUsersRoute
   '/admin': typeof AuthAdminIndexRoute
   '/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
+  '/orgs/$orgId/favorites': typeof AuthOrgsOrgIdFavoritesRoute
   '/orgs/$orgId/inbox': typeof AuthOrgsOrgIdInboxRoute
   '/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
+  '/orgs/$orgId/roadmap': typeof AuthOrgsOrgIdRoadmapRoute
+  '/orgs/$orgId/triage': typeof AuthOrgsOrgIdTriageRoute
   '/orgs/$orgId': typeof AuthOrgsOrgIdIndexRoute
   '/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
   '/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
@@ -319,6 +351,7 @@ export interface FileRoutesByTo {
   '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/orgs/$orgId/settings/statuses': typeof AuthOrgsOrgIdSettingsStatusesRoute
+  '/orgs/$orgId/settings/templates': typeof AuthOrgsOrgIdSettingsTemplatesRoute
   '/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/orgs/$orgId/ai': typeof AuthOrgsOrgIdAiIndexRoute
   '/orgs/$orgId/projects': typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -349,8 +382,11 @@ export interface FileRoutesById {
   '/_auth/admin/': typeof AuthAdminIndexRoute
   '/_auth/orgs/$orgId/settings': typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
   '/_auth/orgs/$orgId/activity': typeof AuthOrgsOrgIdActivityRoute
+  '/_auth/orgs/$orgId/favorites': typeof AuthOrgsOrgIdFavoritesRoute
   '/_auth/orgs/$orgId/inbox': typeof AuthOrgsOrgIdInboxRoute
   '/_auth/orgs/$orgId/my-issues': typeof AuthOrgsOrgIdMyIssuesRoute
+  '/_auth/orgs/$orgId/roadmap': typeof AuthOrgsOrgIdRoadmapRoute
+  '/_auth/orgs/$orgId/triage': typeof AuthOrgsOrgIdTriageRoute
   '/_auth/orgs/$orgId/': typeof AuthOrgsOrgIdIndexRoute
   '/_auth/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
   '/_auth/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
@@ -360,6 +396,7 @@ export interface FileRoutesById {
   '/_auth/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
   '/_auth/orgs/$orgId/settings/members': typeof AuthOrgsOrgIdSettingsMembersRoute
   '/_auth/orgs/$orgId/settings/statuses': typeof AuthOrgsOrgIdSettingsStatusesRoute
+  '/_auth/orgs/$orgId/settings/templates': typeof AuthOrgsOrgIdSettingsTemplatesRoute
   '/_auth/orgs/$orgId/settings/webhooks': typeof AuthOrgsOrgIdSettingsWebhooksRoute
   '/_auth/orgs/$orgId/ai/': typeof AuthOrgsOrgIdAiIndexRoute
   '/_auth/orgs/$orgId/projects/': typeof AuthOrgsOrgIdProjectsIndexRoute
@@ -390,8 +427,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/orgs/$orgId/settings'
     | '/orgs/$orgId/activity'
+    | '/orgs/$orgId/favorites'
     | '/orgs/$orgId/inbox'
     | '/orgs/$orgId/my-issues'
+    | '/orgs/$orgId/roadmap'
+    | '/orgs/$orgId/triage'
     | '/orgs/$orgId/'
     | '/orgs/$orgId/ai/$conversationId'
     | '/orgs/$orgId/settings/ai'
@@ -401,6 +441,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/settings/mcp'
     | '/orgs/$orgId/settings/members'
     | '/orgs/$orgId/settings/statuses'
+    | '/orgs/$orgId/settings/templates'
     | '/orgs/$orgId/settings/webhooks'
     | '/orgs/$orgId/ai/'
     | '/orgs/$orgId/projects/'
@@ -426,8 +467,11 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin'
     | '/orgs/$orgId/activity'
+    | '/orgs/$orgId/favorites'
     | '/orgs/$orgId/inbox'
     | '/orgs/$orgId/my-issues'
+    | '/orgs/$orgId/roadmap'
+    | '/orgs/$orgId/triage'
     | '/orgs/$orgId'
     | '/orgs/$orgId/ai/$conversationId'
     | '/orgs/$orgId/settings/ai'
@@ -437,6 +481,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/settings/mcp'
     | '/orgs/$orgId/settings/members'
     | '/orgs/$orgId/settings/statuses'
+    | '/orgs/$orgId/settings/templates'
     | '/orgs/$orgId/settings/webhooks'
     | '/orgs/$orgId/ai'
     | '/orgs/$orgId/projects'
@@ -466,8 +511,11 @@ export interface FileRouteTypes {
     | '/_auth/admin/'
     | '/_auth/orgs/$orgId/settings'
     | '/_auth/orgs/$orgId/activity'
+    | '/_auth/orgs/$orgId/favorites'
     | '/_auth/orgs/$orgId/inbox'
     | '/_auth/orgs/$orgId/my-issues'
+    | '/_auth/orgs/$orgId/roadmap'
+    | '/_auth/orgs/$orgId/triage'
     | '/_auth/orgs/$orgId/'
     | '/_auth/orgs/$orgId/ai/$conversationId'
     | '/_auth/orgs/$orgId/settings/ai'
@@ -477,6 +525,7 @@ export interface FileRouteTypes {
     | '/_auth/orgs/$orgId/settings/mcp'
     | '/_auth/orgs/$orgId/settings/members'
     | '/_auth/orgs/$orgId/settings/statuses'
+    | '/_auth/orgs/$orgId/settings/templates'
     | '/_auth/orgs/$orgId/settings/webhooks'
     | '/_auth/orgs/$orgId/ai/'
     | '/_auth/orgs/$orgId/projects/'
@@ -641,6 +690,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdActivityRouteImport
       parentRoute: typeof AuthOrgsOrgIdRoute
     }
+    '/_auth/orgs/$orgId/favorites': {
+      id: '/_auth/orgs/$orgId/favorites'
+      path: '/favorites'
+      fullPath: '/orgs/$orgId/favorites'
+      preLoaderRoute: typeof AuthOrgsOrgIdFavoritesRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
     '/_auth/orgs/$orgId/inbox': {
       id: '/_auth/orgs/$orgId/inbox'
       path: '/inbox'
@@ -655,11 +711,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdMyIssuesRouteImport
       parentRoute: typeof AuthOrgsOrgIdRoute
     }
+    '/_auth/orgs/$orgId/roadmap': {
+      id: '/_auth/orgs/$orgId/roadmap'
+      path: '/roadmap'
+      fullPath: '/orgs/$orgId/roadmap'
+      preLoaderRoute: typeof AuthOrgsOrgIdRoadmapRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
     '/_auth/orgs/$orgId/settings': {
       id: '/_auth/orgs/$orgId/settings'
       path: '/settings'
       fullPath: '/orgs/$orgId/settings'
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsRouteRouteImport
+      parentRoute: typeof AuthOrgsOrgIdRoute
+    }
+    '/_auth/orgs/$orgId/triage': {
+      id: '/_auth/orgs/$orgId/triage'
+      path: '/triage'
+      fullPath: '/orgs/$orgId/triage'
+      preLoaderRoute: typeof AuthOrgsOrgIdTriageRouteImport
       parentRoute: typeof AuthOrgsOrgIdRoute
     }
     '/_auth/orgs/$orgId/ai/': {
@@ -739,6 +809,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsStatusesRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
+    '/_auth/orgs/$orgId/settings/templates': {
+      id: '/_auth/orgs/$orgId/settings/templates'
+      path: '/templates'
+      fullPath: '/orgs/$orgId/settings/templates'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsTemplatesRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
     '/_auth/orgs/$orgId/settings/webhooks': {
       id: '/_auth/orgs/$orgId/settings/webhooks'
       path: '/webhooks'
@@ -794,6 +871,7 @@ interface AuthOrgsOrgIdSettingsRouteRouteChildren {
   AuthOrgsOrgIdSettingsMcpRoute: typeof AuthOrgsOrgIdSettingsMcpRoute
   AuthOrgsOrgIdSettingsMembersRoute: typeof AuthOrgsOrgIdSettingsMembersRoute
   AuthOrgsOrgIdSettingsStatusesRoute: typeof AuthOrgsOrgIdSettingsStatusesRoute
+  AuthOrgsOrgIdSettingsTemplatesRoute: typeof AuthOrgsOrgIdSettingsTemplatesRoute
   AuthOrgsOrgIdSettingsWebhooksRoute: typeof AuthOrgsOrgIdSettingsWebhooksRoute
   AuthOrgsOrgIdSettingsIndexRoute: typeof AuthOrgsOrgIdSettingsIndexRoute
 }
@@ -807,6 +885,7 @@ const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteCh
     AuthOrgsOrgIdSettingsMcpRoute: AuthOrgsOrgIdSettingsMcpRoute,
     AuthOrgsOrgIdSettingsMembersRoute: AuthOrgsOrgIdSettingsMembersRoute,
     AuthOrgsOrgIdSettingsStatusesRoute: AuthOrgsOrgIdSettingsStatusesRoute,
+    AuthOrgsOrgIdSettingsTemplatesRoute: AuthOrgsOrgIdSettingsTemplatesRoute,
     AuthOrgsOrgIdSettingsWebhooksRoute: AuthOrgsOrgIdSettingsWebhooksRoute,
     AuthOrgsOrgIdSettingsIndexRoute: AuthOrgsOrgIdSettingsIndexRoute,
   }
@@ -819,8 +898,11 @@ const AuthOrgsOrgIdSettingsRouteRouteWithChildren =
 interface AuthOrgsOrgIdRouteChildren {
   AuthOrgsOrgIdSettingsRouteRoute: typeof AuthOrgsOrgIdSettingsRouteRouteWithChildren
   AuthOrgsOrgIdActivityRoute: typeof AuthOrgsOrgIdActivityRoute
+  AuthOrgsOrgIdFavoritesRoute: typeof AuthOrgsOrgIdFavoritesRoute
   AuthOrgsOrgIdInboxRoute: typeof AuthOrgsOrgIdInboxRoute
   AuthOrgsOrgIdMyIssuesRoute: typeof AuthOrgsOrgIdMyIssuesRoute
+  AuthOrgsOrgIdRoadmapRoute: typeof AuthOrgsOrgIdRoadmapRoute
+  AuthOrgsOrgIdTriageRoute: typeof AuthOrgsOrgIdTriageRoute
   AuthOrgsOrgIdIndexRoute: typeof AuthOrgsOrgIdIndexRoute
   AuthOrgsOrgIdAiConversationIdRoute: typeof AuthOrgsOrgIdAiConversationIdRoute
   AuthOrgsOrgIdAiIndexRoute: typeof AuthOrgsOrgIdAiIndexRoute
@@ -833,8 +915,11 @@ interface AuthOrgsOrgIdRouteChildren {
 const AuthOrgsOrgIdRouteChildren: AuthOrgsOrgIdRouteChildren = {
   AuthOrgsOrgIdSettingsRouteRoute: AuthOrgsOrgIdSettingsRouteRouteWithChildren,
   AuthOrgsOrgIdActivityRoute: AuthOrgsOrgIdActivityRoute,
+  AuthOrgsOrgIdFavoritesRoute: AuthOrgsOrgIdFavoritesRoute,
   AuthOrgsOrgIdInboxRoute: AuthOrgsOrgIdInboxRoute,
   AuthOrgsOrgIdMyIssuesRoute: AuthOrgsOrgIdMyIssuesRoute,
+  AuthOrgsOrgIdRoadmapRoute: AuthOrgsOrgIdRoadmapRoute,
+  AuthOrgsOrgIdTriageRoute: AuthOrgsOrgIdTriageRoute,
   AuthOrgsOrgIdIndexRoute: AuthOrgsOrgIdIndexRoute,
   AuthOrgsOrgIdAiConversationIdRoute: AuthOrgsOrgIdAiConversationIdRoute,
   AuthOrgsOrgIdAiIndexRoute: AuthOrgsOrgIdAiIndexRoute,

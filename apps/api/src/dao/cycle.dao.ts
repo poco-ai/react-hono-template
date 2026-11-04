@@ -204,6 +204,8 @@ export const createCycleDao = (db: Database) => {
 						eq(issues.orgId, orgId),
 						inArray(issues.cycleId, cycleIds),
 						isNull(issues.deletedAt),
+						// Archived issues do not count toward cycle progress.
+						isNull(issues.archivedAt),
 					),
 				)
 				.groupBy(issues.cycleId)
@@ -340,6 +342,8 @@ export const createCycleDao = (db: Database) => {
 							eq(issues.projectId, params.projectId),
 							eq(issues.cycleId, params.sourceCycleId),
 							isNull(issues.deletedAt),
+							// Archived issues stay parked in their cycle.
+							isNull(issues.archivedAt),
 							notInArray(
 								issues.statusId,
 								db

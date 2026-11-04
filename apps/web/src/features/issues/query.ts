@@ -53,6 +53,8 @@ export interface IssueQueryState {
 	search: string;
 	/** Flat cycle filter; never merged into `filter`. */
 	cycleId?: string;
+	/** Include archived issues; hidden by default and never part of a view. */
+	includeArchived?: boolean;
 }
 
 export const DEFAULT_ISSUE_SORT: IssueQuerySort = {
@@ -389,6 +391,7 @@ export const buildIssueListParams = ({
 	page,
 	pageSize,
 	cycleId,
+	includeArchived,
 }: IssueQueryState & { page: number; pageSize: number }) => ({
 	page: String(page),
 	pageSize: String(pageSize),
@@ -397,6 +400,7 @@ export const buildIssueListParams = ({
 	sort: JSON.stringify(sorts.length > 0 ? sorts : [DEFAULT_ISSUE_SORT]),
 	groupBy,
 	cycleId,
+	includeArchived: includeArchived ? "true" : undefined,
 });
 
 /** Canonical cache-key fragment covering the complete query. */
@@ -406,6 +410,7 @@ export const issueQueryKey = ({
 	groupBy,
 	search,
 	cycleId,
+	includeArchived,
 }: IssueQueryState) => ({
 	filter:
 		filter && filter.children.length > 0 ? normalizeFilterTree(filter) : null,
@@ -413,6 +418,7 @@ export const issueQueryKey = ({
 	groupBy: groupBy ?? null,
 	search: search ?? "",
 	cycleId: cycleId ?? null,
+	includeArchived: includeArchived ?? false,
 });
 
 export const isNullOperator = (operator: IssueFilterOperator): boolean =>

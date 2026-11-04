@@ -29,7 +29,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import {
+	Archive,
+	ArchiveRestore,
+	MoreHorizontal,
+	Repeat2,
+	Trash2,
+} from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
@@ -60,7 +66,9 @@ export function IssuePropertiesPanel({
 	cycles,
 	frozen,
 	onUpdate,
+	onArchive,
 	onDelete,
+	onMakeRecurring,
 }: {
 	orgId: string;
 	projectId: string;
@@ -77,7 +85,11 @@ export function IssuePropertiesPanel({
 	cycles: CycleWithProgressDto[];
 	frozen: boolean;
 	onUpdate: (input: UpdateIssueInput) => void;
+	/** Archive (or restore, when the issue is archived). */
+	onArchive: () => void;
 	onDelete: () => void;
+	/** Opens the "make recurring" dialog. */
+	onMakeRecurring: () => void;
 }) {
 	const { t } = useTranslation();
 	const [estimateDraft, setEstimateDraft] = useState("");
@@ -118,6 +130,16 @@ export function IssuePropertiesPanel({
 						<TooltipContent>{t("common.actions")}</TooltipContent>
 					</Tooltip>
 					<DropdownMenuContent align="end">
+						<DropdownMenuItem disabled={frozen} onClick={onMakeRecurring}>
+							<Repeat2 />
+							{t("recurrences.makeRecurring")}
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={frozen} onClick={onArchive}>
+							{issue.archivedAt ? <ArchiveRestore /> : <Archive />}
+							{issue.archivedAt
+								? t("issues.restoreAction")
+								: t("issues.archiveAction")}
+						</DropdownMenuItem>
 						<DropdownMenuItem
 							variant="destructive"
 							disabled={frozen}

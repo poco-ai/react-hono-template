@@ -59,6 +59,15 @@ export const issueSearchSchema = z.object({
 	/** Applied saved view; cleared as soon as the filter changes. */
 	viewId: z.string().optional().catch(""),
 	/**
+	 * Show archived issues in the list (default off). URL values arrive as
+	 * text, so `true`/`1` enable it; anything else falls back to the default.
+	 */
+	includeArchived: z
+		.union([z.boolean(), z.literal(1), z.literal("1"), z.literal("true")])
+		.transform((value) => value !== false)
+		.optional()
+		.catch(undefined),
+	/**
 	 * Set by the command palette to open the create-issue dialog on arrival.
 	 * Accepts the URL forms (`new=true` / `new=1`) and programmatic booleans,
 	 * always resolving to a boolean.

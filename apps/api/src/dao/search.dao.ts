@@ -236,6 +236,7 @@ export const createSearchDao = (db: Database) => ({
 					where issue_search match ${terms.ftsQuery}
 						and i.org_id = ${orgId}
 						and i.deleted_at is null
+						and i.archived_at is null
 						and p.archived = 0
 						${shortFilter ? sql`and ${shortFilter}` : sql``}
 					order by bm25(issue_search), i.updated_at desc, i.id
@@ -249,6 +250,7 @@ export const createSearchDao = (db: Database) => ({
 					left join user u on u.id = i.assignee_id
 					where i.org_id = ${orgId}
 						and i.deleted_at is null
+						and i.archived_at is null
 						and p.archived = 0
 						and ${joinAnd(terms.tokens.map(issueInstr))}
 					order by i.updated_at desc, i.id
@@ -279,6 +281,7 @@ export const createSearchDao = (db: Database) => ({
 						and c.org_id = ${orgId}
 						and i.org_id = ${orgId}
 						and i.deleted_at is null
+						and i.archived_at is null
 						and p.archived = 0
 						${shortFilter ? sql`and ${shortFilter}` : sql``}
 					order by bm25(comment_search), c.created_at desc, c.id
@@ -293,6 +296,7 @@ export const createSearchDao = (db: Database) => ({
 					where c.org_id = ${orgId}
 						and i.org_id = ${orgId}
 						and i.deleted_at is null
+						and i.archived_at is null
 						and p.archived = 0
 						and ${joinAnd(terms.tokens.map(commentInstr))}
 					order by c.created_at desc, c.id

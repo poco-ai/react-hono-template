@@ -10,12 +10,14 @@ type IssueRow = typeof issues.$inferSelect;
 
 export type IssueDto = Omit<
 	IssueRow,
-	"createdAt" | "updatedAt" | "dueDate" | "deletedAt"
+	"createdAt" | "updatedAt" | "dueDate" | "deletedAt" | "archivedAt"
 > & {
 	createdAt: string;
 	updatedAt: string;
 	dueDate: string | null;
 	deletedAt: string | null;
+	/** Set while the issue is archived (hidden from lists/search/progress). */
+	archivedAt?: string | null;
 	/** Resolved workflow status (id/name/category/color/position). */
 	status: StatusDto;
 };
@@ -71,6 +73,43 @@ export type ListIssuesQueryDto = {
 	filter?: IssueFilterNode;
 	projectId?: string;
 	cycleId?: string;
+	/** Defaults to false: archived issues are hidden from lists. */
+	includeArchived?: boolean;
 };
 
 export type ListIssuesDto = Paginated<IssueDetailDto>;
+
+/** Result of a project CSV export (already serialized). */
+export type IssueExportResultDto = {
+	csv: string;
+	filename: string;
+	/** Active rows written to the CSV (capped by `exportLimit`). */
+	exported: number;
+	/** Active rows that matched, before truncation. */
+	total: number;
+	truncated: boolean;
+};
+
+/**
+ * Triage row: an issue waiting for an owner (status category `backlog` and no
+ * assignee) with just enough project/status data to render the queue.
+ */
+export type TriageIssueDto = {
+	id: string;
+	projectId: string;
+	projectKey: string;
+	number: number;
+	identifier: string;
+	title: string;
+	statusId: string;
+	statusName: string;
+	statusCategory: string;
+	statusColor: string;
+	priority: number;
+	createdById: string | null;
+	createdAt: string;
+};
+
+export type TriageListDto = {
+	items: TriageIssueDto[];
+};

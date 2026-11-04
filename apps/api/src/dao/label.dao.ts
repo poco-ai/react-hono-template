@@ -90,6 +90,8 @@ export const createLabelDao = (db: Database) => ({
 	},
 
 	countIssueReferences: async (orgId: string, id: string): Promise<number> => {
+		// Archived issues are read-only and hidden from the normal surfaces, so
+		// they must not keep a label from being deleted.
 		const [row] = await db
 			.select({ value: count() })
 			.from(issueLabels)
@@ -99,6 +101,7 @@ export const createLabelDao = (db: Database) => ({
 					eq(issues.orgId, orgId),
 					eq(issueLabels.labelId, id),
 					isNull(issues.deletedAt),
+					isNull(issues.archivedAt),
 				),
 			);
 		return row?.value ?? 0;

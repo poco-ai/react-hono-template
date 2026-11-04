@@ -72,10 +72,11 @@ type SetupOptions = {
 	role?: string;
 	frozen?: boolean;
 	member?: boolean;
+	issue?: Partial<IssueDetailDto>;
 };
 
 const setup = (options: SetupOptions = {}) => {
-	const issue = issueDto();
+	const issue = issueDto(options.issue);
 	const project = projectDto();
 	const calls = {
 		listIssues: [] as { orgId: string; projectId: string | null }[],
@@ -445,6 +446,27 @@ test("list_issues and search_issues forward filter, sorts and grouping", async (
 		}),
 		(error: unknown) => error instanceof ApiError && error.status === 400,
 	);
+});
+
+test("issue summaries expose archivedAt so tools can spot archived issues", async () => {
+	const active = createCapabilityLayer(setup().deps);
+	const activeResult = await active.execute<{
+		issue: { archivedAt?: string | null };
+	}>("get_issue", context(), { issueId: "issue-1" });
+	assert.equal(activeResult.data.issue.archivedAt, null);
+
+	const archived = createCapabilityLayer(
+		setup({ issue: { archivedAt: NOW } }).deps,
+	);
+	const archivedResult = await archived.execute<{
+		issue: { archivedAt?: string | null };
+	}>("get_issue", context(), { issueId: "issue-1" });
+	assert.equal(archivedResult.data.issue.archivedAt, NOW);
+
+	const listed = await active.execute<{
+		items: { archivedAt?: string | null }[];
+	}>("list_issues", context(), {});
+	assert.equal(listed.data.items[0]?.archivedAt, null);
 });
 
 test("list_orgs returns the actor's memberships and works without an org", async () => {

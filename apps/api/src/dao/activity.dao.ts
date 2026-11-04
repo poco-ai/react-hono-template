@@ -113,6 +113,7 @@ export const cycleRolloverActivityStatement = (
 			AND ${issues.projectId} = ${params.projectId}
 			AND ${issues.cycleId} = ${params.sourceCycleId}
 			AND ${issues.deletedAt} IS NULL
+			AND ${issues.archivedAt} IS NULL
 			AND ${issueStatuses.category} NOT IN (${terminalCategoryList})
 	`);
 
@@ -207,7 +208,7 @@ export const createActivityDao = (db: Database) => ({
 
 	listByOrg: async (
 		orgId: string,
-		query: { projectId?: string; limit?: number },
+		query: { projectId?: string; limit?: number; offset?: number },
 	): Promise<OrgActivityDto[]> => {
 		const conditions: SQL[] = [eq(activities.orgId, orgId)];
 		if (query.projectId) {
@@ -234,7 +235,8 @@ export const createActivityDao = (db: Database) => ({
 			.innerJoin(projects, eq(projects.id, activities.projectId))
 			.where(and(...conditions))
 			.orderBy(desc(activities.createdAt), desc(activities.id))
-			.limit(query.limit ?? 50);
+			.limit(query.limit ?? 50)
+			.offset(query.offset ?? 0);
 		return rows.map((row) => ({
 			...toActivityDto(row),
 			issue: row.issue,

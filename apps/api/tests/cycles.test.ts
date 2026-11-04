@@ -97,6 +97,7 @@ CREATE TABLE issues (
 	due_date integer,
 	estimate integer,
 	deleted_at integer,
+	archived_at integer,
 	created_at integer NOT NULL DEFAULT 0,
 	updated_at integer NOT NULL DEFAULT 0
 );

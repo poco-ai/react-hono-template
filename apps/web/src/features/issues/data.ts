@@ -10,13 +10,17 @@ import {
 import type {
 	CreateIssueInput,
 	CreateIssueRelationInput,
+	ImportIssuesInput,
 	IssueFilterGroup,
+	IssueImportResultDto,
 	IssueQueryGroupBy,
 	IssueQuerySort,
 	UpdateIssueInput,
 } from "@workspace/shared";
 import { orgActivitiesRootKey } from "@/features/activities/data";
+import { invalidateFavoriteQueries } from "@/features/favorites/data";
 import { projectsRootKey } from "@/features/projects/data";
+import { roadmapRootKey } from "@/features/roadmap/data";
 import { client, unwrap } from "@/lib/api";
 import { type CodedError, codedError, errorCode } from "@/lib/errors";
 import {
@@ -36,6 +40,69 @@ export const createIssue = (
 			json: input,
 		}),
 	);
+
+export const importProjectIssues = (
+	orgId: string,
+	projectId: string,
+	input: ImportIssuesInput,
+) =>
+	unwrap(
+		client.api.orgs[":orgId"].projects[":projectId"].issues.import.$post({
+			param: { orgId, projectId },
+			json: input,
+		}),
+	);
+
+const apiBaseUrl = () =>
+	(import.meta.env?.VITE_API_URL ?? "").replace(/\/$/, "");
+
+/** Absolute export URL; the browser sends the session cookie. */
+export const issueExportUrl = (orgId: string, projectId: string) =>
+	`${apiBaseUrl()}/api/orgs/${encodeURIComponent(orgId)}/projects/${encodeURIComponent(projectId)}/issues/export.csv`;
+
+export type IssueExportDownload = {
+	blob: Blob;
+	filename: string;
+	truncated: boolean;
+	total: number;
+};
+
+/**
+ * Downloads the project CSV as a Blob. Uses `fetch` instead of the typed Hono
+ * client because the response is `text/csv`, not the `ApiResult` envelope.
+ */
+export async function exportProjectIssues(
+	orgId: string,
+	projectId: string,
+): Promise<IssueExportDownload> {
+	const response = await fetch(issueExportUrl(orgId, projectId), {
+		credentials: "include",
+	});
+	if (!response.ok) {
+		let code = "EXPORT_FAILED";
+		let message = `Export failed (${response.status})`;
+		try {
+			const body = (await response.json()) as {
+				ok: false;
+				error: { code: string; message: string };
+			};
+			code = body.error.code;
+			message = body.error.message;
+		} catch {
+			// Non-JSON error body: keep the HTTP status fallback.
+		}
+		throw Object.assign(new Error(message), { code, status: response.status });
+	}
+	const disposition = response.headers.get("Content-Disposition") ?? "";
+	const filename =
+		/filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? "issues.csv";
+	return {
+		blob: await response.blob(),
+		filename,
+		truncated: response.headers.get("X-Issue-Truncated") === "true",
+		total: Number(response.headers.get("X-Issue-Total") ?? 0),
+	};
+}
 
 export const updateIssue = (
 	orgId: string,
@@ -57,6 +124,37 @@ export const deleteIssue = (orgId: string, projectId: string, number: number) =>
 		}),
 	);
 
+/** Archives an issue: it disappears from lists/search/progress but stays readable. */
+export const archiveIssue = (
+	orgId: string,
+	projectId: string,
+	number: number,
+) =>
+	unwrap(
+		client.api.orgs[":orgId"].projects[":projectId"].issues[
+			":number"
+		].archive.$post({ param: { orgId, projectId, number: String(number) } }),
+	);
+
+/** Restores an archived issue to every list/search/progress calculation. */
+export const restoreIssue = (
+	orgId: string,
+	projectId: string,
+	number: number,
+) =>
+	unwrap(
+		client.api.orgs[":orgId"].projects[":projectId"].issues[
+			":number"
+		].restore.$post({ param: { orgId, projectId, number: String(number) } }),
+	);
+
+export type IssueArchiveAction = "archive" | "restore";
+
+/** Menu mapping: archived issues offer Restore, active issues offer Archive. */
+export const issueArchiveAction = (
+	issue: Pick<IssueDetailDto, "archivedAt">,
+): IssueArchiveAction => (issue.archivedAt ? "restore" : "archive");
+
 export type IssueSort = "updated" | "created" | "priority";
 
 /**
@@ -70,6 +168,8 @@ export interface IssueFilters {
 	search: string;
 	/** Flat cycle filter applied by the API alongside the structured filter. */
 	cycleId?: string;
+	/** Include archived issues; the API hides them by default. */
+	includeArchived?: boolean;
 	page: number;
 	pageSize?: number;
 }
@@ -82,6 +182,7 @@ const normalizedQuery = (filters: IssueFilters) => ({
 	groupBy: filters.groupBy,
 	search: filters.search ?? "",
 	cycleId: filters.cycleId || undefined,
+	includeArchived: filters.includeArchived ?? false,
 });
 
 const buildQuery = (filters: IssueFilters) =>
@@ -249,6 +350,12 @@ export const invalidateIssueQueries = (
 		queryClient.invalidateQueries({ queryKey: projectsRootKey(orgId) }),
 		queryClient.invalidateQueries({ queryKey: orgIssuesRootKey(orgId) }),
 		queryClient.invalidateQueries({ queryKey: orgActivitiesRootKey(orgId) }),
+		// Issue writes change roadmap progress (open/total counts) and
+		// archive/restore hides or reveals timeline entries.
+		queryClient.invalidateQueries({ queryKey: roadmapRootKey(orgId) }),
+		// Favorite rows are hydrated with issue titles/status, and archived or
+		// deleted issues are dropped from that list by the API.
+		invalidateFavoriteQueries(queryClient, orgId),
 	]);
 
 export function useCreateIssue(orgId: string, projectId: string) {
@@ -261,6 +368,23 @@ export function useCreateIssue(orgId: string, projectId: string) {
 			// Detail keys live under ["orgs", orgId, "projects", ...], which the
 			// list/project prefixes above do not cover. Creating a sub-issue
 			// changes the parent's child list and progress.
+			void queryClient.invalidateQueries({
+				queryKey: issueDetailRootKey(orgId, projectId),
+			});
+		},
+	});
+}
+
+/**
+ * CSV import: valid rows are created server-side and invalid rows come back
+ * as row errors (partial success). Writes refresh every issue surface.
+ */
+export function useImportIssues(orgId: string, projectId: string) {
+	const queryClient = useQueryClient();
+	return useMutation<IssueImportResultDto, Error, ImportIssuesInput>({
+		mutationFn: (input) => importProjectIssues(orgId, projectId, input),
+		onSettled: () => {
+			void invalidateIssueQueries(queryClient, orgId);
 			void queryClient.invalidateQueries({
 				queryKey: issueDetailRootKey(orgId, projectId),
 			});
@@ -403,6 +527,52 @@ export function useDeleteIssue(
 		mutationFn: () => deleteIssue(orgId, projectId, issueNumber),
 		onSuccess: () => {
 			void invalidateIssueQueries(queryClient, orgId);
+		},
+	});
+}
+
+/**
+ * Archive/restore toggle for one issue. The detail cache is patched
+ * optimistically (so the menu and the archived banner flip immediately) and
+ * rolled back on failure; the settled write refreshes issue lists, details,
+ * search, project/cycle statistics, sub-issue progress and favorites through
+ * `invalidateIssueQueries` plus the detail root.
+ */
+export function useSetIssueArchived(
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+) {
+	const queryClient = useQueryClient();
+	const detailKey = issueQuery(orgId, projectId, issueNumber).queryKey;
+	return useMutation({
+		mutationFn: (archived: boolean) =>
+			archived
+				? archiveIssue(orgId, projectId, issueNumber)
+				: restoreIssue(orgId, projectId, issueNumber),
+		onMutate: async (archived) => {
+			await queryClient.cancelQueries({ queryKey: detailKey });
+			const previous = queryClient.getQueryData(detailKey);
+			queryClient.setQueryData(detailKey, (old) =>
+				old
+					? {
+							...old,
+							archivedAt: archived ? new Date().toISOString() : null,
+						}
+					: old,
+			);
+			return { previous };
+		},
+		onError: (_error, _archived, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(detailKey, context.previous);
+			}
+		},
+		onSettled: () => {
+			void invalidateIssueQueries(queryClient, orgId);
+			void queryClient.invalidateQueries({
+				queryKey: issueDetailRootKey(orgId, projectId),
+			});
 		},
 	});
 }

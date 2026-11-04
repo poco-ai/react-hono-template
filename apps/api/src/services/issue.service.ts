@@ -2,24 +2,37 @@ import {
 	ApiError,
 	ApiErrorCode,
 	type CreateIssueInput,
+	type ImportIssuesInput,
+	ISSUE_CSV_EXPORT_HEADERS,
+	ISSUE_CSV_MAX_EXPORT_ROWS,
+	ISSUE_CSV_MAX_IMPORT_ROWS,
+	ISSUE_PRIORITIES,
+	type IssueImportResultDto,
+	type IssueImportRowError,
 	type IssueListQuery,
 	isTerminalStatusCategory,
 	normalizeIssueSorts,
+	parseCsv,
+	priorityName,
+	serializeCsvText,
 	type UpdateIssueInput,
+	unescapeCsvCell,
 } from "@workspace/shared";
 import type { ActivityInsert } from "../dao/activity.dao";
 import type { CycleDao } from "../dao/cycle.dao";
-import type { IssueDao } from "../dao/issue.dao";
+import type { IssueDao, IssueInsertData } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type {
 	IssueDetailDto,
 	IssueDto,
+	IssueExportResultDto,
 	IssueLinkSummaryDto,
 	IssueNavigationDto,
 	IssueOverviewDto,
 	ListIssuesDto,
+	TriageListDto,
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
 import type { BackgroundFn } from "../lib/background";
@@ -227,6 +240,48 @@ export const assertValidParent = async ({
 	return parent;
 };
 
+const nameKey = (value: string) => value.trim().toLowerCase();
+
+const csvValue = (value: unknown) =>
+	typeof value === "string" ? value.trim() : "";
+
+/**
+ * Reverses the spreadsheet-safety prefix added on export so a project's own
+ * CSV re-imports unchanged (`'=1+1` becomes `=1+1` again).
+ */
+const unescapeImportRow = (
+	row: Record<string, string>,
+): Record<string, string> =>
+	Object.fromEntries(
+		Object.entries(row).map(([key, value]) => [key, unescapeCsvCell(value)]),
+	);
+
+/** `none|urgent|high|medium|low` or a numeric 0-4; null when unparseable. */
+const parseImportPriority = (value: string): number | null => {
+	if (!value) {
+		return 0;
+	}
+	if (/^\d+$/.test(value)) {
+		const numeric = Number(value);
+		return numeric >= 0 && numeric <= 4 ? numeric : null;
+	}
+	const named = ISSUE_PRIORITIES.find(
+		(priority) => priority.name === value.toLowerCase(),
+	);
+	return named?.value ?? null;
+};
+
+/** Accepts `YYYY-MM-DD` (UTC midnight) or any ISO-8601 timestamp. */
+const parseImportDate = (value: string): Date | null => {
+	if (!value) {
+		return null;
+	}
+	const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+		? new Date(`${value}T00:00:00.000Z`)
+		: new Date(value);
+	return Number.isNaN(date.getTime()) ? null : date;
+};
+
 export const createIssueService = ({
 	issueDao,
 	labelDao,
@@ -241,8 +296,11 @@ export const createIssueService = ({
 	labelDao: LabelDao;
 	projectDao: ProjectDao;
 	memberDao: MemberDao;
-	cycleDao: Pick<CycleDao, "findById">;
-	statusService: Pick<StatusService, "resolveStatus" | "resolveStatusIds">;
+	cycleDao: Pick<CycleDao, "findById" | "listAllByProject">;
+	statusService: Pick<
+		StatusService,
+		"resolveStatus" | "resolveStatusIds" | "listStatuses"
+	>;
 	webhooks?: WebhookDispatcher;
 	notifications?: Pick<
 		NotificationService,
@@ -271,6 +329,7 @@ export const createIssueService = ({
 			filter: query.filter,
 			projectId: query.projectId,
 			cycleId: query.cycleId,
+			includeArchived: query.includeArchived,
 		});
 	},
 
@@ -313,6 +372,145 @@ export const createIssueService = ({
 			subIssues,
 			subIssueProgress: { done, total: subIssues.length },
 		};
+	},
+
+	/** Triage queue: backlog-category issues without an assignee. */
+	listTriage: async (
+		orgId: string,
+		query: { projectId?: string } = {},
+	): Promise<TriageListDto> => {
+		if (query.projectId) {
+			const project = await projectDao.findById(orgId, query.projectId);
+			if (!project) {
+				throw new ApiError(
+					404,
+					ApiErrorCode.PROJECT_NOT_FOUND,
+					`Project ${query.projectId} not found`,
+				);
+			}
+		}
+		return { items: await issueDao.listTriage(orgId, query.projectId) };
+	},
+
+	/**
+	 * Archives an issue: it disappears from lists, search, statistics and
+	 * progress bars while the detail page stays reachable. Idempotent.
+	 */
+	archiveIssue: async (
+		orgId: string,
+		projectId: string,
+		number: number,
+		userId: string | null,
+		background?: BackgroundFn,
+	): Promise<IssueDetailDto> => {
+		const issue = await issueDao.findByProjectAndNumber(
+			orgId,
+			projectId,
+			number,
+		);
+		if (!issue) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.ISSUE_NOT_FOUND,
+				`Issue #${number} not found`,
+			);
+		}
+		if (issue.archivedAt) {
+			return { ...issue, labelIds: await issueDao.findLabelIds(issue.id) };
+		}
+		const project = await projectDao.findById(orgId, issue.projectId);
+		assertProjectWritable(project?.archived ?? true);
+		const updated = await issueDao.setArchived(
+			orgId,
+			issue.id,
+			new Date(),
+			userId
+				? buildActivity(
+						orgId,
+						issue.projectId,
+						issue.id,
+						userId,
+						"issue.updated",
+						{
+							field: "archived",
+							oldValue: null,
+							newValue: "archived",
+						},
+					)
+				: undefined,
+		);
+		if (!updated) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.ISSUE_NOT_FOUND,
+				`Issue #${number} not found`,
+			);
+		}
+		const result = {
+			...updated,
+			labelIds: await issueDao.findLabelIds(issue.id),
+		};
+		await webhooks?.dispatch(orgId, "issue.updated", result, background);
+		return result;
+	},
+
+	/** Restores an archived issue to every list/search/progress surface. */
+	restoreIssue: async (
+		orgId: string,
+		projectId: string,
+		number: number,
+		userId: string | null,
+		background?: BackgroundFn,
+	): Promise<IssueDetailDto> => {
+		const issue = await issueDao.findByProjectAndNumber(
+			orgId,
+			projectId,
+			number,
+		);
+		if (!issue) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.ISSUE_NOT_FOUND,
+				`Issue #${number} not found`,
+			);
+		}
+		if (!issue.archivedAt) {
+			return { ...issue, labelIds: await issueDao.findLabelIds(issue.id) };
+		}
+		const project = await projectDao.findById(orgId, issue.projectId);
+		assertProjectWritable(project?.archived ?? true);
+		const updated = await issueDao.setArchived(
+			orgId,
+			issue.id,
+			null,
+			userId
+				? buildActivity(
+						orgId,
+						issue.projectId,
+						issue.id,
+						userId,
+						"issue.updated",
+						{
+							field: "archived",
+							oldValue: "archived",
+							newValue: null,
+						},
+					)
+				: undefined,
+		);
+		if (!updated) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.ISSUE_NOT_FOUND,
+				`Issue #${number} not found`,
+			);
+		}
+		const result = {
+			...updated,
+			labelIds: await issueDao.findLabelIds(issue.id),
+		};
+		await webhooks?.dispatch(orgId, "issue.updated", result, background);
+		return result;
 	},
 
 	getIssueById: async (
@@ -424,6 +622,279 @@ export const createIssueService = ({
 		);
 		await webhooks?.dispatch(orgId, "issue.created", result, background);
 		return result;
+	},
+
+	/**
+	 * CSV export: active issues only (deleted and archived excluded), display
+	 * order (number ascending). The assignee column carries the member display
+	 * name (email is available on the members page, not in the export).
+	 */
+	exportIssues: async (
+		orgId: string,
+		projectId: string,
+	): Promise<IssueExportResultDto> => {
+		const project = await projectDao.findById(orgId, projectId);
+		if (!project) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.PROJECT_NOT_FOUND,
+				`Project ${projectId} not found`,
+			);
+		}
+		const [statuses, labels, members, cycles, exported] = await Promise.all([
+			statusService.listStatuses(orgId),
+			labelDao.listByOrg(orgId),
+			memberDao.listByOrg(orgId),
+			cycleDao.listAllByProject(orgId, projectId),
+			issueDao.listForExport(orgId, projectId, ISSUE_CSV_MAX_EXPORT_ROWS),
+		]);
+		const statusById = new Map(statuses.map((status) => [status.id, status]));
+		const labelById = new Map(labels.map((label) => [label.id, label]));
+		const memberById = new Map(
+			members.map((member) => [member.userId, member.name]),
+		);
+		const cycleById = new Map(cycles.map((cycle) => [cycle.id, cycle]));
+		const labelIdsByIssue = new Map<string, string[]>();
+		// One join query (not an IN list: 2000 ids would exceed D1's parameter
+		// limit), then grouped locally.
+		const links = await issueDao.listLabelLinksForProject(orgId, projectId);
+		for (const link of links) {
+			const list = labelIdsByIssue.get(link.issueId) ?? [];
+			list.push(link.labelId);
+			labelIdsByIssue.set(link.issueId, list);
+		}
+		const data = exported.rows.map((row) => {
+			const status = statusById.get(row.statusId);
+			if (!status) {
+				throw new Error(`Issue ${row.id} references unknown status`);
+			}
+			const labelNames = (labelIdsByIssue.get(row.id) ?? [])
+				.map((labelId) => labelById.get(labelId)?.name)
+				.filter((name): name is string => Boolean(name))
+				.sort((a, b) => a.localeCompare(b));
+			return [
+				issueKey(project.key, row.number),
+				project.name,
+				row.title,
+				row.description ?? "",
+				status.name,
+				priorityName(row.priority),
+				row.assigneeId ? (memberById.get(row.assigneeId) ?? "") : "",
+				labelNames.join(", "),
+				row.dueDate ? row.dueDate.toISOString().slice(0, 10) : "",
+				row.estimate === null ? "" : String(row.estimate),
+				row.cycleId ? (cycleById.get(row.cycleId)?.name ?? "") : "",
+				row.createdAt.toISOString(),
+				row.updatedAt.toISOString(),
+			];
+		});
+		return {
+			csv: serializeCsvText([[...ISSUE_CSV_EXPORT_HEADERS], ...data]),
+			filename: `${project.key.replace(/[^A-Za-z0-9._-]/g, "_")}-issues.csv`,
+			exported: exported.rows.length,
+			total: exported.total,
+			truncated: exported.total > exported.rows.length,
+		};
+	},
+
+	/**
+	 * CSV import with partial success: invalid rows are reported by 1-based
+	 * data-row index (header excluded) and skipped, valid rows are inserted in
+	 * one transaction with contiguous numbers. Status/assignee/label/cycle
+	 * values resolve by name against the organization's current data.
+	 */
+	importIssues: async (
+		orgId: string,
+		projectId: string,
+		userId: string | null,
+		input: ImportIssuesInput,
+	): Promise<IssueImportResultDto> => {
+		const project = await projectDao.findById(orgId, projectId);
+		if (!project) {
+			throw new ApiError(
+				404,
+				ApiErrorCode.PROJECT_NOT_FOUND,
+				`Project ${projectId} not found`,
+			);
+		}
+		assertProjectWritable(project.archived);
+		if (input.rows.length > ISSUE_CSV_MAX_IMPORT_ROWS) {
+			throw new ApiError(
+				400,
+				ApiErrorCode.VALIDATION,
+				`An import can contain at most ${ISSUE_CSV_MAX_IMPORT_ROWS} rows`,
+			);
+		}
+		const [statuses, labels, members, cycles] = await Promise.all([
+			statusService.listStatuses(orgId),
+			labelDao.listByOrg(orgId),
+			memberDao.listByOrg(orgId),
+			cycleDao.listAllByProject(orgId, projectId),
+		]);
+		const statusByKey = new Map(
+			statuses.map((status) => [nameKey(status.name), status]),
+		);
+		const defaultStatus =
+			statuses.find((status) => status.isDefault) ?? statuses[0] ?? null;
+		const labelsByKey = new Map<string, string[]>();
+		for (const label of labels) {
+			const key = nameKey(label.name);
+			labelsByKey.set(key, [...(labelsByKey.get(key) ?? []), label.id]);
+		}
+		const membersByEmail = new Map(
+			members.map((member) => [nameKey(member.email), member]),
+		);
+		const membersByName = new Map<string, typeof members>();
+		for (const member of members) {
+			const key = nameKey(member.name);
+			membersByName.set(key, [...(membersByName.get(key) ?? []), member]);
+		}
+		const cyclesByName = new Map<string, typeof cycles>();
+		for (const cycle of cycles) {
+			const key = nameKey(cycle.name);
+			cyclesByName.set(key, [...(cyclesByName.get(key) ?? []), cycle]);
+		}
+
+		const errors: IssueImportRowError[] = [];
+		const inserts: IssueInsertData[] = [];
+		const labelLinks: { issueId: string; labelId: string }[] = [];
+		const activities: ActivityInsert[] = [];
+		const invalid = (message: string): never => {
+			throw new Error(message);
+		};
+
+		input.rows.forEach((rawRow, index) => {
+			const row = index + 1;
+			try {
+				const raw = unescapeImportRow(rawRow);
+				const title = csvValue(raw.title);
+				if (!title) {
+					invalid("Title is required");
+				}
+				if (title.length > 500) {
+					invalid("Title must be at most 500 characters");
+				}
+				const description = csvValue(raw.description);
+				if (description.length > 20000) {
+					invalid("Description must be at most 20000 characters");
+				}
+				const statusName = csvValue(raw.status);
+				const status = statusName
+					? statusByKey.get(nameKey(statusName))
+					: defaultStatus;
+				if (!status) {
+					throw new Error(
+						statusName
+							? `Unknown status "${statusName}"`
+							: "This organization has no workflow status",
+					);
+				}
+				const priorityInput = csvValue(raw.priority);
+				const priority = parseImportPriority(priorityInput);
+				if (priority === null) {
+					throw new Error(
+						`Invalid priority "${priorityInput}" (use none/urgent/high/medium/low or 0-4)`,
+					);
+				}
+				let assigneeId: string | null = null;
+				const assigneeInput = csvValue(raw.assignee);
+				if (assigneeInput) {
+					const key = nameKey(assigneeInput);
+					const byEmail = membersByEmail.get(key);
+					const byName = membersByName.get(key) ?? [];
+					if (byEmail) {
+						assigneeId = byEmail.userId;
+					} else if (byName.length === 1) {
+						assigneeId = byName[0].userId;
+					} else if (byName.length > 1) {
+						invalid(
+							`Assignee "${assigneeInput}" is ambiguous; use the email address`,
+						);
+					} else {
+						invalid(`Unknown assignee "${assigneeInput}"`);
+					}
+				}
+				const labelIds: string[] = [];
+				for (const labelName of parseCsv(raw.labels)) {
+					const matches = labelsByKey.get(nameKey(labelName)) ?? [];
+					if (matches.length === 0) {
+						invalid(`Unknown label "${labelName}"`);
+					}
+					const labelId = matches[0];
+					if (!labelIds.includes(labelId)) {
+						labelIds.push(labelId);
+					}
+					if (labelIds.length > 20) {
+						invalid("At most 20 labels are allowed per issue");
+					}
+				}
+				const dueDateInput = csvValue(raw.due_date);
+				const dueDate = parseImportDate(dueDateInput);
+				if (dueDateInput && !dueDate) {
+					invalid(`Invalid due_date "${dueDateInput}" (use YYYY-MM-DD)`);
+				}
+				const estimateInput = csvValue(raw.estimate);
+				let estimate: number | null = null;
+				if (estimateInput) {
+					if (!/^\d+$/.test(estimateInput)) {
+						invalid("estimate must be a whole number between 0 and 100");
+					}
+					estimate = Number(estimateInput);
+					if (estimate > 100) {
+						invalid("estimate must be a whole number between 0 and 100");
+					}
+				}
+				let cycleId: string | null = null;
+				const cycleInput = csvValue(raw.cycle);
+				if (cycleInput) {
+					const matches = cyclesByName.get(nameKey(cycleInput)) ?? [];
+					if (matches.length === 0) {
+						invalid(`Unknown cycle "${cycleInput}"`);
+					}
+					cycleId = matches[0].id;
+				}
+				const id = crypto.randomUUID();
+				inserts.push({
+					id,
+					orgId,
+					projectId,
+					title,
+					description: description || null,
+					statusId: status.id,
+					priority,
+					assigneeId,
+					createdById: userId,
+					dueDate,
+					estimate,
+					parentId: null,
+					cycleId,
+				});
+				for (const labelId of labelIds) {
+					labelLinks.push({ issueId: id, labelId });
+				}
+				if (userId) {
+					activities.push(
+						buildActivity(orgId, projectId, id, userId, "issue.created"),
+					);
+				}
+			} catch (err) {
+				errors.push({
+					row,
+					message: err instanceof Error ? err.message : "Invalid row",
+				});
+			}
+		});
+
+		if (inserts.length > 0) {
+			await issueDao.createManyWithNumbers(
+				orgId,
+				projectId,
+				inserts,
+				labelLinks,
+				activities,
+			);
+		}
+		return { created: inserts.length, errors };
 	},
 
 	updateIssue: async (

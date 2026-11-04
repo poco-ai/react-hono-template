@@ -14,12 +14,15 @@ import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Separator } from "@workspace/ui/components/separator";
 import { Spinner } from "@workspace/ui/components/spinner";
 import {
+	Archive,
+	ArchiveRestore,
 	ArrowLeft,
 	ChevronLeft,
 	ChevronRight,
 	CircleAlert,
 	CornerUpLeft,
 	Pencil,
+	Star,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -31,14 +34,22 @@ import { IssueAttachments } from "@/features/attachments/components/issue-attach
 import { useSession } from "@/features/auth/data";
 import { IssueComments } from "@/features/comments/components/issue-comments";
 import { cyclesQuery } from "@/features/cycles/data";
+import {
+	favoritesQuery,
+	isFavorited,
+	useToggleFavorite,
+} from "@/features/favorites/data";
+import { IssueArchiveDialog } from "@/features/issues/components/issue-archive-dialog";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
 import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
 import { RelationsSection } from "@/features/issues/components/relations-section";
 import { SubIssuesSection } from "@/features/issues/components/sub-issues-section";
 import {
+	issueArchiveAction,
 	issueQuery,
 	useDeleteIssue,
+	useSetIssueArchived,
 	useUpdateIssue,
 } from "@/features/issues/data";
 import { labelsQuery } from "@/features/labels/data";
@@ -46,9 +57,10 @@ import { membersQuery } from "@/features/members/data";
 import { IssueSubscriptionButton } from "@/features/notifications/components/issue-subscription-button";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
+import { RecurrenceDialog } from "@/features/recurrences/components/recurrence-dialog";
 import { useRecordRecentIssue } from "@/features/search/data";
 import { statusesQuery } from "@/features/statuses/data";
-import { isNotFoundError } from "@/lib/errors";
+import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -90,6 +102,8 @@ export function IssueDetailPage({
 
 	const [title, setTitle] = useState("");
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [archiveOpen, setArchiveOpen] = useState(false);
+	const [recurringOpen, setRecurringOpen] = useState(false);
 
 	useEffect(() => {
 		setTitle(issue.data?.title ?? "");
@@ -97,6 +111,39 @@ export function IssueDetailPage({
 
 	const updateMutation = useUpdateIssue(orgId, projectId, issueNumber);
 	const deleteMutation = useDeleteIssue(orgId, projectId, issueNumber);
+	const archiveMutation = useSetIssueArchived(orgId, projectId, issueNumber);
+	const favorites = useQuery(favoritesQuery(orgId));
+	const favoriteMutation = useToggleFavorite(orgId, {
+		onError: (error) => toast.error(apiErrorMessage(t, error)),
+	});
+	const favorited = issue.data
+		? isFavorited(favorites.data, "issue", issue.data.id)
+		: false;
+	const toggleFavorite = () => {
+		if (!issue.data) {
+			return;
+		}
+		favoriteMutation.mutate({
+			entityType: "issue",
+			entityId: issue.data.id,
+			favorited,
+		});
+	};
+
+	const setArchived = (archived: boolean) => {
+		archiveMutation.mutate(archived, {
+			onSuccess: () => {
+				toast.success(
+					t(archived ? "toast.issueArchived" : "toast.issueRestored"),
+				);
+				setArchiveOpen(false);
+			},
+			onError: (error) => {
+				toast.error(apiErrorMessage(t, error));
+				setArchiveOpen(false);
+			},
+		});
+	};
 	const remove = () =>
 		deleteMutation.mutate(undefined, {
 			onSuccess: () => {
@@ -171,6 +218,11 @@ export function IssueDetailPage({
 	}
 
 	const data = issue.data;
+	const favoriteLabel = data.archivedAt
+		? t("favorites.archivedIssue")
+		: t(favorited ? "favorites.removeIssue" : "favorites.addIssue");
+	const favoriteDisabled =
+		frozen || Boolean(data.archivedAt) || favoriteMutation.isPending;
 
 	return (
 		<div className="flex flex-col gap-8 px-4 py-8 lg:flex-row lg:px-6">
@@ -201,6 +253,18 @@ export function IssueDetailPage({
 							</BreadcrumbPage>
 						</BreadcrumbItem>
 						<BreadcrumbItem className="ml-auto">
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								className="size-7"
+								aria-label={favoriteLabel}
+								aria-pressed={favorited}
+								title={favoriteLabel}
+								disabled={favoriteDisabled}
+								onClick={toggleFavorite}
+							>
+								<Star className={favorited ? "fill-current" : undefined} />
+							</Button>
 							<IssueSubscriptionButton
 								orgId={orgId}
 								projectId={projectId}
@@ -230,6 +294,23 @@ export function IssueDetailPage({
 						</BreadcrumbItem>
 					</BreadcrumbList>
 				</Breadcrumb>
+				{data.archivedAt ? (
+					<Alert className="mb-4">
+						<Archive />
+						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+							<span>{t("issues.archivedNotice")}</span>
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={frozen || archiveMutation.isPending}
+								onClick={() => setArchived(false)}
+							>
+								<ArchiveRestore />
+								{t("issues.restoreAction")}
+							</Button>
+						</AlertDescription>
+					</Alert>
+				) : null}
 				{data.parent ? (
 					<Link
 						to="/orgs/$orgId/projects/$projectId/$issueNumber"
@@ -362,7 +443,28 @@ export function IssueDetailPage({
 					cycles={cycles.data?.items ?? []}
 					frozen={frozen}
 					onUpdate={update}
+					onArchive={() =>
+						issueArchiveAction(data) === "restore"
+							? setArchived(false)
+							: setArchiveOpen(true)
+					}
 					onDelete={() => setDeleteOpen(true)}
+					onMakeRecurring={() => setRecurringOpen(true)}
+				/>
+				<RecurrenceDialog
+					open={recurringOpen}
+					onOpenChange={setRecurringOpen}
+					orgId={orgId}
+					projectId={projectId}
+					issueId={data.id}
+					issueKey={`${project.data?.key ?? ""}-${data.number}`}
+				/>
+				<IssueArchiveDialog
+					open={archiveOpen}
+					onOpenChange={setArchiveOpen}
+					issueKey={`${project.data?.key ?? ""}-${data.number}`}
+					pending={archiveMutation.isPending}
+					onConfirm={() => setArchived(true)}
 				/>
 				<IssueDeleteDialog
 					open={deleteOpen}

@@ -37,12 +37,23 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { CircleAlert, CircleDot, MoreHorizontal, Plus } from "lucide-react";
+import {
+	CircleAlert,
+	CircleDot,
+	MoreHorizontal,
+	Plus,
+	Star,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { useSession } from "@/features/auth/data";
+import {
+	favoritesQuery,
+	isFavorited,
+	useToggleFavorite,
+} from "@/features/favorites/data";
 import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
@@ -73,6 +84,10 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
 	const [editTarget, setEditTarget] = useState<ProjectDto | null>(null);
+	const favorites = useQuery(favoritesQuery(orgId));
+	const favoriteMutation = useToggleFavorite(orgId, {
+		onError: (error) => toast.error(apiErrorMessage(t, error)),
+	});
 
 	const setShowArchived = (next: boolean) =>
 		navigate({
@@ -262,6 +277,47 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 												/>
 											)}
 										</div>
+										{(() => {
+											const favorited = isFavorited(
+												favorites.data,
+												"project",
+												project.id,
+											);
+											const favoriteLabel = project.archived
+												? t("favorites.archivedProject")
+												: t(
+														favorited
+															? "favorites.removeProject"
+															: "favorites.addProject",
+													);
+											return (
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													aria-label={favoriteLabel}
+													aria-pressed={favorited}
+													title={favoriteLabel}
+													disabled={
+														frozen ||
+														project.archived ||
+														favoriteMutation.isPending
+													}
+													className="shrink-0"
+													onClick={(event) => {
+														event.stopPropagation();
+														favoriteMutation.mutate({
+															entityType: "project",
+															entityId: project.id,
+															favorited,
+														});
+													}}
+												>
+													<Star
+														className={favorited ? "fill-current" : undefined}
+													/>
+												</Button>
+											);
+										})()}
 										{canManage && (
 											<DropdownMenu>
 												<Tooltip>

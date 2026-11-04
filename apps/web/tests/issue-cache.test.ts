@@ -20,6 +20,7 @@ test("issue writes invalidate lists, details and activities only in their organi
 		["orgs", "org", "projects", "project", "issues", "detail", 1, "activities"],
 		["orgs", "org", "issues"],
 		["orgs", "org", "activities", { limit: 50 }],
+		["orgs", "org", "roadmap"],
 	];
 	const unaffected = [
 		["orgs", "other", "projects"],
@@ -43,6 +44,7 @@ test("relation writes invalidate detail, relation groups, activity and org feeds
 		["orgs", "org", "projects", "project", "issues", { page: 1 }],
 		["orgs", "org", "issues"],
 		["orgs", "org", "activities", { limit: 50 }],
+		["orgs", "org", "roadmap"],
 	];
 	const unaffected = [
 		// `invalidateIssueQueries` invalidates the org's project root (which
@@ -117,6 +119,7 @@ test("bulk writes invalidate lists, details and activity feeds", async () => {
 		["orgs", "org", "projects", "project", "issues", "detail", 1],
 		["orgs", "org", "projects", "project", "issues", "detail", 1, "activities"],
 		["orgs", "org", "activities", { limit: 50 }],
+		["orgs", "org", "roadmap"],
 	];
 	const unaffected = [
 		["orgs", "other", "issues"],

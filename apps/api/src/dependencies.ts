@@ -17,8 +17,10 @@ import { createCommentDao } from "./dao/comment.dao";
 import { createCommentMentionDao } from "./dao/comment-mention.dao";
 import { createCommentReactionDao } from "./dao/comment-reaction.dao";
 import { createCycleDao } from "./dao/cycle.dao";
+import { createFavoriteDao } from "./dao/favorite.dao";
 import { createIssueDao } from "./dao/issue.dao";
 import { createIssueSubscriptionDao } from "./dao/issue-subscription.dao";
+import { createIssueTemplateDao } from "./dao/issue-template.dao";
 import { createLabelDao } from "./dao/label.dao";
 import { createMediaAssetDao } from "./dao/media-asset.dao";
 import { createMemberDao } from "./dao/member.dao";
@@ -28,7 +30,9 @@ import { createOrganizationDao } from "./dao/organization.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
 import { createProjectUpdateDao } from "./dao/project-update.dao";
+import { createRecurrenceDao } from "./dao/recurrence.dao";
 import { createRelationDao } from "./dao/relation.dao";
+import { createRoadmapDao } from "./dao/roadmap.dao";
 import { createSearchDao } from "./dao/search.dao";
 import { createStatusDao } from "./dao/status.dao";
 import { createViewDao } from "./dao/view.dao";
@@ -56,8 +60,10 @@ import { createCleanupService } from "./services/cleanup.service";
 import { createCommentService } from "./services/comment.service";
 import { createConfigService } from "./services/config.service";
 import { createCycleService } from "./services/cycle.service";
+import { createFavoriteService } from "./services/favorite.service";
 import { createIssueService } from "./services/issue.service";
 import { createIssueSubscriptionService } from "./services/issue-subscription.service";
+import { createIssueTemplateService } from "./services/issue-template.service";
 import { createLabelService } from "./services/label.service";
 import { createMediaService } from "./services/media.service";
 import { createNotificationService } from "./services/notification.service";
@@ -65,7 +71,9 @@ import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
 import { createProjectUpdateService } from "./services/project-update.service";
+import { createRecurrenceService } from "./services/recurrence.service";
 import { createRelationService } from "./services/relation.service";
+import { createRoadmapService } from "./services/roadmap.service";
 import { createSearchService } from "./services/search.service";
 import { createStatusService } from "./services/status.service";
 import { createStorageUsageService } from "./services/storage-usage.service";
@@ -118,7 +126,11 @@ export const createDependencies = ({
 	const projectDao = createProjectDao(db);
 	const projectUpdateDao = createProjectUpdateDao(db);
 	const cycleDao = createCycleDao(db);
+	const roadmapDao = createRoadmapDao(db);
 	const issueDao = createIssueDao(db);
+	const favoriteDao = createFavoriteDao(db);
+	const issueTemplateDao = createIssueTemplateDao(db);
+	const recurrenceDao = createRecurrenceDao(db);
 	const relationDao = createRelationDao(db);
 	const labelDao = createLabelDao(db);
 	const statusDao = createStatusDao(db);
@@ -188,6 +200,7 @@ export const createDependencies = ({
 		projectDao,
 	});
 	const cycleService = createCycleService({ cycleDao, projectDao });
+	const roadmapService = createRoadmapService({ roadmapDao });
 	const viewService = createViewService({
 		viewDao,
 		projectDao,
@@ -209,6 +222,25 @@ export const createDependencies = ({
 		notifications: notificationService,
 	});
 	const labelService = createLabelService(labelDao, cache);
+	const recurrenceService = createRecurrenceService({
+		recurrenceDao,
+		issueDao,
+		projectDao,
+		labelDao,
+		memberDao,
+		statusService,
+	});
+	const favoriteService = createFavoriteService({
+		favoriteDao,
+		issueDao,
+		projectDao,
+	});
+	const issueTemplateService = createIssueTemplateService({
+		templateDao: issueTemplateDao,
+		projectDao,
+		statusDao,
+		labelDao,
+	});
 	const relationService = createRelationService({
 		relationDao,
 		issueDao,
@@ -270,6 +302,9 @@ export const createDependencies = ({
 			cycleService,
 			projectUpdateService,
 			searchService,
+			favoriteService,
+			issueTemplateService,
+			recurrenceService,
 		},
 		daos: {
 			memberDao,
@@ -322,6 +357,9 @@ export const createDependencies = ({
 			projectUpdateDao,
 			cycleDao,
 			issueDao,
+			favoriteDao,
+			issueTemplateDao,
+			recurrenceDao,
 			relationDao,
 			commentDao,
 			labelDao,
@@ -347,9 +385,13 @@ export const createDependencies = ({
 			projectService,
 			projectUpdateService,
 			cycleService,
+			roadmapService,
 			viewService,
 			issueService,
 			labelService,
+			favoriteService,
+			issueTemplateService,
+			recurrenceService,
 			statusService,
 			commentService,
 			issueSubscriptionService,

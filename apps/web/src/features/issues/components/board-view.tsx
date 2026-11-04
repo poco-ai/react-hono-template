@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
@@ -106,7 +107,9 @@ export function BoardView({
 		}
 		const issue = items.find((item) => item.id === active.id);
 		const statusId = String(over.id);
-		if (issue && issue.statusId !== statusId) {
+		// Archived cards are not draggable; keep the guard in case a drag starts
+		// from stale state before the archive write refreshes the list.
+		if (issue && !issue.archivedAt && issue.statusId !== statusId) {
 			moveMutation.mutate({ id: issue.id, number: issue.number, statusId });
 		}
 	};
@@ -273,8 +276,10 @@ function BoardCard({
 	labelById: Map<string, LabelDto>;
 	onOpen: (issueNumber: number) => void;
 }) {
+	const { t } = useTranslation();
+	const archived = Boolean(issue.archivedAt);
 	const { attributes, listeners, setNodeRef, transform, isDragging } =
-		useDraggable({ id: issue.id, disabled: frozen });
+		useDraggable({ id: issue.id, disabled: frozen || archived });
 	const assignee = issue.assigneeId
 		? memberById.get(issue.assigneeId)
 		: undefined;
@@ -289,16 +294,24 @@ function BoardCard({
 					: undefined
 			}
 			{...attributes}
-			{...(frozen ? {} : listeners)}
+			{...(frozen || archived ? {} : listeners)}
 			onClick={() => onOpen(issue.number)}
+			title={archived ? t("issues.archivedDragDisabled") : undefined}
 			className={cn(
 				"bg-card flex w-full touch-none flex-col gap-2 rounded-md border p-2.5 text-left shadow-xs transition-shadow hover:shadow-sm",
 				isDragging && "opacity-50 ring-2 ring-primary/40",
 			)}
 		>
-			<p className="text-muted-foreground font-mono text-[11px]">
-				{projectKey}-{issue.number}
-			</p>
+			<div className="flex items-center gap-2">
+				<p className="text-muted-foreground font-mono text-[11px]">
+					{projectKey}-{issue.number}
+				</p>
+				{archived && (
+					<Badge variant="secondary" className="rounded-md">
+						{t("issues.archivedBadge")}
+					</Badge>
+				)}
+			</div>
 			<p className="text-sm leading-snug font-medium break-words">
 				{issue.title}
 			</p>

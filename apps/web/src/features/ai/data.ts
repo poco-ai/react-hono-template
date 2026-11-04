@@ -425,6 +425,10 @@ export const AI_TOOL_TITLE_KEYS: Record<string, TranslationKey> = {
 	update_label: "ai.capabilities.update_label.title",
 	delete_label: "ai.capabilities.delete_label.title",
 	create_view: "ai.capabilities.create_view.title",
+	list_favorites: "ai.capabilities.list_favorites.title",
+	list_issue_templates: "ai.capabilities.list_issue_templates.title",
+	list_recurrences: "ai.capabilities.list_recurrences.title",
+	create_recurrence: "ai.capabilities.create_recurrence.title",
 };
 
 export const aiToolTitleKey = (toolName: string): TranslationKey | undefined =>

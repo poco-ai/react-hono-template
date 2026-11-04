@@ -6,6 +6,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import type { CreateProjectInput, UpdateProjectInput } from "@workspace/shared";
+import { roadmapRootKey } from "@/features/roadmap/data";
 import { client, unwrap } from "@/lib/api";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -115,7 +116,12 @@ export function useUpdateProject(
 export const projectsRootKey = (orgId: string) =>
 	["orgs", orgId, "projects"] as const;
 export const invalidateProjectQueries = (client: QueryClient, orgId: string) =>
-	client.invalidateQueries({ queryKey: projectsRootKey(orgId) });
+	Promise.all([
+		client.invalidateQueries({ queryKey: projectsRootKey(orgId) }),
+		// Project archive state, target dates and colors all render on the
+		// roadmap, so keep the timeline in sync with project writes.
+		client.invalidateQueries({ queryKey: roadmapRootKey(orgId) }),
+	]);
 
 export const projectKey = (orgId: string, projectId: string) =>
 	["orgs", orgId, "projects", projectId] as const;

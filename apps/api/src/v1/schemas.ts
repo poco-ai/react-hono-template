@@ -65,6 +65,13 @@ export const issueSchema = z.object({
 			"Parent issue id for sub-issues. Relation endpoints are available in the app API but not exposed here yet.",
 		),
 	deletedAt: z.string().nullable(),
+	archivedAt: z
+		.string()
+		.nullable()
+		.optional()
+		.describe(
+			"Set while the issue is archived; archived issues are hidden by default.",
+		),
 	cycleId: z.string().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),

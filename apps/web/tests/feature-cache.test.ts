@@ -99,6 +99,7 @@ test("project writes invalidate every project list/detail variant within their o
 			["orgs", "org", "projects"],
 			["orgs", "org", "projects", "project"],
 			["orgs", "org", "projects", "project", "issues", { page: 2 }],
+			["orgs", "org", "roadmap"],
 		],
 		[
 			["orgs", "other", "projects"],

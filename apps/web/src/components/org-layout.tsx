@@ -38,13 +38,16 @@ import {
 	Activity,
 	Bell,
 	ChevronsUpDown,
+	Filter,
 	Folder,
 	FolderKanban,
 	Inbox,
+	Map as MapIcon,
 	Search,
 	Snowflake,
 	Sparkles,
 	SquarePen,
+	Star,
 } from "lucide-react";
 import { type CSSProperties, Fragment, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -79,7 +82,10 @@ function SidebarLink({
 		| "/orgs/$orgId/projects"
 		| "/orgs/$orgId/my-issues"
 		| "/orgs/$orgId/activity"
-		| "/orgs/$orgId/inbox";
+		| "/orgs/$orgId/inbox"
+		| "/orgs/$orgId/favorites"
+		| "/orgs/$orgId/roadmap"
+		| "/orgs/$orgId/triage";
 	exact?: boolean;
 	tooltip?: string;
 	onNavigate?: () => void;
@@ -402,6 +408,33 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 						>
 							<Inbox />
 							<span>{t("nav.myIssues")}</span>
+						</SidebarLink>
+						<SidebarLink
+							to="/orgs/$orgId/favorites"
+							exact
+							tooltip={t("nav.favorites")}
+							onNavigate={onNavigate}
+						>
+							<Star />
+							<span>{t("nav.favorites")}</span>
+						</SidebarLink>
+						<SidebarLink
+							to="/orgs/$orgId/roadmap"
+							exact
+							tooltip={t("nav.roadmap")}
+							onNavigate={onNavigate}
+						>
+							<MapIcon />
+							<span>{t("nav.roadmap")}</span>
+						</SidebarLink>
+						<SidebarLink
+							to="/orgs/$orgId/triage"
+							exact
+							tooltip={t("nav.triage")}
+							onNavigate={onNavigate}
+						>
+							<Filter />
+							<span>{t("nav.triage")}</span>
 						</SidebarLink>
 						<SidebarLink
 							to="/orgs/$orgId/activity"

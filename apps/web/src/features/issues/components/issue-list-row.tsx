@@ -3,6 +3,7 @@ import type { LabelDto } from "@api/dto/label.dto";
 import type { StatusDto } from "@api/dto/status.dto";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ISSUE_PRIORITIES, type UpdateIssueInput } from "@workspace/shared";
+import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import {
@@ -18,7 +19,15 @@ import {
 } from "@workspace/ui/components/dropdown-menu";
 import { TableCell, TableRow } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
-import { Copy, ExternalLink, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+	Archive,
+	ArchiveRestore,
+	Copy,
+	ExternalLink,
+	MoreHorizontal,
+	Trash2,
+} from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/user-avatar";
@@ -33,13 +42,18 @@ import {
 	toDateInputValue,
 } from "@/lib/format";
 import type { IssueFilters } from "../data";
-import { useIssueFieldUpdate } from "../data";
+import {
+	issueArchiveAction,
+	useIssueFieldUpdate,
+	useSetIssueArchived,
+} from "../data";
 import {
 	type IssueListColumn,
 	type IssueListDensity,
 	LIST_DENSITY_ROW_CLASS,
 } from "../list-preferences";
 import { DateField } from "./date-field";
+import { IssueArchiveDialog } from "./issue-archive-dialog";
 import { PriorityBadge } from "./priority-badge";
 import { StatusBadge } from "./status-badge";
 
@@ -91,6 +105,10 @@ export function IssueListRow({
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const update = useIssueFieldUpdate(orgId, projectId, filters);
+	const archiveMutation = useSetIssueArchived(orgId, projectId, issue.number);
+	const [archiveOpen, setArchiveOpen] = useState(false);
+	const archiveAction = issueArchiveAction(issue);
+	const issueKey = `${projectKey}-${issue.number}`;
 	const assignee = issue.assigneeId
 		? memberById.get(issue.assigneeId)
 		: undefined;
@@ -116,6 +134,24 @@ export function IssueListRow({
 			?.writeText(url)
 			.then(() => toast.success(t("common.copied")))
 			.catch(() => toast.error(t("common.copyFailed")));
+	};
+
+	const setArchived = (archived: boolean) => {
+		if (frozen) {
+			return;
+		}
+		archiveMutation.mutate(archived, {
+			onSuccess: () => {
+				toast.success(
+					t(archived ? "toast.issueArchived" : "toast.issueRestored"),
+				);
+				setArchiveOpen(false);
+			},
+			onError: (error) => {
+				toast.error(apiErrorMessage(t, error));
+				setArchiveOpen(false);
+			},
+		});
 	};
 
 	const renderCell = (column: IssueListColumn) => {
@@ -290,156 +326,186 @@ export function IssueListRow({
 	};
 
 	return (
-		<TableRow
-			className={cn(
-				"group cursor-pointer hover:bg-accent/40",
-				selected && "bg-accent/40",
-				LIST_DENSITY_ROW_CLASS[density],
-			)}
-			onClick={() =>
-				navigate({
-					to: "/orgs/$orgId/projects/$projectId/$issueNumber",
-					params,
-				})
-			}
-		>
-			<TableCell
-				className="hidden md:table-cell"
-				onClick={(event) => event.stopPropagation()}
+		<>
+			<TableRow
+				className={cn(
+					"group cursor-pointer hover:bg-accent/40",
+					selected && "bg-accent/40",
+					LIST_DENSITY_ROW_CLASS[density],
+				)}
+				onClick={() =>
+					navigate({
+						to: "/orgs/$orgId/projects/$projectId/$issueNumber",
+						params,
+					})
+				}
 			>
-				<Checkbox
-					aria-label={issue.title}
-					checked={selected}
-					disabled={frozen}
-					onCheckedChange={(checked) => onToggle(issue.id, checked)}
-				/>
-			</TableCell>
-			<TableCell className="text-muted-foreground font-mono text-xs">
-				{projectKey}-{issue.number}
-			</TableCell>
-			<TableCell>
-				<Link
-					to="/orgs/$orgId/projects/$projectId/$issueNumber"
-					params={params}
-					className="hover:underline"
-				>
-					{issue.title}
-				</Link>
-			</TableCell>
-			{columns.map((column) => (
 				<TableCell
-					key={column}
-					className={ISSUE_COLUMN_CLASS[column]}
-					// Inline editors live inside the row link: keep row-clicks from
-					// navigating while a cell control handles the interaction.
+					className="hidden md:table-cell"
 					onClick={(event) => event.stopPropagation()}
-					title={
-						column === "updatedAt"
-							? formatDateTime(issue.updatedAt)
-							: column === "createdAt"
-								? formatDateTime(issue.createdAt)
-								: undefined
-					}
 				>
-					{renderCell(column)}
-				</TableCell>
-			))}
-			<TableCell
-				className="w-10 text-right"
-				onClick={(event) => event.stopPropagation()}
-			>
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label={t("issues.rowActions")}
-								className={cn(
-									"opacity-100 transition-opacity",
-									"[@media(hover:hover)]:opacity-0",
-									"[@media(hover:hover)]:group-hover:opacity-100",
-									"group-focus-within:opacity-100 focus-visible:opacity-100",
-								)}
-							>
-								<MoreHorizontal />
-							</Button>
-						}
+					<Checkbox
+						aria-label={issue.title}
+						checked={selected}
+						disabled={frozen}
+						onCheckedChange={(checked) => onToggle(issue.id, checked)}
 					/>
-					<DropdownMenuContent align="end" className="min-w-44">
-						<DropdownMenuLabel>
-							{projectKey}-{issue.number}
-						</DropdownMenuLabel>
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger disabled={frozen}>
-								{t("bulk.changeStatus")}
-							</DropdownMenuSubTrigger>
-							<DropdownMenuSubContent>
-								{statuses.map((status) => (
-									<DropdownMenuItem
-										key={status.id}
-										disabled={status.id === issue.statusId}
-										onClick={() => commit({ statusId: status.id })}
-									>
-										<StatusBadge status={status} />
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuSubContent>
-						</DropdownMenuSub>
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger disabled={frozen}>
-								{t("bulk.changeAssignee")}
-							</DropdownMenuSubTrigger>
-							<DropdownMenuSubContent>
-								<DropdownMenuItem
-									disabled={issue.assigneeId === null}
-									onClick={() => commit({ assigneeId: null })}
+				</TableCell>
+				<TableCell className="text-muted-foreground font-mono text-xs">
+					{projectKey}-{issue.number}
+				</TableCell>
+				<TableCell>
+					<span className="inline-flex min-w-0 items-center gap-2">
+						<Link
+							to="/orgs/$orgId/projects/$projectId/$issueNumber"
+							params={params}
+							className="truncate hover:underline"
+						>
+							{issue.title}
+						</Link>
+						{issue.archivedAt ? (
+							<Badge variant="secondary" className="shrink-0 rounded-md">
+								{t("issues.archivedBadge")}
+							</Badge>
+						) : null}
+					</span>
+				</TableCell>
+				{columns.map((column) => (
+					<TableCell
+						key={column}
+						className={ISSUE_COLUMN_CLASS[column]}
+						// Inline editors live inside the row link: keep row-clicks from
+						// navigating while a cell control handles the interaction.
+						onClick={(event) => event.stopPropagation()}
+						title={
+							column === "updatedAt"
+								? formatDateTime(issue.updatedAt)
+								: column === "createdAt"
+									? formatDateTime(issue.createdAt)
+									: undefined
+						}
+					>
+						{renderCell(column)}
+					</TableCell>
+				))}
+				<TableCell
+					className="w-10 text-right"
+					onClick={(event) => event.stopPropagation()}
+				>
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							render={
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label={t("issues.rowActions")}
+									className={cn(
+										"opacity-100 transition-opacity",
+										"[@media(hover:hover)]:opacity-0",
+										"[@media(hover:hover)]:group-hover:opacity-100",
+										"group-focus-within:opacity-100 focus-visible:opacity-100",
+									)}
 								>
-									{t("common.unassigned")}
-								</DropdownMenuItem>
-								{members.map((member) => (
-									<DropdownMenuItem
-										key={member.userId}
-										disabled={member.userId === issue.assigneeId}
-										onClick={() => commit({ assigneeId: member.userId })}
-									>
-										<UserAvatar
-											name={member.user.name}
-											image={member.user.image}
-										/>
-										<span className="truncate">{member.user.name}</span>
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuSubContent>
-						</DropdownMenuSub>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={copyLink}>
-							<Copy />
-							{t("issues.copyLink")}
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								navigate({
-									to: "/orgs/$orgId/projects/$projectId/$issueNumber",
-									params,
-								})
+									<MoreHorizontal />
+								</Button>
 							}
-						>
-							<ExternalLink />
-							{t("issues.openDetail")}
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							variant="destructive"
-							disabled={frozen}
-							onClick={() => onRequestDelete(issue)}
-						>
-							<Trash2 />
-							{t("issues.deleteAction")}
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</TableCell>
-		</TableRow>
+						/>
+						<DropdownMenuContent align="end" className="min-w-44">
+							<DropdownMenuLabel>
+								{projectKey}-{issue.number}
+							</DropdownMenuLabel>
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger disabled={frozen}>
+									{t("bulk.changeStatus")}
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									{statuses.map((status) => (
+										<DropdownMenuItem
+											key={status.id}
+											disabled={status.id === issue.statusId}
+											onClick={() => commit({ statusId: status.id })}
+										>
+											<StatusBadge status={status} />
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger disabled={frozen}>
+									{t("bulk.changeAssignee")}
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									<DropdownMenuItem
+										disabled={issue.assigneeId === null}
+										onClick={() => commit({ assigneeId: null })}
+									>
+										{t("common.unassigned")}
+									</DropdownMenuItem>
+									{members.map((member) => (
+										<DropdownMenuItem
+											key={member.userId}
+											disabled={member.userId === issue.assigneeId}
+											onClick={() => commit({ assigneeId: member.userId })}
+										>
+											<UserAvatar
+												name={member.user.name}
+												image={member.user.image}
+											/>
+											<span className="truncate">{member.user.name}</span>
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onClick={copyLink}>
+								<Copy />
+								{t("issues.copyLink")}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() =>
+									navigate({
+										to: "/orgs/$orgId/projects/$projectId/$issueNumber",
+										params,
+									})
+								}
+							>
+								<ExternalLink />
+								{t("issues.openDetail")}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								disabled={frozen}
+								onClick={() =>
+									archiveAction === "restore"
+										? setArchived(false)
+										: setArchiveOpen(true)
+								}
+							>
+								{archiveAction === "archive" ? <Archive /> : <ArchiveRestore />}
+								{archiveAction === "archive"
+									? t("issues.archiveAction")
+									: t("issues.restoreAction")}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								variant="destructive"
+								disabled={frozen}
+								onClick={() => onRequestDelete(issue)}
+							>
+								<Trash2 />
+								{t("issues.deleteAction")}
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</TableCell>
+			</TableRow>
+			<IssueArchiveDialog
+				open={archiveOpen}
+				onOpenChange={setArchiveOpen}
+				issueKey={issueKey}
+				pending={archiveMutation.isPending}
+				onConfirm={() => setArchived(true)}
+			/>
+		</>
 	);
 }

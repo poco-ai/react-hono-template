@@ -19,7 +19,9 @@ import { createBootstrapRoutes } from "./routes/bootstrap";
 import { createCommentsRoutes } from "./routes/comments";
 import { createConfigRoutes } from "./routes/config";
 import { createCyclesRoutes } from "./routes/cycles";
+import { createFavoritesRoutes } from "./routes/favorites";
 import { createIssueSubscriptionsRoutes } from "./routes/issue-subscriptions";
+import { createIssueTemplatesRoutes } from "./routes/issue-templates";
 import { createIssuesRoutes } from "./routes/issues";
 import { createLabelsRoutes } from "./routes/labels";
 import {
@@ -31,7 +33,9 @@ import { createNotificationsRoutes } from "./routes/notifications";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectUpdatesRoutes } from "./routes/project-updates";
 import { createProjectsRoutes } from "./routes/projects";
+import { createRecurrencesRoutes } from "./routes/recurrences";
 import { createRelationsRoutes } from "./routes/relations";
+import { createRoadmapRoutes } from "./routes/roadmap";
 import { createSearchRoutes } from "./routes/search";
 import { createStatusesRoutes } from "./routes/statuses";
 import { createViewsRoutes } from "./routes/views";
@@ -98,7 +102,17 @@ export const createRoutes = ({
 				createProjectUpdatesRoutes(dependencies.services.projectUpdateService),
 			)
 			.route("/", createCyclesRoutes(dependencies.services.cycleService))
+			.route(
+				"/",
+				createRecurrencesRoutes(dependencies.services.recurrenceService),
+			)
+			.route("/", createRoadmapRoutes(dependencies.services.roadmapService))
 			.route("/", createIssuesRoutes(dependencies.services.issueService))
+			.route("/", createFavoritesRoutes(dependencies.services.favoriteService))
+			.route(
+				"/",
+				createIssueTemplatesRoutes(dependencies.services.issueTemplateService),
+			)
 			.route(
 				"/",
 				createIssueSubscriptionsRoutes(

@@ -8,6 +8,7 @@ import {
 	createLabelSchema,
 	createProjectSchema,
 	createProjectUpdateSchema,
+	createRecurrenceSchema,
 	createViewSchema,
 	ISSUE_RELATION_INPUT_TYPES,
 	updateIssueSchema,
@@ -613,6 +614,53 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 				return {
 					data: { update: toProjectUpdateSummary(update) },
 					summary: `Posted a project update${update.health ? ` (${update.health})` : ""}.`,
+					links: [projectLink(ctx, orgId, projectId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "create_recurrence",
+			titleKey: "ai.capabilities.create_recurrence.title",
+			description:
+				"Create a recurring issue template in a project. Provide a cadence (daily/weekly/monthly) and a future nextRunAt (ISO 8601). Either pass issueId to snapshot an existing issue's fields, or provide title (and optionally description, statusId, priority, assigneeId, labelIds, estimate) directly. Each due run creates a new issue; runs are skipped (not cancelled) while the organization is frozen or the project is archived.",
+			input: createRecurrenceSchema.extend({
+				projectId: z.string().min(1),
+			}),
+			output: z.object({
+				recurrence: z.object({
+					id: z.string(),
+					projectId: z.string(),
+					title: z.string(),
+					cadence: z.enum(["daily", "weekly", "monthly"]),
+					nextRunAt: z.string(),
+					active: z.boolean(),
+				}),
+			}),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const { projectId, ...createInput } = input;
+				const recurrence =
+					await deps.services.recurrenceService.createRecurrence(
+						orgId,
+						projectId,
+						ctx.actor.userId ?? null,
+						createInput,
+					);
+				return {
+					data: {
+						recurrence: {
+							id: recurrence.id,
+							projectId: recurrence.projectId,
+							title: recurrence.title,
+							cadence: recurrence.cadence,
+							nextRunAt: recurrence.nextRunAt,
+							active: recurrence.active,
+						},
+					},
+					summary: `Created recurring issue "${recurrence.title}" (${recurrence.cadence}) next due ${recurrence.nextRunAt}.`,
 					links: [projectLink(ctx, orgId, projectId)],
 				};
 			},

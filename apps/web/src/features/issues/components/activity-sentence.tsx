@@ -47,6 +47,8 @@ export function ActivitySentence({
 				return t("activity.fields.parent");
 			case "cycle":
 				return t("activity.fields.cycle");
+			case "archived":
+				return t("activity.fields.archived");
 			case "comment_resolved":
 				return t("activity.fields.commentResolved");
 			case "relation:blocks":
@@ -108,7 +110,7 @@ export function ActivitySentence({
 	};
 
 	let sentence: ReactNode;
-	if (activity.action === "issue.created") {
+	if (activity.action === "issue.created" || activity.action === "created") {
 		sentence = t("activity.issue.created", { name });
 	} else if (activity.action === "issue.deleted") {
 		sentence = t("activity.issue.deleted", { name });
@@ -129,6 +131,16 @@ export function ActivitySentence({
 		activity.field === "comment_resolved"
 	) {
 		sentence = t("activity.issue.commentResolved", { name });
+	} else if (
+		activity.action === "issue.updated" &&
+		activity.field === "archived"
+	) {
+		// Archive/restore activities store the target state in `newValue`
+		// ("archived") or clear it on restore; there is no meaningful
+		// from/to pair for this field.
+		sentence = activity.newValue
+			? t("activity.issue.archived", { name })
+			: t("activity.issue.restored", { name });
 	} else if (activity.action === "issue.updated" && activity.field) {
 		const field = activity.field;
 		const relationType = field.startsWith("relation:")

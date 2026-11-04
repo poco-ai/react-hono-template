@@ -28,7 +28,20 @@ const trustedOrigins = [
 const app = new Hono<{ Bindings: Env }>();
 
 app.use(logger());
-app.use("/api/*", cors({ origin: trustedOrigins, credentials: true }));
+app.use(
+	"/api/*",
+	cors({
+		origin: trustedOrigins,
+		credentials: true,
+		// CSV downloads expose the filename and truncation headers to the SPA.
+		exposeHeaders: [
+			"Content-Disposition",
+			"X-Issue-Count",
+			"X-Issue-Total",
+			"X-Issue-Truncated",
+		],
+	}),
+);
 // MCP uses bearer tokens, never cookies: credentials must stay off so a
 // browser cannot reuse an ambient session, and WWW-Authenticate is exposed so
 // OAuth clients can read the RFC 9728 challenge.
@@ -194,5 +207,9 @@ export default {
 	fetch: app.fetch,
 	queue: (batch: MessageBatch<{ deliveryId: string }>) =>
 		handleWebhookQueue(batch, dependencies.services.webhookDeliveryService),
-	scheduled: () => handleScheduled(dependencies.services.cleanupService),
+	scheduled: () =>
+		handleScheduled(
+			dependencies.services.cleanupService,
+			dependencies.services.recurrenceService,
+		),
 };

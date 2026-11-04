@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ISSUE_PRIORITY, ISSUE_STATUSES } from "../constants";
-import { parseCsv } from "../csv";
+import { ISSUE_CSV_MAX_IMPORT_ROWS, parseCsv } from "../csv";
 import {
 	ISSUE_LEGACY_SORT_FIELDS,
 	ISSUE_QUERY_GROUP_BY,
@@ -60,6 +60,23 @@ const parseSortQuery = (value: unknown) => {
 	} catch {
 		return trimmed;
 	}
+};
+
+/**
+ * Query strings carry booleans as text (`?includeArchived=true`). Anything
+ * else is passed through so the boolean schema reports the validation error.
+ */
+const toBoolean = (value: unknown) => {
+	if (typeof value !== "string") {
+		return value;
+	}
+	if (value === "true" || value === "1") {
+		return true;
+	}
+	if (value === "false" || value === "0") {
+		return false;
+	}
+	return value;
 };
 
 export const createIssueSchema = z.object({
@@ -164,7 +181,48 @@ export const issueListQuerySchema = z.object({
 	 * views but the API does not group rows; the web client derives groups.
 	 */
 	groupBy: z.enum(ISSUE_QUERY_GROUP_BY).optional(),
+	/**
+	 * Include archived issues. Archived issues are hidden from every list,
+	 * search and progress calculation by default; their detail page stays
+	 * reachable and `restore` brings them back.
+	 */
+	includeArchived: z
+		.preprocess(toBoolean, z.boolean().optional())
+		.describe("Include archived issues (hidden by default)."),
 });
+
+/** Triage queue filters: backlog + unassigned issues, newest first. */
+export const triageQuerySchema = z.object({
+	projectId: z.string().min(1).optional(),
+});
+
+/**
+ * One CSV import row. Values arrive as strings; the service resolves status,
+ * assignee, labels and cycle names and reports per-row errors. Unknown extra
+ * columns are ignored, so exports can be re-imported unchanged.
+ */
+export const issueImportRowSchema = z.record(z.string(), z.string());
+
+export const importIssuesSchema = z.object({
+	rows: z.array(issueImportRowSchema).min(1).max(ISSUE_CSV_MAX_IMPORT_ROWS),
+});
+
+export type IssueImportRow = z.infer<typeof issueImportRowSchema>;
+
+export type ImportIssuesInput = z.infer<typeof importIssuesSchema>;
+
+/** Per-row import failure. `row` is 1-based, excluding the header row. */
+export type IssueImportRowError = {
+	row: number;
+	message: string;
+};
+
+export type IssueImportResultDto = {
+	created: number;
+	errors: IssueImportRowError[];
+};
+
+export type TriageQuery = z.infer<typeof triageQuerySchema>;
 
 export type CreateIssueInput = z.infer<typeof createIssueSchema>;
 

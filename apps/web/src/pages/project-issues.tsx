@@ -10,30 +10,41 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
+import { Toggle } from "@workspace/ui/components/toggle";
 import {
 	ToggleGroup,
 	ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group";
 import {
+	Archive,
 	ArrowLeft,
 	CalendarRange,
+	Clock3,
 	Columns3,
 	List,
 	Megaphone,
 	Plus,
 	SlidersHorizontal,
+	Star,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { NotFoundState } from "@/components/not-found-state";
 import { useSession } from "@/features/auth/data";
 import { CurrentCycleCard } from "@/features/cycles/components/current-cycle-card";
 import { CycleFilterBadge } from "@/features/cycles/components/cycle-filter-badge";
 import { cyclesQuery } from "@/features/cycles/data";
+import {
+	favoritesQuery,
+	isFavorited,
+	useToggleFavorite,
+} from "@/features/favorites/data";
 import { BoardView } from "@/features/issues/components/board-view";
 import { BulkActionBar } from "@/features/issues/components/bulk-bar";
 import { CreateIssueDialog } from "@/features/issues/components/create-issue-dialog";
+import { ImportExportMenu } from "@/features/issues/components/import-export-menu";
 import { IssueFilterControls } from "@/features/issues/components/issue-filter-controls";
 import { IssueList } from "@/features/issues/components/issue-list";
 import { IssueListToolbar } from "@/features/issues/components/list-toolbar";
@@ -56,11 +67,12 @@ import { useOrgRole } from "@/features/organizations/use-org-role";
 import { ProjectUpdatesSheet } from "@/features/project-updates/components/project-updates-sheet";
 import { ProjectMeta } from "@/features/projects/components/project-meta";
 import { projectQuery, projectsQuery } from "@/features/projects/data";
+import { RecurrencesSheet } from "@/features/recurrences/components/recurrences-sheet";
 import { useRecordRecentProject } from "@/features/search/data";
 import { defaultStatusOf, statusesQuery } from "@/features/statuses/data";
 import { ViewSwitcher } from "@/features/views/components/view-switcher";
 import { type ViewDto, viewsQuery } from "@/features/views/data";
-import { isNotFoundError } from "@/lib/errors";
+import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -87,6 +99,7 @@ export function ProjectIssuesPage({
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [updatesOpen, setUpdatesOpen] = useState(false);
+	const [recurrencesOpen, setRecurrencesOpen] = useState(false);
 	const [createStatusId, setCreateStatusId] = useState<string | undefined>(
 		undefined,
 	);
@@ -98,6 +111,29 @@ export function ProjectIssuesPage({
 	}, [search.search]);
 
 	const view = search.view ?? "list";
+	const includeArchived = search.includeArchived ?? false;
+
+	const favorites = useQuery(favoritesQuery(orgId));
+	const favoriteMutation = useToggleFavorite(orgId, {
+		onError: (error) => toast.error(apiErrorMessage(t, error)),
+	});
+	const projectFavorited = project.data
+		? isFavorited(favorites.data, "project", project.data.id)
+		: false;
+	const projectArchived = Boolean(project.data?.archived);
+	const projectFavoriteLabel = projectArchived
+		? t("favorites.archivedProject")
+		: t(projectFavorited ? "favorites.removeProject" : "favorites.addProject");
+	const toggleProjectFavorite = () => {
+		if (!project.data) {
+			return;
+		}
+		favoriteMutation.mutate({
+			entityType: "project",
+			entityId: project.data.id,
+			favorited: projectFavorited,
+		});
+	};
 
 	const views = useQuery(viewsQuery(orgId, projectId));
 	const currentView = search.viewId
@@ -151,6 +187,7 @@ export function ProjectIssuesPage({
 			groupBy: resolved.groupBy,
 			search: resolved.search,
 			cycleId: resolved.cycleId,
+			includeArchived,
 			page: search.page,
 		}),
 	);
@@ -161,6 +198,7 @@ export function ProjectIssuesPage({
 		groupBy: resolved.groupBy,
 		search: resolved.search,
 		cycleId: resolved.cycleId,
+		includeArchived,
 		page: search.page,
 	};
 
@@ -425,6 +463,22 @@ export function ProjectIssuesPage({
 		);
 	}
 
+	const archivedToggle = (
+		<Toggle
+			variant="outline"
+			size="sm"
+			pressed={includeArchived}
+			aria-label={t("issues.showArchived")}
+			title={t("issues.showArchived")}
+			onPressedChange={(pressed) =>
+				updateSearch({ includeArchived: pressed || undefined, page: 1 })
+			}
+		>
+			<Archive />
+			<span className="max-sm:hidden">{t("issues.showArchived")}</span>
+		</Toggle>
+	);
+
 	return (
 		<div className="flex min-h-svh flex-col">
 			<header className="border-b px-4 py-6 lg:px-6">
@@ -456,6 +510,19 @@ export function ProjectIssuesPage({
 					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
+							size="icon-sm"
+							aria-label={projectFavoriteLabel}
+							aria-pressed={projectFavorited}
+							title={projectFavoriteLabel}
+							disabled={
+								!project.data || projectArchived || favoriteMutation.isPending
+							}
+							onClick={toggleProjectFavorite}
+						>
+							<Star className={projectFavorited ? "fill-current" : undefined} />
+						</Button>
+						<Button
+							variant="outline"
 							size="sm"
 							onClick={() => setUpdatesOpen(true)}
 						>
@@ -470,6 +537,14 @@ export function ProjectIssuesPage({
 							<CalendarRange className="size-4" />
 							{t("cycles.title")}
 						</Link>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setRecurrencesOpen(true)}
+						>
+							<Clock3 className="size-4" />
+							{t("recurrences.title")}
+						</Button>
 						{view === "list" && (
 							<IssueListToolbar
 								groupBy={resolved.groupBy}
@@ -520,6 +595,11 @@ export function ProjectIssuesPage({
 								{t("issues.viewBoard")}
 							</ToggleGroupItem>
 						</ToggleGroup>
+						<ImportExportMenu
+							orgId={orgId}
+							projectId={projectId}
+							frozen={frozen}
+						/>
 						{!hideHeaderCreate && (
 							<Button onClick={() => openCreate()} disabled={frozen} title="C">
 								<Plus />
@@ -561,6 +641,7 @@ export function ProjectIssuesPage({
 						onFilterChange={applyFilter}
 						onClearFilters={clearFilters}
 					/>
+					{archivedToggle}
 				</div>
 			) : (
 				<div className="border-b flex items-center gap-2 px-4 py-3 lg:px-6">
@@ -583,6 +664,7 @@ export function ProjectIssuesPage({
 								})})`
 							: t("issues.filterButton")}
 					</Button>
+					{archivedToggle}
 					<Sheet open={filterOpen} onOpenChange={setFilterOpen}>
 						<SheetContent side="bottom" className="max-h-[85svh] gap-0">
 							<SheetHeader className="border-b">
@@ -696,6 +778,13 @@ export function ProjectIssuesPage({
 				projectId={projectId}
 				open={updatesOpen}
 				onOpenChange={setUpdatesOpen}
+				frozen={frozen}
+			/>
+			<RecurrencesSheet
+				orgId={orgId}
+				projectId={projectId}
+				open={recurrencesOpen}
+				onOpenChange={setRecurrencesOpen}
 				frozen={frozen}
 			/>
 		</div>

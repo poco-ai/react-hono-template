@@ -428,7 +428,7 @@ test("creating an issue uses the organization default status", async () => {
 			findById: async () => ({ id: "project-1", archived: false }),
 		} as unknown as ProjectDao,
 		memberDao: { findByOrgAndUser: async () => null } as unknown as never,
-		cycleDao: { findById: async () => null },
+		cycleDao: { findById: async () => null, listAllByProject: async () => [] },
 		statusService,
 	});
 
