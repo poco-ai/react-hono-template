@@ -9,10 +9,11 @@ import {
 import {
 	ApiError,
 	ApiErrorCode,
-	type ApiKeyScope,
 	scopeSatisfies,
+	scopesSatisfy,
 } from "@workspace/shared";
 import { z } from "zod";
+import { roleSatisfies } from "../capabilities/access";
 import type { CapabilityExecutor } from "../capabilities/executor";
 import type {
 	CapabilityContext,
@@ -44,20 +45,6 @@ export type McpToolRuntime = {
 	/** Optional strict-write policy lookup (organization AI settings). */
 	orgAiSettings?: Pick<OrgAiSettingsService, "get">;
 };
-
-const roleSatisfies = (
-	role: string | undefined,
-	minRole: "owner" | "admin" | undefined,
-): boolean => {
-	if (!minRole) return true;
-	if (minRole === "owner") return role === "owner";
-	return role === "owner" || role === "admin";
-};
-
-const hasScopes = (
-	granted: readonly ApiKeyScope[],
-	required: readonly ApiKeyScope[],
-): boolean => required.every((scope) => scopeSatisfies(granted, scope));
 
 /**
  * Capabilities exposed by this caller before per-call authorization.
@@ -91,7 +78,7 @@ export const filterMcpCapabilities = async ({
 			: false;
 
 	return capabilities.filter((capability) => {
-		if (!hasScopes(principal.scopes, capability.scopes)) return false;
+		if (!scopesSatisfy(principal.scopes, capability.scopes)) return false;
 		if (capability.orgScoped === false) return true;
 
 		if (principal.method === "api_key") {
@@ -178,14 +165,12 @@ export const resolveOrgContext = async ({
 	if (principal.method === "api_key") {
 		if (!principal.orgId) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"This API key is not scoped to an organization.",
 			);
 		}
 		if (requestedOrgId && requestedOrgId !== principal.orgId) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"This API key is scoped to a different organization.",
 			);
@@ -195,7 +180,6 @@ export const resolveOrgContext = async ({
 
 	if (!principal.userId) {
 		throw new ApiError(
-			401,
 			ApiErrorCode.UNAUTHORIZED,
 			"This token is not associated with a user.",
 		);
@@ -208,7 +192,6 @@ export const resolveOrgContext = async ({
 			orgId = memberships[0]?.id;
 		} else {
 			throw new ApiError(
-				400,
 				ApiErrorCode.MCP_ORG_REQUIRED,
 				memberships.length === 0
 					? "You do not belong to any organization."
@@ -218,7 +201,6 @@ export const resolveOrgContext = async ({
 	}
 	if (!orgId) {
 		throw new ApiError(
-			400,
 			ApiErrorCode.MCP_ORG_REQUIRED,
 			"Organization context required. Call the list_orgs tool, then retry with the orgId argument.",
 		);
@@ -227,7 +209,6 @@ export const resolveOrgContext = async ({
 	const membership = await memberDao.findByOrgAndUser(orgId, principal.userId);
 	if (!membership) {
 		throw new ApiError(
-			404,
 			ApiErrorCode.NOT_FOUND,
 			"Organization not found or you are not a member.",
 		);
@@ -349,7 +330,6 @@ export const executeCapabilityTool = async (
 			if (settings.strictMcpWrites) {
 				return toToolError(
 					new ApiError(
-						403,
 						ApiErrorCode.FORBIDDEN,
 						"MCP writes are disabled by this organization's policy. Use the in-app AI assistant for writes.",
 					),
