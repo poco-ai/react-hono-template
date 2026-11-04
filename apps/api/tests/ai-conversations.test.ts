@@ -49,6 +49,7 @@ const issue = {
 	createdById: USER_ID,
 	dueDate: null,
 	estimate: null,
+	parentId: null,
 	deletedAt: null,
 	createdAt: NOW.toISOString(),
 	updatedAt: NOW.toISOString(),

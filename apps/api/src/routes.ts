@@ -27,6 +27,7 @@ import {
 } from "./routes/media";
 import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectsRoutes } from "./routes/projects";
+import { createRelationsRoutes } from "./routes/relations";
 import { createStatusesRoutes } from "./routes/statuses";
 import { createWebhooksRoutes } from "./routes/webhooks";
 
@@ -87,6 +88,7 @@ export const createRoutes = ({
 			.route("/", createMcpRoutes({ config: mcp }))
 			.route("/", createProjectsRoutes(dependencies.services.projectService))
 			.route("/", createIssuesRoutes(dependencies.services.issueService))
+			.route("/", createRelationsRoutes(dependencies.services.relationService))
 			.route("/", createCommentsRoutes(dependencies.services.commentService))
 			.route(
 				"/",

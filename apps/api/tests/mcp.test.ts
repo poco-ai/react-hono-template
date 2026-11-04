@@ -105,6 +105,7 @@ const issueData = {
 	assigneeId: null,
 	dueDate: null,
 	estimate: null,
+	parentId: null,
 	labelIds: [],
 	createdAt: NOW,
 	updatedAt: NOW,

@@ -3,6 +3,7 @@ import {
 	ApiErrorCode,
 	type CreateIssueInput,
 	type IssueListQuery,
+	isTerminalStatusCategory,
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import type { ActivityInsert } from "../dao/activity.dao";
@@ -12,7 +13,10 @@ import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type {
 	IssueDetailDto,
+	IssueDto,
+	IssueLinkSummaryDto,
 	IssueNavigationDto,
+	IssueOverviewDto,
 	ListIssuesDto,
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
@@ -34,6 +38,22 @@ const assertProjectWritable = (archived: boolean) => {
 		);
 	}
 };
+
+const toLinkSummary = (issue: IssueDto): IssueLinkSummaryDto => ({
+	id: issue.id,
+	orgId: issue.orgId,
+	projectId: issue.projectId,
+	number: issue.number,
+	title: issue.title,
+	statusId: issue.statusId,
+	status: issue.status,
+	priority: issue.priority,
+	parentId: issue.parentId,
+});
+
+/** Issue key as displayed in activity history, e.g. `WEB-12`. */
+export const issueKey = (projectKey: string, number: number) =>
+	`${projectKey}-${number}`;
 
 export type IssueFieldDiff = {
 	field: string;
@@ -143,6 +163,63 @@ const buildActivity = (
 	newValue: diff?.newValue ?? null,
 });
 
+/**
+ * Validates the two-level parent rule: the parent must exist in the same
+ * organization/project, must not itself have a parent, and the issue being
+ * reparented must not already have children (which would create a third level).
+ */
+export const assertValidParent = async ({
+	issueDao,
+	orgId,
+	projectId,
+	parentId,
+	currentId,
+}: {
+	issueDao: Pick<IssueDao, "findById" | "hasChildren">;
+	orgId: string;
+	projectId: string;
+	parentId: string;
+	currentId?: string;
+}): Promise<IssueDto> => {
+	const parent = await issueDao.findById(orgId, parentId);
+	if (!parent) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.ISSUE_PARENT_INVALID,
+			"Parent issue does not exist in this organization",
+		);
+	}
+	if (parent.projectId !== projectId) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.ISSUE_PARENT_INVALID,
+			"Parent issue must belong to the same project",
+		);
+	}
+	if (currentId && parent.id === currentId) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.ISSUE_PARENT_INVALID,
+			"An issue cannot be its own parent",
+		);
+	}
+	if (parent.parentId) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.ISSUE_PARENT_DEPTH,
+			"Sub-issues cannot be nested more than two levels deep",
+		);
+	}
+	if (currentId && (await issueDao.hasChildren(orgId, currentId))) {
+		throw new ApiError(
+			400,
+			ApiErrorCode.ISSUE_PARENT_DEPTH,
+			"An issue with sub-issues cannot become a sub-issue",
+		);
+	}
+	return parent;
+};
+
 export const createIssueService = ({
 	issueDao,
 	labelDao,
@@ -184,7 +261,7 @@ export const createIssueService = ({
 		orgId: string,
 		projectId: string,
 		number: number,
-	): Promise<IssueDetailDto & IssueNavigationDto> => {
+	): Promise<IssueOverviewDto & IssueNavigationDto> => {
 		const issue = await issueDao.findByProjectAndNumber(
 			orgId,
 			projectId,
@@ -198,11 +275,27 @@ export const createIssueService = ({
 			);
 		}
 		const labelIds = await issueDao.findLabelIds(issue.id);
-		const [prevNumber, nextNumber] = await Promise.all([
+		const [prevNumber, nextNumber, parent, children] = await Promise.all([
 			issueDao.findPrevNumber(orgId, projectId, number),
 			issueDao.findNextNumber(orgId, projectId, number),
+			issue.parentId ? issueDao.findById(orgId, issue.parentId) : null,
+			issueDao.findChildren(orgId, issue.id),
 		]);
-		return { ...issue, labelIds, prevNumber, nextNumber };
+		const subIssues = children.map(toLinkSummary);
+		// Progress counts every terminal category (completed *and* canceled),
+		// matching how the rest of the app treats "done" work.
+		const done = children.filter((child) =>
+			isTerminalStatusCategory(child.status.category),
+		).length;
+		return {
+			...issue,
+			labelIds,
+			prevNumber,
+			nextNumber,
+			parent: parent ? toLinkSummary(parent) : null,
+			subIssues,
+			subIssueProgress: { done, total: subIssues.length },
+		};
 	},
 
 	getIssueById: async (
@@ -258,11 +351,34 @@ export const createIssueService = ({
 				);
 			}
 		}
+		const parent = input.parentId
+			? await assertValidParent({
+					issueDao,
+					orgId,
+					projectId,
+					parentId: input.parentId,
+				})
+			: null;
 		const id = crypto.randomUUID();
 		const status = await statusService.resolveStatus(orgId, {
 			statusId: input.statusId,
 			statusName: input.status,
 		});
+		const activities: ActivityInsert[] = [];
+		if (userId) {
+			activities.push(
+				buildActivity(orgId, projectId, id, userId, "issue.created"),
+			);
+			if (parent) {
+				activities.push(
+					buildActivity(orgId, projectId, id, userId, "issue.updated", {
+						field: "parent",
+						oldValue: null,
+						newValue: issueKey(project.key, parent.number),
+					}),
+				);
+			}
+		}
 		const issue = await issueDao.createWithNumber(
 			{
 				id,
@@ -276,11 +392,10 @@ export const createIssueService = ({
 				createdById: userId,
 				dueDate: input.dueDate ? new Date(input.dueDate) : null,
 				estimate: input.estimate ?? null,
+				parentId: parent?.id ?? null,
 			},
 			labelIds,
-			userId
-				? buildActivity(orgId, projectId, id, userId, "issue.created")
-				: undefined,
+			activities,
 		);
 		const result = { ...issue, labelIds };
 		await webhooks?.dispatch(orgId, "issue.created", result, background);
@@ -339,6 +454,34 @@ export const createIssueService = ({
 					})
 				: undefined;
 		const diffs = computeIssueDiff(current, input, resolvedStatus);
+		const parentChanged =
+			"parentId" in input &&
+			input.parentId !== undefined &&
+			input.parentId !== (issue.parentId ?? null);
+		if (parentChanged) {
+			const oldParent = issue.parentId
+				? await issueDao.findById(orgId, issue.parentId)
+				: null;
+			const oldValue = oldParent
+				? issueKey(project?.key ?? "", oldParent.number)
+				: null;
+			if (input.parentId) {
+				const parent = await assertValidParent({
+					issueDao,
+					orgId,
+					projectId: issue.projectId,
+					parentId: input.parentId,
+					currentId: issue.id,
+				});
+				diffs.push({
+					field: "parent",
+					oldValue,
+					newValue: issueKey(project?.key ?? "", parent.number),
+				});
+			} else {
+				diffs.push({ field: "parent", oldValue, newValue: null });
+			}
+		}
 		const statusChanged = diffs.some((diff) => diff.field === "status");
 		const activityRows = userId
 			? diffs.map((diff) =>
@@ -363,6 +506,7 @@ export const createIssueService = ({
 				assigneeId: "assigneeId" in input ? input.assigneeId : undefined,
 				dueDate: "dueDate" in input ? toDueDate(input.dueDate) : undefined,
 				estimate: "estimate" in input ? input.estimate : undefined,
+				parentId: "parentId" in input ? input.parentId : undefined,
 			},
 			input.labelIds,
 			activityRows,

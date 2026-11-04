@@ -34,6 +34,10 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
 import { DateField } from "@/features/issues/components/date-field";
+import {
+	ParentIssueField,
+	type ParentSummary,
+} from "@/features/issues/components/parent-issue-field";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { LabelBadge } from "@/features/labels/components/label-badge";
@@ -42,7 +46,12 @@ import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 const UNASSIGNED = "__unassigned__";
 
 export function IssuePropertiesPanel({
+	orgId,
+	projectId,
+	projectKey,
 	issue,
+	parent,
+	canSetParent,
 	members,
 	labels,
 	statuses,
@@ -50,7 +59,14 @@ export function IssuePropertiesPanel({
 	onUpdate,
 	onDelete,
 }: {
+	orgId: string;
+	projectId: string;
+	projectKey: string;
 	issue: IssueDetailDto;
+	/** Current parent summary, when the issue is a sub-issue. */
+	parent: ParentSummary | null;
+	/** False when the issue has its own sub-issues (two-level limit). */
+	canSetParent: boolean;
 	members: { userId: string; user: { name: string } }[];
 	labels: LabelDto[];
 	statuses: StatusDto[];
@@ -108,6 +124,17 @@ export function IssuePropertiesPanel({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
+
+			<ParentIssueField
+				orgId={orgId}
+				projectId={projectId}
+				projectKey={projectKey}
+				issueId={issue.id}
+				parent={parent}
+				canSetParent={canSetParent}
+				frozen={frozen}
+				onChange={(parentId) => onUpdate({ parentId })}
+			/>
 
 			<PropertyRow label={t("issues.status")}>
 				<Select

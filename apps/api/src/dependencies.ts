@@ -22,6 +22,7 @@ import { createOrgAiSettingsDao } from "./dao/org-ai-settings.dao";
 import { createOrganizationDao } from "./dao/organization.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
+import { createRelationDao } from "./dao/relation.dao";
 import { createStatusDao } from "./dao/status.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
@@ -52,6 +53,7 @@ import { createMediaService } from "./services/media.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
+import { createRelationService } from "./services/relation.service";
 import { createStatusService } from "./services/status.service";
 import { createStorageUsageService } from "./services/storage-usage.service";
 import { createWebhookService } from "./services/webhook.service";
@@ -101,6 +103,7 @@ export const createDependencies = ({
 	const memberDao = createMemberDao(db);
 	const projectDao = createProjectDao(db);
 	const issueDao = createIssueDao(db);
+	const relationDao = createRelationDao(db);
 	const labelDao = createLabelDao(db);
 	const statusDao = createStatusDao(db);
 	const commentDao = createCommentDao(db);
@@ -163,6 +166,12 @@ export const createDependencies = ({
 		webhooks: webhookDeliveryService,
 	});
 	const labelService = createLabelService(labelDao, cache);
+	const relationService = createRelationService({
+		relationDao,
+		issueDao,
+		projectDao,
+		webhooks: webhookDeliveryService,
+	});
 	const attachmentService = createAttachmentService({
 		attachmentDao,
 		issueDao,
@@ -205,6 +214,7 @@ export const createDependencies = ({
 			labelService,
 			statusService,
 			activityService,
+			relationService,
 		},
 		daos: {
 			memberDao,
@@ -255,6 +265,7 @@ export const createDependencies = ({
 			organizationDao,
 			projectDao,
 			issueDao,
+			relationDao,
 			commentDao,
 			labelDao,
 			statusDao,
@@ -278,6 +289,7 @@ export const createDependencies = ({
 			statusService,
 			commentService,
 			attachmentService,
+			relationService,
 			mediaService,
 			activityService,
 			apiKeyService,

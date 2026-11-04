@@ -18,6 +18,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	CircleAlert,
+	CornerUpLeft,
 	Pencil,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -31,6 +32,8 @@ import { IssueComments } from "@/features/comments/components/issue-comments";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
 import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
+import { RelationsSection } from "@/features/issues/components/relations-section";
+import { SubIssuesSection } from "@/features/issues/components/sub-issues-section";
 import {
 	issueQuery,
 	useDeleteIssue,
@@ -202,6 +205,24 @@ export function IssueDetailPage({
 						</BreadcrumbItem>
 					</BreadcrumbList>
 				</Breadcrumb>
+				{data.parent ? (
+					<Link
+						to="/orgs/$orgId/projects/$projectId/$issueNumber"
+						params={{
+							orgId,
+							projectId,
+							issueNumber: String(data.parent.number),
+						}}
+						className={buttonVariants({
+							variant: "link",
+							size: "sm",
+							className: "mb-2 h-auto justify-start p-0",
+						})}
+					>
+						<CornerUpLeft className="size-4" />
+						{t("issues.backToParent")} {project.data?.key}-{data.parent.number}
+					</Link>
+				) : null}
 				<div className="group/title relative mt-1">
 					<input
 						value={title}
@@ -255,6 +276,29 @@ export function IssueDetailPage({
 				<Separator className="my-8" />
 
 				<div className="flex flex-col gap-8">
+					<SubIssuesSection
+						orgId={orgId}
+						projectId={projectId}
+						projectKey={project.data?.key ?? ""}
+						issueId={data.id}
+						isSubIssue={data.parentId !== null}
+						subIssues={data.subIssues}
+						progress={data.subIssueProgress}
+						frozen={frozen}
+						members={members.data ?? []}
+						labels={labels.data ?? []}
+						statuses={statuses.data ?? []}
+					/>
+					<Separator />
+					<RelationsSection
+						orgId={orgId}
+						projectId={projectId}
+						projectKey={project.data?.key ?? ""}
+						issueId={data.id}
+						issueNumber={data.number}
+						frozen={frozen}
+					/>
+					<Separator />
 					<IssueComments
 						orgId={orgId}
 						projectId={projectId}
@@ -281,7 +325,12 @@ export function IssueDetailPage({
 
 			<aside className="flex w-full shrink-0 flex-col gap-4 lg:w-64">
 				<IssuePropertiesPanel
+					orgId={orgId}
+					projectId={projectId}
+					projectKey={project.data?.key ?? ""}
 					issue={data}
+					parent={data.parent}
+					canSetParent={data.subIssues.length === 0}
 					members={members.data ?? []}
 					labels={labels.data ?? []}
 					statuses={statuses.data ?? []}

@@ -410,6 +410,7 @@ test("creating an issue uses the organization default status", async () => {
 		createdById: "user-1",
 		dueDate: null,
 		estimate: null,
+		parentId: null,
 		deletedAt: null,
 		createdAt: NOW,
 		updatedAt: NOW,

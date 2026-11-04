@@ -20,6 +20,33 @@ export type IssueDetailDto = IssueDto & {
 	labelIds: string[];
 };
 
+/** Compact issue projection used by hierarchy/relation summaries. */
+export type IssueLinkSummaryDto = Pick<
+	IssueDto,
+	| "id"
+	| "orgId"
+	| "projectId"
+	| "number"
+	| "title"
+	| "statusId"
+	| "status"
+	| "priority"
+	| "parentId"
+>;
+
+export type SubIssueProgressDto = {
+	/** Children in a terminal status category (completed or canceled). */
+	done: number;
+	total: number;
+};
+
+/** Issue detail plus hierarchy data rendered on the detail page. */
+export type IssueOverviewDto = IssueDetailDto & {
+	parent: IssueLinkSummaryDto | null;
+	subIssues: IssueLinkSummaryDto[];
+	subIssueProgress: SubIssueProgressDto;
+};
+
 export type IssueNavigationDto = {
 	prevNumber: number | null;
 	nextNumber: number | null;

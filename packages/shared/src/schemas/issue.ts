@@ -45,6 +45,8 @@ export const createIssueSchema = z.object({
 	labelIds: z.array(z.string().min(1)).max(20).optional(),
 	dueDate: z.iso.datetime().optional(),
 	estimate: z.number().int().min(0).max(100).optional(),
+	/** Parent issue id; the parent must live in the same project. */
+	parentId: z.string().min(1).optional(),
 });
 
 export const updateIssueSchema = createIssueSchema.partial().extend({
@@ -53,6 +55,8 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
 	assigneeId: z.string().min(1).nullish(),
 	dueDate: z.iso.datetime().nullish(),
 	estimate: z.number().int().min(0).max(100).nullish(),
+	/** Pass null to detach the issue from its parent. */
+	parentId: z.string().min(1).nullish(),
 });
 
 export const issueListQuerySchema = z.object({

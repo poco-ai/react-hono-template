@@ -43,6 +43,16 @@ export function ActivitySentence({
 				return t("activity.fields.dueDate");
 			case "estimate":
 				return t("activity.fields.estimate");
+			case "parent":
+				return t("activity.fields.parent");
+			case "relation:blocks":
+				return t("activity.fields.relationBlocks");
+			case "relation:blocked_by":
+				return t("activity.fields.relationBlockedBy");
+			case "relation:related":
+				return t("activity.fields.relationRelated");
+			case "relation:duplicates":
+				return t("activity.fields.relationDuplicates");
 			default:
 				return field;
 		}
@@ -81,6 +91,10 @@ export function ActivitySentence({
 				return formatDueDate(value) || t("activity.emptyValue");
 			case "estimate":
 				return value || t("activity.emptyValue");
+			case "parent":
+				// Attaching a parent has no previous value; render "none" instead
+				// of an empty string.
+				return value || t("activity.emptyValue");
 			default:
 				return value ?? "";
 		}
@@ -105,15 +119,34 @@ export function ActivitySentence({
 		});
 	} else if (activity.action === "issue.updated" && activity.field) {
 		const field = activity.field;
-		sentence =
-			field === "description"
-				? t("activity.issue.descriptionChanged", { name })
-				: t("activity.issue.updated", {
-						name,
-						field: fieldLabel(field),
-						from: displayValue(field, activity.oldValue),
-						to: displayValue(field, activity.newValue),
-					});
+		const relationType = field.startsWith("relation:")
+			? field.slice("relation:".length)
+			: null;
+		if (relationType) {
+			if (activity.newValue && !activity.oldValue) {
+				sentence = t("activity.issue.relationAdded", {
+					name,
+					type: fieldLabel(field),
+					issue: activity.newValue,
+				});
+			} else {
+				sentence = t("activity.issue.relationRemoved", {
+					name,
+					type: fieldLabel(field),
+					issue: activity.oldValue ?? activity.newValue ?? "",
+				});
+			}
+		} else {
+			sentence =
+				field === "description"
+					? t("activity.issue.descriptionChanged", { name })
+					: t("activity.issue.updated", {
+							name,
+							field: fieldLabel(field),
+							from: displayValue(field, activity.oldValue),
+							to: displayValue(field, activity.newValue),
+						});
+		}
 	} else {
 		sentence = t("activity.unknownAction", { action: activity.action });
 	}

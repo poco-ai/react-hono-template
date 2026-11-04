@@ -8,6 +8,7 @@ import type { CommentService } from "../services/comment.service";
 import type { IssueService } from "../services/issue.service";
 import type { LabelService } from "../services/label.service";
 import type { ProjectService } from "../services/project.service";
+import type { RelationService } from "../services/relation.service";
 import type { StatusService } from "../services/status.service";
 
 export type CapabilityEffect = "read" | "write" | "destructive";
@@ -120,6 +121,10 @@ export type CapabilityServices = {
 	>;
 	statusService: Pick<StatusService, "listStatuses">;
 	activityService: Pick<ActivityService, "listByIssue" | "listByOrg">;
+	relationService: Pick<
+		RelationService,
+		"listRelations" | "createRelation" | "deleteRelation"
+	>;
 };
 
 export type CapabilityDaos = {

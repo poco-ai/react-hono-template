@@ -192,7 +192,7 @@ export const createV1App = (dependencies: Dependencies) => {
 			title: "Issue Tracker Public API",
 			version: "1.0.0",
 			description:
-				"Public API authenticated with Bearer API keys (sk_...). All endpoints are rate limited per key.",
+				"Public API authenticated with Bearer API keys (sk_...). All endpoints are rate limited per key. Issues expose parentId; issue relations are not exposed by this API version yet.",
 		},
 		servers: [{ url: "/api/v1" }],
 		security: [{ bearerAuth: [] }],

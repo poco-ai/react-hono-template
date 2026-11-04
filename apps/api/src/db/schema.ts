@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+	type AnySQLiteColumn,
 	index,
 	integer,
 	primaryKey,
@@ -83,6 +84,11 @@ export const issues = sqliteTable(
 		number: integer("number").notNull(),
 		title: text("title").notNull(),
 		description: text("description"),
+		// Self-reference for sub-issues. At most two levels are allowed; the
+		// service enforces depth and project/org consistency.
+		parentId: text("parent_id").references((): AnySQLiteColumn => issues.id, {
+			onDelete: "set null",
+		}),
 		statusId: text("status_id")
 			.notNull()
 			.references(() => issueStatuses.id, { onDelete: "restrict" }),
@@ -109,6 +115,7 @@ export const issues = sqliteTable(
 		index("issues_orgId_idx").on(table.orgId),
 		index("issues_orgId_statusId_idx").on(table.orgId, table.statusId),
 		index("issues_orgId_assigneeId_idx").on(table.orgId, table.assigneeId),
+		index("issues_orgId_parentId_idx").on(table.orgId, table.parentId),
 	],
 );
 
@@ -143,6 +150,45 @@ export const issueLabels = sqliteTable(
 			.references(() => labels.id, { onDelete: "cascade" }),
 	},
 	(table) => [primaryKey({ columns: [table.issueId, table.labelId] })],
+);
+
+/**
+ * Issue relations in canonical storage form: `blocks` is directed (A blocks B)
+ * while `related` and `duplicates` are symmetric (pair ids sorted, one row per
+ * pair). The API/UI present blocks from the current issue's point of view
+ * (blocks / blockedBy) and show related/duplicates as symmetric groups.
+ */
+export const issueRelations = sqliteTable(
+	"issue_relations",
+	{
+		id: text("id").primaryKey(),
+		orgId: text("org_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		relatedIssueId: text("related_issue_id")
+			.notNull()
+			.references(() => issues.id, { onDelete: "cascade" }),
+		// blocks | related | duplicates
+		type: text("type").notNull(),
+		createdById: text("created_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("issueRelations_issueId_relatedIssueId_type_uq").on(
+			table.issueId,
+			table.relatedIssueId,
+			table.type,
+		),
+		index("issueRelations_orgId_idx").on(table.orgId),
+		index("issueRelations_relatedIssueId_idx").on(table.relatedIssueId),
+	],
 );
 
 export const comments = sqliteTable(

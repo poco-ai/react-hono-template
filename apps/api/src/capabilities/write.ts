@@ -5,6 +5,7 @@ import {
 	createIssueSchema,
 	createLabelSchema,
 	createProjectSchema,
+	ISSUE_RELATION_INPUT_TYPES,
 	updateIssueSchema,
 	updateLabelSchema,
 } from "@workspace/shared";
@@ -84,6 +85,15 @@ const deleteIssueInputSchema = z.object(issueRefShape).refine(resolveRef, {
 	message: "Provide issueId, or projectKey together with number.",
 });
 
+const linkIssuesInputSchema = issueRef({
+	relatedIssueId: z.string().min(1),
+	type: z.enum(ISSUE_RELATION_INPUT_TYPES),
+});
+
+const unlinkIssueInputSchema = issueRef({
+	relationId: z.string().min(1),
+});
+
 const deletedOutputSchema = z.object({
 	id: z.string(),
 	deleted: z.boolean(),
@@ -109,7 +119,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 			name: "create_issue",
 			titleKey: "ai.capabilities.create_issue.title",
 			description:
-				"Create an issue in a project. Requires the project id; uses the organization's labels and members for labelIds and assigneeId. Pass statusId (preferred) or a legacy status name; defaults to the organization's default status.",
+				"Create an issue in a project. Requires the project id; uses the organization's labels and members for labelIds and assigneeId. Pass statusId (preferred) or a legacy status name; defaults to the organization's default status. Pass parentId to create a sub-issue: the parent must be a top-level issue in the same project (sub-issues are two levels deep).",
 			input: createIssueInputSchema,
 			output: z.object({ issue: issueSummarySchema }),
 			effect: "write",
@@ -135,7 +145,7 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 		defineCapability({
 			name: "update_issue",
 			titleKey: "ai.capabilities.update_issue.title",
-			description: `Update issue fields (title, description, statusId (or legacy status name), priority, assignee, labels, due date, estimate). ${issueRefDescription}`,
+			description: `Update issue fields (title, description, statusId (or legacy status name), priority, assignee, labels, due date, estimate, parentId). parentId moves the issue under a top-level issue in the same project; pass parentId: null to detach it. Issues that already have sub-issues cannot become sub-issues (two levels max). ${issueRefDescription}`,
 			input: updateIssueInputSchema,
 			output: z.object({ issue: issueSummarySchema }),
 			effect: "write",
@@ -185,6 +195,74 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 					data: { id: issue.id, deleted: true },
 					summary: `Deleted issue #${issue.number}: ${issue.title}.`,
 					links: deletedLinks(ctx, orgId, issue.projectId),
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "link_issues",
+			titleKey: "ai.capabilities.link_issues.title",
+			description: `Link two issues in the same project. type is blocks (this issue blocks the related one; the link is rejected if it would close a blocking cycle), blocked_by (the related issue blocks this one), related (symmetric) or duplicates (symmetric: both issues are marked as duplicates of each other). ${issueRefDescription}`,
+			input: linkIssuesInputSchema,
+			output: z.object({
+				relation: z.object({
+					id: z.string(),
+					type: z.string(),
+					issueId: z.string(),
+					relatedIssueId: z.string(),
+				}),
+			}),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const issue = await resolveIssueRef(deps, orgId, input);
+				const relation = await deps.services.relationService.createRelation(
+					orgId,
+					issue.projectId,
+					issue.number,
+					ctx.actor.userId ?? null,
+					{ relatedIssueId: input.relatedIssueId, type: input.type },
+					ctx.background,
+				);
+				return {
+					data: {
+						relation: {
+							id: relation.id,
+							type: relation.type,
+							issueId: relation.issueId,
+							relatedIssueId: relation.relatedIssueId,
+						},
+					},
+					summary: `Linked issue #${issue.number} (${input.type}).`,
+					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "unlink_issue",
+			titleKey: "ai.capabilities.unlink_issue.title",
+			description: `Remove one of the issue's relations by relation id (see list_issue_relations). This is destructive; confirm with the user before calling. ${issueRefDescription}`,
+			input: unlinkIssueInputSchema,
+			output: deletedOutputSchema,
+			effect: "destructive",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const issue = await resolveIssueRef(deps, orgId, input);
+				await deps.services.relationService.deleteRelation(
+					orgId,
+					issue.projectId,
+					issue.number,
+					ctx.actor.userId ?? null,
+					input.relationId,
+					ctx.background,
+				);
+				return {
+					data: { id: input.relationId, deleted: true },
+					summary: `Removed relation ${input.relationId} from issue #${issue.number}.`,
+					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
 				};
 			},
 		}),

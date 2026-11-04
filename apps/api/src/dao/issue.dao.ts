@@ -21,9 +21,17 @@ import type {
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
+import { deleteRelationsForIssueStatement } from "./relation.dao";
 import { toStatusDto } from "./status.dao";
 
 type IssueRow = typeof issues.$inferSelect;
+
+/**
+ * Upper bound for the sub-issue list returned with an issue. Sub-issues are a
+ * planning aid, so the detail view (and its progress bar) stays bounded even
+ * for an issue with an unusually large number of children.
+ */
+export const MAX_SUB_ISSUES = 200;
 
 const escapeLike = (value: string) =>
 	value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
@@ -77,9 +85,10 @@ export const createIssueDao = (db: Database) => {
 				createdById: string | null;
 				dueDate: Date | null;
 				estimate: number | null;
+				parentId: string | null;
 			},
 			labelIds: string[],
-			activity?: ActivityInsert,
+			activityRows: ActivityInsert[] = [],
 		): Promise<IssueDto> => {
 			let lastError: unknown;
 			for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
@@ -116,7 +125,9 @@ export const createIssueDao = (db: Database) => {
 									),
 								]
 							: []),
-						...(activity ? [activityInsertStatement(db, [activity])] : []),
+						...(activityRows.length
+							? [activityInsertStatement(db, activityRows)]
+							: []),
 					]);
 					const status = await db
 						.select()
@@ -186,6 +197,73 @@ export const createIssueDao = (db: Database) => {
 				.where(eq(issueStatuses.id, row.statusId))
 				.get();
 			return status ? toIssueDto(row, toStatusDto(status)) : null;
+		},
+
+		findByIds: async (orgId: string, ids: string[]): Promise<IssueDto[]> => {
+			if (ids.length === 0) {
+				return [];
+			}
+			const [rows, statusRows] = await Promise.all([
+				db
+					.select()
+					.from(issues)
+					.where(
+						and(
+							eq(issues.orgId, orgId),
+							inArray(issues.id, ids),
+							isNull(issues.deletedAt),
+						),
+					),
+				db.select().from(issueStatuses).where(eq(issueStatuses.orgId, orgId)),
+			]);
+			const statusById = new Map(
+				statusRows.map((status) => [status.id, toStatusDto(status)]),
+			);
+			return rows.map((row) =>
+				toIssueDto(row, requireStatus(statusById, row.statusId)),
+			);
+		},
+
+		/** Non-deleted direct children of a parent issue (capped, see MAX_SUB_ISSUES). */
+		findChildren: async (
+			orgId: string,
+			parentId: string,
+		): Promise<IssueDto[]> => {
+			const [rows, statusRows] = await Promise.all([
+				db
+					.select()
+					.from(issues)
+					.where(
+						and(
+							eq(issues.orgId, orgId),
+							eq(issues.parentId, parentId),
+							isNull(issues.deletedAt),
+						),
+					)
+					.orderBy(asc(issues.number))
+					.limit(MAX_SUB_ISSUES),
+				db.select().from(issueStatuses).where(eq(issueStatuses.orgId, orgId)),
+			]);
+			const statusById = new Map(
+				statusRows.map((status) => [status.id, toStatusDto(status)]),
+			);
+			return rows.map((row) =>
+				toIssueDto(row, requireStatus(statusById, row.statusId)),
+			);
+		},
+
+		hasChildren: async (orgId: string, parentId: string): Promise<boolean> => {
+			const [row] = await db
+				.select({ value: count() })
+				.from(issues)
+				.where(
+					and(
+						eq(issues.orgId, orgId),
+						eq(issues.parentId, parentId),
+						isNull(issues.deletedAt),
+					),
+				);
+			return (row?.value ?? 0) > 0;
 		},
 
 		findPrevNumber: async (
@@ -339,6 +417,7 @@ export const createIssueDao = (db: Database) => {
 				assigneeId: string | null;
 				dueDate: Date | null;
 				estimate: number | null;
+				parentId: string | null;
 			}>,
 			labelIds?: string[],
 			activityRows: ActivityInsert[] = [],
@@ -389,6 +468,13 @@ export const createIssueDao = (db: Database) => {
 			return row ? describeIssue(row) : null;
 		},
 
+		/**
+		 * Soft-deletes the issue and keeps dependent rows consistent in the same
+		 * D1 batch (a transaction):
+		 * - direct children are detached (`parent_id = NULL`) so they remain
+		 *   top-level issues instead of pointing at a hidden parent;
+		 * - every relation involving the issue is removed, from either side.
+		 */
 		softDelete: async (
 			orgId: string,
 			id: string,
@@ -406,6 +492,17 @@ export const createIssueDao = (db: Database) => {
 						),
 					)
 					.returning({ id: issues.id }),
+				db
+					.update(issues)
+					.set({ parentId: null })
+					.where(
+						and(
+							eq(issues.orgId, orgId),
+							eq(issues.parentId, id),
+							isNull(issues.deletedAt),
+						),
+					),
+				deleteRelationsForIssueStatement(db, orgId, id),
 			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
 			if (activity) {
 				statements.push(activityInsertStatement(db, [activity]));

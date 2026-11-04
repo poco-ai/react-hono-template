@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
-import { invalidateIssueQueries } from "../src/features/issues/data";
+import {
+	invalidateIssueQueries,
+	invalidateRelationQueries,
+} from "../src/features/issues/data";
 import { issueSearchSchema } from "../src/features/issues/search";
 
 test("issue writes invalidate lists, details and activities only in their organization", async () => {
@@ -24,6 +27,32 @@ test("issue writes invalidate lists, details and activities only in their organi
 		assert.equal(client.getQueryState(key)?.isInvalidated, true);
 	for (const key of unaffected)
 		assert.equal(client.getQueryState(key)?.isInvalidated, false);
+	client.clear();
+});
+
+test("relation writes invalidate detail, relation groups, activity and org feeds", async () => {
+	const client = new QueryClient();
+	const affected = [
+		["orgs", "org", "projects", "project", "issues", "detail", 1],
+		["orgs", "org", "projects", "project", "issues", "detail", 1, "relations"],
+		["orgs", "org", "projects", "project", "issues", "detail", 1, "activities"],
+		["orgs", "org", "projects", "project", "issues", { page: 1 }],
+		["orgs", "org", "issues"],
+		["orgs", "org", "activities", { limit: 50 }],
+	];
+	const unaffected = [
+		// `invalidateIssueQueries` invalidates the org's project root (which
+		// covers every detail key in the org); only other orgs stay untouched.
+		["orgs", "other", "issues"],
+		["orgs", "other", "projects"],
+		["orgs", "org", "members"],
+	];
+	for (const key of [...affected, ...unaffected]) client.setQueryData(key, {});
+	await invalidateRelationQueries(client, "org", "project", 1);
+	for (const key of affected)
+		assert.equal(client.getQueryState(key)?.isInvalidated, true, String(key));
+	for (const key of unaffected)
+		assert.equal(client.getQueryState(key)?.isInvalidated, false, String(key));
 	client.clear();
 });
 

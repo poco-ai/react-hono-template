@@ -42,6 +42,7 @@ const issueDto = (overrides: Partial<IssueDetailDto> = {}): IssueDetailDto => ({
 	createdById: USER_ID,
 	dueDate: null,
 	estimate: 3,
+	parentId: null,
 	deletedAt: null,
 	createdAt: NOW,
 	updatedAt: NOW,

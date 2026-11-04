@@ -55,6 +55,12 @@ export const issueSchema = z.object({
 	createdById: z.string().nullable(),
 	dueDate: z.string().nullable(),
 	estimate: z.number().nullable(),
+	parentId: z
+		.string()
+		.nullable()
+		.describe(
+			"Parent issue id for sub-issues. Relation endpoints are available in the app API but not exposed here yet.",
+		),
 	deletedAt: z.string().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),

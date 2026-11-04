@@ -76,6 +76,7 @@ export const issueSummarySchema = z.object({
 	dueDate: z.string().nullable(),
 	estimate: z.number().int().nullable(),
 	labelIds: z.array(z.string()),
+	parentId: z.string().nullable(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
@@ -97,6 +98,24 @@ export const labelSummarySchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	color: z.string(),
+});
+
+export const relatedIssueSchema = z.object({
+	id: z.string(),
+	projectId: z.string(),
+	number: z.number().int(),
+	title: z.string(),
+	statusId: z.string(),
+	statusName: z.string(),
+	status: statusSummarySchema,
+	priority: z.number().int(),
+});
+
+export const issueRelationSummarySchema = z.object({
+	/** Relation row id, used by unlink_issue. */
+	id: z.string(),
+	type: z.string(),
+	issue: relatedIssueSchema,
 });
 
 export const activitySummarySchema = z.object({
@@ -200,6 +219,7 @@ export const toIssueSummary = (issue: IssueDetailDto): IssueSummary => ({
 	dueDate: issue.dueDate,
 	estimate: issue.estimate,
 	labelIds: issue.labelIds,
+	parentId: issue.parentId,
 	createdAt: issue.createdAt,
 	updatedAt: issue.updatedAt,
 });
@@ -653,6 +673,71 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 					data: { issue: toIssueSummary(issue) },
 					summary: `Issue #${issue.number}: ${issue.title}.`,
 					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_issue_relations",
+			titleKey: "ai.capabilities.list_issue_relations.title",
+			description: `List the issue's relations: blocks and blockedBy are the two sides of directed blocking links, while related and duplicates are symmetric groups (the same link appears for both issues). Each entry includes the relation id, stored type and the other issue. ${issueRefDescription}`,
+			input: issueRefSchema,
+			output: z.object({
+				blocks: z.array(issueRelationSummarySchema),
+				blockedBy: z.array(issueRelationSummarySchema),
+				related: z.array(issueRelationSummarySchema),
+				duplicates: z.array(issueRelationSummarySchema),
+			}),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const issue = await resolveIssueRef(deps, orgId, input);
+				const relations = await deps.services.relationService.listRelations(
+					orgId,
+					issue.projectId,
+					issue.number,
+				);
+				const toSummary = (
+					link: (typeof relations)["blocks"][number],
+				): z.infer<typeof issueRelationSummarySchema> => ({
+					id: link.id,
+					type: link.type,
+					issue: {
+						id: link.issue.id,
+						projectId: link.issue.projectId,
+						number: link.issue.number,
+						title: link.issue.title,
+						statusId: link.issue.statusId,
+						statusName: link.issue.status.name,
+						status: link.issue.status,
+						priority: link.issue.priority,
+					},
+				});
+				const total =
+					relations.blocks.length +
+					relations.blockedBy.length +
+					relations.related.length +
+					relations.duplicates.length;
+				return {
+					data: {
+						blocks: relations.blocks.map(toSummary),
+						blockedBy: relations.blockedBy.map(toSummary),
+						related: relations.related.map(toSummary),
+						duplicates: relations.duplicates.map(toSummary),
+					},
+					summary: `Issue #${issue.number} has ${total} relation(s).`,
+					links: [
+						issueLink(ctx, orgId, issue.projectId, issue.number),
+						...[
+							...relations.blocks,
+							...relations.blockedBy,
+							...relations.related,
+							...relations.duplicates,
+						].map((link) =>
+							issueLink(ctx, orgId, link.issue.projectId, link.issue.number),
+						),
+					],
 				};
 			},
 		}),

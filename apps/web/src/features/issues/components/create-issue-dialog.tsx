@@ -3,7 +3,6 @@ import {
 	createIssueSchema,
 	ISSUE_PRIORITIES,
 	type IssuePriorityName,
-	priorityValue,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -43,13 +42,13 @@ import { MutationError } from "@/components/mutation-error";
 import { DateField } from "@/features/issues/components/date-field";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
+import { buildCreateIssueInput } from "@/features/issues/create-issue-input";
 import {
 	type FieldErrors,
 	fieldErrorsFromZod,
 	focusFirstInvalidField,
 	withoutFieldError,
 } from "@/lib/form";
-import { fromDateInputValue } from "@/lib/format";
 import { useCreateIssue } from "../data";
 
 const UNASSIGNED = "__unassigned__";
@@ -60,6 +59,7 @@ export function CreateIssueDialog({
 	open,
 	onOpenChange,
 	defaultStatusId,
+	parentId,
 	members,
 	labels,
 	statuses,
@@ -69,6 +69,8 @@ export function CreateIssueDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	defaultStatusId?: string;
+	/** When set, the new issue is created as a sub-issue of this issue. */
+	parentId?: string;
 	members: { userId: string; user: { name: string } }[];
 	labels: { id: string; name: string }[];
 	statuses: StatusDto[];
@@ -108,22 +110,21 @@ export function CreateIssueDialog({
 	const createMutation = useCreateIssue(orgId, projectId);
 
 	const onSubmit = () => {
-		const parsedEstimate = estimate === "" ? undefined : Number(estimate);
-		const parsed = createIssueSchema.safeParse({
-			title: title.trim(),
-			description: description.trim() || undefined,
-			statusId,
-			priority: priorityValue(priority),
-			assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
-			labelIds: labelIds.length > 0 ? labelIds : undefined,
-			dueDate: fromDateInputValue(dueDate) ?? undefined,
-			estimate:
-				parsedEstimate !== undefined &&
-				Number.isInteger(parsedEstimate) &&
-				parsedEstimate >= 0
-					? parsedEstimate
-					: undefined,
-		});
+		const parsed = createIssueSchema.safeParse(
+			buildCreateIssueInput(
+				{
+					title,
+					description,
+					statusId,
+					priority,
+					assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
+					labelIds,
+					dueDate,
+					estimate,
+				},
+				{ parentId },
+			),
+		);
 		if (!parsed.success) {
 			const errors = fieldErrorsFromZod(parsed.error, t);
 			setFieldErrors(errors);
@@ -145,8 +146,16 @@ export function CreateIssueDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle>{t("issues.createTitle")}</DialogTitle>
-					<DialogDescription>{t("issues.createDescription")}</DialogDescription>
+					<DialogTitle>
+						{parentId
+							? t("issues.subIssues.createTitle")
+							: t("issues.createTitle")}
+					</DialogTitle>
+					<DialogDescription>
+						{parentId
+							? t("issues.subIssues.createDescription")
+							: t("issues.createDescription")}
+					</DialogDescription>
 				</DialogHeader>
 				<form
 					noValidate

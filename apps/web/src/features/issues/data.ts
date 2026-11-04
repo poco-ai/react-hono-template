@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import {
 	type CreateIssueInput,
+	type CreateIssueRelationInput,
 	ISSUE_PRIORITY,
 	type IssuePriorityName,
 	type UpdateIssueInput,
@@ -113,26 +114,42 @@ export function orgIssuesQuery(
 /** Number of results the command palette requests per issue search. */
 export const ISSUE_SEARCH_LIMIT = 8;
 
+/** Result page size used by in-dialog issue pickers (relation / parent). */
+export const ISSUE_PICKER_PAGE_SIZE = 20;
+
 /** Minimum term length before the palette's issue search queries the API. */
 export const ISSUE_SEARCH_MIN_LENGTH = 2;
 
 /**
- * Org-wide issue search used by the command palette. The query stays disabled
- * until the (trimmed) term reaches `ISSUE_SEARCH_MIN_LENGTH`.
+ * Org-wide issue search used by the command palette and the issue pickers.
+ * The query stays disabled until the (trimmed) term reaches
+ * `ISSUE_SEARCH_MIN_LENGTH`. Pass `projectId` to scope the search to one
+ * project server-side (pickers do not re-filter results client-side).
  */
-export function issueSearchQuery(orgId: string, term: string) {
+export function issueSearchQuery(
+	orgId: string,
+	term: string,
+	{
+		projectId,
+		pageSize = ISSUE_SEARCH_LIMIT,
+	}: {
+		projectId?: string;
+		pageSize?: number;
+	} = {},
+) {
 	const search = term.trim();
 	return queryOptions({
-		queryKey: issueSearchKey(orgId, search),
+		queryKey: issueSearchKey(orgId, search, projectId),
 		queryFn: () =>
 			unwrap(
 				client.api.orgs[":orgId"].issues.$get({
 					param: { orgId },
 					query: {
 						page: "1",
-						pageSize: String(ISSUE_SEARCH_LIMIT),
+						pageSize: String(pageSize),
 						search,
 						sort: "updated",
+						projectId,
 					},
 				}),
 			),
@@ -154,6 +171,53 @@ export function issueQuery(orgId: string, projectId: string, number: number) {
 	});
 }
 
+export function issueRelationsQuery(
+	orgId: string,
+	projectId: string,
+	number: number,
+) {
+	return queryOptions({
+		queryKey: issueRelationsKey(orgId, projectId, number),
+		queryFn: () =>
+			unwrap(
+				client.api.orgs[":orgId"].projects[":projectId"].issues[
+					":number"
+				].relations.$get({
+					param: { orgId, projectId, number: String(number) },
+				}),
+			),
+	});
+}
+
+export const createIssueRelation = (
+	orgId: string,
+	projectId: string,
+	number: number,
+	input: CreateIssueRelationInput,
+) =>
+	unwrap(
+		client.api.orgs[":orgId"].projects[":projectId"].issues[
+			":number"
+		].relations.$post({
+			param: { orgId, projectId, number: String(number) },
+			json: input,
+		}),
+	);
+
+export const deleteIssueRelation = (
+	orgId: string,
+	projectId: string,
+	number: number,
+	relationId: string,
+) =>
+	unwrap(
+		client.api.orgs[":orgId"].projects[":projectId"].issues[
+			":number"
+		].relations[":relationId"].$delete({
+			param: { orgId, projectId, number: String(number), relationId },
+		}),
+	);
+
 export type { ListIssuesDto };
 
 export const invalidateIssueQueries = (
@@ -173,6 +237,12 @@ export function useCreateIssue(orgId: string, projectId: string) {
 			createIssue(orgId, projectId, input),
 		onSuccess: () => {
 			void invalidateIssueQueries(queryClient, orgId);
+			// Detail keys live under ["orgs", orgId, "projects", ...], which the
+			// list/project prefixes above do not cover. Creating a sub-issue
+			// changes the parent's child list and progress.
+			void queryClient.invalidateQueries({
+				queryKey: issueDetailRootKey(orgId, projectId),
+			});
 		},
 	});
 }
@@ -230,9 +300,74 @@ export function useUpdateIssue(
 		},
 		onSettled: () => {
 			void invalidateIssueQueries(queryClient, orgId);
+			// Detail/activity keys are not under the list prefixes; a child's
+			// status change must also refresh its parent's sub-issue progress.
+			void queryClient.invalidateQueries({
+				queryKey: issueDetailRootKey(orgId, projectId),
+			});
 		},
 	});
 }
+
+export function useCreateIssueRelation(
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: CreateIssueRelationInput) =>
+			createIssueRelation(orgId, projectId, issueNumber, input),
+		onSuccess: () => {
+			void invalidateRelationQueries(
+				queryClient,
+				orgId,
+				projectId,
+				issueNumber,
+			);
+		},
+	});
+}
+
+export function useDeleteIssueRelation(
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (relationId: string) =>
+			deleteIssueRelation(orgId, projectId, issueNumber, relationId),
+		onSuccess: () => {
+			void invalidateRelationQueries(
+				queryClient,
+				orgId,
+				projectId,
+				issueNumber,
+			);
+		},
+	});
+}
+
+/**
+ * Relation writes refresh the issue detail tree and org-wide lists.
+ *
+ * `issueKey` is a prefix of `issueRelationsKey` (and of the issue's activity
+ * key), so invalidating it already covers the relation groups — no separate
+ * relations invalidation is needed.
+ */
+export const invalidateRelationQueries = (
+	queryClient: QueryClient,
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+) =>
+	Promise.all([
+		queryClient.invalidateQueries({
+			queryKey: issueKey(orgId, projectId, issueNumber),
+		}),
+		invalidateIssueQueries(queryClient, orgId),
+	]);
 
 export function useDeleteIssue(
 	orgId: string,
@@ -356,7 +491,17 @@ export const orgIssuesKey = (
 	orgId: string,
 	filters: Partial<IssueFilters> & { assigneeId: string },
 ) => [...orgIssuesRootKey(orgId), filters] as const;
-export const issueSearchKey = (orgId: string, term: string) =>
-	[...orgIssuesRootKey(orgId), "search", term] as const;
+export const issueSearchKey = (
+	orgId: string,
+	term: string,
+	projectId?: string,
+) => [...orgIssuesRootKey(orgId), "search", projectId ?? "all", term] as const;
 export const issueKey = (orgId: string, projectId: string, number: number) =>
 	["orgs", orgId, "projects", projectId, "issues", "detail", number] as const;
+export const issueDetailRootKey = (orgId: string, projectId: string) =>
+	["orgs", orgId, "projects", projectId, "issues", "detail"] as const;
+export const issueRelationsKey = (
+	orgId: string,
+	projectId: string,
+	number: number,
+) => [...issueKey(orgId, projectId, number), "relations"] as const;
