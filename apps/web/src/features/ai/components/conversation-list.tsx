@@ -1,14 +1,4 @@
 import type { AiConversationDto } from "@api/dto/ai.dto";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -51,6 +41,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MutationError } from "@/components/mutation-error";
 import { useAiChat } from "@/features/ai/chat-provider";
 import {
@@ -308,40 +299,25 @@ export function AiConversationList({
 				</DialogContent>
 			</Dialog>
 
-			<AlertDialog
+			<ConfirmDialog
 				open={deleteTarget !== null}
 				onOpenChange={(open) => {
 					if (!open) {
 						setDeleteTarget(null);
 					}
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							{t("ai.conversations.deleteTitle")}
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("ai.conversations.deleteDescription")}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<MutationError error={deleteMutation.error} />
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={deleteMutation.isPending}
-							onClick={() => {
-								if (deleteTarget) {
-									deleteMutation.mutate(deleteTarget.id);
-								}
-							}}
-						>
-							{t("ai.conversations.delete")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={t("ai.conversations.deleteTitle")}
+				description={t("ai.conversations.deleteDescription")}
+				confirmLabel={t("ai.conversations.delete")}
+				variant="destructive"
+				pending={deleteMutation.isPending}
+				error={deleteMutation.error}
+				onConfirm={() => {
+					if (deleteTarget) {
+						deleteMutation.mutate(deleteTarget.id);
+					}
+				}}
+			/>
 		</div>
 	);
 }

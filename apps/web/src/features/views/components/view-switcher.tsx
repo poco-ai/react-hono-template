@@ -1,14 +1,4 @@
 import type { IssueQuery } from "@workspace/shared";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -55,6 +45,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MutationError } from "@/components/mutation-error";
 import { QuotaError } from "@/components/quota-error";
 import { apiErrorMessage } from "@/lib/errors";
@@ -522,28 +513,19 @@ export function ViewSwitcher({
 				</DialogContent>
 			</Dialog>
 
-			<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("issues.views.deleteTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("issues.views.deleteDescription", {
-								name: currentView?.name ?? "",
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<MutationError error={remove.error} />
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							disabled={remove.isPending || !currentView}
-							onClick={() => currentView && remove.mutate(currentView.id)}
-						>
-							{t("issues.views.delete")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<ConfirmDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				title={t("issues.views.deleteTitle")}
+				description={t("issues.views.deleteDescription", {
+					name: currentView?.name ?? "",
+				})}
+				confirmLabel={t("issues.views.delete")}
+				variant="destructive"
+				pending={remove.isPending || !currentView}
+				error={remove.error}
+				onConfirm={() => currentView && remove.mutate(currentView.id)}
+			/>
 		</>
 	);
 }

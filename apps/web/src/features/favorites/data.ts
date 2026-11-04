@@ -84,47 +84,6 @@ const optimisticFavorite = (
 	project: null,
 });
 
-export function useAddFavorite(
-	orgId: string,
-	callbacks?: MutationCallbacks<
-		Awaited<ReturnType<typeof addFavorite>>,
-		CreateFavoriteInput
-	>,
-) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
-		mutationFn: (input: CreateFavoriteInput) => addFavorite(orgId, input),
-		onMutate: async ({ entityType, entityId }) => {
-			const key = favoritesRootKey(orgId);
-			await queryClient.cancelQueries({ queryKey: key });
-			const previous = queryClient.getQueryData<FavoriteItemDto[]>(key);
-			if (previous) {
-				queryClient.setQueryData<FavoriteItemDto[]>(key, (old) => {
-					if (!old) {
-						return old;
-					}
-					return old.some(
-						(item) =>
-							item.entityType === entityType && item.entityId === entityId,
-					)
-						? old
-						: [...old, optimisticFavorite(orgId, entityType, entityId)];
-				});
-			}
-			return { previous };
-		},
-		onError: (_error, _input, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(favoritesRootKey(orgId), context.previous);
-			}
-		},
-		onSettled: () => {
-			void invalidateFavoriteQueries(queryClient, orgId);
-		},
-	});
-}
-
 export function useRemoveFavorite(
 	orgId: string,
 	callbacks?: MutationCallbacks<

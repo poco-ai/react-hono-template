@@ -485,6 +485,7 @@ const zh: typeof en = {
 			VIEW_LIMIT_REACHED:
 				"已达到当前方案的保存视图上限。请升级方案，或请所有者/管理员为团队创建共享视图。",
 			VIEW_NOT_FOUND: "该视图不存在或对你不可见。",
+			MCP_FORBIDDEN_SCOPE: "此操作需要权限范围更高的 API 密钥。",
 		},
 		orgSettingsRequired: "只有所有者或管理员可以修改组织设置。",
 		orgLeaveOwner: "所有者需先转移所有权才能退出组织。",

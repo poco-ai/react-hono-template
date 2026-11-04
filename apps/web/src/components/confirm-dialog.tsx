@@ -11,6 +11,7 @@ import {
 import { Spinner } from "@workspace/ui/components/spinner";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { MutationError } from "./mutation-error";
 
 export function ConfirmDialog({
 	open,
@@ -21,6 +22,7 @@ export function ConfirmDialog({
 	cancelLabel,
 	variant = "destructive",
 	pending = false,
+	error,
 	onConfirm,
 }: {
 	open: boolean;
@@ -31,6 +33,8 @@ export function ConfirmDialog({
 	cancelLabel?: ReactNode;
 	variant?: "default" | "destructive";
 	pending?: boolean;
+	/** Mutation error rendered inside the dialog (kept open on failure). */
+	error?: Error | null | undefined;
 	onConfirm: () => void;
 }) {
 	const { t } = useTranslation();
@@ -44,6 +48,7 @@ export function ConfirmDialog({
 						<AlertDialogDescription>{description}</AlertDialogDescription>
 					)}
 				</AlertDialogHeader>
+				<MutationError error={error} />
 				<AlertDialogFooter>
 					<AlertDialogCancel>
 						{cancelLabel ?? t("common.cancel")}

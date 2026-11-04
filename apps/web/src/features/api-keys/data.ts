@@ -17,7 +17,7 @@ export function apiKeysRootKey(orgId: string) {
 
 export function apiKeysQuery(orgId: string, page: number) {
 	return queryOptions({
-		queryKey: ["orgs", orgId, "api-keys", page] as const,
+		queryKey: [...apiKeysRootKey(orgId), page] as const,
 		queryFn: (): Promise<ListApiKeysDto> =>
 			unwrap(
 				client.api.orgs[":orgId"]["api-keys"].$get({

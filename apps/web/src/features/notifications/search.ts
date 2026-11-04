@@ -8,5 +8,3 @@ import { z } from "zod";
 export const inboxSearchSchema = z.object({
 	filter: z.enum(NOTIFICATION_FILTERS).catch("all"),
 });
-
-export type InboxSearch = z.infer<typeof inboxSearchSchema>;

@@ -15,7 +15,6 @@ import { useAuth, useAuthPlugin } from "@better-auth-ui/react";
 import {
 	useActiveOrganization,
 	useHasPermission,
-	useInviteMember,
 	useListOrganizationInvitations,
 	useListRoles,
 	useListTeams,
@@ -53,6 +52,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
+import { useInviteMember } from "@/features/members/data";
 import { useOrgWriteLocked } from "@/features/organizations/org-write-lock";
 import { organizationCopy } from "@/lib/auth/auth-localization";
 import {
@@ -142,15 +142,13 @@ export function InviteMemberDialog({
 	const wasOpen = useRef(false);
 
 	const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember(
-		authClient as OrganizationTeamsAuthClient,
-		{
-			onSuccess: (invitation) => {
-				setSubmitError(null);
-				setCreatedLink({
-					email: invitation.email,
-					url: `${window.location.origin}/invite?invitationId=${invitation.id}`,
-				});
-			},
+		activeOrganizationId,
+		(invitation) => {
+			setSubmitError(null);
+			setCreatedLink({
+				email: invitation.email,
+				url: `${window.location.origin}/invite?invitationId=${invitation.id}`,
+			});
 		},
 	);
 

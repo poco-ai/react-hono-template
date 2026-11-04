@@ -446,10 +446,6 @@ export const filterConditionCount = (
 					0,
 				);
 
-/** Root children rendered as removable chips. */
-export const filterChips = (filter: IssueFilterGroup | undefined) =>
-	filter?.children ?? [];
-
 /** Collects the scalar selections of a field (eq/in conditions only). */
 export const filterSelection = (
 	filter: IssueFilterGroup | undefined,
@@ -587,12 +583,6 @@ export const removeFilterNode = (
 	return { ...root, children };
 };
 
-/** Adds a root-level condition (used by quick filters and the builder). */
-export const addFilterCondition = (
-	root: IssueFilterGroup,
-	condition: IssueFilterCondition,
-): IssueFilterGroup => ({ ...root, children: [...root.children, condition] });
-
 /** Human-friendly value scalars for labels/selects. */
 export const filterScalarLabel = (
 	field: IssueFilterField,
@@ -605,4 +595,3 @@ export const filterScalarLabel = (
 };
 
 /** Priority values listed by the quick filter. */
-export const PRIORITY_VALUES = ISSUE_PRIORITIES.map((entry) => entry.value);

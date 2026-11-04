@@ -11,7 +11,6 @@ import {
 	resolveComment,
 	toggleCommentReaction,
 } from "../src/features/comments/data";
-import { inviteMember } from "../src/features/members/data";
 import { uploadOrganizationLogo } from "../src/features/organizations/data";
 import { createProject, updateProject } from "../src/features/projects/data";
 import { saveWebhook } from "../src/features/webhooks/data";
@@ -329,23 +328,5 @@ test("organization logo uploads use the active organization", () =>
 			assert.deepEqual(requests[3].body, {
 				key: "orgs/org-1/logo/asset.webp",
 			});
-		},
-	));
-
-test("invitation failures retain plan-limit codes for translated quota feedback", () =>
-	withRequests(
-		() =>
-			Response.json(
-				{ code: "PLAN_LIMIT_EXCEEDED", message: "Quota reached" },
-				{ status: 403 },
-			),
-		async () => {
-			await assert.rejects(
-				inviteMember("org", { email: "person@example.com", role: "member" }),
-				(error: unknown) =>
-					error instanceof Error &&
-					"code" in error &&
-					error.code === "PLAN_LIMIT_EXCEEDED",
-			);
 		},
 	));

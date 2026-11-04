@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { defaultRoadmapWindow } from "@workspace/shared";
+import { roadmapKey } from "../src/features/roadmap/data";
 import {
 	isWithinTimeline,
-	roadmapKey,
 	roadmapMonthTicks,
 	timelineBarGeometry,
 	timelinePercent,
-} from "../src/features/roadmap/data";
+} from "../src/features/roadmap/timeline";
 
 const closeTo = (actual: number, expected: number, epsilon = 0.01) =>
 	assert.ok(

@@ -11,7 +11,6 @@ import {
 	type QueryClient,
 	queryOptions,
 	useMutation,
-	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
 import type {
@@ -24,7 +23,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { i18n } from "@/i18n";
 import { client, unwrap } from "@/lib/api";
 import type { TranslationKey } from "@/lib/errors";
-import { type CodedError, codedError, errorCode } from "@/lib/errors";
+import { errorCode } from "@/lib/errors";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -35,7 +34,6 @@ export const AI_CONVERSATION_PAGE_SIZE = 20;
 export const AI_CONVERSATION_MAX_LIMIT = 50;
 
 /** Messages the detail endpoint returns (newest window). */
-export const AI_MESSAGE_DETAIL_LIMIT = 200;
 
 /** Chat context sent with every turn (project or issue the user is viewing). */
 export type AiChatContextInput = {
@@ -184,14 +182,6 @@ export function aiSettingsQuery(orgId: string) {
 		queryKey: aiSettingsKey(orgId),
 		queryFn: () => getAiSettings(orgId),
 	});
-}
-
-export function useAiConversationList(orgId: string) {
-	return useQuery(aiConversationListQuery(orgId));
-}
-
-export function useAiUsage(orgId: string) {
-	return useQuery(aiUsageQuery(orgId));
 }
 
 // ---------------------------------------------------------------------------
@@ -373,15 +363,6 @@ const responseEnvelopeCode = (error: unknown): string | undefined => {
 export function aiErrorCode(error: unknown): string | undefined {
 	return errorCode(error) ?? responseEnvelopeCode(error);
 }
-
-export function isAiUnavailableError(error: unknown): boolean {
-	const code = aiErrorCode(error);
-	return code !== undefined && AI_UNAVAILABLE_CODES.includes(code);
-}
-
-/** Builds a coded error for client-side AI failures without an API code. */
-export const aiCodedError = (message: string, code?: string): CodedError =>
-	codedError(message, code);
 
 // ---------------------------------------------------------------------------
 // Tool metadata (names are snake_case capability ids from the API)

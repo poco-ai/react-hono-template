@@ -1,9 +1,5 @@
 import type { StatusDto } from "@api/dto/status.dto";
-import {
-	ISSUE_STATUSES,
-	type IssueStatus,
-	type StatusCategory,
-} from "@workspace/shared";
+import type { IssueStatus, StatusCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -67,5 +63,3 @@ export function StatusBadge({
 }
 
 /** Legacy helper kept for callers that only have a status string. */
-export const isLegacyIssueStatus = (value: string): value is IssueStatus =>
-	(ISSUE_STATUSES as readonly string[]).includes(value);

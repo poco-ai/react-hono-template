@@ -1,6 +1,11 @@
-import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import type { OrganizationTeamsAuthClient } from "@better-auth-ui/core/plugins/organization";
+import { useInviteMember as useInviteMemberBase } from "@better-auth-ui/react/plugins/organization";
+import {
+	type QueryClient,
+	queryOptions,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
-import { codedError, errorCode } from "@/lib/errors";
 
 export type OrgMember = NonNullable<
 	Awaited<ReturnType<typeof authClient.organization.listMembers>>["data"]
@@ -27,21 +32,6 @@ export function membersQuery(orgId: string) {
 	});
 }
 
-export const inviteMember = async (
-	orgId: string,
-	{ email, role }: { email: string; role: OrgRole },
-) => {
-	const { data, error } = await authClient.organization.inviteMember({
-		organizationId: orgId,
-		email: email.trim(),
-		role,
-	});
-	if (error || !data) {
-		throw codedError(error?.message ?? "", errorCode(error));
-	}
-	return data.id;
-};
-
 export const membersKey = (orgId: string) =>
 	["orgs", orgId, "members"] as const;
 export const invitationsKey = (orgId: string) =>
@@ -51,3 +41,27 @@ export const invalidateMemberQueries = (client: QueryClient, orgId: string) =>
 		client.invalidateQueries({ queryKey: membersKey(orgId) }),
 		client.invalidateQueries({ queryKey: invitationsKey(orgId) }),
 	]);
+
+/**
+ * Wraps the Better Auth UI invite mutation with the members cache policy:
+ * member and invitation lists refresh after every successful invite.
+ */
+export function useInviteMember(
+	orgId: string | undefined,
+	onInvited?: (invitation: { id: string; email: string }) => void,
+) {
+	const queryClient = useQueryClient();
+	return useInviteMemberBase(
+		// The app does not enable the teams plugin; the invite mutation only
+		// needs organization.inviteMember, so the teams-typed cast is safe.
+		authClient as unknown as OrganizationTeamsAuthClient,
+		{
+			onSuccess: (invitation) => {
+				if (orgId) {
+					void invalidateMemberQueries(queryClient, orgId);
+				}
+				onInvited?.(invitation);
+			},
+		},
+	);
+}

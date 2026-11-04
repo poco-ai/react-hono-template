@@ -155,8 +155,6 @@ export const issueArchiveAction = (
 	issue: Pick<IssueDetailDto, "archivedAt">,
 ): IssueArchiveAction => (issue.archivedAt ? "restore" : "archive");
 
-export type IssueSort = "updated" | "created" | "priority";
-
 /**
  * Issue list request state. The structured filter, sort list and grouping are
  * sent as-is; legacy flat params are converted by `features/issues/query`.

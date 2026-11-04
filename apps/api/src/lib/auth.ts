@@ -270,7 +270,12 @@ export const createAuth = ({
 						error instanceof ApiError &&
 						error.code === ApiErrorCode.PLAN_LIMIT_EXCEEDED
 					) {
-						throw new APIError("FORBIDDEN", { message: error.message });
+						// The machine code rides along so the web can translate the
+						// quota error instead of pattern-matching the message.
+						throw new APIError("FORBIDDEN", {
+							message: error.message,
+							code: error.code,
+						});
 					}
 					throw error;
 				}

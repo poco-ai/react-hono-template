@@ -166,28 +166,6 @@ export function applyReactionToggle(
 	);
 }
 
-export function useCreateComment(
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-	callbacks?: MutationCallbacks<
-		Awaited<ReturnType<typeof createComment>>,
-		string
-	>,
-) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
-		mutationFn: (input: string) =>
-			createComment(orgId, projectId, issueNumber, input),
-		onSuccess: (...args) => {
-			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
-			return callbacks?.onSuccess?.(...args);
-		},
-	});
-}
-
 const isAbortError = (error: unknown): boolean =>
 	typeof error === "object" &&
 	error !== null &&

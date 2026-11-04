@@ -38,6 +38,10 @@ test("views consume feature data instead of owning business requests or cache po
 				const module = (node.moduleSpecifier as ts.StringLiteral).text;
 				assert.ok(!module.includes("lib/queries"), file);
 				if (module === "@tanstack/react-query") {
+					// Note: `features/ai/chat-provider.tsx` (in the features root,
+					// not components/) is the documented single owner of the chat
+					// stream and may forward a queryClient to the AI data layer.
+					// Files under features/*/components must stay free of these.
 					assert.doesNotMatch(
 						node.getText(tree),
 						/\b(useMutation|useQueryClient)\b/,

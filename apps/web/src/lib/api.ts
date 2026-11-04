@@ -25,11 +25,5 @@ export async function unwrap<T>(
 
 export function isPlanLimitError(err: unknown): boolean {
 	const code = errorCode(err);
-	if (code === "PLAN_LIMIT_EXCEEDED" || code === "VIEW_LIMIT_REACHED") {
-		return true;
-	}
-	return (
-		err instanceof Error &&
-		/plan limit reached|PLAN_LIMIT_EXCEEDED/i.test(err.message)
-	);
+	return code === "PLAN_LIMIT_EXCEEDED" || code === "VIEW_LIMIT_REACHED";
 }

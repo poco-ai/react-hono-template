@@ -9,14 +9,14 @@ import { CircleAlert, Map as MapIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { ProjectHealthBadge } from "@/features/projects/components/project-health-badge";
+import { roadmapQuery } from "@/features/roadmap/data";
 import {
 	isWithinTimeline,
 	roadmapMonthTicks,
-	roadmapQuery,
 	type TimelineWindow,
 	timelineBarGeometry,
 	timelinePercent,
-} from "@/features/roadmap/data";
+} from "@/features/roadmap/timeline";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 

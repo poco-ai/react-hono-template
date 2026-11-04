@@ -520,6 +520,8 @@ const en = {
 			VIEW_LIMIT_REACHED:
 				"You have reached the saved-view limit of your plan. Upgrade, or ask an owner or admin to share a view with the team.",
 			VIEW_NOT_FOUND: "That view no longer exists or is not visible to you.",
+			MCP_FORBIDDEN_SCOPE:
+				"This action requires an API key with broader permissions.",
 		},
 		orgSettingsRequired:
 			"Only owners and admins can change organization settings.",
