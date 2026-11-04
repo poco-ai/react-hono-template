@@ -32,6 +32,7 @@ import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectUpdatesRoutes } from "./routes/project-updates";
 import { createProjectsRoutes } from "./routes/projects";
 import { createRelationsRoutes } from "./routes/relations";
+import { createSearchRoutes } from "./routes/search";
 import { createStatusesRoutes } from "./routes/statuses";
 import { createViewsRoutes } from "./routes/views";
 import { createWebhooksRoutes } from "./routes/webhooks";
@@ -109,6 +110,7 @@ export const createRoutes = ({
 				createNotificationsRoutes(dependencies.services.notificationService),
 			)
 			.route("/", createRelationsRoutes(dependencies.services.relationService))
+			.route("/", createSearchRoutes(dependencies.services.searchService))
 			.route("/", createCommentsRoutes(dependencies.services.commentService))
 			.route(
 				"/",

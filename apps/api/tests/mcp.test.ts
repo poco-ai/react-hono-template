@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -901,6 +901,10 @@ test("the migration creating MCP auth tables exists", () => {
 	);
 	const sql = readdirSync(migrationsDir, { withFileTypes: true })
 		.filter((entry) => entry.isDirectory())
+		// `drizzle/fts/` holds the re-runnable search DDL, not a migration.
+		.filter((entry) =>
+			existsSync(join(migrationsDir, entry.name, "migration.sql")),
+		)
 		.map((entry) =>
 			readFileSync(join(migrationsDir, entry.name, "migration.sql"), "utf8"),
 		)

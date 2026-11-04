@@ -29,6 +29,7 @@ import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
 import { createProjectUpdateDao } from "./dao/project-update.dao";
 import { createRelationDao } from "./dao/relation.dao";
+import { createSearchDao } from "./dao/search.dao";
 import { createStatusDao } from "./dao/status.dao";
 import { createViewDao } from "./dao/view.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
@@ -65,6 +66,7 @@ import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
 import { createProjectUpdateService } from "./services/project-update.service";
 import { createRelationService } from "./services/relation.service";
+import { createSearchService } from "./services/search.service";
 import { createStatusService } from "./services/status.service";
 import { createStorageUsageService } from "./services/storage-usage.service";
 import { createViewService } from "./services/view.service";
@@ -140,6 +142,8 @@ export const createDependencies = ({
 	const aiUsageDao = createAiUsageDao(db);
 	const orgAiSettingsDao = createOrgAiSettingsDao(db);
 	const planService = createPlanService(billingDao, cache);
+
+	const searchService = createSearchService(createSearchDao(db));
 
 	const webhookDeliveryService = createWebhookDeliveryService({
 		webhookDao,
@@ -265,6 +269,7 @@ export const createDependencies = ({
 			viewService,
 			cycleService,
 			projectUpdateService,
+			searchService,
 		},
 		daos: {
 			memberDao,
@@ -352,6 +357,7 @@ export const createDependencies = ({
 			relationService,
 			mediaService,
 			activityService,
+			searchService,
 			notificationService,
 			apiKeyService,
 			webhookService,

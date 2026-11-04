@@ -56,6 +56,7 @@ import { useOrgRole } from "@/features/organizations/use-org-role";
 import { ProjectUpdatesSheet } from "@/features/project-updates/components/project-updates-sheet";
 import { ProjectMeta } from "@/features/projects/components/project-meta";
 import { projectQuery, projectsQuery } from "@/features/projects/data";
+import { useRecordRecentProject } from "@/features/search/data";
 import { defaultStatusOf, statusesQuery } from "@/features/statuses/data";
 import { ViewSwitcher } from "@/features/views/components/view-switcher";
 import { type ViewDto, viewsQuery } from "@/features/views/data";
@@ -110,6 +111,17 @@ export function ProjectIssuesPage({
 	const sortField = primarySortField(resolved.sorts);
 	const { canManage } = useOrgRole(orgId);
 	const { data: session } = useSession();
+	useRecordRecentProject(
+		orgId,
+		session?.user.id,
+		project.data
+			? {
+					projectId: project.data.id,
+					name: project.data.name,
+					key: project.data.key,
+				}
+			: null,
+	);
 	const [dirtyView, setDirtyView] = useState<ViewDto | null>(null);
 
 	useEffect(() => {

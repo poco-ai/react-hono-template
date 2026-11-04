@@ -11,6 +11,7 @@ import type { LabelService } from "../services/label.service";
 import type { ProjectService } from "../services/project.service";
 import type { ProjectUpdateService } from "../services/project-update.service";
 import type { RelationService } from "../services/relation.service";
+import type { SearchService } from "../services/search.service";
 import type { StatusService } from "../services/status.service";
 import type { ViewService } from "../services/view.service";
 
@@ -139,6 +140,7 @@ export type CapabilityServices = {
 		ProjectUpdateService,
 		"listUpdates" | "createUpdate"
 	>;
+	searchService: Pick<SearchService, "searchAll">;
 };
 
 export type CapabilityDaos = {

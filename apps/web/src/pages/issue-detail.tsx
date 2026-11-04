@@ -28,6 +28,7 @@ import { MutationError } from "@/components/mutation-error";
 import { NotFoundState } from "@/components/not-found-state";
 import { IssueActivityTimeline } from "@/features/activities/components/issue-activity";
 import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
+import { useSession } from "@/features/auth/data";
 import { IssueComments } from "@/features/comments/components/issue-comments";
 import { cyclesQuery } from "@/features/cycles/data";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
@@ -45,6 +46,7 @@ import { membersQuery } from "@/features/members/data";
 import { IssueSubscriptionButton } from "@/features/notifications/components/issue-subscription-button";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
+import { useRecordRecentIssue } from "@/features/search/data";
 import { statusesQuery } from "@/features/statuses/data";
 import { isNotFoundError } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
@@ -71,6 +73,20 @@ export function IssueDetailPage({
 	const statuses = useQuery(statusesQuery(orgId));
 	const cycles = useQuery(cyclesQuery(orgId, projectId));
 	const frozen = useOrgFrozen(orgId);
+	const { data: session } = useSession();
+
+	useRecordRecentIssue(
+		orgId,
+		session?.user.id,
+		issue.data && project.data
+			? {
+					projectId,
+					issueNumber: issue.data.number,
+					identifier: `${project.data.key}-${issue.data.number}`,
+					title: issue.data.title,
+				}
+			: null,
+	);
 
 	const [title, setTitle] = useState("");
 	const [deleteOpen, setDeleteOpen] = useState(false);

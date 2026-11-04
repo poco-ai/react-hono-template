@@ -23,6 +23,7 @@ export * from "./schemas/pagination";
 export * from "./schemas/project";
 export * from "./schemas/project-update";
 export * from "./schemas/relation";
+export * from "./schemas/search";
 export * from "./schemas/status";
 export * from "./schemas/view";
 export * from "./schemas/webhook";

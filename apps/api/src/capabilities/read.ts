@@ -10,6 +10,9 @@ import {
 	issueQuerySchema,
 	issueQuerySortSchema,
 	projectUpdateListQuerySchema,
+	SEARCH_DEFAULT_LIMIT,
+	SEARCH_MAX_LIMIT,
+	SEARCH_MAX_QUERY_LENGTH,
 } from "@workspace/shared";
 import { z } from "zod";
 import type { ActivityDto, OrgActivityDto } from "../dto/activity.dto";
@@ -204,6 +207,65 @@ export const viewSummarySchema = z.object({
 	query: issueQuerySchema,
 	createdAt: z.string(),
 	updatedAt: z.string(),
+});
+
+export const searchUserSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	image: z.string().nullable(),
+});
+
+export const searchIssueHitSchema = z.object({
+	id: z.string(),
+	projectId: z.string(),
+	projectKey: z.string(),
+	number: z.number().int(),
+	/** Human-readable reference, e.g. WEB-12. */
+	identifier: z.string(),
+	title: z.string(),
+	descriptionExcerpt: z.string().nullable(),
+	statusId: z.string(),
+	statusName: z.string(),
+	statusColor: z.string(),
+	statusCategory: z.string(),
+	priority: z.number().int(),
+	assignee: searchUserSchema.nullable(),
+	updatedAt: z.string(),
+});
+
+export const searchCommentHitSchema = z.object({
+	id: z.string(),
+	body: z.string(),
+	author: searchUserSchema,
+	issue: z.object({
+		id: z.string(),
+		projectId: z.string(),
+		projectKey: z.string(),
+		number: z.number().int(),
+		identifier: z.string(),
+		title: z.string(),
+	}),
+	createdAt: z.string(),
+});
+
+export const searchProjectHitSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	key: z.string(),
+	descriptionExcerpt: z.string().nullable(),
+	color: z.string().nullable(),
+	archived: z.boolean(),
+	updatedAt: z.string(),
+});
+
+/** Members are matched by name/email but never expose their email address. */
+export const searchMemberHitSchema = searchUserSchema;
+
+export const searchResultsSchema = z.object({
+	issues: z.array(searchIssueHitSchema),
+	comments: z.array(searchCommentHitSchema),
+	projects: z.array(searchProjectHitSchema),
+	members: z.array(searchMemberHitSchema),
 });
 
 const pageMetaSchema = {
@@ -811,6 +873,53 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 							issueLink(ctx, orgId, issue.projectId, issue.number),
 						),
 					),
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "search_all",
+			titleKey: "ai.capabilities.search_all.title",
+			description:
+				"Search the whole organization in one call: issues and comments by full text, projects by name/description and members by name or email. Every section is capped by limit (default 8, max 20). Archived projects are excluded, together with their issues and comments. Use it for quick lookups such as a keyword, a project name or a teammate's name.",
+			input: z.object({
+				q: z.string().trim().min(1).max(SEARCH_MAX_QUERY_LENGTH),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(SEARCH_MAX_LIMIT)
+					.default(SEARCH_DEFAULT_LIMIT),
+			}),
+			output: searchResultsSchema,
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const results = await deps.services.searchService.searchAll(orgId, {
+					q: input.q,
+					limit: input.limit,
+				});
+				return {
+					data: results,
+					summary: `Found ${results.issues.length} issue(s), ${results.comments.length} comment(s), ${results.projects.length} project(s) and ${results.members.length} member(s) matching "${input.q}".`,
+					links: uniqueLinks([
+						orgLink(ctx, orgId),
+						...results.issues.map((issue) =>
+							issueLink(ctx, orgId, issue.projectId, issue.number),
+						),
+						...results.comments.map((comment) =>
+							issueLink(
+								ctx,
+								orgId,
+								comment.issue.projectId,
+								comment.issue.number,
+							),
+						),
+						...results.projects.map((project) =>
+							projectLink(ctx, orgId, project.id),
+						),
+					]),
 				};
 			},
 		}),
