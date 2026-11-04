@@ -63,7 +63,6 @@ const decodeCursor = (raw: string): AiConversationCursor => {
 		// fall through to the validation error
 	}
 	throw new ApiError(
-		400,
 		ApiErrorCode.INVALID_PARAM,
 		"Invalid conversation cursor.",
 	);
@@ -90,7 +89,6 @@ export const createAiConversationService = ({
 		const conversation = await conversationDao.findById(orgId, userId, id);
 		if (!conversation) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.AI_CONVERSATION_NOT_FOUND,
 				`AI conversation ${id} not found.`,
 			);
@@ -173,7 +171,6 @@ export const createAiConversationService = ({
 			const updated = await conversationDao.update(orgId, userId, id, input);
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.AI_CONVERSATION_NOT_FOUND,
 					`AI conversation ${id} not found.`,
 				);

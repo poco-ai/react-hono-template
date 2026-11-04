@@ -1,11 +1,10 @@
-import {
-	ApiError,
-	ApiErrorCode,
-	type CreateFavoriteInput,
-	FAVORITE_ENTITY_TYPES,
-	type FavoriteEntityType,
+import type {
+	CreateFavoriteInput,
+	FavoriteEntityType,
 } from "@workspace/shared";
+import { FAVORITE_ENTITY_TYPES } from "@workspace/shared";
 import type { Context } from "hono";
+import { requireEnumParamValue } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -13,17 +12,12 @@ import type { FavoriteService } from "../services/favorite.service";
 
 type Env = SessionEnv & OrgEnv;
 
-const requireEntityType = (c: Context<Env>): FavoriteEntityType => {
-	const value = c.req.param("entityType") ?? "";
-	if (!(FAVORITE_ENTITY_TYPES as readonly string[]).includes(value)) {
-		throw new ApiError(
-			400,
-			ApiErrorCode.INVALID_PARAM,
-			`entityType must be one of ${FAVORITE_ENTITY_TYPES.join(", ")}`,
-		);
-	}
-	return value as FavoriteEntityType;
-};
+const requireEntityType = (c: Context<Env>): FavoriteEntityType =>
+	requireEnumParamValue(
+		c.req.param("entityType"),
+		"entityType",
+		FAVORITE_ENTITY_TYPES,
+	);
 
 export const createFavoriteController = (service: FavoriteService) => ({
 	list: async (c: Context<Env>) =>

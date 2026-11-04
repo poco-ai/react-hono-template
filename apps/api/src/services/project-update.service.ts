@@ -17,7 +17,6 @@ const MODERATOR_ROLES = new Set(["owner", "admin"]);
 
 const updateNotFound = (id: string) =>
 	new ApiError(
-		404,
 		ApiErrorCode.PROJECT_UPDATE_NOT_FOUND,
 		`Project update ${id} not found`,
 	);
@@ -33,7 +32,6 @@ export const createProjectUpdateService = ({
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
@@ -46,7 +44,6 @@ export const createProjectUpdateService = ({
 		const project = await requireProject(orgId, projectId);
 		if (project.archived) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.PROJECT_ARCHIVED,
 				"Project is archived and read-only",
 			);
@@ -74,7 +71,6 @@ export const createProjectUpdateService = ({
 			return;
 		}
 		throw new ApiError(
-			403,
 			ApiErrorCode.FORBIDDEN,
 			"Only the author or an organization admin can change this update",
 		);

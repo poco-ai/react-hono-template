@@ -38,7 +38,6 @@ export const resolveRoadmapWindow = (
 		: defaults.to;
 	if (from.getTime() >= requestedTo.getTime()) {
 		throw new ApiError(
-			400,
 			ApiErrorCode.VALIDATION,
 			"`from` must be on or before `to`",
 		);

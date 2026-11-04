@@ -39,7 +39,6 @@ export const createIssueSubscriptionService = ({
 		);
 		if (!issue) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.ISSUE_NOT_FOUND,
 				`Issue #${number} not found`,
 			);

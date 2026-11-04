@@ -57,11 +57,7 @@ const appFor = ({
 			mediaService: {
 				getMedia: async (assetId: string) => {
 					if (assetId !== "asset-1") {
-						throw new ApiError(
-							404,
-							ApiErrorCode.ASSET_NOT_FOUND,
-							"Media not found",
-						);
+						throw new ApiError(ApiErrorCode.ASSET_NOT_FOUND, "Media not found");
 					}
 					return {
 						body: new ReadableStream({

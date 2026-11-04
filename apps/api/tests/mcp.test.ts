@@ -193,7 +193,6 @@ const createLayer = (
 					} as unknown as CapabilityResult<TData>;
 				default:
 					throw new ApiError(
-						404,
 						ApiErrorCode.NOT_FOUND,
 						`Unknown capability ${name}`,
 					);
@@ -548,7 +547,7 @@ test("capability errors become MCP tool errors instead of JSON-RPC errors", asyn
 	assert.ok("principal" in auth);
 	const layer = createLayer({
 		get_issue: async () => {
-			throw new ApiError(404, ApiErrorCode.ISSUE_NOT_FOUND, "Issue not found");
+			throw new ApiError(ApiErrorCode.ISSUE_NOT_FOUND, "Issue not found");
 		},
 	});
 	const handler = handlerFor(

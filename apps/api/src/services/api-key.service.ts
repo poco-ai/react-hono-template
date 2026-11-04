@@ -52,7 +52,6 @@ export const createApiKeyService = (dao: ApiKeyDao) => ({
 		const existing = await dao.findById(orgId, keyId);
 		if (!existing) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.API_KEY_NOT_FOUND,
 				`API key ${keyId} not found`,
 			);

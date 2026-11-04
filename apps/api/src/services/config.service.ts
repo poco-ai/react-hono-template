@@ -44,7 +44,6 @@ export const createConfigService = (cache: CacheStore) => {
 		const config = runtimeConfigUpdateSchema.parse(input);
 		if (!(await cache.set(CONFIG_KEY, config))) {
 			throw new ApiError(
-				503,
 				ApiErrorCode.SERVICE_UNAVAILABLE,
 				"Configuration storage unavailable",
 			);

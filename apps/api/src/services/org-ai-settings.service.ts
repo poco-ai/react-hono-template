@@ -47,7 +47,6 @@ export const createOrgAiSettingsService = ({
 				!provider.models.includes(input.defaultModel)
 			) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					`Model "${input.defaultModel}" is not allowlisted. Available models: ${
 						provider.models.join(", ") || "none"

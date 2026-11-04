@@ -15,18 +15,13 @@ export const createAdminUserService = (dao: AdminUserDao) => ({
 	) => {
 		if (targetId === actorId) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"You cannot change your own role",
 			);
 		}
 		const target = await dao.findById(targetId);
 		if (!target) {
-			throw new ApiError(
-				404,
-				ApiErrorCode.NOT_FOUND,
-				`User ${targetId} not found`,
-			);
+			throw new ApiError(ApiErrorCode.NOT_FOUND, `User ${targetId} not found`);
 		}
 		return dao.updateRole(targetId, role);
 	},
@@ -34,25 +29,13 @@ export const createAdminUserService = (dao: AdminUserDao) => ({
 	banUser: async (actorId: string, targetId: string, banReason?: string) => {
 		const target = await dao.findById(targetId);
 		if (!target) {
-			throw new ApiError(
-				404,
-				ApiErrorCode.NOT_FOUND,
-				`User ${targetId} not found`,
-			);
+			throw new ApiError(ApiErrorCode.NOT_FOUND, `User ${targetId} not found`);
 		}
 		if (target.id === actorId) {
-			throw new ApiError(
-				403,
-				ApiErrorCode.FORBIDDEN,
-				"You cannot ban yourself",
-			);
+			throw new ApiError(ApiErrorCode.FORBIDDEN, "You cannot ban yourself");
 		}
 		if (target.role === "admin") {
-			throw new ApiError(
-				403,
-				ApiErrorCode.FORBIDDEN,
-				"You cannot ban an admin",
-			);
+			throw new ApiError(ApiErrorCode.FORBIDDEN, "You cannot ban an admin");
 		}
 		return dao.ban(targetId, {
 			banReason: banReason ?? null,
@@ -63,11 +46,7 @@ export const createAdminUserService = (dao: AdminUserDao) => ({
 	unbanUser: async (targetId: string) => {
 		const target = await dao.findById(targetId);
 		if (!target) {
-			throw new ApiError(
-				404,
-				ApiErrorCode.NOT_FOUND,
-				`User ${targetId} not found`,
-			);
+			throw new ApiError(ApiErrorCode.NOT_FOUND, `User ${targetId} not found`);
 		}
 		return dao.unban(targetId);
 	},

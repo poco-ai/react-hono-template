@@ -67,7 +67,7 @@ const parseAllowlist = (value: string | undefined): string[] => {
 };
 
 const unavailable = (message: string): never => {
-	throw new ApiError(503, ApiErrorCode.AI_NOT_CONFIGURED, message);
+	throw new ApiError(ApiErrorCode.AI_NOT_CONFIGURED, message);
 };
 
 const parseKind = (value: string | undefined): AiProviderKind => {
@@ -195,7 +195,6 @@ export const createAiProvider = (config: AiProviderConfig = {}): AiProvider => {
 			resolveModel: (requested) => {
 				if (requested && requested !== modelId) {
 					throw new ApiError(
-						400,
 						ApiErrorCode.VALIDATION,
 						`Model "${requested}" is not available in mock mode. Use "${modelId}".`,
 					);
@@ -229,7 +228,6 @@ export const createAiProvider = (config: AiProviderConfig = {}): AiProvider => {
 		const id = requested?.trim() || (modelId as string);
 		if (!models.includes(id)) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.VALIDATION,
 				`Model "${id}" is not allowlisted. Available models: ${models.join(", ")}.`,
 			);

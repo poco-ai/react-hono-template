@@ -200,7 +200,6 @@ export const createNotificationService = ({
 			const updated = await notificationDao.markRead(orgId, userId, id, readAt);
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOTIFICATION_NOT_FOUND,
 					`Notification ${id} not found`,
 				);
@@ -220,7 +219,6 @@ export const createNotificationService = ({
 			const deleted = await notificationDao.delete(orgId, userId, id);
 			if (!deleted) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOTIFICATION_NOT_FOUND,
 					`Notification ${id} not found`,
 				);

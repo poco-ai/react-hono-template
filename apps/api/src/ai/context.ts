@@ -28,7 +28,6 @@ export const resolveAiContext = async (
 		const project = await daos.projectDao.findById(orgId, context.id);
 		if (!project) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.VALIDATION,
 				"AI context project not found in this organization.",
 			);
@@ -43,7 +42,6 @@ export const resolveAiContext = async (
 	const issue = await daos.issueDao.findById(orgId, context.id);
 	if (!issue) {
 		throw new ApiError(
-			400,
 			ApiErrorCode.VALIDATION,
 			"AI context issue not found in this organization.",
 		);

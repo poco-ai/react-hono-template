@@ -91,7 +91,6 @@ export const createAiUsageService = ({
 						? " Upgrade to Pro for a larger monthly AI quota."
 						: "";
 				throw new ApiError(
-					429,
 					ApiErrorCode.AI_QUOTA_EXCEEDED,
 					`Monthly AI token quota exceeded: ${summary.totalTokens} of ${summary.limits.monthlyTokens} tokens used on the ${plan} plan.${upgrade}`,
 				);
@@ -122,7 +121,6 @@ export const createAiUsageService = ({
 			const { success } = await limiter.limit({ key });
 			if (!success) {
 				throw new ApiError(
-					429,
 					ApiErrorCode.AI_RATE_LIMITED,
 					`AI rate limit exceeded: max ${PLANS[plan].aiRequestsPerMinute} chat requests per minute.`,
 				);

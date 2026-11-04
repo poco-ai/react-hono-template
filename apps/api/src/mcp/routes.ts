@@ -1,11 +1,11 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
-import { API_KEY_SCOPES, PLANS } from "@workspace/shared";
+import { API_KEY_SCOPES, ApiErrorCode, PLANS } from "@workspace/shared";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import type { Dependencies } from "../dependencies";
 import type { Auth } from "../lib/auth";
 import { backgroundFromContext } from "../lib/background";
-import { ok } from "../lib/response";
+import { fail, ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import { createMcpAudit, type McpAuditBackground } from "./audit";
@@ -43,14 +43,10 @@ export const createMcpEndpoint = ({
 }) => {
 	return async (c: Context): Promise<Response> => {
 		if (!config.enabled) {
-			return c.json(
-				{
-					ok: false,
-					error: {
-						code: "NOT_FOUND",
-						message: "The MCP server is disabled.",
-					},
-				},
+			return fail(
+				c,
+				ApiErrorCode.NOT_FOUND,
+				"The MCP server is disabled.",
 				404,
 			);
 		}

@@ -405,7 +405,7 @@ test("removing a relation that belongs to another issue returns 404", async () =
 
 	await assert.rejects(
 		service.deleteRelation("org", "project-1", 3, "user-1", created.id),
-		isApiError(ApiErrorCode.ISSUE_RELATION_INVALID, 404),
+		isApiError(ApiErrorCode.NOT_FOUND, 404),
 	);
 	assert.equal(state.relations.length, 1);
 	assert.equal(state.activities.length, 1);
@@ -781,11 +781,7 @@ test("relation capabilities are exposed and execute through the capability layer
 				getIssueById: async (_orgId: string, id: string) => {
 					if (id === "issue-1") return issue();
 					if (id === "issue-2") return second;
-					throw new ApiError(
-						404,
-						ApiErrorCode.ISSUE_NOT_FOUND,
-						"Issue not found",
-					);
+					throw new ApiError(ApiErrorCode.ISSUE_NOT_FOUND, "Issue not found");
 				},
 				getIssue: async () => issue(),
 			},

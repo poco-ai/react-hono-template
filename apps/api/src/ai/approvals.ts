@@ -90,7 +90,6 @@ export const verifyApprovalResponses = async (
 			);
 			if (!stored) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.AI_APPROVAL_NOT_FOUND,
 					`No pending approval found for tool call ${part.toolCallId}.`,
 				);
@@ -111,7 +110,6 @@ export const verifyApprovalResponses = async (
 				const submittedHash = await sha256Hex(JSON.stringify(input ?? null));
 				if (submittedHash !== stored.inputHash) {
 					throw new ApiError(
-						400,
 						ApiErrorCode.AI_APPROVAL_NOT_FOUND,
 						`The approved input for tool call ${part.toolCallId} does not match the proposed action.`,
 					);

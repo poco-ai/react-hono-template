@@ -16,7 +16,13 @@ export type OrgEnv = {
 	};
 };
 
-export const requireOrgMember = (memberDao: MemberDao) =>
+export const requireOrgMember = (
+	memberDao: MemberDao,
+	{
+		/** Route suffixes after `/api/orgs/:orgId` whose writes bypass the freeze guard. */
+		freezeWriteExempt = [],
+	}: { freezeWriteExempt?: readonly string[] } = {},
+) =>
 	createMiddleware<SessionEnv & OrgEnv>(async (c, next) => {
 		const orgId = c.req.param("orgId");
 		const session = c.get("session");
@@ -25,27 +31,16 @@ export const requireOrgMember = (memberDao: MemberDao) =>
 				? await memberDao.findByOrgAndUser(orgId, session.user.id)
 				: undefined;
 		if (!orgId || !membership) {
-			throw new ApiError(404, ApiErrorCode.NOT_FOUND, "Organization not found");
+			throw new ApiError(ApiErrorCode.NOT_FOUND, "Organization not found");
 		}
 		if (membership.frozen) {
 			const method = c.req.method.toUpperCase();
-			const isBillingRoute = c.req.path.startsWith(
-				`/api/orgs/${orgId}/billing`,
+			const suffix = c.req.path.slice(`/api/orgs/${orgId}`.length);
+			const exempt = freezeWriteExempt.some(
+				(prefix) => suffix === prefix || suffix.startsWith(`${prefix}/`),
 			);
-			// AI chat is read-only by default; the capability executor blocks
-			// every write tool when the organization is frozen.
-			const isAiChatRoute = c.req.path.startsWith(`/api/orgs/${orgId}/ai/chat`);
-			if (
-				method !== "GET" &&
-				method !== "HEAD" &&
-				!isBillingRoute &&
-				!isAiChatRoute
-			) {
-				throw new ApiError(
-					403,
-					ApiErrorCode.ORG_FROZEN,
-					"Organization is frozen",
-				);
+			if (method !== "GET" && method !== "HEAD" && !exempt) {
+				throw new ApiError(ApiErrorCode.ORG_FROZEN, "Organization is frozen");
 			}
 		}
 		c.set("orgMember", {
@@ -62,7 +57,6 @@ export const requireOrgRole = (...roles: string[]) =>
 		const orgMember = c.get("orgMember");
 		if (!orgMember || !roles.includes(orgMember.role)) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"You do not have permission to perform this action",
 			);

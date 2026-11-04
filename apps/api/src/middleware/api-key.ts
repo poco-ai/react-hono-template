@@ -95,11 +95,7 @@ export const forbidFrozenOrg = (memberDao: MemberDao) =>
 			return fail(c, ApiErrorCode.UNAUTHORIZED, "Invalid API key", 401);
 		}
 		if (await memberDao.isOrgFrozen(auth.orgId)) {
-			throw new ApiError(
-				403,
-				ApiErrorCode.ORG_FROZEN,
-				"Organization is frozen",
-			);
+			throw new ApiError(ApiErrorCode.ORG_FROZEN, "Organization is frozen");
 		}
 		await next();
 	});

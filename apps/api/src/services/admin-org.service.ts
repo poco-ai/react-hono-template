@@ -17,7 +17,6 @@ export const createAdminOrgService = (dao: OrganizationDao) => ({
 	freeze: async (orgId: string) => {
 		if (!(await dao.findById(orgId))) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.NOT_FOUND,
 				`Organization ${orgId} not found`,
 			);
@@ -28,7 +27,6 @@ export const createAdminOrgService = (dao: OrganizationDao) => ({
 	unfreeze: async (orgId: string) => {
 		if (!(await dao.findById(orgId))) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.NOT_FOUND,
 				`Organization ${orgId} not found`,
 			);

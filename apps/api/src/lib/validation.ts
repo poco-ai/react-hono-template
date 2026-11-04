@@ -16,11 +16,7 @@ export const validate = <T, const S extends "json" | "query">(
 	validator(source, (value) => {
 		const result = schema.safeParse(value);
 		if (result.error) {
-			throw new ApiError(
-				400,
-				ApiErrorCode.VALIDATION,
-				formatZodError(result.error),
-			);
+			throw new ApiError(ApiErrorCode.VALIDATION, formatZodError(result.error));
 		}
 		return result.data as T;
 	});

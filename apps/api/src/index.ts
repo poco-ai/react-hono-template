@@ -8,6 +8,7 @@ import { db } from "./db";
 import { createDependencies } from "./dependencies";
 import { createAuth } from "./lib/auth";
 import { createKvCache } from "./lib/kv/cache";
+import { createErrorHandler } from "./lib/on-error";
 import { fail } from "./lib/response";
 import type { SocialProvidersConfig } from "./lib/social-providers";
 import { s3ClientFromEnv } from "./lib/storage/s3-client";
@@ -26,6 +27,11 @@ const trustedOrigins = [
 ];
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Top-level error mapping: handlers mounted directly on this app (Stripe
+// webhook, /mcp, /api/auth/*) are outside the sub-apps and need the same
+// envelope guarantee as the main and v1 APIs.
+app.onError(createErrorHandler("worker"));
 
 app.use(logger());
 app.use(

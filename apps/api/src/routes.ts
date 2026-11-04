@@ -1,9 +1,7 @@
-import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { Hono } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Dependencies } from "./dependencies";
 import type { Auth } from "./lib/auth";
-import { fail } from "./lib/response";
+import { createErrorHandler } from "./lib/on-error";
 import type { SocialProvidersConfig } from "./lib/social-providers";
 import { type McpConfig, resolveMcpConfig } from "./mcp/config";
 import { createMcpRoutes } from "./mcp/routes";
@@ -54,23 +52,7 @@ export const createRoutes = ({
 }) => {
 	return (
 		new Hono()
-			.onError((err, c) => {
-				if (err instanceof ApiError) {
-					return fail(
-						c,
-						err.code,
-						err.message,
-						err.status as ContentfulStatusCode,
-					);
-				}
-				console.error("[api] Unhandled error:", err);
-				return fail(
-					c,
-					ApiErrorCode.INTERNAL_ERROR,
-					"Internal Server Error",
-					500,
-				);
-			})
+			.onError(createErrorHandler("api"))
 			.route("/", createMediaRoutes(dependencies.services.mediaService))
 			.route("/", createBootstrapRoutes(dependencies.services.bootstrapService))
 			.route("/", createConfigRoutes(dependencies.services.configService))
@@ -88,10 +70,15 @@ export const createRoutes = ({
 			)
 			// The authenticated org wildcard prefix is mounted before the resource
 			// routes: any new resource path must live under /api/orgs/:orgId.
+			// Frozen organizations keep two write paths: /billing (to manage or
+			// restore the subscription) and /ai/chat (read-only by default — the
+			// capability executor blocks every write tool while frozen).
 			.use(
 				"/api/orgs/:orgId/*",
 				requireAuth(auth),
-				requireOrgMember(dependencies.daos.memberDao),
+				requireOrgMember(dependencies.daos.memberDao, {
+					freezeWriteExempt: ["/billing", "/ai/chat"],
+				}),
 			)
 			// Mounted after the org middleware so /api/orgs/:orgId/mcp/* is
 			// session-authenticated; a route registered before `use` bypasses it.

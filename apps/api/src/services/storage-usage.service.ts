@@ -63,7 +63,6 @@ export const createStorageUsageService = ({
 				size > limits.attachmentMaxSize
 			) {
 				throw new ApiError(
-					413,
 					ApiErrorCode.FILE_TOO_LARGE,
 					`Attachment size must be between 1 byte and ${limits.attachmentMaxSize} bytes (plan limit)`,
 				);
@@ -75,7 +74,6 @@ export const createStorageUsageService = ({
 			]);
 			if (attachments + pending + media + size > limits.storageBytes) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.STORAGE_QUOTA_EXCEEDED,
 					"Organization storage quota exceeded",
 				);
@@ -92,7 +90,6 @@ export const createStorageUsageService = ({
 				]);
 				if (existing + reserved + 1 > limits.attachmentsPerIssue) {
 					throw new ApiError(
-						403,
 						ApiErrorCode.STORAGE_QUOTA_EXCEEDED,
 						"Issue attachment limit exceeded",
 					);
@@ -110,7 +107,6 @@ export const createStorageUsageService = ({
 			]);
 			if (existing + reserved + 1 > limits.attachmentsPerComment) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.STORAGE_QUOTA_EXCEEDED,
 					"Comment attachment limit exceeded",
 				);

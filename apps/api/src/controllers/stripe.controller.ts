@@ -1,4 +1,4 @@
-import { ApiErrorCode } from "@workspace/shared";
+import { ApiError, ApiErrorCode } from "@workspace/shared";
 import type { Context } from "hono";
 import type Stripe from "stripe";
 import { fail, ok } from "../lib/response";
@@ -36,11 +36,10 @@ export const createStripeController = ({
 			);
 		} catch (err) {
 			console.error("[stripe] webhook signature verification failed:", err);
-			return fail(
-				c,
-				ApiErrorCode.BILLING_ERROR,
+			// Signature failures are malformed webhook input, not billing errors.
+			throw new ApiError(
+				ApiErrorCode.VALIDATION,
 				"Invalid Stripe webhook signature",
-				400,
 			);
 		}
 		await service.handleWebhookEvent(event);

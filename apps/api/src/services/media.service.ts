@@ -41,7 +41,6 @@ const extensionFor = (contentType: string) => {
 	if (contentType === "image/png") return "png";
 	if (contentType === "image/webp") return "webp";
 	throw new ApiError(
-		415,
 		ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
 		`Content type "${contentType}" is not allowed`,
 	);
@@ -55,7 +54,6 @@ const assetIdFromUrl = (url: string) => {
 const requireStorage = (storage: StorageAdapter | null): StorageAdapter => {
 	if (!storage) {
 		throw new ApiError(
-			503,
 			ApiErrorCode.SERVICE_UNAVAILABLE,
 			"Storage is not configured",
 		);
@@ -66,14 +64,12 @@ const requireStorage = (storage: StorageAdapter | null): StorageAdapter => {
 const assertImage = (contentType: string, size: number) => {
 	if (!IMAGE_TYPES.has(contentType)) {
 		throw new ApiError(
-			415,
 			ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
 			`Content type "${contentType}" is not allowed`,
 		);
 	}
 	if (!Number.isSafeInteger(size) || size < 1 || size > MEDIA_MAX_SIZE) {
 		throw new ApiError(
-			413,
 			ApiErrorCode.FILE_TOO_LARGE,
 			`Image size must be between 1 byte and ${MEDIA_MAX_SIZE} bytes`,
 		);
@@ -167,7 +163,6 @@ export const createMediaService = ({
 			!input.key.startsWith(expectedPrefix)
 		) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.UPLOAD_NOT_PENDING,
 				"Upload was not reserved or has expired",
 			);
@@ -177,21 +172,18 @@ export const createMediaService = ({
 		const stat = await s3.stat(input.key);
 		if (!stat) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.STORAGE_ERROR,
 				"No uploaded object found for this key",
 			);
 		}
 		if (stat.size > MEDIA_MAX_SIZE || stat.size > pending.declaredSize) {
 			throw new ApiError(
-				413,
 				ApiErrorCode.FILE_TOO_LARGE,
 				`Uploaded object is ${stat.size} bytes, exceeding the reserved limit`,
 			);
 		}
 		if (stat.contentType && !stat.contentType.startsWith(pending.contentType)) {
 			throw new ApiError(
-				415,
 				ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
 				"Uploaded object content type does not match the reserved upload",
 			);
@@ -199,7 +191,6 @@ export const createMediaService = ({
 		const existing = await mediaAssetDao.findByKey(input.key);
 		if (existing) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.CONFLICT,
 				"This object has already been registered",
 			);
@@ -259,18 +250,13 @@ export const createMediaService = ({
 			const assetId = assetIdFromUrl(url);
 			if (!assetId) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Avatar URL does not reference a media asset",
 				);
 			}
 			const asset = await mediaAssetDao.findById(assetId);
 			if (asset?.kind !== "avatar" || asset.ownerUserId !== userId) {
-				throw new ApiError(
-					404,
-					ApiErrorCode.ASSET_NOT_FOUND,
-					"Avatar not found",
-				);
+				throw new ApiError(ApiErrorCode.ASSET_NOT_FOUND, "Avatar not found");
 			}
 			if (storage) {
 				try {
@@ -320,7 +306,6 @@ export const createMediaService = ({
 			const assetId = assetIdFromUrl(url);
 			if (!assetId) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Logo URL does not reference a media asset",
 				);
@@ -328,7 +313,6 @@ export const createMediaService = ({
 			const asset = await mediaAssetDao.findById(assetId);
 			if (asset?.kind !== "org_logo" || asset.orgId !== orgId) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.ASSET_NOT_FOUND,
 					"Organization logo not found",
 				);
@@ -347,20 +331,12 @@ export const createMediaService = ({
 		getMedia: async (assetId: string): Promise<MediaObject> => {
 			const asset = await mediaAssetDao.findById(assetId);
 			if (!asset || !PUBLIC_MEDIA_KINDS.has(asset.kind)) {
-				throw new ApiError(
-					404,
-					ApiErrorCode.ASSET_NOT_FOUND,
-					"Media not found",
-				);
+				throw new ApiError(ApiErrorCode.ASSET_NOT_FOUND, "Media not found");
 			}
 			const s3 = requireStorage(storage);
 			const object = await s3.get(asset.key);
 			if (!object) {
-				throw new ApiError(
-					404,
-					ApiErrorCode.ASSET_NOT_FOUND,
-					"Media not found",
-				);
+				throw new ApiError(ApiErrorCode.ASSET_NOT_FOUND, "Media not found");
 			}
 			return {
 				body: object.body,

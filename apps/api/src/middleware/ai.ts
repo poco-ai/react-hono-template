@@ -15,7 +15,6 @@ export const requireAiEnabled = (
 	createMiddleware<SessionEnv & OrgEnv>(async (c, next) => {
 		if (!provider.enabled) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.AI_DISABLED,
 				"AI is disabled for this deployment.",
 			);
@@ -23,7 +22,6 @@ export const requireAiEnabled = (
 		const { orgId } = c.get("orgMember");
 		if (!(await settings.isEnabled(orgId))) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.AI_DISABLED,
 				"AI is disabled for this organization.",
 			);
@@ -36,7 +34,6 @@ export const requireAiConfigured = (provider: AiProviderInfo) =>
 	createMiddleware<SessionEnv & OrgEnv>(async (_c, next) => {
 		if (!provider.configured) {
 			throw new ApiError(
-				503,
 				ApiErrorCode.AI_NOT_CONFIGURED,
 				"AI provider is not configured.",
 			);

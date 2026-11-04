@@ -3,19 +3,13 @@ import type {
 	BanAdminUserInput,
 	UpdateAdminUserRoleInput,
 } from "@workspace/shared";
-import { ApiError, ApiErrorCode } from "@workspace/shared";
 import type { Context } from "hono";
+import { requireParamValue } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { AdminUserService } from "../services/admin-user.service";
 
-const requireId = (c: Context) => {
-	const id = c.req.param("id");
-	if (!id) {
-		throw new ApiError(400, ApiErrorCode.INVALID_PARAM, "Missing user id");
-	}
-	return id;
-};
+const requireId = (c: Context) => requireParamValue(c.req.param("id"), "id");
 
 export const createAdminController = (service: AdminUserService) => ({
 	list: async (c: Context, query: AdminUserListQuery) =>

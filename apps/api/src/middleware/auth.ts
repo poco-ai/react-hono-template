@@ -15,11 +15,7 @@ export const requireAuth = (auth: Auth) =>
 			headers: c.req.raw.headers,
 		});
 		if (!session) {
-			throw new ApiError(
-				401,
-				ApiErrorCode.UNAUTHORIZED,
-				"Authentication required",
-			);
+			throw new ApiError(ApiErrorCode.UNAUTHORIZED, "Authentication required");
 		}
 		c.set("session", session);
 		await next();
@@ -34,7 +30,6 @@ export const requirePermission = (permission: Permission) =>
 		const role = (session?.user as { role?: string } | undefined)?.role;
 		if (!role || !hasPermission(role, permission)) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"You do not have permission to perform this action",
 			);

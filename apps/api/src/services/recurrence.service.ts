@@ -111,7 +111,6 @@ export const createRecurrenceService = ({
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
@@ -122,7 +121,6 @@ export const createRecurrenceService = ({
 	const assertProjectWritable = (archived: boolean) => {
 		if (archived) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.PROJECT_ARCHIVED,
 				"Project is archived and read-only",
 			);
@@ -144,7 +142,6 @@ export const createRecurrenceService = ({
 			const member = await memberDao.findByOrgAndUser(orgId, input.assigneeId);
 			if (!member) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Assignee must be a member of this organization",
 				);
@@ -155,7 +152,6 @@ export const createRecurrenceService = ({
 			const found = await labelDao.findByIds(orgId, labelIds);
 			if (found.length !== labelIds.length) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.LABEL_NOT_FOUND,
 					"One or more labels do not exist in this organization",
 				);
@@ -233,7 +229,6 @@ export const createRecurrenceService = ({
 			const current = now();
 			if (!isFuture(input.nextRunAt, current)) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"nextRunAt must be in the future",
 				);
@@ -254,7 +249,6 @@ export const createRecurrenceService = ({
 				const issue = await issueDao.findById(orgId, input.issueId);
 				if (!issue || issue.projectId !== projectId) {
 					throw new ApiError(
-						404,
 						ApiErrorCode.ISSUE_NOT_FOUND,
 						`Issue ${input.issueId} not found in this project`,
 					);
@@ -273,7 +267,6 @@ export const createRecurrenceService = ({
 			const title = input.title ?? source?.title;
 			if (!title) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"title is required unless issueId is provided",
 				);
@@ -327,7 +320,6 @@ export const createRecurrenceService = ({
 			const recurrence = await recurrenceDao.findById(orgId, projectId, id);
 			if (!recurrence) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOT_FOUND,
 					`Recurrence ${id} not found`,
 				);
@@ -336,7 +328,6 @@ export const createRecurrenceService = ({
 			assertProjectWritable(project.archived);
 			if (input.nextRunAt && !isFuture(input.nextRunAt, now())) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"nextRunAt must be in the future",
 				);
@@ -358,7 +349,6 @@ export const createRecurrenceService = ({
 			const updated = await recurrenceDao.update(orgId, projectId, id, patch);
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOT_FOUND,
 					`Recurrence ${id} not found`,
 				);
@@ -374,7 +364,6 @@ export const createRecurrenceService = ({
 			const deleted = await recurrenceDao.remove(orgId, projectId, id);
 			if (!deleted) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOT_FOUND,
 					`Recurrence ${id} not found`,
 				);

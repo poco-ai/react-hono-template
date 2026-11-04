@@ -34,7 +34,6 @@ const assertNameAvailable = async (
 	const existing = await dao.findByName(orgId, name);
 	if (existing && existing.id !== excludeId) {
 		throw new ApiError(
-			409,
 			ApiErrorCode.LABEL_NAME_TAKEN,
 			`Label name "${name}" is already used in this organization`,
 		);
@@ -66,7 +65,6 @@ export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 		} catch (err) {
 			if (err instanceof Error && /unique constraint/i.test(err.message)) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.LABEL_NAME_TAKEN,
 					`Label name "${input.name}" is already used in this organization`,
 				);
@@ -85,7 +83,6 @@ export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 		const label = await dao.findById(orgId, labelId);
 		if (!label) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.LABEL_NOT_FOUND,
 				`Label ${labelId} not found`,
 			);
@@ -99,7 +96,6 @@ export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 		});
 		if (!updated) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.LABEL_NOT_FOUND,
 				`Label ${labelId} not found`,
 			);
@@ -112,7 +108,6 @@ export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 		const label = await dao.findById(orgId, labelId);
 		if (!label) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.LABEL_NOT_FOUND,
 				`Label ${labelId} not found`,
 			);
@@ -120,7 +115,6 @@ export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 		const references = await dao.countIssueReferences(orgId, labelId);
 		if (references > 0) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.LABEL_IN_USE,
 				`Label "${label.name}" is used by ${references} issue(s)`,
 			);

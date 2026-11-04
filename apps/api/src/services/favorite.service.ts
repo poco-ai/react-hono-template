@@ -123,14 +123,12 @@ export const createFavoriteService = ({
 			const issue = await issueDao.findById(orgId, input.entityId);
 			if (!issue) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.ISSUE_NOT_FOUND,
 					`Issue ${input.entityId} not found`,
 				);
 			}
 			if (issue.archivedAt) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.CONFLICT,
 					"Archived issues cannot be favorited",
 				);
@@ -140,14 +138,12 @@ export const createFavoriteService = ({
 		const project = await projectDao.findById(orgId, input.entityId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${input.entityId} not found`,
 			);
 		}
 		if (project.archived) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.CONFLICT,
 				"Archived projects cannot be favorited",
 			);
@@ -178,11 +174,7 @@ export const createFavoriteService = ({
 			const [item] = await hydrate(orgId, [favorite]);
 			if (!item) {
 				// The entity disappeared between validation and hydration.
-				throw new ApiError(
-					404,
-					ApiErrorCode.NOT_FOUND,
-					"Favorite target not found",
-				);
+				throw new ApiError(ApiErrorCode.NOT_FOUND, "Favorite target not found");
 			}
 			return item;
 		},

@@ -219,11 +219,7 @@ const setup = (
 	const statusService = {
 		resolveStatus: async (orgId: string, input: { statusId?: string }) => {
 			if (input.statusId === "missing-status") {
-				throw new ApiError(
-					404,
-					ApiErrorCode.STATUS_NOT_FOUND,
-					"Status not found",
-				);
+				throw new ApiError(ApiErrorCode.STATUS_NOT_FOUND, "Status not found");
 			}
 			return {
 				id: input.statusId ?? (orgId === ORG ? "s-todo" : "s-other"),

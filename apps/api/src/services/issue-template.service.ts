@@ -28,7 +28,6 @@ const isUniqueViolation = (err: unknown) =>
 
 const nameTaken = (name: string) =>
 	new ApiError(
-		409,
 		ApiErrorCode.CONFLICT,
 		`A template named "${name}" already exists in this scope`,
 	);
@@ -59,7 +58,6 @@ export const createIssueTemplateService = ({
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
@@ -76,7 +74,6 @@ export const createIssueTemplateService = ({
 		const status = await statusDao.findById(orgId, statusId);
 		if (!status) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.STATUS_NOT_FOUND,
 				`Status ${statusId} not found`,
 			);
@@ -94,7 +91,6 @@ export const createIssueTemplateService = ({
 		const unique = [...new Set(labelIds)];
 		if (unique.length > MAX_TEMPLATE_LABELS) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.VALIDATION,
 				`A template can reference at most ${MAX_TEMPLATE_LABELS} labels`,
 			);
@@ -105,7 +101,6 @@ export const createIssueTemplateService = ({
 		const found = await labelDao.findByIds(orgId, unique);
 		if (found.length !== unique.length) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.LABEL_NOT_FOUND,
 				"One or more labels do not exist in this organization",
 			);
@@ -132,7 +127,6 @@ export const createIssueTemplateService = ({
 		const template = await templateDao.findById(orgId, id);
 		if (!template) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.NOT_FOUND,
 				`Issue template ${id} not found`,
 			);
@@ -215,7 +209,6 @@ export const createIssueTemplateService = ({
 				const updated = await templateDao.update(orgId, id, patch);
 				if (!updated) {
 					throw new ApiError(
-						404,
 						ApiErrorCode.NOT_FOUND,
 						`Issue template ${id} not found`,
 					);
@@ -233,7 +226,6 @@ export const createIssueTemplateService = ({
 			const deleted = await templateDao.delete(orgId, id);
 			if (!deleted) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOT_FOUND,
 					`Issue template ${id} not found`,
 				);
