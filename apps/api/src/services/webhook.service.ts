@@ -3,7 +3,6 @@ import {
 	ApiErrorCode,
 	type CreateWebhookInput,
 	isAllowedWebhookUrl,
-	PLANS,
 	type UpdateWebhookInput,
 	WEBHOOK_EVENTS,
 } from "@workspace/shared";
@@ -42,7 +41,6 @@ export const createWebhookService = ({
 		);
 		if (invalid.length > 0) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.WEBHOOK_EVENT_INVALID,
 				`Unknown webhook events: ${invalid.join(", ")}`,
 			);
@@ -52,7 +50,6 @@ export const createWebhookService = ({
 	const assertUrlAllowed = (url: string) => {
 		if (!isAllowedWebhookUrl(url)) {
 			throw new ApiError(
-				400,
 				ApiErrorCode.VALIDATION,
 				"Webhook URL must be https (http is only allowed for localhost)",
 			);
@@ -66,7 +63,6 @@ export const createWebhookService = ({
 		const webhook = await webhookDao.findById(orgId, webhookId);
 		if (!webhook) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.WEBHOOK_NOT_FOUND,
 				`Webhook ${webhookId} not found`,
 			);
@@ -80,14 +76,13 @@ export const createWebhookService = ({
 			createdById: string | null,
 			input: CreateWebhookInput,
 		): Promise<WebhookWithSecretDto> => {
-			const plan = await plans.getPlanForOrg(orgId);
-			const limit = PLANS[plan].webhooks;
-			plans.assertWithinLimit(
+			await plans.assertQuota(
+				orgId,
 				"webhooks",
-				await webhookDao.countByOrg(orgId),
-				limit,
-				plan,
-				limit === 0 ? "Webhooks require the Pro plan" : undefined,
+				() => webhookDao.countByOrg(orgId),
+				{
+					zeroLimitMessage: "Webhooks require the Pro plan",
+				},
 			);
 			assertUrlAllowed(input.url);
 			assertEventsValid(input.events);
@@ -120,7 +115,6 @@ export const createWebhookService = ({
 			});
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.WEBHOOK_NOT_FOUND,
 					`Webhook ${webhookId} not found`,
 				);
@@ -132,7 +126,6 @@ export const createWebhookService = ({
 			const deleted = await webhookDao.delete(orgId, webhookId);
 			if (!deleted) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.WEBHOOK_NOT_FOUND,
 					`Webhook ${webhookId} not found`,
 				);
@@ -182,7 +175,6 @@ export const createWebhookService = ({
 			const delivery = await deliveryDao.findById(orgId, deliveryId);
 			if (!delivery) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.NOT_FOUND,
 					`Webhook delivery ${deliveryId} not found`,
 				);

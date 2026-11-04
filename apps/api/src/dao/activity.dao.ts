@@ -33,6 +33,26 @@ export const activityInsertStatement = (
 ): BatchItem<"sqlite"> => db.insert(activities).values(rows);
 
 /**
+ * Conditional single-row activity insert: the row is written only when
+ * `condition` holds at statement time. Callers pair it with a primary write
+ * (e.g. a DELETE that may remove nothing) in the same `db.batch` — the
+ * condition runs before the primary statement, so the activity appears iff
+ * the primary write actually happened.
+ */
+export const activityInsertWhenStatement = (
+	db: Database,
+	row: ActivityInsert,
+	condition: SQL,
+): BatchItem<"sqlite"> =>
+	db.insert(activities).select(sql`
+		SELECT ${row.id}, ${row.orgId}, ${row.projectId}, ${row.issueId},
+			${row.actorId}, ${row.action}, ${row.field}, ${row.oldValue},
+			${row.newValue}, ${row.source ?? null}, ${row.sourceId ?? null},
+			cast(unixepoch('subsecond') * 1000 as integer)
+		WHERE ${condition}
+	`);
+
+/**
  * Set-based status-migration activity: one INSERT ... SELECT writes a
  * `field = "status"` row for every issue still pointing at the deleted status.
  * It stays a single statement so deleting a status with many issues does not

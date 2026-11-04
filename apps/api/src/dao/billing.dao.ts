@@ -36,11 +36,28 @@ const freeDefault = (orgId: string): SubscriptionDto => ({
 });
 
 export const createBillingDao = (db: Database) => ({
-	ensure: async (orgId: string): Promise<void> => {
-		await db
+	/**
+	 * Inserts or updates the subscription row in a single statement — the
+	 * write paths never need a separate ensure round trip, and mock/stripe
+	 * syncs stay idempotent when the row does not exist yet.
+	 */
+	upsert: async (
+		orgId: string,
+		patch: SubscriptionPatch,
+	): Promise<SubscriptionDto> => {
+		const patchEntries = Object.fromEntries(
+			Object.entries(patch).filter(([, value]) => value !== undefined),
+		);
+		const row = await db
 			.insert(subscriptions)
-			.values({ orgId })
-			.onConflictDoNothing({ target: subscriptions.orgId });
+			.values({ orgId, ...patchEntries })
+			.onConflictDoUpdate({
+				target: subscriptions.orgId,
+				set: { ...patchEntries, updatedAt: new Date() },
+			})
+			.returning()
+			.get();
+		return toDto(row);
 	},
 
 	findByOrg: async (orgId: string): Promise<SubscriptionDto> => {

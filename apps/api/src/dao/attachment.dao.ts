@@ -1,7 +1,7 @@
-import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
-import { attachments, pendingUploads } from "../db/schema";
+import { attachments, comments, pendingUploads } from "../db/schema";
 import type { Database } from "../db/types";
 import type { AttachmentDto } from "../dto/attachment.dto";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
@@ -240,15 +240,31 @@ export const createAttachmentDao = (db: Database) => ({
 		return row?.value ?? 0;
 	},
 
-	listKeysByComment: async (
+	/**
+	 * Storage keys attached to a comment and its direct replies (threads are
+	 * one level deep). Callers read this BEFORE deleting the rows, then remove
+	 * the objects once the database commit has succeeded — deleting the
+	 * objects first would leave visible rows pointing at gone objects.
+	 */
+	listKeysForCommentThread: async (
 		orgId: string,
 		commentId: string,
 	): Promise<string[]> => {
+		const replyIds = db
+			.select({ id: comments.id })
+			.from(comments)
+			.where(and(eq(comments.orgId, orgId), eq(comments.parentId, commentId)));
 		const rows = await db
 			.select({ key: attachments.key })
 			.from(attachments)
 			.where(
-				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
+				and(
+					eq(attachments.orgId, orgId),
+					or(
+						eq(attachments.commentId, commentId),
+						inArray(attachments.commentId, replyIds),
+					),
+				),
 			);
 		return rows.map((row) => row.key);
 	},

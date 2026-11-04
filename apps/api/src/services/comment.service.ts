@@ -24,6 +24,7 @@ import type {
 } from "../dto/comment.dto";
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
+import { excerptOf } from "../lib/excerpt";
 import {
 	bestEffortNotification,
 	type NotificationService,
@@ -40,7 +41,6 @@ const assertIssueCommentable = async (
 	const issue = await issueDao.findByProjectAndNumber(orgId, projectId, number);
 	if (!issue) {
 		throw new ApiError(
-			404,
 			ApiErrorCode.ISSUE_NOT_FOUND,
 			`Issue #${number} not found`,
 		);
@@ -48,7 +48,6 @@ const assertIssueCommentable = async (
 	const project = await projectDao.findById(orgId, issue.projectId);
 	if (project?.archived) {
 		throw new ApiError(
-			409,
 			ApiErrorCode.PROJECT_ARCHIVED,
 			"Project is archived and read-only",
 		);
@@ -56,10 +55,7 @@ const assertIssueCommentable = async (
 	return issue;
 };
 
-const activityExcerpt = (body: string) => {
-	const compact = body.replace(/\s+/g, " ").trim();
-	return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
-};
+const activityExcerpt = (body: string) => excerptOf(body);
 
 /** Reaction aggregates in the shared whitelist order, then any legacy emoji. */
 const summarizeReactions = (
@@ -107,7 +103,8 @@ export const createCommentService = ({
 			orgId: string,
 			commentIds: string[],
 		) => Promise<Map<string, AttachmentWithUrlDto[]>>;
-		purgeForComment: (orgId: string, commentId: string) => Promise<void>;
+		keysForComment: (orgId: string, commentId: string) => Promise<string[]>;
+		removeObjects: (keys: string[]) => Promise<void>;
 	};
 	notifications?: Pick<
 		NotificationService,
@@ -143,7 +140,6 @@ export const createCommentService = ({
 		const comment = await commentDao.findById(orgId, commentId);
 		if (!comment || comment.issueId !== issueId) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.COMMENT_NOT_FOUND,
 				`Comment ${commentId} not found`,
 			);
@@ -192,7 +188,6 @@ export const createCommentService = ({
 	const requireReactionDao = (dao: CommentReactionDao | undefined) => {
 		if (!dao) {
 			throw new ApiError(
-				500,
 				ApiErrorCode.INTERNAL_ERROR,
 				"Reactions are not configured",
 			);
@@ -215,7 +210,6 @@ export const createCommentService = ({
 			);
 			if (!issue) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.ISSUE_NOT_FOUND,
 					`Issue #${number} not found`,
 				);
@@ -264,14 +258,12 @@ export const createCommentService = ({
 				: null;
 			if (parentId && (!parent || parent.issueId !== issue.id)) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.COMMENT_PARENT_INVALID,
 					"Reply target must be a comment on this issue",
 				);
 			}
 			if (parent?.parentId) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.COMMENT_THREAD_DEPTH,
 					"Replies can only target a top-level comment",
 				);
@@ -349,7 +341,6 @@ export const createCommentService = ({
 			const comment = await requireComment(orgId, issue.id, commentId);
 			if (comment.author.id !== userId) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the author can edit this comment",
 				);
@@ -373,7 +364,6 @@ export const createCommentService = ({
 			);
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.COMMENT_NOT_FOUND,
 					`Comment ${commentId} not found`,
 				);
@@ -399,13 +389,19 @@ export const createCommentService = ({
 			const comment = await requireComment(orgId, issue.id, commentId);
 			if (comment.author.id !== userId) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the author can delete this comment",
 				);
 			}
-			await files?.purgeForComment(orgId, comment.id);
-			await commentDao.delete(orgId, commentId);
+			// Read the storage keys while the rows still exist, commit the
+			// row deletions, then remove the objects. Deleting objects first
+			// would leave visible rows pointing at gone objects; the reverse
+			// order only ever leaves orphan objects (invisible, reclaimable).
+			const keys = (await files?.keysForComment(orgId, comment.id)) ?? [];
+			const deleted = await commentDao.delete(orgId, commentId);
+			if (deleted && keys.length > 0) {
+				await files?.removeObjects(keys);
+			}
 		},
 
 		/**
@@ -432,7 +428,6 @@ export const createCommentService = ({
 			const comment = await requireComment(orgId, issue.id, commentId);
 			if (comment.parentId) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.COMMENT_THREAD_DEPTH,
 					"Only top-level comment threads can be resolved",
 				);
@@ -467,7 +462,6 @@ export const createCommentService = ({
 			const updated = await commentDao.findById(orgId, comment.id);
 			if (!updated) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.COMMENT_NOT_FOUND,
 					`Comment ${commentId} not found`,
 				);

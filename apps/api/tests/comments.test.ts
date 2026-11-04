@@ -249,7 +249,7 @@ test("replies cannot be resolved directly", async () => {
 	);
 });
 
-test("deleting a comment removes its stored files first", async () => {
+test("deleting a comment commits rows before removing stored files", async () => {
 	const order: string[] = [];
 	const deleting = createCommentService({
 		issueDao: {
@@ -267,11 +267,15 @@ test("deleting a comment removes its stored files first", async () => {
 		} as unknown as CommentDao,
 		files: {
 			forComments: async () => new Map(),
-			purgeForComment: async () => {
-				order.push("purge");
+			keysForComment: async () => {
+				order.push("keys");
+				return ["attachments/comment-1/a.png"];
+			},
+			removeObjects: async () => {
+				order.push("remove");
 			},
 		},
 	});
 	await deleting.deleteComment("org", "project-1", 7, "comment-1", "author-1");
-	assert.deepEqual(order, ["purge", "delete"]);
+	assert.deepEqual(order, ["keys", "delete", "remove"]);
 });

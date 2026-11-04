@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { commentReactions } from "../db/schema";
 import type { Database } from "../db/types";
@@ -27,17 +27,18 @@ export const createCommentReactionDao = (db: Database) => ({
 	},
 
 	/**
-	 * Toggles one (comment, user, emoji) row. The delete runs first: if it
-	 * removed a row the toggle is an "off"; otherwise the insert is guarded by
-	 * `onConflictDoNothing`, so a duplicate/concurrent request can never trip
-	 * the primary key.
+	 * Toggles one (comment, user, emoji) row atomically in a single batch.
+	 * The DELETE runs first; `changes()` reports whether it removed anything,
+	 * and the INSERT ... SELECT only fires when it did not — so a concurrent
+	 * or duplicated request can never end up with both statements applying
+	 * (net result is always exactly one flip).
 	 */
 	toggle: async (
 		commentId: string,
 		userId: string,
 		emoji: string,
 	): Promise<boolean> => {
-		const [deleted] = (await db.batch([
+		const results = await db.batch([
 			db
 				.delete(commentReactions)
 				.where(
@@ -46,19 +47,16 @@ export const createCommentReactionDao = (db: Database) => ({
 						eq(commentReactions.userId, userId),
 						eq(commentReactions.emoji, emoji),
 					),
-				)
-				.returning({ commentId: commentReactions.commentId }),
-		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]])) as [
-			{ commentId: string }[],
-		];
-		if (deleted.length > 0) {
-			return false;
-		}
-		await db
-			.insert(commentReactions)
-			.values({ commentId, userId, emoji })
-			.onConflictDoNothing();
-		return true;
+				),
+			db.insert(commentReactions).select(
+				sql`SELECT ${commentId}, ${userId}, ${emoji},
+						cast(unixepoch('subsecond') * 1000 as integer)
+						WHERE (SELECT changes()) = 0`,
+			),
+		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+		// The insert's result is non-empty exactly when the toggle turned "on".
+		const inserted = results[1] as unknown[];
+		return inserted.length > 0;
 	},
 });
 

@@ -97,7 +97,7 @@ const harness = ({
 					row.commentId !== null &&
 					commentIds.includes(row.commentId),
 			),
-		listKeysByComment: async (orgId: string, commentId: string) =>
+		listKeysForCommentThread: async (orgId: string, commentId: string) =>
 			attachments
 				.filter((row) => row.orgId === orgId && row.commentId === commentId)
 				.map((row) => row.key),

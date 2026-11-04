@@ -15,6 +15,7 @@ import type {
 	IssueRelationsDto,
 } from "../dto/relation.dto";
 import type { BackgroundFn } from "../lib/background";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 import { issueKey } from "./issue.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
@@ -69,7 +70,6 @@ export const createRelationService = ({
 		);
 		if (!issue) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.ISSUE_NOT_FOUND,
 				`Issue #${number} not found`,
 			);
@@ -81,7 +81,6 @@ export const createRelationService = ({
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project || project.archived) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.PROJECT_ARCHIVED,
 				"Project is archived and read-only",
 			);
@@ -153,21 +152,18 @@ export const createRelationService = ({
 			const other = await issueDao.findById(orgId, input.relatedIssueId);
 			if (!other) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.ISSUE_NOT_FOUND,
 					"Related issue does not exist in this organization",
 				);
 			}
 			if (other.id === issue.id) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.ISSUE_RELATION_INVALID,
 					"An issue cannot be related to itself",
 				);
 			}
 			if (other.projectId !== issue.projectId) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.ISSUE_RELATION_INVALID,
 					"Related issues must belong to the same project",
 				);
@@ -214,7 +210,6 @@ export const createRelationService = ({
 			);
 			if (existing) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.ISSUE_RELATION_EXISTS,
 					"These issues are already linked with this relation type",
 				);
@@ -230,7 +225,6 @@ export const createRelationService = ({
 				);
 				if (closesCycle) {
 					throw new ApiError(
-						409,
 						ApiErrorCode.ISSUE_RELATION_CYCLE,
 						"Blocking relations cannot form a cycle",
 					);
@@ -251,17 +245,29 @@ export const createRelationService = ({
 					}
 				: undefined;
 
-			const relation = await relationDao.create(
-				{
-					id: crypto.randomUUID(),
-					orgId,
-					issueId: stored.issueId,
-					relatedIssueId: stored.relatedIssueId,
-					type: stored.type,
-					createdById: userId,
-				},
-				activity,
-			);
+			const relation = await relationDao
+				.create(
+					{
+						id: crypto.randomUUID(),
+						orgId,
+						issueId: stored.issueId,
+						relatedIssueId: stored.relatedIssueId,
+						type: stored.type,
+						createdById: userId,
+					},
+					activity,
+				)
+				.catch((err: unknown) => {
+					// Concurrent writes can pass the pre-check above; the unique
+					// index is the source of truth and maps to the same 409.
+					if (isUniqueConstraintViolation(err)) {
+						throw new ApiError(
+							ApiErrorCode.ISSUE_RELATION_EXISTS,
+							"These issues are already linked with this relation type",
+						);
+					}
+					throw err;
+				});
 			await webhooks?.dispatch(
 				orgId,
 				"issue.updated",
@@ -287,8 +293,7 @@ export const createRelationService = ({
 				(relation.issueId !== issue.id && relation.relatedIssueId !== issue.id)
 			) {
 				throw new ApiError(
-					404,
-					ApiErrorCode.ISSUE_RELATION_INVALID,
+					ApiErrorCode.NOT_FOUND,
 					`Relation ${relationId} not found for this issue`,
 				);
 			}
@@ -317,8 +322,7 @@ export const createRelationService = ({
 			const deleted = await relationDao.delete(orgId, relationId, activity);
 			if (!deleted) {
 				throw new ApiError(
-					404,
-					ApiErrorCode.ISSUE_RELATION_INVALID,
+					ApiErrorCode.NOT_FOUND,
 					`Relation ${relationId} not found`,
 				);
 			}

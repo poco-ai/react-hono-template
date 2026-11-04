@@ -1,11 +1,11 @@
 import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createIssueDao } from "../src/dao/issue.dao";
 import { createRelationDao } from "../src/dao/relation.dao";
 import type { Database as AppDatabase } from "../src/db/types";
+import { isUniqueConstraintViolation } from "../src/lib/db-errors";
 
 /**
  * DAO integration tests against an in-memory SQLite database. They exercise
@@ -198,6 +198,8 @@ test("relation lists are stably ordered and unique clashes map to a 409", async 
 		["r-a", "r-z"],
 	);
 
+	// The DAO propagates the raw unique-index violation; the service maps it
+	// to the 409 ISSUE_RELATION_EXISTS (see relations.test.ts).
 	await assert.rejects(
 		relationDao.create({
 			id: "r-duplicate",
@@ -207,10 +209,7 @@ test("relation lists are stably ordered and unique clashes map to a 409", async 
 			type: "related",
 			createdById: null,
 		}),
-		(err) =>
-			err instanceof ApiError &&
-			err.code === ApiErrorCode.ISSUE_RELATION_EXISTS &&
-			err.status === 409,
+		(err) => isUniqueConstraintViolation(err),
 	);
 
 	// Deleting the same row twice writes no activity the second time.

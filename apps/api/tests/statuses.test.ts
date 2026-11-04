@@ -108,25 +108,25 @@ const fakeDao = ({
 				...rows.map((row) => ({ ...row, createdAt: NOW, updatedAt: NOW })),
 			);
 		},
-		update: async (
+		updateWithDefault: async (
 			_orgId: string,
 			id: string,
-			patch: Parameters<StatusDao["update"]>[2],
+			patch: Parameters<StatusDao["updateWithDefault"]>[2],
+			promoteDefault: boolean,
 		) => {
 			const status = state.statuses.find((entry) => entry.id === id);
 			if (!status) {
 				return null;
 			}
 			Object.assign(status, patch);
-			return { ...status };
-		},
-		setDefault: async (orgId: string, id: string) => {
-			for (const status of state.statuses) {
-				if (status.orgId === orgId) {
-					status.isDefault = status.id === id;
+			if (promoteDefault) {
+				for (const entry of state.statuses) {
+					if (entry.orgId === status.orgId) {
+						entry.isDefault = entry.id === id;
+					}
 				}
 			}
-			return state.statuses.find((status) => status.id === id) ?? null;
+			return { ...status };
 		},
 		reorder: async (
 			_orgId: string,

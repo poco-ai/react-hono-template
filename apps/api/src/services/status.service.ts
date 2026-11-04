@@ -7,15 +7,15 @@ import {
 	type ReorderStatusesInput,
 	type UpdateStatusInput,
 } from "@workspace/shared";
-import { isStatusUniqueViolation, type StatusDao } from "../dao/status.dao";
+import type { StatusDao } from "../dao/status.dao";
 import type { StatusDto } from "../dto/status.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 
 const statusesNotFound = (id: string) =>
-	new ApiError(404, ApiErrorCode.STATUS_NOT_FOUND, `Status ${id} not found`);
+	new ApiError(ApiErrorCode.STATUS_NOT_FOUND, `Status ${id} not found`);
 
 const nameTaken = (name: string) =>
 	new ApiError(
-		409,
 		ApiErrorCode.STATUS_NAME_TAKEN,
 		`Status name "${name}" is already used in this organization`,
 	);
@@ -53,7 +53,7 @@ export const createStatusService = (dao: StatusDao) => {
 		} catch (err) {
 			// Two concurrent first reads can both seed; the unique index makes
 			// the loser fail and read the winner's rows instead.
-			if (!isStatusUniqueViolation(err)) {
+			if (!isUniqueConstraintViolation(err)) {
 				throw err;
 			}
 		}
@@ -132,7 +132,6 @@ export const createStatusService = (dao: StatusDao) => {
 					// 400 (not 404): the organization exists, the legacy name is
 					// simply not a valid workflow value.
 					throw new ApiError(
-						400,
 						ApiErrorCode.VALIDATION,
 						`Status "${input.statusName}" does not exist in this organization`,
 					);
@@ -142,7 +141,6 @@ export const createStatusService = (dao: StatusDao) => {
 			const fallback = defaultStatusOf(statuses);
 			if (!fallback) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.STATUS_NOT_FOUND,
 					"This organization has no workflow status",
 				);
@@ -165,7 +163,6 @@ export const createStatusService = (dao: StatusDao) => {
 						// Silently dropping the name would make the filter look
 						// successful while returning every issue.
 						throw new ApiError(
-							400,
 							ApiErrorCode.VALIDATION,
 							`Status "${name}" does not exist in this organization`,
 						);
@@ -184,7 +181,6 @@ export const createStatusService = (dao: StatusDao) => {
 			const statuses = await dao.listByOrg(orgId);
 			if (statuses.length >= MAX_STATUSES) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					`An organization can have at most ${MAX_STATUSES} statuses`,
 				);
@@ -203,7 +199,7 @@ export const createStatusService = (dao: StatusDao) => {
 					isDefault: false,
 				});
 			} catch (err) {
-				if (isStatusUniqueViolation(err)) {
+				if (isUniqueConstraintViolation(err)) {
 					throw nameTaken(input.name);
 				}
 				throw err;
@@ -220,22 +216,25 @@ export const createStatusService = (dao: StatusDao) => {
 				await assertNameAvailable(orgId, input.name, statusId);
 			}
 			try {
-				const updated = await dao.update(orgId, statusId, {
-					name: input.name,
-					category: input.category,
-					color: input.color,
-				});
+				// Field changes and the default switch commit atomically in one
+				// DAO batch; `isDefault: false` is a no-op (the organization
+				// keeps its current default until another status is promoted).
+				const updated = await dao.updateWithDefault(
+					orgId,
+					statusId,
+					{
+						name: input.name,
+						category: input.category,
+						color: input.color,
+					},
+					input.isDefault === true,
+				);
 				if (!updated) {
 					throw statusesNotFound(statusId);
 				}
-				// `false` is a no-op: the organization keeps its current default
-				// until another status is promoted.
-				if (input.isDefault) {
-					await dao.setDefault(orgId, statusId);
-				}
-				return (await dao.findById(orgId, statusId)) ?? updated;
+				return updated;
 			} catch (err) {
-				if (isStatusUniqueViolation(err)) {
+				if (isUniqueConstraintViolation(err)) {
 					throw nameTaken(input.name ?? current.name);
 				}
 				throw err;
@@ -255,7 +254,6 @@ export const createStatusService = (dao: StatusDao) => {
 				ids.every((id) => known.has(id));
 			if (!valid) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Reorder requires the complete list of status ids",
 				);
@@ -277,7 +275,6 @@ export const createStatusService = (dao: StatusDao) => {
 			const statuses = await dao.listByOrg(orgId);
 			if (statuses.length <= 1) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.STATUS_LAST_STATUS,
 					"An organization must keep at least one status",
 				);
@@ -285,7 +282,6 @@ export const createStatusService = (dao: StatusDao) => {
 			const references = await dao.countIssueReferences(orgId, statusId);
 			if (references > 0 && !migrateToStatusId) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.STATUS_MIGRATION_REQUIRED,
 					`Status "${status.name}" is used by ${references} issue(s); provide migrateToStatusId`,
 				);
@@ -294,7 +290,6 @@ export const createStatusService = (dao: StatusDao) => {
 			if (migrateToStatusId) {
 				if (migrateToStatusId === statusId) {
 					throw new ApiError(
-						400,
 						ApiErrorCode.STATUS_MIGRATION_INVALID,
 						"migrateToStatusId must be a different status",
 					);
@@ -303,7 +298,6 @@ export const createStatusService = (dao: StatusDao) => {
 					statuses.find((entry) => entry.id === migrateToStatusId) ?? null;
 				if (!target) {
 					throw new ApiError(
-						400,
 						ApiErrorCode.STATUS_MIGRATION_INVALID,
 						`Migration target ${migrateToStatusId} does not belong to this organization`,
 					);

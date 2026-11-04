@@ -62,11 +62,8 @@ test("mock checkout awaits plan cache invalidation after the subscription write"
 			countByOrg: async () => 2,
 		},
 		billingDao: {
-			ensure: async (orgId: string) => {
-				events.push(`ensure:${orgId}`);
-			},
-			update: async (orgId: string) => {
-				events.push(`update:${orgId}`);
+			upsert: async (orgId: string) => {
+				events.push(`upsert:${orgId}`);
 				return null;
 			},
 		},
@@ -93,7 +90,7 @@ test("mock checkout awaits plan cache invalidation after the subscription write"
 
 	releaseInvalidation();
 	assert.deepEqual(await checkout, { url: null });
-	assert.deepEqual(events, ["ensure:org", "update:org", "invalidate:org"]);
+	assert.deepEqual(events, ["upsert:org", "invalidate:org"]);
 });
 
 test("missing or partial Stripe configuration still fails closed", async () => {
@@ -121,8 +118,9 @@ const recordingService = (
 	const events: string[] = [];
 	const service = createBillingService({
 		billingDao: {
-			ensure: async (orgId: string) => {
-				events.push(`ensure:${orgId}`);
+			upsert: async (orgId: string) => {
+				events.push(`upsert:${orgId}`);
+				return null;
 			},
 			update: async (orgId: string) => {
 				events.push(`update:${orgId}`);
@@ -158,7 +156,7 @@ test("mock portal invalidates the plan cache after the subscription write", asyn
 		await service.createPortal("org", "https://app.example.com"),
 		{ url: null },
 	);
-	assert.deepEqual(events, ["ensure:org", "update:org", "invalidate:org"]);
+	assert.deepEqual(events, ["upsert:org", "invalidate:org"]);
 });
 
 test("checkout completion invalidates the plan cache after the update", async () => {
@@ -173,12 +171,7 @@ test("checkout completion invalidates the plan cache after the update", async ()
 			},
 		},
 	} as unknown as Stripe.Event);
-	assert.deepEqual(events, [
-		"count:org",
-		"ensure:org",
-		"update:org",
-		"invalidate:org",
-	]);
+	assert.deepEqual(events, ["count:org", "upsert:org", "invalidate:org"]);
 });
 
 test("subscription deletion invalidates the plan cache after the update", async () => {

@@ -17,13 +17,11 @@ import {
 import { createCommentReactionDao } from "../src/dao/comment-reaction.dao";
 import type { IssueDao } from "../src/dao/issue.dao";
 import { createIssueSubscriptionDao } from "../src/dao/issue-subscription.dao";
-import {
-	commentExcerpt,
-	createNotificationDao,
-} from "../src/dao/notification.dao";
+import { createNotificationDao } from "../src/dao/notification.dao";
 import type { ProjectDao } from "../src/dao/project.dao";
 import type { Database as AppDatabase } from "../src/db/types";
 import type { IssueDto } from "../src/dto/issue.dto";
+import { commentExcerpt } from "../src/lib/excerpt";
 import { createCommentService } from "../src/services/comment.service";
 import { createIssueService } from "../src/services/issue.service";
 import { createIssueSubscriptionService } from "../src/services/issue-subscription.service";

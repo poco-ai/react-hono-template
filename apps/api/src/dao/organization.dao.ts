@@ -1,35 +1,49 @@
+import type { PlanName } from "@workspace/shared";
 import { count, desc, eq, or, type SQL, sql } from "drizzle-orm";
 import { organization, user as userTable } from "../db/auth-schema";
 import { issues, subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
-import type {
-	AdminOrgDto,
-	AdminStatsDto,
-	ListAdminOrgsDto,
-} from "../dto/admin-org.dto";
+import type { AdminStatsDto, ListAdminOrgsDto } from "../dto/admin-org.dto";
 
-type OrganizationRow = typeof organization.$inferSelect;
-
-const toOrgDto = (row: OrganizationRow): AdminOrgDto => ({
-	id: row.id,
-	name: row.name,
-	slug: row.slug,
-	frozen: row.frozen,
-	createdAt: row.createdAt.toISOString(),
-	plan: "free",
-	status: null,
-	members: 0,
-	issues: 0,
-});
+/**
+ * Truthful single-org projection: the real plan from the subscription join.
+ * Unlike the list DTO it carries no aggregate counts — callers that need
+ * member/issue totals must query them, never invent them.
+ */
+export type OrgRecordDto = {
+	id: string;
+	name: string;
+	slug: string;
+	frozen: boolean;
+	createdAt: string;
+	plan: PlanName;
+};
 
 export const createOrganizationDao = (db: Database) => ({
-	findById: async (orgId: string): Promise<AdminOrgDto | null> => {
+	findById: async (orgId: string): Promise<OrgRecordDto | null> => {
 		const row = await db
-			.select()
+			.select({
+				id: organization.id,
+				name: organization.name,
+				slug: organization.slug,
+				frozen: organization.frozen,
+				createdAt: organization.createdAt,
+				plan: subscriptions.plan,
+			})
 			.from(organization)
+			.leftJoin(subscriptions, eq(subscriptions.orgId, organization.id))
 			.where(eq(organization.id, orgId))
 			.get();
-		return row ? toOrgDto(row) : null;
+		return row
+			? {
+					id: row.id,
+					name: row.name,
+					slug: row.slug,
+					frozen: row.frozen,
+					createdAt: row.createdAt.toISOString(),
+					plan: row.plan === "pro" ? "pro" : "free",
+				}
+			: null;
 	},
 
 	list: async ({

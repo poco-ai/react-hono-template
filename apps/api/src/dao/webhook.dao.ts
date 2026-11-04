@@ -1,5 +1,5 @@
 import { and, count, eq } from "drizzle-orm";
-import { webhooks } from "../db/schema";
+import { webhookDeliveries, webhooks } from "../db/schema";
 import type { Database } from "../db/types";
 import type { WebhookWithSecretDto } from "../dto/webhook.dto";
 
@@ -84,11 +84,26 @@ export const createWebhookDao = (db: Database) => ({
 		return row ? toWebhookDto(row) : null;
 	},
 
+	/**
+	 * Deletes the webhook together with its delivery history in one batch.
+	 * The FK would cascade in theory, but D1 does not always enforce foreign
+	 * keys, so the deliveries are removed explicitly — no orphan rows.
+	 */
 	delete: async (orgId: string, id: string): Promise<boolean> => {
-		const rows = await db
-			.delete(webhooks)
-			.where(and(eq(webhooks.orgId, orgId), eq(webhooks.id, id)))
-			.returning({ id: webhooks.id });
+		const [, rows] = await db.batch([
+			db
+				.delete(webhookDeliveries)
+				.where(
+					and(
+						eq(webhookDeliveries.orgId, orgId),
+						eq(webhookDeliveries.webhookId, id),
+					),
+				),
+			db
+				.delete(webhooks)
+				.where(and(eq(webhooks.orgId, orgId), eq(webhooks.id, id)))
+				.returning({ id: webhooks.id }),
+		]);
 		return rows.length > 0;
 	},
 

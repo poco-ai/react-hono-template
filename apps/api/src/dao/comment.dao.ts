@@ -1,7 +1,14 @@
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray, or } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { user } from "../db/auth-schema";
-import { comments } from "../db/schema";
+import {
+	attachments,
+	commentMentions,
+	commentReactions,
+	comments,
+	notifications,
+} from "../db/schema";
 import type { Database } from "../db/types";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
@@ -163,12 +170,47 @@ export const createCommentDao = (db: Database) => ({
 		return row ? toCommentDto(row) : null;
 	},
 
+	/**
+	 * Deletes the comment, its one-level replies and every dependent row
+	 * (reactions, mentions, attachments, notification back-references) in one
+	 * batch. The FKs would cascade in theory, but D1 does not always enforce
+	 * foreign keys, so the child deletes are explicit — no orphan rows and no
+	 * quota rows that outlive their comment. Storage objects are the caller's
+	 * concern and must be removed only after this commit succeeds.
+	 */
 	delete: async (orgId: string, id: string): Promise<boolean> => {
-		const rows = await db
-			.delete(comments)
-			.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-			.returning({ id: comments.id });
-		return rows.length > 0;
+		const replyIds = db
+			.select({ id: comments.id })
+			.from(comments)
+			.where(and(eq(comments.orgId, orgId), eq(comments.parentId, id)));
+		const threadComment = (column: AnySQLiteColumn) =>
+			or(eq(column, id), inArray(column, replyIds));
+		const results = await db.batch([
+			db
+				.delete(commentReactions)
+				.where(threadComment(commentReactions.commentId)),
+			db
+				.delete(commentMentions)
+				.where(threadComment(commentMentions.commentId)),
+			db
+				.delete(attachments)
+				.where(
+					and(
+						eq(attachments.orgId, orgId),
+						threadComment(attachments.commentId),
+					),
+				),
+			db
+				.update(notifications)
+				.set({ commentId: null })
+				.where(threadComment(notifications.commentId)),
+			db
+				.delete(comments)
+				.where(and(eq(comments.orgId, orgId), threadComment(comments.id)))
+				.returning({ id: comments.id }),
+		]);
+		const deleted = results[4] as { id: string }[];
+		return deleted.some((row) => row.id === id);
 	},
 
 	setResolution: async (

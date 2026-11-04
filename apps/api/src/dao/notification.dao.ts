@@ -22,6 +22,7 @@ import type {
 	NotificationDto,
 	NotificationListDto,
 } from "../dto/notification.dto";
+import { commentExcerpt } from "../lib/excerpt";
 import { issueSubscriptionInsertStatements } from "./issue-subscription.dao";
 
 export type NotificationInsert = {
@@ -47,25 +48,6 @@ const chunkRows = <T>(rows: T[], size: number): T[][] => {
 		chunks.push(rows.slice(start, start + size));
 	}
 	return chunks;
-};
-
-/** Compact plain-text preview: markdown/mention markup is unwrapped, not shown. */
-export const commentExcerpt = (body: string): string => {
-	const plain = body
-		// Fence markers (and their language hint) are markup; keep the code text.
-		.replace(/```[^\n]*\n?/g, " ")
-		.replace(/~~~[^\n]*\n?/g, " ")
-		.replace(/`([^`\n]*)`/g, "$1")
-		.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-		.replace(/@\[([^\]\n]*)\]\(user:[^)\s]+\)/g, "@$1")
-		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-		.replace(/^#{1,6}\s+/gm, "")
-		.replace(/^>\s?/gm, "")
-		.replace(/^\s{0,3}[-*+]\s+/gm, "")
-		.replace(/[*_~]/g, "")
-		.replace(/\s+/g, " ")
-		.trim();
-	return plain.length > 120 ? `${plain.slice(0, 117)}...` : plain;
 };
 
 // D1 batch rows are keyed by column name: every joined column gets a unique

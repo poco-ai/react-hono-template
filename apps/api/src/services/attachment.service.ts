@@ -37,7 +37,6 @@ const extensionOf = (filename: string) => {
 const requireStorage = (storage: StorageAdapter | null): StorageAdapter => {
 	if (!storage) {
 		throw new ApiError(
-			503,
 			ApiErrorCode.SERVICE_UNAVAILABLE,
 			"Storage is not configured",
 		);
@@ -48,7 +47,6 @@ const requireStorage = (storage: StorageAdapter | null): StorageAdapter => {
 const assertContentTypeAllowed = (contentType: string) => {
 	if (!(ATTACHMENT_CONTENT_TYPES as readonly string[]).includes(contentType)) {
 		throw new ApiError(
-			415,
 			ApiErrorCode.FILE_TYPE_NOT_ALLOWED,
 			`Content type "${contentType}" is not allowed for attachments`,
 		);
@@ -79,7 +77,6 @@ export const createAttachmentService = ({
 	const assertSizeAllowed = (size: number, maxSize: number) => {
 		if (!Number.isSafeInteger(size) || size < 1 || size > maxSize) {
 			throw new ApiError(
-				413,
 				ApiErrorCode.FILE_TOO_LARGE,
 				`Attachment size must be between 1 byte and ${maxSize} bytes (plan limit)`,
 			);
@@ -98,7 +95,6 @@ export const createAttachmentService = ({
 		);
 		if (!issue) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.ISSUE_NOT_FOUND,
 				`Issue #${number} not found`,
 			);
@@ -115,7 +111,6 @@ export const createAttachmentService = ({
 		const project = await projectDao.findById(orgId, issue.projectId);
 		if (project?.archived) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.PROJECT_ARCHIVED,
 				"Project is archived and read-only",
 			);
@@ -168,7 +163,6 @@ export const createAttachmentService = ({
 		const comment = await commentDao.findById(orgId, commentId);
 		if (!comment || comment.issueId !== issueId) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.COMMENT_NOT_FOUND,
 				`Comment ${commentId} not found`,
 			);
@@ -182,7 +176,6 @@ export const createAttachmentService = ({
 	) => {
 		if (comment.author.id !== userId) {
 			throw new ApiError(
-				403,
 				ApiErrorCode.FORBIDDEN,
 				"Only the comment author can attach files to this comment",
 			);
@@ -252,7 +245,6 @@ export const createAttachmentService = ({
 			const expectedPrefix = `orgs/${orgId}/issues/${issue.id}/`;
 			if (!input.key.startsWith(expectedPrefix)) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.KEY_MISMATCH,
 					"Storage key does not belong to this issue",
 				);
@@ -268,14 +260,12 @@ export const createAttachmentService = ({
 				pending.targetId !== issue.id
 			) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.UPLOAD_NOT_PENDING,
 					"Upload was not reserved or has expired",
 				);
 			}
 			if (input.contentType !== pending.contentType) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Registered content type does not match the reserved upload",
 				);
@@ -285,14 +275,12 @@ export const createAttachmentService = ({
 			const stat = await s3.stat(input.key);
 			if (!stat) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.KEY_MISMATCH,
 					"No uploaded object found for this key — upload the file before registering",
 				);
 			}
 			if (stat.size > maxSize || stat.size > pending.declaredSize) {
 				throw new ApiError(
-					413,
 					ApiErrorCode.FILE_TOO_LARGE,
 					`Uploaded object is ${stat.size} bytes, exceeding the reserved ${Math.min(maxSize, pending.declaredSize)} byte limit`,
 				);
@@ -303,7 +291,6 @@ export const createAttachmentService = ({
 				!stat.contentType.startsWith(pending.contentType)
 			) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Uploaded object content type does not match the registered content type",
 				);
@@ -311,7 +298,6 @@ export const createAttachmentService = ({
 			const existing = await attachmentDao.findByKey(input.key);
 			if (existing) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.CONFLICT,
 					"This object has already been registered",
 				);
@@ -389,7 +375,6 @@ export const createAttachmentService = ({
 				attachment.commentId
 			) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.ATTACHMENT_NOT_FOUND,
 					`Attachment ${attachmentId} not found`,
 				);
@@ -397,7 +382,6 @@ export const createAttachmentService = ({
 			const isPrivileged = actor.role === "owner" || actor.role === "admin";
 			if (attachment.uploader?.id !== actor.userId && !isPrivileged) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the uploader or an organization admin can remove this attachment",
 				);
@@ -491,7 +475,6 @@ export const createAttachmentService = ({
 			const expectedPrefix = `orgs/${orgId}/issues/${issue.id}/comments/${comment.id}/`;
 			if (!input.key.startsWith(expectedPrefix)) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.KEY_MISMATCH,
 					"Storage key does not belong to this comment",
 				);
@@ -507,14 +490,12 @@ export const createAttachmentService = ({
 				pending.targetId !== comment.id
 			) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.UPLOAD_NOT_PENDING,
 					"Upload was not reserved or has expired",
 				);
 			}
 			if (input.contentType !== pending.contentType) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Registered content type does not match the reserved upload",
 				);
@@ -524,14 +505,12 @@ export const createAttachmentService = ({
 			const stat = await s3.stat(input.key);
 			if (!stat) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.KEY_MISMATCH,
 					"No uploaded object found for this key — upload the file before registering",
 				);
 			}
 			if (stat.size > maxSize || stat.size > pending.declaredSize) {
 				throw new ApiError(
-					413,
 					ApiErrorCode.FILE_TOO_LARGE,
 					"Uploaded object is larger than the reserved size",
 				);
@@ -542,7 +521,6 @@ export const createAttachmentService = ({
 				!stat.contentType.startsWith(pending.contentType)
 			) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.VALIDATION,
 					"Uploaded object content type does not match the registered content type",
 				);
@@ -550,7 +528,6 @@ export const createAttachmentService = ({
 			const existing = await attachmentDao.findByKey(input.key);
 			if (existing) {
 				throw new ApiError(
-					409,
 					ApiErrorCode.CONFLICT,
 					"This object has already been registered",
 				);
@@ -621,7 +598,6 @@ export const createAttachmentService = ({
 				attachment.commentId !== comment.id
 			) {
 				throw new ApiError(
-					404,
 					ApiErrorCode.ATTACHMENT_NOT_FOUND,
 					`Attachment ${attachmentId} not found`,
 				);
@@ -631,7 +607,6 @@ export const createAttachmentService = ({
 			const isAuthor = comment.author.id === actor.userId;
 			if (!isUploader && !isAuthor && !isPrivileged) {
 				throw new ApiError(
-					403,
 					ApiErrorCode.FORBIDDEN,
 					"Only the uploader, comment author, or an organization admin can remove this attachment",
 				);
@@ -673,8 +648,12 @@ export const createAttachmentService = ({
 			return grouped;
 		},
 
-		purgeForComment: async (orgId: string, commentId: string) => {
-			const keys = await attachmentDao.listKeysByComment(orgId, commentId);
+		/** Storage keys for a comment and its replies; read before deleting rows. */
+		keysForComment: async (orgId: string, commentId: string) =>
+			attachmentDao.listKeysForCommentThread(orgId, commentId),
+
+		/** Best-effort object removal; call only after the rows are gone. */
+		removeObjects: async (keys: string[]) => {
 			if (!storage) return;
 			for (const key of keys) {
 				try {

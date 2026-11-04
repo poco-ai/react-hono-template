@@ -62,7 +62,6 @@ export const createBillingService = ({
 			return null;
 		}
 		throw new ApiError(
-			503,
 			ApiErrorCode.SERVICE_UNAVAILABLE,
 			stripeUnavailableMessage(stripeSetup),
 		);
@@ -110,8 +109,7 @@ export const createBillingService = ({
 				return { url: session.url };
 			}
 			const seats = await memberDao.countByOrg(orgId);
-			await billingDao.ensure(orgId);
-			await billingDao.update(orgId, {
+			await billingDao.upsert(orgId, {
 				plan: "pro",
 				status: "active",
 				seats,
@@ -129,7 +127,6 @@ export const createBillingService = ({
 				const subscription = await billingDao.findByOrg(orgId);
 				if (!subscription.stripeCustomerId) {
 					throw new ApiError(
-						400,
 						ApiErrorCode.BILLING_ERROR,
 						"No billing account for this organization",
 					);
@@ -140,8 +137,7 @@ export const createBillingService = ({
 				});
 				return { url: session.url };
 			}
-			await billingDao.ensure(orgId);
-			await billingDao.update(orgId, {
+			await billingDao.upsert(orgId, {
 				plan: "free",
 				status: "active",
 				currentPeriodEnd: null,
@@ -158,8 +154,7 @@ export const createBillingService = ({
 					return;
 				}
 				const seats = await memberDao.countByOrg(orgId);
-				await billingDao.ensure(orgId);
-				await billingDao.update(orgId, {
+				await billingDao.upsert(orgId, {
 					plan: "pro",
 					status: "active",
 					stripeCustomerId: customerIdOf(session.customer),

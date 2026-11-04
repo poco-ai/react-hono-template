@@ -9,16 +9,16 @@ import {
 } from "@workspace/shared";
 import { type CycleDao, toCycleProgress } from "../dao/cycle.dao";
 import type { ProjectDao } from "../dao/project.dao";
-import { isUniqueConstraintViolation } from "../dao/relation.dao";
 import type {
 	CycleDto,
 	CycleRolloverDto,
 	CycleWithProgressDto,
 	ListCyclesDto,
 } from "../dto/cycle.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 
 const cycleNotFound = (id: string) =>
-	new ApiError(404, ApiErrorCode.CYCLE_NOT_FOUND, `Cycle ${id} not found`);
+	new ApiError(ApiErrorCode.CYCLE_NOT_FOUND, `Cycle ${id} not found`);
 
 const toMs = (value: Date | string | number): number =>
 	value instanceof Date
@@ -60,7 +60,6 @@ export const assertCycleAssignable = async (
 	}
 	if (cycle.projectId !== projectId) {
 		throw new ApiError(
-			400,
 			ApiErrorCode.VALIDATION,
 			"Cycle must belong to the same project as the issue",
 		);
@@ -71,7 +70,6 @@ export const assertCycleAssignable = async (
 const assertRange = (startsAt: Date, endsAt: Date) => {
 	if (endsAt.getTime() <= startsAt.getTime()) {
 		throw new ApiError(
-			400,
 			ApiErrorCode.CYCLE_RANGE_INVALID,
 			"endsAt must be after startsAt",
 		);
@@ -92,7 +90,6 @@ export const createCycleService = ({
 		const project = await projectDao.findById(orgId, projectId);
 		if (!project) {
 			throw new ApiError(
-				404,
 				ApiErrorCode.PROJECT_NOT_FOUND,
 				`Project ${projectId} not found`,
 			);
@@ -105,7 +102,6 @@ export const createCycleService = ({
 		const project = await requireProject(orgId, projectId);
 		if (project.archived) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.PROJECT_ARCHIVED,
 				"Project is archived and read-only",
 			);
@@ -139,7 +135,6 @@ export const createCycleService = ({
 		);
 		if (overlap) {
 			throw new ApiError(
-				409,
 				ApiErrorCode.CYCLE_OVERLAP,
 				`Cycle dates overlap with "${overlap.name}"`,
 			);
@@ -219,7 +214,6 @@ export const createCycleService = ({
 			} catch (err) {
 				if (isUniqueConstraintViolation(err)) {
 					throw new ApiError(
-						409,
 						ApiErrorCode.CONFLICT,
 						"Cycle number conflict; please retry",
 					);
@@ -313,7 +307,6 @@ export const createCycleService = ({
 			}
 			if (target.id === source.id) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.CYCLE_TARGET_INVALID,
 					"Target cycle must be different from the source cycle",
 				);
@@ -322,7 +315,6 @@ export const createCycleService = ({
 			// exactly now is still rollable into.
 			if (toMs(target.endsAt) < now().getTime()) {
 				throw new ApiError(
-					400,
 					ApiErrorCode.CYCLE_TARGET_INVALID,
 					"Target cycle has already ended",
 				);

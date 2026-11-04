@@ -14,10 +14,6 @@ const toStatusDto = (row: StatusRow): StatusDto => ({
 });
 
 export { toStatusDto };
-
-const isUniqueViolation = (err: unknown) =>
-	err instanceof Error && /unique constraint/i.test(err.message);
-
 export const createStatusDao = (db: Database) => ({
 	listByOrg: async (orgId: string): Promise<StatusDto[]> => {
 		const rows = await db
@@ -99,15 +95,24 @@ export const createStatusDao = (db: Database) => ({
 		await db.insert(issueStatuses).values(rows);
 	},
 
-	update: async (
+	/**
+	 * Updates the editable fields and optionally promotes the status to the
+	 * organization default in one batch (field changes and the default switch
+	 * commit atomically). The previous default is cleared first — the partial
+	 * unique index allows only one is_default row per organization — and the
+	 * returned row reflects both writes without an extra read round trip.
+	 */
+	updateWithDefault: async (
 		orgId: string,
 		id: string,
 		patch: Partial<{ name: string; category: string; color: string }>,
+		promoteDefault: boolean,
 	): Promise<StatusDto | null> => {
 		const patchEntries = Object.fromEntries(
 			Object.entries(patch).filter(([, value]) => value !== undefined),
 		);
-		if (Object.keys(patchEntries).length === 0) {
+		const hasPatch = Object.keys(patchEntries).length > 0;
+		if (!hasPatch && !promoteDefault) {
 			const current = await db
 				.select()
 				.from(issueStatuses)
@@ -115,30 +120,37 @@ export const createStatusDao = (db: Database) => ({
 				.get();
 			return current ? toStatusDto(current) : null;
 		}
-		const row = await db
-			.update(issueStatuses)
-			.set(patchEntries)
-			.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
-			.returning()
-			.get();
-		return row ? toStatusDto(row) : null;
-	},
-
-	/** Makes `id` the only default status of the organization. */
-	setDefault: async (orgId: string, id: string): Promise<StatusDto | null> => {
-		const [, rows] = await db.batch([
-			db
-				.update(issueStatuses)
-				.set({ isDefault: false })
-				.where(eq(issueStatuses.orgId, orgId)),
-			db
-				.update(issueStatuses)
-				.set({ isDefault: true })
-				.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
-				.returning(),
-		]);
-		const row = rows[0];
-		return row ? toStatusDto(row) : null;
+		const statements: BatchItem<"sqlite">[] = [];
+		let returningIndex = 0;
+		if (hasPatch) {
+			const where = and(
+				eq(issueStatuses.orgId, orgId),
+				eq(issueStatuses.id, id),
+			);
+			const update = db.update(issueStatuses).set(patchEntries).where(where);
+			statements.push(promoteDefault ? update : update.returning());
+		}
+		if (promoteDefault) {
+			statements.push(
+				db
+					.update(issueStatuses)
+					.set({ isDefault: false })
+					.where(eq(issueStatuses.orgId, orgId)),
+			);
+			returningIndex = statements.length;
+			statements.push(
+				db
+					.update(issueStatuses)
+					.set({ isDefault: true })
+					.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
+					.returning(),
+			);
+		}
+		const results = await db.batch(
+			statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
+		);
+		const rows = results[returningIndex] as StatusRow[];
+		return rows.length > 0 ? toStatusDto(rows[0]) : null;
 	},
 
 	reorder: async (
@@ -240,5 +252,3 @@ export const createStatusDao = (db: Database) => ({
 });
 
 export type StatusDao = ReturnType<typeof createStatusDao>;
-
-export const isStatusUniqueViolation = isUniqueViolation;

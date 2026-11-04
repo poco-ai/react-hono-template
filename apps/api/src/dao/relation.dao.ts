@@ -1,14 +1,14 @@
-import {
-	ApiError,
-	ApiErrorCode,
-	type IssueRelationType,
-} from "@workspace/shared";
+import type { IssueRelationType } from "@workspace/shared";
 import { and, asc, eq, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { issueRelations } from "../db/schema";
 import type { Database } from "../db/types";
 import type { IssueRelationDto } from "../dto/relation.dto";
-import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
+import {
+	type ActivityInsert,
+	activityInsertStatement,
+	activityInsertWhenStatement,
+} from "./activity.dao";
 
 type RelationRow = typeof issueRelations.$inferSelect;
 
@@ -16,31 +16,6 @@ const toRelationDto = (row: RelationRow): IssueRelationDto => ({
 	...row,
 	createdAt: row.createdAt.toISOString(),
 });
-
-/**
- * SQLite reports unique-index clashes as a "UNIQUE constraint failed" error.
- * Drivers wrap it (drizzle-orm wraps the SQLiteError in a DrizzleQueryError),
- * so the cause chain is inspected too.
- */
-export const isUniqueConstraintViolation = (err: unknown): boolean => {
-	if (!(err instanceof Error)) {
-		return false;
-	}
-	if (/unique constraint failed/i.test(err.message)) {
-		return true;
-	}
-	const cause = (err as { cause?: unknown }).cause;
-	return (
-		cause !== undefined && cause !== err && isUniqueConstraintViolation(cause)
-	);
-};
-
-export const relationExistsError = () =>
-	new ApiError(
-		409,
-		ApiErrorCode.ISSUE_RELATION_EXISTS,
-		"These issues are already linked with this relation type",
-	);
 
 /** Batch statement used when an issue is soft-deleted (either side). */
 export const deleteRelationsForIssueStatement = (
@@ -76,17 +51,9 @@ export const createRelationDao = (db: Database) => ({
 			db.insert(issueRelations).values(data).returning(),
 			...(activity ? [activityInsertStatement(db, [activity])] : []),
 		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		let rows: unknown[];
-		try {
-			[rows] = await db.batch(statements);
-		} catch (err) {
-			// Concurrent writes can pass the service's pre-check; the unique index
-			// is the source of truth and maps to the same 409 the check throws.
-			if (isUniqueConstraintViolation(err)) {
-				throw relationExistsError();
-			}
-			throw err;
-		}
+		// A unique-index violation here (a concurrent create won the pre-check
+		// race) propagates raw; the service maps it to the 409.
+		const [rows] = await db.batch(statements);
 		const row = (rows as RelationRow[])[0];
 		if (!row) {
 			throw new Error("Failed to insert issue relation");
@@ -188,26 +155,37 @@ export const createRelationDao = (db: Database) => ({
 	},
 
 	/**
-	 * Deletes the row and, only when a row was actually removed, writes the
-	 * activity entry (a repeated/concurrent delete leaves no orphan activity).
+	 * Deletes the row and writes the activity entry only when a row was
+	 * actually removed: the conditional INSERT runs before the DELETE in the
+	 * same batch (one transaction), so a repeated or concurrent delete leaves
+	 * no orphan activity row.
 	 */
 	delete: async (
 		orgId: string,
 		id: string,
 		activity?: ActivityInsert,
 	): Promise<IssueRelationDto | null> => {
-		const row = await db
+		const deleteStatement = db
 			.delete(issueRelations)
 			.where(and(eq(issueRelations.orgId, orgId), eq(issueRelations.id, id)))
-			.returning()
-			.get();
-		if (!row) {
-			return null;
-		}
-		if (activity) {
-			await activityInsertStatement(db, [activity]);
-		}
-		return toRelationDto(row);
+			.returning();
+		const statements = (
+			activity
+				? [
+						activityInsertWhenStatement(
+							db,
+							activity,
+							sql`EXISTS (SELECT 1 FROM ${issueRelations}
+								WHERE ${issueRelations.orgId} = ${orgId}
+									AND ${issueRelations.id} = ${id})`,
+						),
+						deleteStatement,
+					]
+				: [deleteStatement]
+		) as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+		const results = await db.batch(statements);
+		const rows = results[results.length - 1] as RelationRow[];
+		return rows.length > 0 ? toRelationDto(rows[0]) : null;
 	},
 });
 

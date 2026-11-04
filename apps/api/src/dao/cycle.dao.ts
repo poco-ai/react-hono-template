@@ -20,11 +20,11 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { cycles, issueStatuses, issues } from "../db/schema";
 import type { Database } from "../db/types";
 import type { CycleDto, CycleProgressDto } from "../dto/cycle.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 import {
 	cycleDetachActivityStatement,
 	cycleRolloverActivityStatement,
 } from "./activity.dao";
-import { isUniqueConstraintViolation } from "./relation.dao";
 
 type CycleRow = typeof cycles.$inferSelect;
 
