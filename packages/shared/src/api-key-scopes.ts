@@ -9,8 +9,6 @@ export const API_KEY_SCOPES = ["read", "write", "admin"] as const;
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 
-export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = API_KEY_SCOPES;
-
 const SCOPE_RANK: Record<ApiKeyScope, number> = {
 	read: 0,
 	write: 1,
@@ -18,9 +16,7 @@ const SCOPE_RANK: Record<ApiKeyScope, number> = {
 };
 
 export const isApiKeyScope = (value: unknown): value is ApiKeyScope =>
-	typeof value === "string" && Object.hasOwn(SCOPE_RANK, value);
-
-/**
+	typeof value === "string" && Object.hasOwn(SCOPE_RANK, value); /**
  * Normalizes arbitrary stored values (JSON columns, request payloads) into a
  * de-duplicated list of known scopes. Unknown entries are dropped. An empty or
  * invalid list falls back to read-only access.

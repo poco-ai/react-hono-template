@@ -494,8 +494,6 @@ export type IssueQueryGroupBy = (typeof ISSUE_QUERY_GROUP_BY)[number];
 
 export const ISSUE_QUERY_LAYOUTS = ["list", "board"] as const;
 
-export type IssueQueryLayout = (typeof ISSUE_QUERY_LAYOUTS)[number];
-
 /** Maximum number of sort keys accepted for a single query. */
 export const ISSUE_QUERY_MAX_SORTS = 3;
 

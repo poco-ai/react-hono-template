@@ -9,10 +9,6 @@ export function parseCsv(value: string | null | undefined): string[] {
 		.filter(Boolean);
 }
 
-export function serializeCsv(values: readonly string[]): string {
-	return values.join(",");
-}
-
 /**
  * RFC 4180 parser for full CSV documents. Supports quoted fields, escaped
  * double quotes (`""`), CRLF/LF line endings and a leading BOM. Blank trailing
@@ -164,8 +160,6 @@ export const ISSUE_CSV_COLUMNS = [
 	"cycle",
 ] as const;
 
-export type IssueCsvColumn = (typeof ISSUE_CSV_COLUMNS)[number];
-
 export const ISSUE_CSV_EXPORT_COLUMNS = [
 	"key",
 	"project",
@@ -174,14 +168,9 @@ export const ISSUE_CSV_EXPORT_COLUMNS = [
 	"updated_at",
 ] as const;
 
-export type IssueCsvExportColumn = (typeof ISSUE_CSV_EXPORT_COLUMNS)[number];
-
 /** Header row used by `GET .../issues/export.csv`. */
 export const ISSUE_CSV_EXPORT_HEADERS: readonly string[] =
 	ISSUE_CSV_EXPORT_COLUMNS;
-
-/** Header row accepted by `POST .../issues/import` (order-independent). */
-export const ISSUE_CSV_IMPORT_HEADERS: readonly string[] = ISSUE_CSV_COLUMNS;
 
 /** Hard import limit: rows per request (the UI enforces it before uploading). */
 export const ISSUE_CSV_MAX_IMPORT_ROWS = 100;

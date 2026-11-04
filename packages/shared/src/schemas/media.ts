@@ -8,8 +8,6 @@ export const MEDIA_IMAGE_TYPES = [
 
 export const MEDIA_MAX_SIZE = 2 * 1024 * 1024;
 
-export type MediaImageType = (typeof MEDIA_IMAGE_TYPES)[number];
-
 export const avatarPresignSchema = z.object({
 	filename: z.string().trim().min(1).max(255),
 	contentType: z.enum(MEDIA_IMAGE_TYPES),

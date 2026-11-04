@@ -31,8 +31,6 @@ export type AiConversationListDto = {
 	nextCursor: string | null;
 };
 
-export type AiMessageStatus = "complete" | "aborted" | "error";
-
 export type AiMessageDto = {
 	id: string;
 	conversationId: string;

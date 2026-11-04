@@ -15,12 +15,6 @@ export const ISSUE_STATUSES = [
 /** @deprecated Use `STATUS_CATEGORIES` and `category === "completed"`. */
 export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 
-/**
- * @deprecated Terminal state is derived from the status category. Kept only
- * so existing imports keep compiling.
- */
-export const TERMINAL_ISSUE_STATUSES = ["done", "canceled"] as const;
-
 /** Fixed workflow categories every organization status belongs to. */
 export const STATUS_CATEGORIES = [
 	"backlog",

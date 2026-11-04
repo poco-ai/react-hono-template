@@ -77,7 +77,6 @@ export type AiConversationListQuery = z.infer<
 	typeof aiConversationListQuerySchema
 >;
 export type AiChatRequest = z.infer<typeof aiChatRequestSchema>;
-export type AiUiMessageInput = z.infer<typeof aiUiMessageSchema>;
 export type UpdateOrgAiSettingsInput = z.infer<
 	typeof updateOrgAiSettingsSchema
 >;
