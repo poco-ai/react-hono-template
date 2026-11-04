@@ -24,6 +24,7 @@ import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
 import { createRelationDao } from "./dao/relation.dao";
 import { createStatusDao } from "./dao/status.dao";
+import { createViewDao } from "./dao/view.dao";
 import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
@@ -56,6 +57,7 @@ import { createProjectService } from "./services/project.service";
 import { createRelationService } from "./services/relation.service";
 import { createStatusService } from "./services/status.service";
 import { createStorageUsageService } from "./services/storage-usage.service";
+import { createViewService } from "./services/view.service";
 import { createWebhookService } from "./services/webhook.service";
 import {
 	createWebhookDeliveryService,
@@ -106,6 +108,7 @@ export const createDependencies = ({
 	const relationDao = createRelationDao(db);
 	const labelDao = createLabelDao(db);
 	const statusDao = createStatusDao(db);
+	const viewDao = createViewDao(db);
 	const commentDao = createCommentDao(db);
 	const attachmentDao = createAttachmentDao(db);
 	const pendingUploadDao = createPendingUploadDao(db);
@@ -156,6 +159,11 @@ export const createDependencies = ({
 	});
 
 	const projectService = createProjectService(projectDao, planService);
+	const viewService = createViewService({
+		viewDao,
+		projectDao,
+		plans: planService,
+	});
 	const statusService = createStatusService(statusDao);
 	const issueService = createIssueService({
 		issueDao,
@@ -215,6 +223,7 @@ export const createDependencies = ({
 			statusService,
 			activityService,
 			relationService,
+			viewService,
 		},
 		daos: {
 			memberDao,
@@ -284,6 +293,7 @@ export const createDependencies = ({
 			adminUserService,
 			adminOrgService,
 			projectService,
+			viewService,
 			issueService,
 			labelService,
 			statusService,

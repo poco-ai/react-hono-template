@@ -20,6 +20,7 @@ import type {
 	ListIssuesQueryDto,
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
+import { compileIssueFilter, issueSortOrderBy } from "../lib/issue-filter";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 import { deleteRelationsForIssueStatement } from "./relation.dao";
 import { toStatusDto } from "./status.dao";
@@ -32,9 +33,6 @@ type IssueRow = typeof issues.$inferSelect;
  * for an issue with an unusually large number of children.
  */
 export const MAX_SUB_ISSUES = 200;
-
-const escapeLike = (value: string) =>
-	value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 
 const toIssueDto = (row: IssueRow, status: StatusDto): IssueDto => ({
 	...row,
@@ -348,18 +346,27 @@ export const createIssueDao = (db: Database) => {
 				);
 			}
 			if (query.search) {
-				const pattern = `%${escapeLike(query.search)}%`;
+				// `instr` avoids D1's 50-byte LIKE-pattern limit (long CJK terms)
+				// and treats `%`/`_` literally, so no escaping is needed.
 				conditions.push(
-					sql`(${issues.title} like ${pattern} escape '\\' or ${issues.description} like ${pattern} escape '\\')`,
+					sql`(instr(lower(${issues.title}), lower(${query.search})) > 0 or instr(lower(coalesce(${issues.description}, '')), lower(${query.search})) > 0)`,
 				);
 			}
+			// Structured filters AND-combine with the legacy flat parameters.
+			if (query.filter) {
+				const compiled = compileIssueFilter(db, query.filter);
+				if (compiled) {
+					conditions.push(compiled);
+				}
+			}
 			const where = and(...conditions);
-			const orderBy =
-				query.sort === "created"
-					? [desc(issues.createdAt)]
+			const orderBy: SQL[] = query.sorts?.length
+				? issueSortOrderBy(query.sorts)
+				: query.sort === "created"
+					? [desc(issues.createdAt), asc(issues.id)]
 					: query.sort === "priority"
-						? [asc(issues.priority), desc(issues.createdAt)]
-						: [desc(issues.updatedAt)];
+						? [asc(issues.priority), desc(issues.createdAt), asc(issues.id)]
+						: [desc(issues.updatedAt), asc(issues.id)];
 
 			const [rows, totals] = await db.batch([
 				db

@@ -1,10 +1,12 @@
-import type { ListIssuesDto } from "@api/dto/issue.dto";
+import type { IssueDetailDto, ListIssuesDto } from "@api/dto/issue.dto";
 import type { LabelDto } from "@api/dto/label.dto";
+import type { StatusDto } from "@api/dto/status.dto";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import type { IssueQueryGroupBy } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Spinner } from "@workspace/ui/components/spinner";
 import {
 	Table,
 	TableBody,
@@ -14,22 +16,39 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
+import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
+import {
+	ISSUE_COLUMN_CLASS,
+	IssueListRow,
+} from "@/features/issues/components/issue-list-row";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { LabelBadge } from "@/features/labels/components/label-badge";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
-import {
-	formatDate,
-	formatDateTime,
-	formatDueDate,
-	formatRelativeTime,
-	getDueDateStatus,
-} from "@/lib/format";
+import { formatDate, formatDueDate, getDueDateStatus } from "@/lib/format";
+import type { IssueFilters } from "../data";
+import { useDeleteIssue } from "../data";
+import { groupIssues } from "../grouping";
+import type { IssueListColumn, IssueListDensity } from "../list-preferences";
+
+const COLUMN_LABEL = {
+	status: "issues.columns.status",
+	priority: "issues.columns.priority",
+	assignee: "issues.columns.assignee",
+	labels: "issues.columns.labels",
+	dueDate: "issues.columns.dueDate",
+	createdAt: "issues.columns.createdAt",
+	updatedAt: "issues.columns.updatedAt",
+	estimate: "issues.columns.estimate",
+} as const satisfies Record<IssueListColumn, string>;
 
 export function IssueList({
 	orgId,
@@ -38,10 +57,15 @@ export function IssueList({
 	issues,
 	members,
 	labels,
+	statuses,
 	page,
 	selected,
 	frozen,
 	hasFilters,
+	filters,
+	columns,
+	density,
+	groupBy,
 	toggleAllOnPage,
 	toggleOne,
 	onPageChange,
@@ -54,10 +78,16 @@ export function IssueList({
 	issues: UseQueryResult<ListIssuesDto, Error>;
 	members: OrgMember[];
 	labels: LabelDto[];
+	statuses: StatusDto[];
 	page: number;
 	selected: Set<string>;
 	frozen: boolean;
 	hasFilters: boolean;
+	/** Same request state as the list query, used for optimistic edits. */
+	filters: IssueFilters;
+	columns: readonly IssueListColumn[];
+	density: IssueListDensity;
+	groupBy: IssueQueryGroupBy | undefined;
 	toggleAllOnPage: (checked: boolean) => void;
 	toggleOne: (id: string, checked: boolean) => void;
 	onPageChange: (page: number) => void;
@@ -65,8 +95,8 @@ export function IssueList({
 	onNewIssue: () => void;
 }) {
 	const { t } = useTranslation();
-	const navigate = useNavigate();
 	const result = issues.data;
+	const items = result?.items ?? [];
 	const listEmpty = !issues.isPending && result?.items.length === 0;
 	const totalPages = result
 		? Math.max(1, Math.ceil(result.total / result.pageSize))
@@ -76,6 +106,71 @@ export function IssueList({
 	const allOnPageSelected =
 		(result?.items.length ?? 0) > 0 &&
 		result?.items.every((issue) => selected.has(issue.id));
+	const columnCount = 2 + 1 + columns.length + 1;
+	const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+	const [deleteTarget, setDeleteTarget] = useState<IssueDetailDto | null>(null);
+	const deleteMutation = useDeleteIssue(
+		orgId,
+		projectId,
+		deleteTarget?.number ?? 0,
+	);
+
+	const groups = groupBy
+		? groupIssues(items, groupBy, {
+				statusIds: statuses.map((status) => status.id),
+				assigneeIds: members.map((member) => member.userId),
+				labelIds: labels.map((label) => label.id),
+			})
+		: [{ key: "all", valueId: null, items }];
+
+	const toggleGroup = (key: string) => {
+		setCollapsed((previous) => {
+			const next = new Set(previous);
+			if (next.has(key)) {
+				next.delete(key);
+			} else {
+				next.add(key);
+			}
+			return next;
+		});
+	};
+
+	const renderGroupValue = (
+		field: IssueQueryGroupBy,
+		valueId: string | null,
+	) => {
+		if (field === "status") {
+			const status = valueId
+				? statuses.find((entry) => entry.id === valueId)
+				: undefined;
+			return status ? <StatusBadge status={status} /> : <span>—</span>;
+		}
+		if (field === "priority") {
+			return <PriorityBadge value={Number(valueId ?? 0)} />;
+		}
+		if (field === "assignee") {
+			const member = valueId ? memberById.get(valueId) : undefined;
+			return member ? (
+				<span className="inline-flex items-center gap-2">
+					<UserAvatar name={member.user.name} image={member.user.image} />
+					<span className="truncate text-sm">{member.user.name}</span>
+				</span>
+			) : (
+				<span className="text-muted-foreground text-sm">
+					{t("common.unassigned")}
+				</span>
+			);
+		}
+		const label = valueId ? labelById.get(valueId) : undefined;
+		return label ? (
+			<LabelBadge label={label} />
+		) : (
+			<span className="text-muted-foreground text-sm">
+				{t("issues.noLabels")}
+			</span>
+		);
+	};
+
 	return (
 		<>
 			<div
@@ -97,109 +192,71 @@ export function IssueList({
 								</TableHead>
 								<TableHead className="w-24">{t("issues.number")}</TableHead>
 								<TableHead>{t("issues.titleField")}</TableHead>
-								<TableHead className="w-28">{t("issues.status")}</TableHead>
-								<TableHead className="w-28">{t("issues.priority")}</TableHead>
-								<TableHead className="w-36">{t("issues.assignee")}</TableHead>
-								<TableHead className="w-48">{t("issues.labels")}</TableHead>
-								<TableHead className="w-28">{t("issues.dueDate")}</TableHead>
-								<TableHead className="w-44">{t("issues.updated")}</TableHead>
+								{columns.map((column) => (
+									<TableHead
+										key={column}
+										className={ISSUE_COLUMN_CLASS[column]}
+									>
+										{t(COLUMN_LABEL[column])}
+									</TableHead>
+								))}
+								<TableHead className="w-10">
+									<span className="sr-only">{t("common.actions")}</span>
+								</TableHead>
 							</TableRow>
 						</TableHeader>
 					)}
 					<TableBody>
-						{result?.items.map((issue) => {
-							const assignee = issue.assigneeId
-								? memberById.get(issue.assigneeId)
-								: undefined;
+						{groups.map((group) => {
+							const isCollapsed = collapsed.has(group.key);
 							return (
-								<TableRow
-									key={issue.id}
-									className={cn(
-										"cursor-pointer hover:bg-accent/40",
-										selected.has(issue.id) && "bg-accent/40",
+								<Fragment key={group.key}>
+									{groupBy && (
+										<TableRow className="hover:bg-transparent">
+											<TableCell
+												colSpan={columnCount}
+												className="bg-muted/30 py-1.5"
+											>
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-7 gap-1.5 px-1.5"
+													aria-expanded={!isCollapsed}
+													onClick={() => toggleGroup(group.key)}
+												>
+													{isCollapsed ? <ChevronRight /> : <ChevronDown />}
+													{renderGroupValue(groupBy, group.valueId)}
+													<span className="text-muted-foreground text-xs">
+														{t("issues.groupCountPage", {
+															count: group.items.length,
+														})}
+													</span>
+												</Button>
+											</TableCell>
+										</TableRow>
 									)}
-									onClick={() =>
-										navigate({
-											to: "/orgs/$orgId/projects/$projectId/$issueNumber",
-											params: {
-												orgId,
-												projectId,
-												issueNumber: String(issue.number),
-											},
-										})
-									}
-								>
-									<TableCell
-										className="hidden md:table-cell"
-										onClick={(e) => e.stopPropagation()}
-									>
-										<Checkbox
-											aria-label={issue.title}
-											checked={selected.has(issue.id)}
-											disabled={frozen}
-											onCheckedChange={(checked) =>
-												toggleOne(issue.id, checked)
-											}
-										/>
-									</TableCell>
-									<TableCell className="text-muted-foreground font-mono text-xs">
-										{projectKey}-{issue.number}
-									</TableCell>
-									<TableCell>
-										<Link
-											to="/orgs/$orgId/projects/$projectId/$issueNumber"
-											params={{
-												orgId,
-												projectId,
-												issueNumber: String(issue.number),
-											}}
-											className="hover:underline"
-										>
-											{issue.title}
-										</Link>
-									</TableCell>
-									<TableCell>
-										<StatusBadge status={issue.status} />
-									</TableCell>
-									<TableCell>
-										<PriorityBadge value={issue.priority} />
-									</TableCell>
-									<TableCell>
-										{assignee ? (
-											<span title={assignee.user.name} className="inline-flex">
-												<UserAvatar
-													name={assignee.user.name}
-													image={assignee.user.image}
-												/>
-											</span>
-										) : (
-											<span className="text-muted-foreground/50">—</span>
-										)}
-									</TableCell>
-									<TableCell>
-										{issue.labelIds.length > 0 ? (
-											<span className="flex flex-wrap gap-1">
-												{issue.labelIds.map((labelId) => {
-													const label = labelById.get(labelId);
-													return label ? (
-														<LabelBadge key={labelId} label={label} />
-													) : null;
-												})}
-											</span>
-										) : (
-											<span className="text-muted-foreground/50">—</span>
-										)}
-									</TableCell>
-									<TableCell className="text-muted-foreground text-xs">
-										<DueDateLabel value={issue.dueDate} />
-									</TableCell>
-									<TableCell
-										title={formatDateTime(issue.updatedAt)}
-										className="text-muted-foreground text-xs"
-									>
-										{formatRelativeTime(issue.updatedAt)}
-									</TableCell>
-								</TableRow>
+									{!isCollapsed &&
+										group.items.map((issue) => (
+											<IssueListRow
+												key={`${group.key}:${issue.id}`}
+												orgId={orgId}
+												projectId={projectId}
+												projectKey={projectKey}
+												issue={issue}
+												columns={columns}
+												density={density}
+												filters={filters}
+												selected={selected.has(issue.id)}
+												frozen={frozen}
+												statuses={statuses}
+												members={members}
+												memberById={memberById}
+												labelById={labelById}
+												onToggle={toggleOne}
+												onRequestDelete={setDeleteTarget}
+											/>
+										))}
+								</Fragment>
 							);
 						})}
 						{issues.isPending &&
@@ -214,36 +271,32 @@ export function IssueList({
 									<TableCell>
 										<Skeleton className="h-4 w-3/4" />
 									</TableCell>
-									<TableCell>
-										<Skeleton className="h-5 w-20 rounded-md" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-5 w-16 rounded-full" />
-									</TableCell>
+									{columns.map((column) => (
+										<TableCell
+											key={column}
+											className={ISSUE_COLUMN_CLASS[column]}
+										>
+											<Skeleton className="h-5 w-16 rounded-md" />
+										</TableCell>
+									))}
 									<TableCell>
 										<Skeleton className="size-6 rounded-full" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-5 w-16 rounded-md" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-3.5 w-16" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-3.5 w-20" />
 									</TableCell>
 								</TableRow>
 							))}
 						{issues.isError && (
 							<TableRow>
-								<TableCell colSpan={9} className="text-center text-destructive">
+								<TableCell
+									colSpan={columnCount}
+									className="text-center text-destructive"
+								>
 									{apiErrorMessage(t, issues.error)}
 								</TableCell>
 							</TableRow>
 						)}
 						{listEmpty && (
 							<TableRow>
-								<TableCell colSpan={9} className="p-0">
+								<TableCell colSpan={columnCount} className="p-0">
 									{hasFilters ? (
 										<EmptyState
 											title={t("issues.noResults")}
@@ -280,7 +333,12 @@ export function IssueList({
 			</div>
 
 			<footer className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-sm lg:px-6">
-				<span>{result ? t("issues.count", { count: result.total }) : ""}</span>
+				<span className="flex items-center gap-2">
+					{issues.isFetching && !issues.isPending && (
+						<Spinner className="size-3.5" />
+					)}
+					{result ? t("issues.count", { count: result.total }) : ""}
+				</span>
 				{totalPages > 1 && (
 					<TablePagination
 						page={page}
@@ -291,6 +349,28 @@ export function IssueList({
 					/>
 				)}
 			</footer>
+
+			<IssueDeleteDialog
+				open={deleteTarget !== null}
+				onOpenChange={(open) => {
+					if (!open) {
+						setDeleteTarget(null);
+					}
+				}}
+				issueKey={
+					deleteTarget
+						? `${projectKey}-${deleteTarget.number}`
+						: `${projectKey}-`
+				}
+				pending={deleteMutation.isPending}
+				onConfirm={() => {
+					deleteMutation.mutate(undefined, {
+						onSuccess: () => toast.success(t("toast.issueDeleted")),
+						onError: (error) => toast.error(apiErrorMessage(t, error)),
+						onSettled: () => setDeleteTarget(null),
+					});
+				}}
+			/>
 		</>
 	);
 }

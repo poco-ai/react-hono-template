@@ -1,4 +1,8 @@
-import type { Paginated } from "@workspace/shared";
+import type {
+	IssueFilterNode,
+	IssueQuerySort,
+	Paginated,
+} from "@workspace/shared";
 import type { issues } from "../db/schema";
 import type { StatusDto } from "./status.dto";
 
@@ -61,6 +65,10 @@ export type ListIssuesQueryDto = {
 	labelId?: string;
 	search?: string;
 	sort: "updated" | "created" | "priority";
+	/** Structured sort keys; falls back to `sort` when absent. */
+	sorts?: IssueQuerySort[];
+	/** Structured filter tree, AND-combined with the flat filters. */
+	filter?: IssueFilterNode;
 	projectId?: string;
 };
 

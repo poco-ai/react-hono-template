@@ -10,6 +10,8 @@ export const PLANS = {
 		attachmentsPerComment: 3,
 		apiRateLimit: 60,
 		webhooks: 0,
+		/** Personal (non-shared) saved views per member; -1 means unlimited. */
+		savedViews: 3,
 		aiMonthlyTokens: 50_000,
 		aiRequestsPerMinute: 10,
 		aiMaxSteps: 4,
@@ -25,6 +27,8 @@ export const PLANS = {
 		attachmentsPerComment: 10,
 		apiRateLimit: 600,
 		webhooks: 5,
+		/** Pro plans are unconstrained (see the `free` comment). */
+		savedViews: -1,
 		aiMonthlyTokens: 1_000_000,
 		aiRequestsPerMinute: 60,
 		aiMaxSteps: 12,

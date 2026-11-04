@@ -1,22 +1,29 @@
-import type { ListIssuesDto } from "@api/dto/issue.dto";
+import type { IssueDetailDto, ListIssuesDto } from "@api/dto/issue.dto";
 import type { StatusDto } from "@api/dto/status.dto";
 import {
+	keepPreviousData,
 	type QueryClient,
 	queryOptions,
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
-import {
-	type CreateIssueInput,
-	type CreateIssueRelationInput,
-	ISSUE_PRIORITY,
-	type IssuePriorityName,
-	type UpdateIssueInput,
+import type {
+	CreateIssueInput,
+	CreateIssueRelationInput,
+	IssueFilterGroup,
+	IssueQueryGroupBy,
+	IssueQuerySort,
+	UpdateIssueInput,
 } from "@workspace/shared";
 import { orgActivitiesRootKey } from "@/features/activities/data";
 import { projectsRootKey } from "@/features/projects/data";
 import { client, unwrap } from "@/lib/api";
 import { type CodedError, codedError, errorCode } from "@/lib/errors";
+import {
+	buildIssueListParams,
+	DEFAULT_ISSUE_SORT,
+	issueQueryKey,
+} from "./query";
 
 export const createIssue = (
 	orgId: string,
@@ -52,30 +59,39 @@ export const deleteIssue = (orgId: string, projectId: string, number: number) =>
 
 export type IssueSort = "updated" | "created" | "priority";
 
+/**
+ * Issue list request state. The structured filter, sort list and grouping are
+ * sent as-is; legacy flat params are converted by `features/issues/query`.
+ */
 export interface IssueFilters {
-	statusId: string[];
-	priority: IssuePriorityName[];
-	assigneeId?: string;
-	labelId?: string;
+	filter?: IssueFilterGroup;
+	sorts?: IssueQuerySort[];
+	groupBy?: IssueQueryGroupBy;
 	search: string;
-	sort: IssueSort;
 	page: number;
 	pageSize?: number;
 }
 
 export const ISSUE_PAGE_SIZE = 20;
 
-const buildQuery = (filters: Partial<IssueFilters>) => ({
-	page: String(filters.page ?? 1),
-	pageSize: String(filters.pageSize ?? ISSUE_PAGE_SIZE),
-	statusId: filters.statusId?.length ? filters.statusId : undefined,
-	priority: filters.priority?.length
-		? filters.priority.map((name) => ISSUE_PRIORITY[name])
-		: undefined,
-	assigneeId: filters.assigneeId || undefined,
-	labelId: filters.labelId || undefined,
-	search: filters.search || undefined,
-	sort: filters.sort ?? "updated",
+const normalizedQuery = (filters: IssueFilters) => ({
+	filter: filters.filter,
+	sorts: filters.sorts?.length ? filters.sorts : [DEFAULT_ISSUE_SORT],
+	groupBy: filters.groupBy,
+	search: filters.search ?? "",
+});
+
+const buildQuery = (filters: IssueFilters) =>
+	buildIssueListParams({
+		...normalizedQuery(filters),
+		page: filters.page ?? 1,
+		pageSize: filters.pageSize ?? ISSUE_PAGE_SIZE,
+	});
+
+const issueListKey = (filters: IssueFilters) => ({
+	...issueQueryKey(normalizedQuery(filters)),
+	page: filters.page ?? 1,
+	pageSize: filters.pageSize ?? ISSUE_PAGE_SIZE,
 });
 
 export function projectIssuesQuery(
@@ -85,27 +101,29 @@ export function projectIssuesQuery(
 ) {
 	return queryOptions({
 		queryKey: projectIssuesKey(orgId, projectId, filters),
+		// Grouping is client-side: keeping the previous page while the
+		// grouping-specific cache entry fills in avoids a skeleton flash.
+		placeholderData: keepPreviousData,
 		queryFn: () =>
 			unwrap(
 				client.api.orgs[":orgId"].projects[":projectId"].issues.$get({
 					param: { orgId, projectId },
-					query: buildQuery(filters),
+					// The API parses `filter`/`sort` JSON strings; the generated
+					// client types describe the post-validation shape.
+					query: buildQuery(filters) as never,
 				}),
 			),
 	});
 }
 
-export function orgIssuesQuery(
-	orgId: string,
-	filters: Partial<IssueFilters> & { assigneeId: string },
-) {
+export function orgIssuesQuery(orgId: string, filters: IssueFilters) {
 	return queryOptions({
 		queryKey: orgIssuesKey(orgId, filters),
 		queryFn: () =>
 			unwrap(
 				client.api.orgs[":orgId"].issues.$get({
 					param: { orgId },
-					query: buildQuery(filters),
+					query: buildQuery(filters) as never,
 				}),
 			),
 	});
@@ -383,6 +401,104 @@ export function useDeleteIssue(
 	});
 }
 
+/**
+ * Applies a partial update to a cached issue row (list rows and detail share
+ * the same shape). The resolved status object is patched as well when known.
+ */
+export function applyIssueUpdate<T extends IssueDetailDto>(
+	issue: T,
+	input: UpdateIssueInput,
+	status?: StatusDto,
+): T {
+	const next = { ...issue };
+	if (input.statusId !== undefined) {
+		next.statusId = input.statusId;
+		if (status) {
+			next.status = status;
+		}
+	}
+	if (input.priority !== undefined) {
+		next.priority = input.priority ?? 0;
+	}
+	if (input.assigneeId !== undefined) {
+		next.assigneeId = input.assigneeId;
+	}
+	if (input.dueDate !== undefined) {
+		next.dueDate = input.dueDate;
+	}
+	if (input.estimate !== undefined) {
+		next.estimate = input.estimate;
+	}
+	if (input.labelIds !== undefined) {
+		next.labelIds = input.labelIds;
+	}
+	return next;
+}
+
+export interface IssueFieldUpdate {
+	/** Row identity in the active list cache. */
+	id: string;
+	number: number;
+	input: UpdateIssueInput;
+}
+
+/**
+ * Inline list edits: optimistically patches the active list page, rolls back
+ * on failure, then refreshes lists, details and activity feeds. Board drags use
+ * `useMoveIssue`, which shares this request and invalidation policy.
+ */
+export function useIssueFieldUpdate(
+	orgId: string,
+	projectId: string,
+	filters: IssueFilters,
+) {
+	const queryClient = useQueryClient();
+	const listKey = projectIssuesQuery(orgId, projectId, filters).queryKey;
+	return useMutation({
+		mutationFn: ({ number, input }: IssueFieldUpdate) =>
+			updateIssue(orgId, projectId, number, input),
+		onMutate: async ({ id, input }) => {
+			await queryClient.cancelQueries({ queryKey: listKey });
+			const previous = queryClient.getQueryData<ListIssuesDto>(listKey);
+			// The statuses cache is owned by features/statuses/data; read its key
+			// directly here to keep the two data modules import-acyclic.
+			const statuses = queryClient.getQueryData<StatusDto[]>([
+				"orgs",
+				orgId,
+				"statuses",
+			]);
+			const status = input.statusId
+				? statuses?.find((entry) => entry.id === input.statusId)
+				: undefined;
+			queryClient.setQueryData<ListIssuesDto>(listKey, (old) =>
+				old
+					? {
+							...old,
+							items: old.items.map((issue) =>
+								issue.id === id
+									? applyIssueUpdate(issue, input, status)
+									: issue,
+							),
+						}
+					: old,
+			);
+			return { previous };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(listKey, context.previous);
+			}
+		},
+		onSettled: () => {
+			void invalidateIssueQueries(queryClient, orgId);
+			// Detail/activity keys are not under the list prefixes.
+			void queryClient.invalidateQueries({
+				queryKey: issueDetailRootKey(orgId, projectId),
+			});
+		},
+	});
+}
+
 export function useMoveIssue(
 	orgId: string,
 	projectId: string,
@@ -451,18 +567,32 @@ export function bulkPartialFailure(
 		: null;
 }
 
+/**
+ * Bulk writes refresh list, detail and activity caches. The detail root is not
+ * covered by `invalidateIssueQueries`, so bulk edits invalidate it explicitly.
+ */
+export const invalidateBulkIssueQueries = (
+	queryClient: QueryClient,
+	orgId: string,
+	projectId: string,
+) =>
+	Promise.all([
+		invalidateIssueQueries(queryClient, orgId),
+		queryClient.invalidateQueries({
+			queryKey: issueDetailRootKey(orgId, projectId),
+		}),
+	]);
+
 export function useBulkUpdateIssues(orgId: string, projectId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async ({
-			numbers,
-			input,
-		}: {
-			numbers: number[];
-			input: UpdateIssueInput;
-		}) => {
+		mutationFn: async (
+			updates: { number: number; input: UpdateIssueInput }[],
+		) => {
 			const results = await Promise.allSettled(
-				numbers.map((number) => updateIssue(orgId, projectId, number, input)),
+				updates.map(({ number, input }) =>
+					updateIssue(orgId, projectId, number, input),
+				),
 			);
 			const failed = results.filter(
 				(result) => result.status === "rejected",
@@ -470,12 +600,12 @@ export function useBulkUpdateIssues(orgId: string, projectId: string) {
 			if (failed > 0) {
 				throw codedError("bulk update partially failed", BULK_PARTIAL_FAILURE, {
 					failed,
-					total: numbers.length,
+					total: updates.length,
 				});
 			}
 		},
 		onSettled: () => {
-			void invalidateIssueQueries(queryClient, orgId);
+			void invalidateBulkIssueQueries(queryClient, orgId, projectId);
 		},
 	});
 }
@@ -484,13 +614,19 @@ export const projectIssuesKey = (
 	orgId: string,
 	projectId: string,
 	filters: IssueFilters,
-) => ["orgs", orgId, "projects", projectId, "issues", filters] as const;
+) =>
+	[
+		"orgs",
+		orgId,
+		"projects",
+		projectId,
+		"issues",
+		issueListKey(filters),
+	] as const;
 export const orgIssuesRootKey = (orgId: string) =>
 	["orgs", orgId, "issues"] as const;
-export const orgIssuesKey = (
-	orgId: string,
-	filters: Partial<IssueFilters> & { assigneeId: string },
-) => [...orgIssuesRootKey(orgId), filters] as const;
+export const orgIssuesKey = (orgId: string, filters: IssueFilters) =>
+	[...orgIssuesRootKey(orgId), issueListKey(filters)] as const;
 export const issueSearchKey = (
 	orgId: string,
 	term: string,

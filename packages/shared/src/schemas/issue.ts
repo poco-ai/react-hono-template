@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { ISSUE_PRIORITY, ISSUE_STATUSES } from "../constants";
 import { parseCsv } from "../csv";
+import {
+	ISSUE_LEGACY_SORT_FIELDS,
+	ISSUE_QUERY_GROUP_BY,
+	type IssueQuerySort,
+	issueFilterNodeSchema,
+	issueQuerySortSchema,
+} from "./issue-query";
 import { paginationQueryShape } from "./pagination";
 
 const toArray = (value: unknown) => {
@@ -16,6 +23,43 @@ const toNumberArray = (value: unknown) => {
 		return array.map((item) => Number(item));
 	}
 	return array;
+};
+
+/**
+ * Query strings carry the structured filter as JSON. Invalid JSON is passed
+ * through unchanged so the filter schema reports the actual validation error.
+ */
+const parseFilterQuery = (value: unknown) => {
+	if (typeof value !== "string") {
+		return value;
+	}
+	if (!value.trim()) {
+		return undefined;
+	}
+	try {
+		return JSON.parse(value);
+	} catch {
+		return value;
+	}
+};
+
+/**
+ * `sort` accepts the legacy scalar (`updated`/`created`/`priority`) or a JSON
+ * array of `{ field, direction }` entries for multi-key sorting.
+ */
+const parseSortQuery = (value: unknown) => {
+	if (typeof value !== "string") {
+		return value;
+	}
+	const trimmed = value.trim();
+	if (!trimmed.startsWith("[")) {
+		return trimmed;
+	}
+	try {
+		return JSON.parse(trimmed);
+	} catch {
+		return trimmed;
+	}
 };
 
 export const createIssueSchema = z.object({
@@ -87,8 +131,33 @@ export const issueListQuerySchema = z.object({
 	assigneeId: z.string().min(1).optional(),
 	labelId: z.string().min(1).optional(),
 	search: z.string().trim().max(100).optional(),
-	sort: z.enum(["updated", "created", "priority"]).default("updated"),
+	/**
+	 * Legacy single sort, or a JSON array of `{ field, direction }` entries
+	 * (see `issueQuerySortSchema`). The service normalizes both forms.
+	 */
+	sort: z
+		.preprocess(
+			parseSortQuery,
+			z
+				.union([
+					z.enum(ISSUE_LEGACY_SORT_FIELDS),
+					z.array(issueQuerySortSchema).max(3),
+				])
+				.default("updated"),
+		)
+		.describe(
+			"updated|created|priority, or a JSON array of {field,direction} sort keys.",
+		),
 	projectId: z.string().min(1).optional(),
+	/** Structured filter tree (JSON string). Combines with the flat params via AND. */
+	filter: z
+		.preprocess(parseFilterQuery, issueFilterNodeSchema.optional())
+		.describe("Structured filter tree as JSON."),
+	/**
+	 * Presentation-only grouping hint. It is accepted for parity with saved
+	 * views but the API does not group rows; the web client derives groups.
+	 */
+	groupBy: z.enum(ISSUE_QUERY_GROUP_BY).optional(),
 });
 
 export type CreateIssueInput = z.infer<typeof createIssueSchema>;
@@ -96,3 +165,22 @@ export type CreateIssueInput = z.infer<typeof createIssueSchema>;
 export type UpdateIssueInput = z.infer<typeof updateIssueSchema>;
 
 export type IssueListQuery = z.infer<typeof issueListQuerySchema>;
+
+/** Normalizes the legacy scalar sort and the array form to a sort list. */
+export const normalizeIssueSorts = (
+	sort: IssueListQuery["sort"] | IssueQuerySort[] | undefined,
+): IssueQuerySort[] => {
+	if (Array.isArray(sort)) {
+		return sort;
+	}
+	if (sort === "created") {
+		return [{ field: "created", direction: "desc" }];
+	}
+	if (sort === "priority") {
+		return [
+			{ field: "priority", direction: "asc" },
+			{ field: "created", direction: "desc" },
+		];
+	}
+	return [{ field: "updated", direction: "desc" }];
+};

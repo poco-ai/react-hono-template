@@ -10,6 +10,7 @@ import type { LabelService } from "../services/label.service";
 import type { ProjectService } from "../services/project.service";
 import type { RelationService } from "../services/relation.service";
 import type { StatusService } from "../services/status.service";
+import type { ViewService } from "../services/view.service";
 
 export type CapabilityEffect = "read" | "write" | "destructive";
 
@@ -125,6 +126,7 @@ export type CapabilityServices = {
 		RelationService,
 		"listRelations" | "createRelation" | "deleteRelation"
 	>;
+	viewService: Pick<ViewService, "listViews" | "createView">;
 };
 
 export type CapabilityDaos = {

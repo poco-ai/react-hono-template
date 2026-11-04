@@ -29,6 +29,7 @@ import { createOAuthRoutes } from "./routes/oauth";
 import { createProjectsRoutes } from "./routes/projects";
 import { createRelationsRoutes } from "./routes/relations";
 import { createStatusesRoutes } from "./routes/statuses";
+import { createViewsRoutes } from "./routes/views";
 import { createWebhooksRoutes } from "./routes/webhooks";
 
 export const createRoutes = ({
@@ -98,6 +99,7 @@ export const createRoutes = ({
 			.route("/", createActivitiesRoutes(dependencies.services.activityService))
 			.route("/", createLabelsRoutes(dependencies.services.labelService))
 			.route("/", createStatusesRoutes(dependencies.services.statusService))
+			.route("/", createViewsRoutes(dependencies.services.viewService))
 			.route("/", createApiKeysRoutes(dependencies.services.apiKeyService))
 			.route("/", createWebhooksRoutes(dependencies.services.webhookService))
 			.route("/", createBillingRoutes(dependencies.services.billingService))

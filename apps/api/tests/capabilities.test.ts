@@ -75,6 +75,7 @@ const setup = (options: SetupOptions = {}) => {
 	const project = projectDto();
 	const calls = {
 		listIssues: [] as { orgId: string; projectId: string | null }[],
+		listIssuesInput: [] as unknown[],
 		listProjects: [] as { orgId: string; options?: unknown }[],
 		createIssue: [] as {
 			orgId: string;
@@ -89,8 +90,13 @@ const setup = (options: SetupOptions = {}) => {
 	const deps = {
 		services: {
 			issueService: {
-				listIssues: async (orgId: string, projectId: string | null) => {
+				listIssues: async (
+					orgId: string,
+					projectId: string | null,
+					input?: unknown,
+				) => {
 					calls.listIssues.push({ orgId, projectId });
+					calls.listIssuesInput.push(input);
 					return { items: [issue], total: 1, page: 1, pageSize: 20 };
 				},
 				getIssue: async () => issue,
@@ -393,6 +399,48 @@ test("capabilities pass the context organization to services (no cross-org)", as
 		sort: "updated",
 	});
 	assert.deepEqual(calls.listIssues, [{ orgId: "org-9", projectId: null }]);
+});
+
+test("list_issues and search_issues forward filter, sorts and grouping", async () => {
+	const { deps, calls } = setup();
+	const layer = createCapabilityLayer(deps);
+	const filter = {
+		type: "condition" as const,
+		field: "priority" as const,
+		operator: "eq" as const,
+		value: 2,
+	};
+	const sort = [{ field: "dueDate" as const, direction: "asc" as const }];
+
+	await layer.execute("list_issues", context(), {
+		filter,
+		sort,
+		groupBy: "assignee",
+	});
+	await layer.execute("search_issues", context(), {
+		search: "login",
+		filter,
+		sort,
+	});
+
+	const [listInput, searchInput] = calls.listIssuesInput as Record<
+		string,
+		unknown
+	>[];
+	assert.deepEqual(listInput?.filter, filter);
+	assert.deepEqual(listInput?.sort, sort);
+	assert.equal(listInput?.groupBy, "assignee");
+	assert.equal(searchInput?.search, "login");
+	assert.deepEqual(searchInput?.filter, filter);
+	assert.deepEqual(searchInput?.sort, sort);
+
+	// Invalid filter trees are rejected by the capability input schema.
+	await assert.rejects(
+		layer.execute("list_issues", context(), {
+			filter: { type: "condition", field: "title", operator: "eq", value: 1 },
+		}),
+		(error: unknown) => error instanceof ApiError && error.status === 400,
+	);
 });
 
 test("list_orgs returns the actor's memberships and works without an org", async () => {

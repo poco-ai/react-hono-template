@@ -1,8 +1,14 @@
+import type { ProjectDto } from "@api/dto/project.dto";
 import type { StatusDto } from "@api/dto/status.dto";
 import {
 	ISSUE_PRIORITIES,
-	type IssuePriorityName,
-	serializeCsv,
+	ISSUE_QUERY_SORT_FIELDS,
+	type IssueFilterCondition,
+	type IssueFilterField,
+	type IssueFilterGroup,
+	type IssueFilterScalar,
+	type IssueQuerySortField,
+	priorityName,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -22,24 +28,44 @@ import { Search } from "lucide-react";
 import type { FormEvent, RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
+import { assigneeSelection, filterSelection, setFieldFilter } from "../query";
 import type { IssuesSearch } from "../search";
+import { IssueFilterChips, IssueQueryBuilder } from "./query-builder";
 
-const ASSIGNEE_ALL = "__all__";
-const LABEL_ALL = "__all__";
+const ALL = "__all__";
+const UNASSIGNED = "none";
+
+type FilterFieldSources = {
+	statuses: StatusDto[];
+	members: { userId: string; user: { name: string } }[];
+	labels: { id: string; name: string }[];
+	projects: Pick<ProjectDto, "id" | "name" | "key">[];
+};
+
+const singleCondition = (
+	field: IssueFilterField,
+	values: IssueFilterScalar[],
+): IssueFilterCondition[] => {
+	if (values.length === 0) {
+		return [];
+	}
+	return [
+		{
+			type: "condition",
+			field,
+			operator: values.length > 1 ? "in" : "eq",
+			value: values.length > 1 ? values : values[0],
+		},
+	];
+};
 
 export function IssueFilterControls({
 	variant,
-	statusFilter,
+	filter,
 	statuses,
-	priorityFilter,
-	assigneeId,
-	assigneeFilterActive,
-	assigneeFilterLabel,
-	labelId,
-	labelFilterActive,
-	labelFilterLabel,
 	members,
 	labels,
+	projects,
 	showSort,
 	sort,
 	searchInput,
@@ -48,47 +74,80 @@ export function IssueFilterControls({
 	onSearchInput,
 	onSearchSubmit,
 	onUpdateSearch,
+	onFilterChange,
+	onClearFilters,
 }: {
 	variant: "inline" | "sheet";
-	statusFilter: string[];
-	statuses: StatusDto[];
-	priorityFilter: IssuePriorityName[];
-	assigneeId?: string;
-	assigneeFilterActive: boolean;
-	assigneeFilterLabel: string;
-	labelId?: string;
-	labelFilterActive: boolean;
-	labelFilterLabel: string;
-	members: { userId: string; user: { name: string } }[];
-	labels: { id: string; name: string }[];
+	filter?: IssueFilterGroup;
 	showSort: boolean;
-	sort: IssuesSearch["sort"];
+	sort: IssueQuerySortField;
 	searchInput: string;
 	searchInputRef: RefObject<HTMLInputElement | null>;
 	hasFilters: boolean;
 	onSearchInput: (value: string) => void;
 	onSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
 	onUpdateSearch: (next: Partial<IssuesSearch>) => void;
-}) {
+	onFilterChange: (next: IssueFilterGroup | undefined) => void;
+	/** Clears filters through the page so view detachment stays consistent. */
+	onClearFilters: () => void;
+} & FilterFieldSources) {
 	const { t } = useTranslation();
 	const stacked = variant === "sheet";
-	const summarize = (labels: string[]) =>
-		labels.length === 0
+	const summarize = (values: string[]) =>
+		values.length === 0
 			? t("common.all")
-			: labels.length === 1
-				? labels[0]
-				: `${labels[0]} +${labels.length - 1}`;
+			: values.length === 1
+				? values[0]
+				: `${values[0]} +${values.length - 1}`;
+
+	const statusFilter = filterSelection(filter, "statusId");
+	const priorityFilter = filterSelection(filter, "priority")
+		.map(Number)
+		.filter((value) => ISSUE_PRIORITIES.some((entry) => entry.value === value));
+	const assigneeId = assigneeSelection(filter);
+	const labelId = filterSelection(filter, "labelId")[0];
+
 	const statusValue = summarize(
 		statusFilter
 			.map((id) => statuses.find((status) => status.id === id)?.name)
 			.filter((name): name is string => Boolean(name)),
 	);
 	const priorityValue = summarize(
-		priorityFilter.map((name) => t(`issues.priorities.${name}`)),
+		priorityFilter.map((value) =>
+			t(`issues.priorities.${priorityName(value)}`),
+		),
 	);
+	const memberById = new Map(members.map((member) => [member.userId, member]));
+	const labelById = new Map(labels.map((label) => [label.id, label]));
+	const assigneeFilterLabel =
+		assigneeId === undefined
+			? t("common.all")
+			: assigneeId === UNASSIGNED
+				? t("common.unassigned")
+				: (memberById.get(assigneeId)?.user.name ?? t("common.all"));
+	const labelFilterLabel = labelId
+		? (labelById.get(labelId)?.name ?? t("common.all"))
+		: t("common.all");
+
+	const changeField = (
+		field: IssueFilterField,
+		conditions: IssueFilterCondition[],
+	) => {
+		const next = setFieldFilter(filter, field, conditions);
+		onFilterChange(next.children.length > 0 ? next : undefined);
+	};
 
 	return (
 		<>
+			<IssueQueryBuilder
+				filter={filter}
+				statuses={statuses}
+				members={members}
+				labels={labels}
+				projects={projects}
+				stacked={stacked}
+				onChange={onFilterChange}
+			/>
 			<MultiSelect
 				className={cn("h-8 text-sm", stacked && "w-full")}
 				placeholder={t("issues.filterStatus")}
@@ -100,7 +159,7 @@ export function IssueFilterControls({
 					label: status.name,
 				}))}
 				onChange={(next) =>
-					onUpdateSearch({ statusId: serializeCsv(next), status: "", page: 1 })
+					changeField("statusId", singleCondition("statusId", next))
 				}
 			/>
 			<MultiSelect
@@ -108,28 +167,50 @@ export function IssueFilterControls({
 				placeholder={t("issues.filterPriority")}
 				triggerLabel={`${t("issues.filterPriority")}: ${priorityValue}`}
 				active={priorityFilter.length > 0}
-				value={priorityFilter}
-				options={ISSUE_PRIORITIES.map(({ name }) => ({
-					value: name,
+				value={priorityFilter.map(String)}
+				options={ISSUE_PRIORITIES.map(({ value, name }) => ({
+					value: String(value),
 					label: t(`issues.priorities.${name}`),
 				}))}
 				onChange={(next) =>
-					onUpdateSearch({ priority: serializeCsv(next), page: 1 })
+					changeField(
+						"priority",
+						singleCondition(
+							"priority",
+							next.map(Number).filter((value) => Number.isFinite(value)),
+						),
+					)
 				}
 			/>
 			<Select
-				value={assigneeId ?? ASSIGNEE_ALL}
-				onValueChange={(value) =>
-					onUpdateSearch({
-						assigneeId: value && value !== ASSIGNEE_ALL ? value : undefined,
-						page: 1,
-					})
-				}
+				value={assigneeId ?? ALL}
+				onValueChange={(value) => {
+					if (!value || value === ALL) {
+						changeField("assigneeId", []);
+					} else if (value === UNASSIGNED) {
+						changeField("assigneeId", [
+							{
+								type: "condition",
+								field: "assigneeId",
+								operator: "isNull",
+							},
+						]);
+					} else {
+						changeField("assigneeId", [
+							{
+								type: "condition",
+								field: "assigneeId",
+								operator: "eq",
+								value,
+							},
+						]);
+					}
+				}}
 			>
 				<SelectTrigger
 					className={cn(
 						stacked ? "w-full" : "w-44",
-						assigneeFilterActive && "border-foreground/30",
+						assigneeId !== undefined && "border-foreground/30",
 					)}
 				>
 					<SelectValue>
@@ -137,15 +218,17 @@ export function IssueFilterControls({
 							{t("issues.filterAssignee")}:
 						</span>
 						<span
-							className={cn(!assigneeFilterActive && "text-muted-foreground")}
+							className={cn(
+								assigneeId === undefined && "text-muted-foreground",
+							)}
 						>
 							{assigneeFilterLabel}
 						</span>
 					</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value={ASSIGNEE_ALL}>{t("common.all")}</SelectItem>
-					<SelectItem value="none">{t("common.unassigned")}</SelectItem>
+					<SelectItem value={ALL}>{t("common.all")}</SelectItem>
+					<SelectItem value={UNASSIGNED}>{t("common.unassigned")}</SelectItem>
 					{members.map((member) => (
 						<SelectItem key={member.userId} value={member.userId}>
 							{member.user.name}
@@ -154,31 +237,40 @@ export function IssueFilterControls({
 				</SelectContent>
 			</Select>
 			<Select
-				value={labelId ?? LABEL_ALL}
+				value={labelId ?? ALL}
 				onValueChange={(value) =>
-					onUpdateSearch({
-						labelId: value && value !== LABEL_ALL ? value : undefined,
-						page: 1,
-					})
+					changeField(
+						"labelId",
+						value && value !== ALL
+							? [
+									{
+										type: "condition",
+										field: "labelId",
+										operator: "eq",
+										value,
+									},
+								]
+							: [],
+					)
 				}
 			>
 				<SelectTrigger
 					className={cn(
 						stacked ? "w-full" : "w-40",
-						labelFilterActive && "border-foreground/30",
+						labelId !== undefined && "border-foreground/30",
 					)}
 				>
 					<SelectValue>
 						<span className="text-muted-foreground">
 							{t("issues.filterLabel")}:
 						</span>
-						<span className={cn(!labelFilterActive && "text-muted-foreground")}>
+						<span className={cn(!labelId && "text-muted-foreground")}>
 							{labelFilterLabel}
 						</span>
 					</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value={LABEL_ALL}>{t("common.all")}</SelectItem>
+					<SelectItem value={ALL}>{t("common.all")}</SelectItem>
 					{labels.map((label) => (
 						<SelectItem key={label.id} value={label.id}>
 							{label.name}
@@ -207,22 +299,21 @@ export function IssueFilterControls({
 				<Select
 					value={sort}
 					onValueChange={(value) =>
-						onUpdateSearch({ sort: value as IssuesSearch["sort"] })
+						onUpdateSearch({
+							sort: value as IssuesSearch["sort"],
+							page: 1,
+						})
 					}
 				>
 					<SelectTrigger className={stacked ? "w-full" : "w-40"}>
 						<SelectValue>{t(`issues.sortOptions.${sort}`)}</SelectValue>
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="updated">
-							{t("issues.sortOptions.updated")}
-						</SelectItem>
-						<SelectItem value="created">
-							{t("issues.sortOptions.created")}
-						</SelectItem>
-						<SelectItem value="priority">
-							{t("issues.sortOptions.priority")}
-						</SelectItem>
+						{ISSUE_QUERY_SORT_FIELDS.map((field) => (
+							<SelectItem key={field} value={field}>
+								{t(`issues.sortOptions.${field}`)}
+							</SelectItem>
+						))}
 					</SelectContent>
 				</Select>
 			)}
@@ -231,20 +322,20 @@ export function IssueFilterControls({
 					variant="ghost"
 					size="sm"
 					className={cn(stacked && "justify-center")}
-					onClick={() =>
-						onUpdateSearch({
-							status: "",
-							priority: "",
-							assigneeId: "",
-							labelId: "",
-							search: "",
-							page: 1,
-						})
-					}
+					onClick={onClearFilters}
 				>
 					{t("issues.clearFilters")}
 				</Button>
 			)}
+			<IssueFilterChips
+				filter={filter}
+				statuses={statuses}
+				members={members}
+				labels={labels}
+				projects={projects}
+				onChange={onFilterChange}
+				className={cn("w-full", !stacked && "mt-1")}
+			/>
 		</>
 	);
 }

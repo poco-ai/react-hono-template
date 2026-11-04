@@ -5,6 +5,7 @@ import {
 	createIssueSchema,
 	createLabelSchema,
 	createProjectSchema,
+	createViewSchema,
 	ISSUE_RELATION_INPUT_TYPES,
 	updateIssueSchema,
 	updateLabelSchema,
@@ -26,6 +27,8 @@ import {
 	toIssueSummary,
 	toLabelSummary,
 	toProjectSummary,
+	toViewSummary,
+	viewSummarySchema,
 } from "./read";
 import {
 	type CapabilityContext,
@@ -346,6 +349,36 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 					data: { id: input.commentId, deleted: true },
 					summary: `Deleted comment ${input.commentId} on issue #${issue.number}.`,
 					links: [issueLink(ctx, orgId, issue.projectId, issue.number)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "create_view",
+			titleKey: "ai.capabilities.create_view.title",
+			description:
+				"Save a reusable issue view for the organization. Provide a name, an optional description and project scope (projectId; omit it for an organization-wide view), plus the query: a filter tree (fields statusId, priority, assigneeId, createdById, labelId, projectId, dueDate, createdAt, updatedAt, estimate with eq/neq/in/notIn/isNull/isNotNull/contains/before/after/between/gt/lt/gte/lte), an optional sort array, groupBy and layout. Personal views are private to the caller and limited by the plan; shared views are visible to every member and require an organization owner/admin.",
+			input: createViewSchema,
+			output: z.object({ view: viewSummarySchema }),
+			effect: "write",
+			scopes: ["write"],
+			execute: async (ctx, input) => {
+				const userId = requireUserId(ctx);
+				const orgId = ctx.orgId as string;
+				const view = await deps.services.viewService.createView(
+					orgId,
+					userId,
+					ctx.actor.role ?? "member",
+					input,
+				);
+				return {
+					data: { view: toViewSummary(view) },
+					summary: `Created ${view.shared ? "shared" : "personal"} view "${view.name}".`,
+					links: [
+						view.projectId
+							? projectLink(ctx, orgId, view.projectId)
+							: orgLink(ctx, orgId),
+					],
 				};
 			},
 		}),

@@ -2,7 +2,12 @@ import {
 	ApiError,
 	ApiErrorCode,
 	ISSUE_PRIORITY,
+	ISSUE_QUERY_GROUP_BY,
+	ISSUE_QUERY_MAX_SORTS,
 	ISSUE_STATUSES,
+	issueFilterNodeSchema,
+	issueQuerySchema,
+	issueQuerySortSchema,
 } from "@workspace/shared";
 import { z } from "zod";
 import type { ActivityDto, OrgActivityDto } from "../dto/activity.dto";
@@ -11,6 +16,7 @@ import type { IssueDetailDto } from "../dto/issue.dto";
 import type { LabelDto } from "../dto/label.dto";
 import type { ProjectWithStatsDto } from "../dto/project.dto";
 import type { StatusDto } from "../dto/status.dto";
+import type { ViewDto } from "../dto/view.dto";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -136,6 +142,21 @@ export const activitySummarySchema = z.object({
 		.optional(),
 });
 
+export const viewSummarySchema = z.object({
+	id: z.string(),
+	orgId: z.string(),
+	projectId: z.string().nullable(),
+	name: z.string(),
+	description: z.string().nullable(),
+	ownerId: z.string(),
+	shared: z.boolean(),
+	isDefault: z.boolean(),
+	layout: z.string(),
+	query: issueQuerySchema,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
 const pageMetaSchema = {
 	total: z.number().int(),
 	page: z.number().int(),
@@ -160,6 +181,7 @@ type CommentSummary = z.infer<typeof commentSummarySchema>;
 type LabelSummary = z.infer<typeof labelSummarySchema>;
 type StatusSummary = z.infer<typeof statusSummarySchema>;
 type ActivitySummary = z.infer<typeof activitySummarySchema>;
+type ViewSummary = z.infer<typeof viewSummarySchema>;
 
 export const toOrgSummary = (
 	org: {
@@ -250,6 +272,21 @@ export const toStatusSummary = (status: StatusDto): StatusSummary => ({
 	color: status.color,
 	position: status.position,
 	isDefault: status.isDefault,
+});
+
+export const toViewSummary = (view: ViewDto): ViewSummary => ({
+	id: view.id,
+	orgId: view.orgId,
+	projectId: view.projectId,
+	name: view.name,
+	description: view.description,
+	ownerId: view.ownerId,
+	shared: view.shared,
+	isDefault: view.isDefault,
+	layout: view.layout,
+	query: view.query,
+	createdAt: view.createdAt,
+	updatedAt: view.updatedAt,
 });
 
 export const toIssueActivitySummary = (
@@ -372,8 +409,22 @@ const listIssuesInputSchema = z.object({
 	assigneeId: z.string().min(1).optional(),
 	labelId: z.string().min(1).optional(),
 	search: z.string().trim().max(100).optional(),
+	/** Structured filter tree; AND-combined with the flat filters above. */
+	filter: issueFilterNodeSchema.optional(),
 	...paginationInputShape,
-	sort: z.enum(["updated", "created", "priority"]).default("updated"),
+	/** Legacy scalar sort or a prioritized list of sort keys. */
+	sort: z
+		.union([
+			z.enum(["updated", "created", "priority"]),
+			z.array(issueQuerySortSchema).max(ISSUE_QUERY_MAX_SORTS),
+		])
+		.default("updated"),
+	/**
+	 * Presentation-only grouping hint: it is forwarded to the service and kept
+	 * for view parity, but rows are returned flat (the web client derives
+	 * groups). It is not reflected in the response.
+	 */
+	groupBy: z.enum(ISSUE_QUERY_GROUP_BY).optional(),
 });
 
 type IssueRefInput = z.infer<typeof issueRefSchema>;
@@ -808,6 +859,36 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 					data: { statuses: statuses.map(toStatusSummary) },
 					summary: `Found ${statuses.length} workflow status(es).`,
 					links: [statusesLink(ctx, orgId)],
+				};
+			},
+		}),
+
+		defineCapability({
+			name: "list_views",
+			titleKey: "ai.capabilities.list_views.title",
+			description:
+				"List saved issue views visible to the caller: their own views plus every view shared in the organization. Each view includes its structured query (filter tree, sorts, grouping) and layout. To run a view, pass its query.filter and query.sort to list_issues; grouping and layout are presentation hints the web client applies.",
+			input: z.object({ projectId: z.string().min(1).optional() }),
+			output: z.object({ views: z.array(viewSummarySchema) }),
+			effect: "read",
+			scopes: ["read"],
+			execute: async (ctx, input) => {
+				const orgId = ctx.orgId as string;
+				const views = await deps.services.viewService.listViews(
+					orgId,
+					ctx.actor.userId ?? "",
+					{ projectId: input.projectId },
+				);
+				return {
+					data: { views: views.map(toViewSummary) },
+					summary: `Found ${views.length} saved view(s).`,
+					links: uniqueLinks(
+						views.map((view) =>
+							view.projectId
+								? projectLink(ctx, orgId, view.projectId)
+								: orgLink(ctx, orgId),
+						),
+					),
 				};
 			},
 		}),

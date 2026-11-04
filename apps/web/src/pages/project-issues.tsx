@@ -1,11 +1,7 @@
 import type { ListIssuesDto } from "@api/dto/issue.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-	ISSUE_PRIORITIES,
-	type IssuePriorityName,
-	parseCsv,
-} from "@workspace/shared";
+import type { IssueFilterGroup, IssueQuery } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import {
@@ -29,22 +25,33 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import { NotFoundState } from "@/components/not-found-state";
+import { useSession } from "@/features/auth/data";
 import { BoardView } from "@/features/issues/components/board-view";
 import { BulkActionBar } from "@/features/issues/components/bulk-bar";
 import { CreateIssueDialog } from "@/features/issues/components/create-issue-dialog";
 import { IssueFilterControls } from "@/features/issues/components/issue-filter-controls";
 import { IssueList } from "@/features/issues/components/issue-list";
+import { IssueListToolbar } from "@/features/issues/components/list-toolbar";
 import { projectIssuesQuery } from "@/features/issues/data";
+import {
+	type IssueListDensity,
+	useIssueListPreferences,
+} from "@/features/issues/list-preferences";
+import {
+	detachedFilterSearch,
+	filterConditionCount,
+	primarySortField,
+	resolveIssueQuery,
+} from "@/features/issues/query";
 import type { IssuesSearch } from "@/features/issues/search";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
-import { projectQuery } from "@/features/projects/data";
-import {
-	defaultStatusOf,
-	resolveStatusIds,
-	statusesQuery,
-} from "@/features/statuses/data";
+import { useOrgRole } from "@/features/organizations/use-org-role";
+import { projectQuery, projectsQuery } from "@/features/projects/data";
+import { defaultStatusOf, statusesQuery } from "@/features/statuses/data";
+import { ViewSwitcher } from "@/features/views/components/view-switcher";
+import { type ViewDto, viewsQuery } from "@/features/views/data";
 import { isNotFoundError } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useHotkeys } from "@/lib/use-hotkeys";
@@ -66,6 +73,7 @@ export function ProjectIssuesPage({
 	useDocumentTitle(project.data?.name);
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
+	const projects = useQuery(projectsQuery(orgId));
 	const statuses = useQuery(statusesQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
@@ -79,47 +87,185 @@ export function ProjectIssuesPage({
 		setSearchInput(search.search ?? "");
 	}, [search.search]);
 
-	const updateSearch = (next: Partial<IssuesSearch>) => {
-		setSelected(new Set());
-		setSearch(next);
-	};
-
 	const view = search.view ?? "list";
 
-	const statusFilter = resolveStatusIds(
-		statuses.data,
-		parseCsv(search.statusId),
-		parseCsv(search.status),
-	);
-	const priorityFilter = parseCsv(search.priority).filter((value) =>
-		ISSUE_PRIORITIES.some((priority) => priority.name === value),
-	) as IssuePriorityName[];
+	const views = useQuery(viewsQuery(orgId, projectId));
+	const currentView = search.viewId
+		? views.data?.find((entry) => entry.id === search.viewId)
+		: undefined;
+	const resolved = resolveIssueQuery(search, {
+		view: currentView?.query,
+		statuses: statuses.data,
+	});
+	const effectiveFilter = resolved.filter;
+	const sortField = primarySortField(resolved.sorts);
+	const { canManage } = useOrgRole(orgId);
+	const { data: session } = useSession();
+	const [dirtyView, setDirtyView] = useState<ViewDto | null>(null);
+
+	useEffect(() => {
+		if (search.viewId) {
+			setDirtyView(null);
+		}
+	}, [search.viewId]);
+
+	// A view id that no longer resolves to a visible view is a ghost filter:
+	// drop it once the list has settled so URL state matches what is applied.
+	useEffect(() => {
+		if (
+			!search.viewId ||
+			!views.isSuccess ||
+			views.isFetching ||
+			views.data.some((entry) => entry.id === search.viewId)
+		) {
+			return;
+		}
+		setSearch({ viewId: undefined });
+	}, [search.viewId, views.data, views.isSuccess, views.isFetching, setSearch]);
 
 	const issues = useQuery(
 		projectIssuesQuery(orgId, projectId, {
+			filter: effectiveFilter,
+			sorts: resolved.sorts,
+			groupBy: resolved.groupBy,
+			search: resolved.search,
 			page: search.page,
-			statusId: statusFilter,
-			priority: priorityFilter,
-			assigneeId: search.assigneeId,
-			labelId: search.labelId,
-			search: search.search ?? "",
-			sort: search.sort,
 		}),
 	);
 
+	const listFilters = {
+		filter: effectiveFilter,
+		sorts: resolved.sorts,
+		groupBy: resolved.groupBy,
+		search: resolved.search,
+		page: search.page,
+	};
+
+	const {
+		columns,
+		density: storedDensity,
+		toggleColumn,
+		setDensity: persistDensity,
+	} = useIssueListPreferences(session?.user.id);
+	// Display-only: the URL wins when present, otherwise the last persisted value.
+	const density: IssueListDensity = search.density ?? storedDensity;
+	const setDensity = (next: IssueListDensity) => {
+		persistDensity(next);
+		setSearch({ density: next });
+	};
+
 	const result: ListIssuesDto | undefined = issues.data;
-	const hasFilters =
-		statusFilter.length > 0 ||
-		priorityFilter.length > 0 ||
-		search.assigneeId !== undefined ||
-		search.labelId !== undefined ||
-		(search.search ?? "") !== "";
-	const activeFilterCount =
-		statusFilter.length +
-		priorityFilter.length +
-		(search.assigneeId !== undefined ? 1 : 0) +
-		(search.labelId !== undefined ? 1 : 0) +
-		((search.search ?? "") !== "" ? 1 : 0);
+	const filterCount = filterConditionCount(effectiveFilter);
+	const hasFilters = filterCount > 0 || resolved.search !== "";
+	const activeFilterCount = filterCount + (resolved.search !== "" ? 1 : 0);
+
+	/**
+	 * Leaves the applied view (when there is one) while keeping its resolved
+	 * sort/grouping, so changing the filter does not silently reset either.
+	 */
+	const detachView = (
+		nextFilter: IssueFilterGroup | undefined,
+		options: {
+			search?: string;
+			overrides?: Partial<Pick<IssuesSearch, "sort" | "groupBy" | "page">>;
+		} = {},
+	) => {
+		setSelected(new Set());
+		if (currentView) {
+			setDirtyView(currentView);
+		}
+		setSearch(
+			detachedFilterSearch({
+				view: currentView?.query,
+				resolved,
+				filter: nextFilter,
+				search: options.search,
+				overrides: options.overrides,
+			}),
+		);
+	};
+
+	const updateSearch = (next: Partial<IssuesSearch>) => {
+		setSelected(new Set());
+		if (currentView && ("sort" in next || "groupBy" in next)) {
+			const overrides: Partial<
+				Pick<IssuesSearch, "sort" | "groupBy" | "page">
+			> = {};
+			if ("sort" in next) {
+				overrides.sort = next.sort;
+			}
+			if ("groupBy" in next) {
+				overrides.groupBy = next.groupBy;
+			}
+			if (next.page !== undefined) {
+				overrides.page = next.page;
+			}
+			detachView(effectiveFilter, { overrides });
+			return;
+		}
+		setSearch(next);
+	};
+
+	const setGroupBy = (next: IssuesSearch["groupBy"]) => {
+		updateSearch({ groupBy: next });
+	};
+
+	/**
+	 * Quick filters and the structured builder both replace field conditions in
+	 * the applied filter. Editing detaches from the saved view while keeping the
+	 * base view around for "update" / "save as".
+	 */
+	const applyFilter = (next: IssueFilterGroup | undefined) => {
+		detachView(next);
+	};
+
+	const applyView = (next: ViewDto) => {
+		setDirtyView(null);
+		setSelected(new Set());
+		setSearch({
+			viewId: next.id,
+			filter: "",
+			sort: "updated",
+			groupBy: undefined,
+			statusId: "",
+			status: "",
+			priority: "",
+			assigneeId: "",
+			labelId: "",
+			page: 1,
+			view: next.layout === "board" ? "board" : "list",
+		});
+	};
+
+	const clearView = () => {
+		setDirtyView(null);
+		setSelected(new Set());
+		setSearch({
+			viewId: undefined,
+			filter: "",
+			sort: "updated",
+			groupBy: undefined,
+			statusId: "",
+			status: "",
+			priority: "",
+			assigneeId: "",
+			labelId: "",
+			page: 1,
+		});
+	};
+
+	// Clearing filters keeps the user's sort/grouping (and a view's resolved
+	// ones) intact; it is not the same as resetting to defaults.
+	const clearFilters = () => {
+		detachView(undefined, { search: "" });
+	};
+
+	const savedQuery: IssueQuery = {
+		filter: effectiveFilter,
+		sort: resolved.sorts,
+		groupBy: resolved.groupBy ?? null,
+		layout: view === "board" ? "board" : "list",
+	};
 	// The empty state owns the only "create" call to action on a fresh project.
 	const hideHeaderCreate =
 		view === "list" &&
@@ -128,27 +274,10 @@ export function ProjectIssuesPage({
 		!issues.isError &&
 		result?.items.length === 0;
 
-	const memberById = new Map(
-		(members.data ?? []).map((member) => [member.userId, member]),
-	);
-	const labelById = new Map(
-		(labels.data ?? []).map((label) => [label.id, label]),
-	);
-	const assigneeFilterActive = Boolean(search.assigneeId);
-	const assigneeFilterLabel =
-		search.assigneeId === undefined || search.assigneeId === ""
-			? t("common.all")
-			: search.assigneeId === "none"
-				? t("common.unassigned")
-				: (memberById.get(search.assigneeId)?.user.name ?? t("common.all"));
-	const labelFilterActive = Boolean(search.labelId);
-	const labelFilterLabel = search.labelId
-		? (labelById.get(search.labelId)?.name ?? t("common.all"))
-		: t("common.all");
-
 	const onSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		updateSearch({ search: searchInput.trim(), page: 1 });
+		setSelected(new Set());
+		setSearch({ search: searchInput.trim(), page: 1 });
 	};
 
 	const gotoPage = (next: number) => updateSearch({ page: next });
@@ -230,9 +359,9 @@ export function ProjectIssuesPage({
 		});
 	};
 
-	const selectedNumbers = (result?.items ?? [])
+	const selectedIssues = (result?.items ?? [])
 		.filter((issue) => selected.has(issue.id))
-		.map((issue) => issue.number);
+		.map((issue) => ({ number: issue.number, labelIds: issue.labelIds }));
 
 	if (project.isError && isNotFoundError(project.error)) {
 		return (
@@ -274,6 +403,35 @@ export function ProjectIssuesPage({
 						)}
 					</div>
 					<div className="flex items-center gap-2">
+						{view === "list" && (
+							<IssueListToolbar
+								groupBy={resolved.groupBy}
+								onGroupByChange={setGroupBy}
+								density={density}
+								onDensityChange={setDensity}
+								columns={columns}
+								onToggleColumn={toggleColumn}
+							/>
+						)}
+						<ViewSwitcher
+							orgId={orgId}
+							projectId={projectId}
+							views={views.data ?? []}
+							viewsLoading={views.isPending}
+							viewsError={views.isError ? views.error : null}
+							onRetryViews={() => {
+								void views.refetch();
+							}}
+							currentView={currentView}
+							dirtyView={dirtyView}
+							query={savedQuery}
+							layout={view === "board" ? "board" : "list"}
+							canManage={canManage}
+							currentUserId={session?.user.id}
+							onApply={applyView}
+							onUpdated={applyView}
+							onCleared={clearView}
+						/>
 						<ToggleGroup
 							value={[view]}
 							onValueChange={(next) => {
@@ -309,25 +467,21 @@ export function ProjectIssuesPage({
 				<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
 					<IssueFilterControls
 						variant="inline"
-						statusFilter={statusFilter}
+						filter={effectiveFilter}
 						statuses={statuses.data ?? []}
-						priorityFilter={priorityFilter}
-						assigneeId={search.assigneeId}
-						assigneeFilterActive={assigneeFilterActive}
-						assigneeFilterLabel={assigneeFilterLabel}
-						labelId={search.labelId}
-						labelFilterActive={labelFilterActive}
-						labelFilterLabel={labelFilterLabel}
 						members={members.data ?? []}
 						labels={labels.data ?? []}
+						projects={projects.data ?? []}
 						showSort={view === "list"}
-						sort={search.sort}
+						sort={sortField}
 						searchInput={searchInput}
 						searchInputRef={searchInputRef}
 						hasFilters={hasFilters}
 						onSearchInput={setSearchInput}
 						onSearchSubmit={onSearch}
 						onUpdateSearch={updateSearch}
+						onFilterChange={applyFilter}
+						onClearFilters={clearFilters}
 					/>
 				</div>
 			) : (
@@ -353,25 +507,21 @@ export function ProjectIssuesPage({
 							<div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
 								<IssueFilterControls
 									variant="sheet"
-									statusFilter={statusFilter}
+									filter={effectiveFilter}
 									statuses={statuses.data ?? []}
-									priorityFilter={priorityFilter}
-									assigneeId={search.assigneeId}
-									assigneeFilterActive={assigneeFilterActive}
-									assigneeFilterLabel={assigneeFilterLabel}
-									labelId={search.labelId}
-									labelFilterActive={labelFilterActive}
-									labelFilterLabel={labelFilterLabel}
 									members={members.data ?? []}
 									labels={labels.data ?? []}
+									projects={projects.data ?? []}
 									showSort={view === "list"}
-									sort={search.sort}
+									sort={sortField}
 									searchInput={searchInput}
 									searchInputRef={searchInputRef}
 									hasFilters={hasFilters}
 									onSearchInput={setSearchInput}
 									onSearchSubmit={onSearch}
 									onUpdateSearch={updateSearch}
+									onFilterChange={applyFilter}
+									onClearFilters={clearFilters}
 								/>
 							</div>
 						</SheetContent>
@@ -387,12 +537,10 @@ export function ProjectIssuesPage({
 						projectKey={project.data?.key ?? ""}
 						frozen={frozen}
 						filters={{
-							statusId: statusFilter,
-							priority: priorityFilter,
-							assigneeId: search.assigneeId,
-							labelId: search.labelId,
-							search: search.search ?? "",
-							sort: search.sort,
+							filter: effectiveFilter,
+							sorts: resolved.sorts,
+							groupBy: resolved.groupBy,
+							search: resolved.search,
 						}}
 						members={members.data ?? []}
 						labels={labels.data ?? []}
@@ -408,34 +556,31 @@ export function ProjectIssuesPage({
 					issues={issues}
 					members={members.data ?? []}
 					labels={labels.data ?? []}
+					statuses={statuses.data ?? []}
 					page={search.page}
 					selected={selected}
 					frozen={frozen}
 					hasFilters={hasFilters}
+					filters={listFilters}
+					columns={columns}
+					density={density}
+					groupBy={resolved.groupBy}
 					toggleAllOnPage={toggleAllOnPage}
 					toggleOne={toggleOne}
 					onPageChange={gotoPage}
-					onClearFilters={() =>
-						updateSearch({
-							statusId: "",
-							status: "",
-							priority: "",
-							assigneeId: "",
-							labelId: "",
-							search: "",
-							page: 1,
-						})
-					}
+					onClearFilters={clearFilters}
 					onNewIssue={() => openCreate()}
 				/>
 			)}
 
-			{selectedNumbers.length > 0 && view === "list" && (
+			{selectedIssues.length > 0 && view === "list" && (
 				<BulkActionBar
 					orgId={orgId}
 					projectId={projectId}
-					numbers={selectedNumbers}
+					issues={selectedIssues}
 					statuses={statuses.data ?? []}
+					members={members.data ?? []}
+					labels={labels.data ?? []}
 					frozen={frozen}
 					onDone={() => setSelected(new Set())}
 				/>

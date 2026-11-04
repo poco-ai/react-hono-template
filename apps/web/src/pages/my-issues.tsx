@@ -61,11 +61,22 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 	const statuses = useQuery(statusesQuery(orgId));
 	const issues = useQuery({
 		...orgIssuesQuery(orgId, {
-			assigneeId: userId ?? "",
-			statusId: [],
-			priority: [],
+			filter: userId
+				? {
+						type: "group",
+						op: "and",
+						children: [
+							{
+								type: "condition",
+								field: "assigneeId",
+								operator: "eq",
+								value: userId,
+							},
+						],
+					}
+				: undefined,
+			sorts: [{ field: "updated", direction: "desc" }],
 			search: "",
-			sort: "updated",
 			page: 1,
 			pageSize: 100,
 		}),

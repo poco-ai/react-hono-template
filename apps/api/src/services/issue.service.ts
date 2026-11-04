@@ -4,6 +4,7 @@ import {
 	type CreateIssueInput,
 	type IssueListQuery,
 	isTerminalStatusCategory,
+	normalizeIssueSorts,
 	type UpdateIssueInput,
 } from "@workspace/shared";
 import type { ActivityInsert } from "../dao/activity.dao";
@@ -252,7 +253,9 @@ export const createIssueService = ({
 			assigneeId: query.assigneeId,
 			labelId: query.labelId,
 			search: query.search,
-			sort: query.sort,
+			sort: Array.isArray(query.sort) ? "updated" : query.sort,
+			sorts: normalizeIssueSorts(query.sort),
+			filter: query.filter,
 			projectId: query.projectId,
 		});
 	},
