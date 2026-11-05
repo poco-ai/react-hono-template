@@ -12,6 +12,11 @@ import type {
 import { favoritesRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
+import {
+	type OptimisticContext,
+	optimisticUpdate,
+	rollbackOptimistic,
+} from "@/lib/optimistic";
 
 export function favoritesQuery(orgId: string) {
 	return queryOptions({
@@ -92,25 +97,27 @@ export function useRemoveFavorite(
 			entityType: FavoriteEntityType;
 			entityId: string;
 		}) => removeFavorite(orgId, entityType, entityId),
-		onMutate: async ({ entityType, entityId }) => {
-			const key = favoritesRootKey(orgId);
-			await queryClient.cancelQueries({ queryKey: key });
-			const previous = queryClient.getQueryData<FavoriteItemDto[]>(key);
-			queryClient.setQueryData<FavoriteItemDto[]>(key, (old) =>
-				old?.filter(
-					(item) =>
-						!(item.entityType === entityType && item.entityId === entityId),
-				),
+		onMutate: ({ entityType, entityId }) =>
+			optimisticUpdate<FavoriteItemDto[]>(
+				queryClient,
+				favoritesRootKey(orgId),
+				(old) =>
+					old?.filter(
+						(item) =>
+							!(item.entityType === entityType && item.entityId === entityId),
+					),
+			),
+		onError: (...args) => {
+			rollbackOptimistic(
+				queryClient,
+				favoritesRootKey(orgId),
+				args[2] as OptimisticContext<FavoriteItemDto[]> | undefined,
 			);
-			return { previous };
+			return callbacks?.onError?.(...args);
 		},
-		onError: (_error, _input, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(favoritesRootKey(orgId), context.previous);
-			}
-		},
-		onSettled: () => {
+		onSettled: (...args) => {
 			void invalidateFavoriteQueries(queryClient, orgId);
+			return callbacks?.onSettled?.(...args);
 		},
 	});
 }
@@ -145,36 +152,39 @@ export function useToggleFavorite(
 			await addFavorite(orgId, { entityType, entityId });
 			return { favorited: true };
 		},
-		onMutate: async ({ entityType, entityId, favorited }) => {
-			const key = favoritesRootKey(orgId);
-			await queryClient.cancelQueries({ queryKey: key });
-			const previous = queryClient.getQueryData<FavoriteItemDto[]>(key);
-			queryClient.setQueryData<FavoriteItemDto[]>(key, (old) => {
-				if (!old) {
-					return old;
-				}
-				if (favorited) {
-					return old.filter(
+		onMutate: ({ entityType, entityId, favorited }) =>
+			optimisticUpdate<FavoriteItemDto[]>(
+				queryClient,
+				favoritesRootKey(orgId),
+				(old) => {
+					if (!old) {
+						return old;
+					}
+					if (favorited) {
+						return old.filter(
+							(item) =>
+								!(item.entityType === entityType && item.entityId === entityId),
+						);
+					}
+					return old.some(
 						(item) =>
-							!(item.entityType === entityType && item.entityId === entityId),
-					);
-				}
-				return old.some(
-					(item) =>
-						item.entityType === entityType && item.entityId === entityId,
-				)
-					? old
-					: [...old, optimisticFavorite(orgId, entityType, entityId)];
-			});
-			return { previous };
+							item.entityType === entityType && item.entityId === entityId,
+					)
+						? old
+						: [...old, optimisticFavorite(orgId, entityType, entityId)];
+				},
+			),
+		onError: (...args) => {
+			rollbackOptimistic(
+				queryClient,
+				favoritesRootKey(orgId),
+				args[2] as OptimisticContext<FavoriteItemDto[]> | undefined,
+			);
+			return callbacks?.onError?.(...args);
 		},
-		onError: (_error, _variables, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(favoritesRootKey(orgId), context.previous);
-			}
-		},
-		onSettled: () => {
+		onSettled: (...args) => {
 			void invalidateFavoriteQueries(queryClient, orgId);
+			return callbacks?.onSettled?.(...args);
 		},
 	});
 }

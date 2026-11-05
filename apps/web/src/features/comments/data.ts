@@ -26,6 +26,7 @@ import {
 	orgActivitiesRootKey,
 } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 import { isAbortError } from "@/lib/upload";
 
@@ -222,10 +223,7 @@ export function useDeleteCommentAttachment(
 		{ commentId: string; attachmentId: string }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { commentId: string; attachmentId: string }) =>
 			deleteCommentAttachment(
 				orgId,
@@ -234,10 +232,9 @@ export function useDeleteCommentAttachment(
 				input.commentId,
 				input.attachmentId,
 			),
-		onSuccess: (...args) => {
-			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCommentQueries(queryClient, orgId, projectId, issueNumber),
+		callbacks,
 	});
 }
 
@@ -270,16 +267,12 @@ export function useUpdateComment(
 		{ commentId: string; body: string }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { commentId: string; body: string }) =>
 			updateComment(orgId, projectId, issueNumber, input),
-		onSuccess: (...args) => {
-			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCommentQueries(queryClient, orgId, projectId, issueNumber),
+		callbacks,
 	});
 }
 
@@ -311,16 +304,12 @@ export function useDeleteComment(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) =>
 			deleteComment(orgId, projectId, issueNumber, input),
-		onSuccess: (...args) => {
-			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCommentQueries(queryClient, orgId, projectId, issueNumber),
+		callbacks,
 	});
 }
 
@@ -373,21 +362,12 @@ export function useResolveComment(
 		{ commentId: string; resolved: boolean }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { commentId: string; resolved: boolean }) =>
 			resolveComment(orgId, projectId, issueNumber, input),
-		onSuccess: (...args) => {
-			void invalidateCommentResolution(
-				queryClient,
-				orgId,
-				projectId,
-				issueNumber,
-			);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCommentResolution(queryClient, orgId, projectId, issueNumber),
+		callbacks,
 	});
 }
 

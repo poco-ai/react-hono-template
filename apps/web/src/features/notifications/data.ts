@@ -24,6 +24,7 @@ import {
 } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
+import { optimisticUpdate, rollbackOptimistic } from "@/lib/optimistic";
 
 /** Page size of the inbox list; the API caps `pageSize` at 100. */
 export const NOTIFICATIONS_PAGE_SIZE = 20;
@@ -523,10 +524,8 @@ export function useUpdateIssueSubscription(
 		...callbacks,
 		mutationFn: (input: UpdateIssueSubscriptionInput) =>
 			updateIssueSubscription(orgId, projectId, issueNumber, input),
-		onMutate: async (input) => {
-			await queryClient.cancelQueries({ queryKey });
-			const previous = queryClient.getQueryData<IssueSubscriptionDto>(queryKey);
-			queryClient.setQueryData<IssueSubscriptionDto>(queryKey, (old) =>
+		onMutate: (input) =>
+			optimisticUpdate<IssueSubscriptionDto>(queryClient, queryKey, (old) =>
 				old
 					? {
 							...old,
@@ -534,13 +533,9 @@ export function useUpdateIssueSubscription(
 							muted: input.subscribed ? (input.muted ?? old.muted) : false,
 						}
 					: old,
-			);
-			return { previous };
-		},
+			),
 		onError: (error, input, result, context) => {
-			if (result?.previous) {
-				queryClient.setQueryData(queryKey, result.previous);
-			}
+			rollbackOptimistic(queryClient, queryKey, result);
 			return callbacks?.onError?.(error, input, result, context);
 		},
 		onSettled: (...args) => {

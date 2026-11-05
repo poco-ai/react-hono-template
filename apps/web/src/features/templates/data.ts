@@ -1,16 +1,12 @@
 import type { IssueTemplateDto } from "@api/dto/issue-template.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	CreateIssueTemplateInput,
 	UpdateIssueTemplateInput,
 } from "@workspace/shared";
 import { issueTemplatesKey, issueTemplatesRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { IssueTemplateDto };
@@ -77,15 +73,12 @@ export function useCreateIssueTemplate(
 		CreateIssueTemplateInput
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateIssueTemplateInput) =>
 			createIssueTemplate(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateIssueTemplateQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateIssueTemplateQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -96,9 +89,7 @@ export function useUpdateIssueTemplate(
 		{ templateId: string; input: UpdateIssueTemplateInput }
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: ({
 			templateId,
 			input,
@@ -106,10 +97,9 @@ export function useUpdateIssueTemplate(
 			templateId: string;
 			input: UpdateIssueTemplateInput;
 		}) => updateIssueTemplate(orgId, templateId, input),
-		onSuccess: (...args) => {
-			void invalidateIssueTemplateQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateIssueTemplateQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -120,13 +110,10 @@ export function useDeleteIssueTemplate(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (templateId: string) => deleteIssueTemplate(orgId, templateId),
-		onSuccess: (...args) => {
-			void invalidateIssueTemplateQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateIssueTemplateQueries(queryClient, orgId),
+		callbacks,
 	});
 }

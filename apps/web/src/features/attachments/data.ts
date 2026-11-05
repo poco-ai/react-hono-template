@@ -1,10 +1,5 @@
 import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import {
 	attachmentsQueryKey,
 	billingRootKey,
@@ -13,6 +8,7 @@ import {
 } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { errorCode } from "@/lib/errors";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 import {
@@ -108,21 +104,12 @@ export function useUploadAttachment(
 		}
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { file: File; signal: AbortSignal }) =>
 			uploadAttachment(orgId, projectId, issueNumber, input),
-		onSuccess: (...args) => {
-			void invalidateAttachmentQueries(
-				queryClient,
-				orgId,
-				projectId,
-				issueNumber,
-			);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateAttachmentQueries(queryClient, orgId, projectId, issueNumber),
+		callbacks,
 	});
 }
 
@@ -220,21 +207,12 @@ export function useDeleteAttachment(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) =>
 			deleteAttachment(orgId, projectId, issueNumber, input),
-		onSuccess: (...args) => {
-			void invalidateAttachmentQueries(
-				queryClient,
-				orgId,
-				projectId,
-				issueNumber,
-			);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateAttachmentQueries(queryClient, orgId, projectId, issueNumber),
+		callbacks,
 	});
 }
 

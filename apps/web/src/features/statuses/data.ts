@@ -1,10 +1,5 @@
 import type { StatusDto } from "@api/dto/status.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import {
 	type CreateStatusInput,
 	normalizeStatusNameKey,
@@ -13,6 +8,7 @@ import {
 import { invalidateIssueQueries } from "@/features/issues/data";
 import { statusesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { StatusDto };
@@ -84,15 +80,11 @@ export function useSaveStatus(
 		CreateStatusInput | UpdateStatusInput
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateStatusInput | UpdateStatusInput) =>
 			saveStatus(orgId, statusId, input),
-		onSuccess: (...args) => {
-			void invalidateStatusQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateStatusQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -100,15 +92,11 @@ export function useSetDefaultStatus(
 	orgId: string,
 	callbacks?: MutationCallbacks<StatusDto, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (statusId: string) =>
 			saveStatus(orgId, statusId, { isDefault: true }),
-		onSuccess: (...args) => {
-			void invalidateStatusQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateStatusQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -116,9 +104,7 @@ export function useReorderStatuses(
 	orgId: string,
 	callbacks?: MutationCallbacks<StatusDto[], string[]>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (ids: string[]) =>
 			unwrap(
 				client.api.orgs[":orgId"].statuses.reorder.$put({
@@ -126,10 +112,8 @@ export function useReorderStatuses(
 					json: { ids },
 				}),
 			),
-		onSuccess: (...args) => {
-			void invalidateStatusQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateStatusQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -140,9 +124,7 @@ export function useDeleteStatus(
 		{ statusId: string; migrateToStatusId: string }
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: ({
 			statusId,
 			migrateToStatusId,
@@ -156,10 +138,8 @@ export function useDeleteStatus(
 					query: { migrateToStatusId },
 				}),
 			),
-		onSuccess: (...args) => {
-			void invalidateStatusQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateStatusQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 

@@ -1,13 +1,9 @@
 import type { ProjectDto } from "@api/dto/project.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type { CreateProjectInput, UpdateProjectInput } from "@workspace/shared";
 import { projectKey, projectsRootKey, roadmapRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -46,15 +42,10 @@ export function useArchiveProject(
 		ProjectDto
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: ProjectDto) => archiveProject(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateProjectQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateProjectQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -70,15 +61,10 @@ export function useCreateProject(
 		CreateProjectInput
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateProjectInput) => createProject(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateProjectQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateProjectQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -100,16 +86,11 @@ export function useUpdateProject(
 		{ projectId: string; input: UpdateProjectInput }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { projectId: string; input: UpdateProjectInput }) =>
 			updateProject(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateProjectQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateProjectQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 

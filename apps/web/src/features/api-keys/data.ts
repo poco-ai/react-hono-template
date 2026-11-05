@@ -1,12 +1,8 @@
 import type { ListApiKeysDto } from "@api/dto/api-key.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { apiKeysKey, apiKeysRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -42,15 +38,10 @@ export function useRevokeApiKey(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => revokeApiKey(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateApiKeyQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateApiKeyQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -69,15 +60,10 @@ export function useCreateApiKey(
 		{ name: string }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { name: string }) => createApiKey(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateApiKeyQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateApiKeyQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 

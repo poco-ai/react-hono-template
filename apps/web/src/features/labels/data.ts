@@ -1,13 +1,9 @@
 import type { LabelDto } from "@api/dto/label.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { invalidateIssueQueries } from "@/features/issues/data";
 import { labelsKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -46,16 +42,11 @@ export function useSaveLabel(
 		{ name: string; color: string }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { name: string; color: string }) =>
 			saveLabel(orgId, labelId, input),
-		onSuccess: (...args) => {
-			void invalidateLabelQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateLabelQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -73,15 +64,10 @@ export function useDeleteLabel(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => deleteLabel(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateLabelQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateLabelQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 

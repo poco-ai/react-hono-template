@@ -1,14 +1,10 @@
 import type { ViewDto } from "@api/dto/view.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type { CreateViewInput, UpdateViewInput } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";
 import { viewsKey, viewsRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { ViewDto };
@@ -91,14 +87,10 @@ export function useCreateView(
 	orgId: string,
 	callbacks?: MutationCallbacks<ViewDto, CreateViewInput>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateViewInput) => createView(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateViewQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateViewQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -107,14 +99,10 @@ export function useUpdateView(
 	viewId: string,
 	callbacks?: MutationCallbacks<ViewDto, UpdateViewInput>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: UpdateViewInput) => updateView(orgId, viewId, input),
-		onSuccess: (...args) => {
-			void invalidateViewQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateViewQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -122,14 +110,10 @@ export function useDeleteView(
 	orgId: string,
 	callbacks?: MutationCallbacks<{ deleted: boolean }, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (viewId: string) => deleteView(orgId, viewId),
-		onSuccess: (...args) => {
-			void invalidateViewQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateViewQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -137,14 +121,11 @@ export function useSetDefaultView(
 	orgId: string,
 	callbacks?: MutationCallbacks<ViewDto, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (viewId: string) => setDefaultView(orgId, viewId),
-		onSuccess: (...args) => {
-			void invalidateViewQueries(queryClient, orgId, { issues: false });
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateViewQueries(queryClient, orgId, { issues: false }),
+		callbacks,
 	});
 }
 
@@ -152,13 +133,10 @@ export function useClearDefaultView(
 	orgId: string,
 	callbacks?: MutationCallbacks<{ cleared: boolean }, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (viewId: string) => clearDefaultView(orgId, viewId),
-		onSuccess: (...args) => {
-			void invalidateViewQueries(queryClient, orgId, { issues: false });
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateViewQueries(queryClient, orgId, { issues: false }),
+		callbacks,
 	});
 }

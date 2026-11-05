@@ -7,12 +7,7 @@ import type {
 	OrgAiSettingsDto,
 	OrgAiSettingsViewDto,
 } from "@api/dto/ai.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	AiContextType,
 	CreateAiConversationInput,
@@ -31,6 +26,7 @@ import { i18n } from "@/i18n";
 import { client, unwrap } from "@/lib/api";
 import type { TranslationKey } from "@/lib/errors";
 import { errorCode } from "@/lib/errors";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -178,16 +174,12 @@ export function useCreateAiConversation(
 	orgId: string,
 	callbacks?: MutationCallbacks<AiConversationDto, CreateAiConversationInput>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateAiConversationInput) =>
 			createAiConversation(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateAiConversationQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateAiConversationQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -198,10 +190,7 @@ export function useUpdateAiConversation(
 		{ id: string; input: UpdateAiConversationInput }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: ({
 			id,
 			input,
@@ -209,10 +198,9 @@ export function useUpdateAiConversation(
 			id: string;
 			input: UpdateAiConversationInput;
 		}) => updateAiConversation(orgId, id, input),
-		onSuccess: (...args) => {
-			void invalidateAiConversationQueries(queryClient, orgId, args[1].id);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient, variables) =>
+			invalidateAiConversationQueries(queryClient, orgId, variables.id),
+		callbacks,
 	});
 }
 
@@ -220,17 +208,15 @@ export function useUpdateAiSettings(
 	orgId: string,
 	callbacks?: MutationCallbacks<OrgAiSettingsDto, UpdateOrgAiSettingsInput>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: UpdateOrgAiSettingsInput) =>
 			updateAiSettings(orgId, input),
-		onSuccess: (...args) => {
-			void queryClient.invalidateQueries({ queryKey: aiSettingsKey(orgId) });
-			void queryClient.invalidateQueries({ queryKey: aiUsageKey(orgId) });
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			Promise.all([
+				queryClient.invalidateQueries({ queryKey: aiSettingsKey(orgId) }),
+				queryClient.invalidateQueries({ queryKey: aiUsageKey(orgId) }),
+			]),
+		callbacks,
 	});
 }
 
@@ -238,15 +224,11 @@ export function useDeleteAiConversation(
 	orgId: string,
 	callbacks?: MutationCallbacks<{ deleted: boolean }, string>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (id: string) => deleteAiConversation(orgId, id),
-		onSuccess: (...args) => {
-			void invalidateAiConversationQueries(queryClient, orgId, args[1]);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient, id) =>
+			invalidateAiConversationQueries(queryClient, orgId, id),
+		callbacks,
 	});
 }
 

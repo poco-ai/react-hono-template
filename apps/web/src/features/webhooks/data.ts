@@ -2,15 +2,11 @@ import type {
 	ListWebhookDeliveriesDto,
 	WebhookDto,
 } from "@api/dto/webhook.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type { WebhookEventName } from "@workspace/shared";
 import { webhookDeliveriesKey, webhooksKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export const WEBHOOK_DELIVERIES_PAGE_SIZE = 10;
@@ -61,16 +57,11 @@ export function useToggleWebhook(
 		{ id: string; active: boolean }
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: { id: string; active: boolean }) =>
 			toggleWebhook(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateWebhookQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateWebhookQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -88,15 +79,10 @@ export function useDeleteWebhook(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => deleteWebhook(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateWebhookQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateWebhookQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -114,15 +100,10 @@ export function usePingWebhook(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => pingWebhook(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateWebhookQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateWebhookQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -161,19 +142,14 @@ export function useSaveWebhook(
 		}
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: {
 			url: string;
 			events: WebhookEventName[];
 			active?: boolean;
 		}) => saveWebhook(orgId, webhookId, input),
-		onSuccess: (...args) => {
-			void invalidateWebhookQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateWebhookQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 
@@ -193,15 +169,10 @@ export function useRedeliverWebhook(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => redeliverWebhook(orgId, input),
-		onSuccess: (...args) => {
-			void invalidateWebhookQueries(queryClient, orgId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateWebhookQueries(queryClient, orgId),
+		callbacks,
 	});
 }
 

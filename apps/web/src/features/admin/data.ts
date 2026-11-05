@@ -23,6 +23,7 @@ import {
 	organizationsKey,
 } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -35,15 +36,10 @@ export function useFreezeOrganization(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => freezeOrganization(input),
-		onSuccess: (...args) => {
-			void invalidateAdminOrgQueries(queryClient);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateAdminOrgQueries(queryClient),
+		callbacks,
 	});
 }
 
@@ -56,15 +52,10 @@ export function useUnfreezeOrganization(
 		string
 	>,
 ) {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: string) => unfreezeOrganization(input),
-		onSuccess: (...args) => {
-			void invalidateAdminOrgQueries(queryClient);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) => invalidateAdminOrgQueries(queryClient),
+		callbacks,
 	});
 }
 

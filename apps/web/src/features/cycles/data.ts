@@ -3,12 +3,7 @@ import type {
 	CycleWithProgressDto,
 	ListCyclesDto,
 } from "@api/dto/cycle.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	CreateCycleInput,
 	CycleStatusFilter,
@@ -18,6 +13,7 @@ import type {
 import { invalidateIssueQueries } from "@/features/issues/data";
 import { cycleKey, cyclesRootKey, issueDetailRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { CycleRolloverDto, CycleWithProgressDto, ListCyclesDto };
@@ -133,15 +129,12 @@ export function useCreateCycle(
 	projectId: string,
 	callbacks?: MutationCallbacks<CycleWithProgressDto, CreateCycleInput>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateCycleInput) =>
 			createCycle(orgId, projectId, input),
-		onSuccess: (...args) => {
-			void invalidateCycleQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCycleQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -153,9 +146,7 @@ export function useUpdateCycle(
 		{ cycleId: string; input: UpdateCycleInput }
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: ({
 			cycleId,
 			input,
@@ -163,10 +154,9 @@ export function useUpdateCycle(
 			cycleId: string;
 			input: UpdateCycleInput;
 		}) => updateCycle(orgId, projectId, cycleId, input),
-		onSuccess: (...args) => {
-			void invalidateCycleQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCycleQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -175,14 +165,11 @@ export function useDeleteCycle(
 	projectId: string,
 	callbacks?: MutationCallbacks<{ deleted: boolean }, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (cycleId: string) => deleteCycle(orgId, projectId, cycleId),
-		onSuccess: (...args) => {
-			void invalidateCycleQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCycleQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -196,15 +183,12 @@ export function useRolloverCycle(
 	projectId: string,
 	callbacks?: MutationCallbacks<CycleRolloverDto, RolloverCycleVariables>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: ({ sourceCycleId, targetCycleId }: RolloverCycleVariables) =>
 			rolloverCycle(orgId, projectId, sourceCycleId, targetCycleId),
-		onSuccess: (...args) => {
-			void invalidateCycleQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateCycleQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 

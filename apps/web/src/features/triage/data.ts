@@ -16,6 +16,7 @@ import {
 import { issueDetailRootKey, triageKey, triageRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { codedError } from "@/lib/errors";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { TriageIssueDto, TriageListDto };
@@ -168,14 +169,11 @@ export function useTriageIssue(
 	orgId: string,
 	callbacks?: MutationCallbacks<unknown, TriageUpdate>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (variables: TriageUpdate) => triageAction(orgId, variables),
-		onSuccess: (...args) => {
-			void invalidateTriage(queryClient, orgId, [args[1].issue.projectId]);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient, variables) =>
+			invalidateTriage(queryClient, orgId, [variables.issue.projectId]),
+		callbacks,
 	});
 }
 

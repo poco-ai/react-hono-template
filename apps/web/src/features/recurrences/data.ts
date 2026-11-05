@@ -1,10 +1,5 @@
 import type { RecurrenceDto } from "@api/dto/recurrence.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import {
 	type CreateRecurrenceInput,
 	RECURRENCE_CADENCES,
@@ -23,6 +18,7 @@ import {
 	dateOnlyAtLocalTime,
 	dateToDateOnly,
 } from "@/lib/date";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { RecurrenceDto };
@@ -112,15 +108,12 @@ export function useCreateRecurrence(
 	projectId: string,
 	callbacks?: MutationCallbacks<RecurrenceDto, CreateRecurrenceInput>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateRecurrenceInput) =>
 			createRecurrence(orgId, projectId, input),
-		onSuccess: (...args) => {
-			void invalidateRecurrenceQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateRecurrenceQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -132,17 +125,14 @@ export function useUpdateRecurrence(
 		{ recurrenceId: string; input: UpdateRecurrenceInput }
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: {
 			recurrenceId: string;
 			input: UpdateRecurrenceInput;
 		}) => updateRecurrence(orgId, projectId, input),
-		onSuccess: (...args) => {
-			void invalidateRecurrenceQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateRecurrenceQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -151,15 +141,12 @@ export function useDeleteRecurrence(
 	projectId: string,
 	callbacks?: MutationCallbacks<{ deleted: boolean }, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (recurrenceId: string) =>
 			deleteRecurrence(orgId, projectId, recurrenceId),
-		onSuccess: (...args) => {
-			void invalidateRecurrenceQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateRecurrenceQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 

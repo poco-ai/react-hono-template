@@ -2,18 +2,14 @@ import type {
 	ListProjectUpdatesDto,
 	ProjectUpdateDto,
 } from "@api/dto/project-update.dto";
-import {
-	infiniteQueryOptions,
-	type QueryClient,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { infiniteQueryOptions, type QueryClient } from "@tanstack/react-query";
 import type {
 	CreateProjectUpdateInput,
 	UpdateProjectUpdateInput,
 } from "@workspace/shared";
 import { projectsRootKey, projectUpdatesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { ListProjectUpdatesDto, ProjectUpdateDto };
@@ -108,15 +104,12 @@ export function useCreateProjectUpdate(
 	projectId: string,
 	callbacks?: MutationCallbacks<ProjectUpdateDto, CreateProjectUpdateInput>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: CreateProjectUpdateInput) =>
 			createProjectUpdate(orgId, projectId, input),
-		onSuccess: (...args) => {
-			void invalidateProjectUpdateQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateProjectUpdateQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -128,17 +121,14 @@ export function useUpdateProjectUpdate(
 		{ updateId: string; input: UpdateProjectUpdateInput }
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (input: {
 			updateId: string;
 			input: UpdateProjectUpdateInput;
 		}) => updateProjectUpdate(orgId, projectId, input),
-		onSuccess: (...args) => {
-			void invalidateProjectUpdateQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateProjectUpdateQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
 
@@ -147,14 +137,11 @@ export function useDeleteProjectUpdate(
 	projectId: string,
 	callbacks?: MutationCallbacks<{ deleted: boolean }, string>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	return useInvalidatingMutation({
 		mutationFn: (updateId: string) =>
 			deleteProjectUpdate(orgId, projectId, updateId),
-		onSuccess: (...args) => {
-			void invalidateProjectUpdateQueries(queryClient, orgId, projectId);
-			return callbacks?.onSuccess?.(...args);
-		},
+		invalidate: (queryClient) =>
+			invalidateProjectUpdateQueries(queryClient, orgId, projectId),
+		callbacks,
 	});
 }
