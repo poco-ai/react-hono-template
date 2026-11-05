@@ -11,6 +11,10 @@ import type {
 	WebhookWithSecretDto,
 } from "../src/dto/webhook.dto";
 import type { BackgroundFn } from "../src/lib/background";
+import {
+	signLegacyPayload,
+	verifyStandardWebhook,
+} from "../src/lib/webhook-signature";
 import { handleWebhookQueue } from "../src/queue";
 import {
 	createWebhookDeliveryService,
@@ -33,7 +37,7 @@ const deliveryDto = (
 	orgId: "org-1",
 	webhookId: hook.id,
 	event: "issue.created",
-	payload: '{"id":"del-1"}',
+	payload: '{"event":"issue.created","id":"payload-1"}',
 	status: "pending",
 	attempts: 0,
 	responseStatus: null,
@@ -274,13 +278,35 @@ test("consumer records success and acks a 2xx attempt", async () => {
 		assert.deepEqual(calls, ["ack"]);
 		const init = fetchMock.calls[0]?.init;
 		const headers = new Headers(init?.headers);
+		const payload = deliveryDto().payload;
 		assert.equal(init?.method, "POST");
 		assert.equal(init?.redirect, "manual");
 		assert.equal(headers.get("content-type"), "application/json");
 		assert.equal(headers.get("x-webhook-event"), "issue.created");
 		assert.equal(headers.get("x-webhook-delivery"), "del-1");
-		assert.match(headers.get("x-webhook-signature") ?? "", /^[0-9a-f]{64}$/);
-		assert.equal(init?.body, deliveryDto().payload);
+		assert.equal(
+			headers.get("x-webhook-signature"),
+			await signLegacyPayload(payload, hook.secret),
+		);
+
+		const webhookId = headers.get("webhook-id");
+		const webhookTimestamp = headers.get("webhook-timestamp");
+		const webhookSignature = headers.get("webhook-signature");
+		assert.equal(webhookId, "del-1");
+		assert.match(webhookTimestamp ?? "", /^\d+$/);
+		assert.match(webhookSignature ?? "", /^v1,/);
+		assert.equal(
+			await verifyStandardWebhook({
+				id: webhookId ?? "",
+				timestamp: webhookTimestamp ?? "",
+				payload,
+				signature: webhookSignature ?? "",
+				secret: hook.secret,
+				nowSeconds: Number(webhookTimestamp),
+			}),
+			true,
+		);
+		assert.equal(init?.body, payload);
 	} finally {
 		fetchMock.restore();
 	}

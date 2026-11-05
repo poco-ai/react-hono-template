@@ -2,6 +2,10 @@ import type { WebhookDao } from "../dao/webhook.dao";
 import type { WebhookDeliveryDao } from "../dao/webhook-delivery.dao";
 import type { WebhookDeliveryDto } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
+import {
+	signLegacyPayload,
+	signStandardWebhook,
+} from "../lib/webhook-signature";
 
 const WEBHOOK_TIMEOUT_MS = 5_000;
 export const WEBHOOK_MAX_ATTEMPTS = 2;
@@ -23,24 +27,6 @@ export type QueuedDeliveryOutcome = "success" | "failed" | "missing";
 export const shouldRetryWebhookDelivery = (attempts: number) =>
 	attempts < WEBHOOK_MAX_ATTEMPTS;
 
-const signPayload = async (payload: string, secret: string) => {
-	const key = await crypto.subtle.importKey(
-		"raw",
-		new TextEncoder().encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-	const signature = await crypto.subtle.sign(
-		"HMAC",
-		key,
-		new TextEncoder().encode(payload),
-	);
-	return Array.from(new Uint8Array(signature), (byte) =>
-		byte.toString(16).padStart(2, "0"),
-	).join("");
-};
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type AttemptResult = {
@@ -58,7 +44,12 @@ const postWebhook = async (
 ): Promise<AttemptResult> => {
 	let responseStatus: number | null = null;
 	let lastError: string | null = null;
+	const timestamp = Math.floor(Date.now() / 1000);
 	try {
+		const [legacySignature, standardSignature] = await Promise.all([
+			signLegacyPayload(payload, secret),
+			signStandardWebhook({ id: deliveryId, timestamp, payload, secret }),
+		]);
 		const response = await fetch(url, {
 			method: "POST",
 			redirect: "manual",
@@ -66,7 +57,10 @@ const postWebhook = async (
 				"content-type": "application/json",
 				"x-webhook-event": event,
 				"x-webhook-delivery": deliveryId,
-				"x-webhook-signature": await signPayload(payload, secret),
+				"x-webhook-signature": legacySignature,
+				"webhook-id": deliveryId,
+				"webhook-timestamp": String(timestamp),
+				"webhook-signature": standardSignature,
 			},
 			body: payload,
 			signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
