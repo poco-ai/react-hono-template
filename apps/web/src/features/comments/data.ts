@@ -25,8 +25,8 @@ import {
 import { billingRootKey } from "@/features/billing/data";
 import { issueSubscriptionKey } from "@/features/notifications/data";
 import { client, unwrap } from "@/lib/api";
-
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
+import { isAbortError } from "@/lib/upload";
 
 export const COMMENTS_PAGE_SIZE = 20;
 
@@ -165,11 +165,6 @@ export function applyReactionToggle(
 		),
 	);
 }
-
-const isAbortError = (error: unknown): boolean =>
-	typeof error === "object" &&
-	error !== null &&
-	(error as { name?: unknown }).name === "AbortError";
 
 export function usePostComment(
 	orgId: string,

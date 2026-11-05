@@ -19,7 +19,12 @@ import type {
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
 import type { StorageAdapter } from "../lib/storage/types";
-import { PENDING_UPLOAD_TTL_MS } from "../lib/storage/uploads";
+import {
+	assertStoredContentType,
+	assertUploadedObject,
+	loadPendingUpload,
+	reserveUpload,
+} from "../lib/storage/upload-flow";
 import type { PlanService } from "./plan.service";
 import type { StorageUsageService } from "./storage-usage.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
@@ -198,39 +203,19 @@ export const createAttachmentService = ({
 				issueId: issue.id,
 			});
 			const key = `orgs/${orgId}/issues/${issue.id}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
-			const pendingId = crypto.randomUUID();
-			await pendingUploadDao.create({
-				id: pendingId,
-				key,
+			return reserveUpload({
+				pendingUploadDao,
+				storage: s3,
+				logLabel: "attachment",
 				kind: "issue_attachment",
 				orgId,
 				userId,
+				key,
 				targetId: issue.id,
 				declaredSize: input.size,
 				contentType: input.contentType,
-				expiresAt: new Date(Date.now() + PENDING_UPLOAD_TTL_MS),
+				expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
 			});
-			try {
-				const uploadUrl = await s3.presignPut(
-					key,
-					input.contentType,
-					ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-					input.size,
-				);
-				return {
-					key,
-					uploadUrl,
-					expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-				};
-			} catch (error) {
-				await pendingUploadDao.deleteByKey(key).catch((deleteError) => {
-					console.error(
-						"[attachment] failed to drop pending upload after presign error:",
-						deleteError,
-					);
-				});
-				throw error;
-			}
 		},
 
 		register: async (
@@ -250,20 +235,14 @@ export const createAttachmentService = ({
 				);
 			}
 			assertContentTypeAllowed(input.contentType);
-			const pending = await pendingUploadDao.findByKey(input.key);
-			if (
-				!pending ||
-				pending.expiresAt.getTime() <= Date.now() ||
-				pending.orgId !== orgId ||
-				pending.userId !== userId ||
-				pending.kind !== "issue_attachment" ||
-				pending.targetId !== issue.id
-			) {
-				throw new ApiError(
-					ApiErrorCode.UPLOAD_NOT_PENDING,
-					"Upload was not reserved or has expired",
-				);
-			}
+			const pending = await loadPendingUpload({
+				pendingUploadDao,
+				key: input.key,
+				orgId,
+				userId,
+				kind: "issue_attachment",
+				targetId: issue.id,
+			});
 			if (input.contentType !== pending.contentType) {
 				throw new ApiError(
 					ApiErrorCode.VALIDATION,
@@ -271,30 +250,25 @@ export const createAttachmentService = ({
 				);
 			}
 			const maxSize = (await plans.getLimitsForOrg(orgId)).attachmentMaxSize;
-			const s3 = requireStorage(storage);
-			const stat = await s3.stat(input.key);
-			if (!stat) {
-				throw new ApiError(
-					ApiErrorCode.KEY_MISMATCH,
+			const stat = await assertUploadedObject({
+				storage: requireStorage(storage),
+				key: input.key,
+				declaredSize: pending.declaredSize,
+				maxSize,
+				missingCode: ApiErrorCode.KEY_MISMATCH,
+				missingMessage:
 					"No uploaded object found for this key — upload the file before registering",
-				);
-			}
-			if (stat.size > maxSize || stat.size > pending.declaredSize) {
-				throw new ApiError(
-					ApiErrorCode.FILE_TOO_LARGE,
-					`Uploaded object is ${stat.size} bytes, exceeding the reserved ${Math.min(maxSize, pending.declaredSize)} byte limit`,
-				);
-			}
+				tooLargeMessage: (size) =>
+					`Uploaded object is ${size} bytes, exceeding the reserved ${Math.min(maxSize, pending.declaredSize)} byte limit`,
+			});
 			assertSizeAllowed(stat.size, maxSize);
-			if (
-				stat.contentType &&
-				!stat.contentType.startsWith(pending.contentType)
-			) {
-				throw new ApiError(
-					ApiErrorCode.VALIDATION,
+			assertStoredContentType({
+				stat,
+				declaredContentType: pending.contentType,
+				code: ApiErrorCode.VALIDATION,
+				message:
 					"Uploaded object content type does not match the registered content type",
-				);
-			}
+			});
 			const existing = await attachmentDao.findByKey(input.key);
 			if (existing) {
 				throw new ApiError(
@@ -426,38 +400,19 @@ export const createAttachmentService = ({
 				commentId: comment.id,
 			});
 			const key = `orgs/${orgId}/issues/${issue.id}/comments/${comment.id}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
-			await pendingUploadDao.create({
-				id: crypto.randomUUID(),
-				key,
+			return reserveUpload({
+				pendingUploadDao,
+				storage: s3,
+				logLabel: "attachment",
 				kind: "comment_attachment",
 				orgId,
 				userId,
+				key,
 				targetId: comment.id,
 				declaredSize: input.size,
 				contentType: input.contentType,
-				expiresAt: new Date(Date.now() + PENDING_UPLOAD_TTL_MS),
+				expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
 			});
-			try {
-				const uploadUrl = await s3.presignPut(
-					key,
-					input.contentType,
-					ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-					input.size,
-				);
-				return {
-					key,
-					uploadUrl,
-					expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-				};
-			} catch (error) {
-				await pendingUploadDao.deleteByKey(key).catch((deleteError) => {
-					console.error(
-						"[attachment] failed to drop pending upload after presign error:",
-						deleteError,
-					);
-				});
-				throw error;
-			}
 		},
 
 		registerComment: async (
@@ -480,20 +435,14 @@ export const createAttachmentService = ({
 				);
 			}
 			assertContentTypeAllowed(input.contentType);
-			const pending = await pendingUploadDao.findByKey(input.key);
-			if (
-				!pending ||
-				pending.expiresAt.getTime() <= Date.now() ||
-				pending.orgId !== orgId ||
-				pending.userId !== userId ||
-				pending.kind !== "comment_attachment" ||
-				pending.targetId !== comment.id
-			) {
-				throw new ApiError(
-					ApiErrorCode.UPLOAD_NOT_PENDING,
-					"Upload was not reserved or has expired",
-				);
-			}
+			const pending = await loadPendingUpload({
+				pendingUploadDao,
+				key: input.key,
+				orgId,
+				userId,
+				kind: "comment_attachment",
+				targetId: comment.id,
+			});
 			if (input.contentType !== pending.contentType) {
 				throw new ApiError(
 					ApiErrorCode.VALIDATION,
@@ -501,30 +450,25 @@ export const createAttachmentService = ({
 				);
 			}
 			const maxSize = (await plans.getLimitsForOrg(orgId)).attachmentMaxSize;
-			const s3 = requireStorage(storage);
-			const stat = await s3.stat(input.key);
-			if (!stat) {
-				throw new ApiError(
-					ApiErrorCode.KEY_MISMATCH,
+			const stat = await assertUploadedObject({
+				storage: requireStorage(storage),
+				key: input.key,
+				declaredSize: pending.declaredSize,
+				maxSize,
+				missingCode: ApiErrorCode.KEY_MISMATCH,
+				missingMessage:
 					"No uploaded object found for this key — upload the file before registering",
-				);
-			}
-			if (stat.size > maxSize || stat.size > pending.declaredSize) {
-				throw new ApiError(
-					ApiErrorCode.FILE_TOO_LARGE,
+				tooLargeMessage: () =>
 					"Uploaded object is larger than the reserved size",
-				);
-			}
+			});
 			assertSizeAllowed(stat.size, maxSize);
-			if (
-				stat.contentType &&
-				!stat.contentType.startsWith(pending.contentType)
-			) {
-				throw new ApiError(
-					ApiErrorCode.VALIDATION,
+			assertStoredContentType({
+				stat,
+				declaredContentType: pending.contentType,
+				code: ApiErrorCode.VALIDATION,
+				message:
 					"Uploaded object content type does not match the registered content type",
-				);
-			}
+			});
 			const existing = await attachmentDao.findByKey(input.key);
 			if (existing) {
 				throw new ApiError(

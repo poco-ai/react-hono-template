@@ -9,7 +9,14 @@ import {
 import type { MediaAssetDao } from "../dao/media-asset.dao";
 import type { PendingUploadDao } from "../dao/pending-upload.dao";
 import type { StorageAdapter } from "../lib/storage/types";
-import { MEDIA_KINDS, PENDING_UPLOAD_TTL_MS } from "../lib/storage/uploads";
+import {
+	assertStoredContentType,
+	assertUploadedObject,
+	loadPendingUpload,
+	reserveUpload,
+	uploadNotPendingError,
+} from "../lib/storage/upload-flow";
+import { MEDIA_KINDS } from "../lib/storage/uploads";
 
 const PUBLIC_MEDIA_KINDS = new Set<string>(MEDIA_KINDS);
 const IMAGE_TYPES = new Set<string>(MEDIA_IMAGE_TYPES);
@@ -107,34 +114,19 @@ export const createMediaService = ({
 	}): Promise<PresignedMedia> => {
 		const s3 = requireStorage(storage);
 		assertImage(input.contentType, input.size);
-		await pendingUploadDao.create({
-			id: crypto.randomUUID(),
-			key,
+		return reserveUpload({
+			pendingUploadDao,
+			storage: s3,
+			logLabel: "media",
 			kind,
 			orgId,
 			userId,
+			key,
 			targetId: assetId,
 			declaredSize: input.size,
 			contentType: input.contentType,
-			expiresAt: new Date(Date.now() + PENDING_UPLOAD_TTL_MS),
+			expiresIn: UPLOAD_URL_EXPIRES_IN,
 		});
-		try {
-			const uploadUrl = await s3.presignPut(
-				key,
-				input.contentType,
-				UPLOAD_URL_EXPIRES_IN,
-				input.size,
-			);
-			return { key, uploadUrl, expiresIn: UPLOAD_URL_EXPIRES_IN };
-		} catch (error) {
-			await pendingUploadDao.deleteByKey(key).catch((deleteError) => {
-				console.error(
-					"[media] failed to drop pending upload after presign error:",
-					deleteError,
-				);
-			});
-			throw error;
-		}
 	};
 
 	const registerReserved = async ({
@@ -152,42 +144,34 @@ export const createMediaService = ({
 		input: MediaRegisterInput;
 		requestUrl: string;
 	}): Promise<RegisteredMedia> => {
-		const pending = await pendingUploadDao.findByKey(input.key);
-		if (
-			!pending ||
-			pending.expiresAt.getTime() <= Date.now() ||
-			pending.userId !== userId ||
-			pending.kind !== kind ||
-			pending.orgId !== orgId ||
-			!pending.targetId ||
-			!input.key.startsWith(expectedPrefix)
-		) {
-			throw new ApiError(
-				ApiErrorCode.UPLOAD_NOT_PENDING,
-				"Upload was not reserved or has expired",
-			);
+		const pending = await loadPendingUpload({
+			pendingUploadDao,
+			key: input.key,
+			orgId,
+			userId,
+			kind,
+		});
+		if (!pending.targetId || !input.key.startsWith(expectedPrefix)) {
+			throw uploadNotPendingError();
 		}
 		assertImage(pending.contentType, pending.declaredSize);
-		const s3 = requireStorage(storage);
-		const stat = await s3.stat(input.key);
-		if (!stat) {
-			throw new ApiError(
-				ApiErrorCode.STORAGE_ERROR,
-				"No uploaded object found for this key",
-			);
-		}
-		if (stat.size > MEDIA_MAX_SIZE || stat.size > pending.declaredSize) {
-			throw new ApiError(
-				ApiErrorCode.FILE_TOO_LARGE,
-				`Uploaded object is ${stat.size} bytes, exceeding the reserved limit`,
-			);
-		}
-		if (stat.contentType && !stat.contentType.startsWith(pending.contentType)) {
-			throw new ApiError(
-				ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
+		const stat = await assertUploadedObject({
+			storage: requireStorage(storage),
+			key: input.key,
+			declaredSize: pending.declaredSize,
+			maxSize: MEDIA_MAX_SIZE,
+			missingCode: ApiErrorCode.STORAGE_ERROR,
+			missingMessage: "No uploaded object found for this key",
+			tooLargeMessage: (size) =>
+				`Uploaded object is ${size} bytes, exceeding the reserved limit`,
+		});
+		assertStoredContentType({
+			stat,
+			declaredContentType: pending.contentType,
+			code: ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
+			message:
 				"Uploaded object content type does not match the reserved upload",
-			);
-		}
+		});
 		const existing = await mediaAssetDao.findByKey(input.key);
 		if (existing) {
 			throw new ApiError(
