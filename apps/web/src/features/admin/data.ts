@@ -16,7 +16,12 @@ import {
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { organizationsKey } from "@/features/organizations/data";
+import {
+	adminOrgsKey,
+	adminOrgsRootKey,
+	adminStatsKey,
+	organizationsKey,
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -64,8 +69,6 @@ export function useUnfreezeOrganization(
 }
 
 export const ADMIN_PAGE_SIZE = 10;
-export const adminOrgsRootKey = () => ["admin-orgs"] as const;
-export const adminStatsKey = () => ["admin-stats"] as const;
 export const invalidateAdminUserQueries = (client: QueryClient) =>
 	Promise.all([client.invalidateQueries({ queryKey: adminStatsKey() })]);
 export const invalidateAdminOrgQueries = (client: QueryClient) =>
@@ -97,9 +100,6 @@ export function adminOrganizationsQuery(page: number, search: string) {
 			),
 	});
 }
-
-export const adminOrgsKey = (page: number, search: string) =>
-	[...adminOrgsRootKey(), page, search] as const;
 
 export function useAuthBanAdminUser(
 	...args: Parameters<typeof banAdminUserOptions>

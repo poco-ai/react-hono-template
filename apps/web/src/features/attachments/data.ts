@@ -6,10 +6,11 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import {
+	attachmentsQueryKey,
+	billingRootKey,
 	issueActivitiesKey,
 	orgActivitiesRootKey,
-} from "@/features/activities/data";
-import { billingRootKey } from "@/features/billing/data";
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { errorCode } from "@/lib/errors";
 
@@ -42,23 +43,6 @@ export const attachmentUploadErrorKey = (
 			return "attachments.uploadFailed";
 	}
 };
-
-export function attachmentsQueryKey(
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) {
-	return [
-		"orgs",
-		orgId,
-		"projects",
-		projectId,
-		"issues",
-		"detail",
-		issueNumber,
-		"attachments",
-	] as const;
-}
 
 export function attachmentsQuery(
 	orgId: string,

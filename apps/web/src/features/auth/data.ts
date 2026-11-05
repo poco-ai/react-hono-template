@@ -10,6 +10,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
+import { bootstrapKey, oauthProvidersKey, sessionKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { codedError, errorCode } from "@/lib/errors";
@@ -31,7 +32,6 @@ export type Session = NonNullable<
 
 export type SessionUser = Session["user"];
 
-export const sessionKey = () => ["session"] as const;
 export const sessionOptions = queryOptions({
 	queryKey: sessionKey(),
 	queryFn: async () => {
@@ -115,8 +115,6 @@ export function useRefreshSessionOnUserUpdate() {
 	}, [queryClient]);
 }
 
-export const oauthProvidersKey = () => ["oauth", "providers"] as const;
-
 export function oauthProvidersQuery() {
 	return queryOptions({
 		queryKey: oauthProvidersKey(),
@@ -138,8 +136,6 @@ export function useSignOut(
 		},
 	});
 }
-
-export const bootstrapKey = () => ["bootstrap"] as const;
 
 /** Refresh the app route-guard session after a library sign-in completes. */
 export function useRefreshAppSession() {

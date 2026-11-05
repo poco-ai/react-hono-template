@@ -9,24 +9,11 @@ import type {
 	CreateIssueTemplateInput,
 	UpdateIssueTemplateInput,
 } from "@workspace/shared";
+import { issueTemplatesKey, issueTemplatesRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { IssueTemplateDto };
-
-/**
- * Reusable issue prefills. Templates are read by the create-issue dialog and
- * managed in organization settings; applying one is a client-side action, so
- * template writes only refresh the template list (never issue caches).
- */
-export const issueTemplatesRootKey = (orgId: string) =>
-	["orgs", orgId, "issueTemplates"] as const;
-
-export const issueTemplatesKey = (
-	orgId: string,
-	{ projectId }: { projectId?: string } = {},
-) =>
-	[...issueTemplatesRootKey(orgId), { projectId: projectId ?? null }] as const;
 
 export function issueTemplatesQuery(
 	orgId: string,

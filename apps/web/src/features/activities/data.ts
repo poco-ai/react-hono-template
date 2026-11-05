@@ -1,25 +1,7 @@
 import type { ActivityDto, OrgActivityDto } from "@api/dto/activity.dto";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { issueActivitiesKey, orgActivitiesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
-
-export const orgActivitiesRootKey = (orgId: string) =>
-	["orgs", orgId, "activities"] as const;
-
-export const issueActivitiesKey = (
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) =>
-	[
-		"orgs",
-		orgId,
-		"projects",
-		projectId,
-		"issues",
-		"detail",
-		issueNumber,
-		"activities",
-	] as const;
 
 /** Rows fetched per "load more" step of the organization feed. */
 export const ORG_ACTIVITY_PAGE_SIZE = 30;
@@ -79,19 +61,6 @@ export function orgActivitiesInfiniteQuery(
 				: undefined,
 	});
 }
-
-/** Infinite-list key; the resource root stays a prefix for invalidation. */
-export const orgActivitiesKey = (
-	orgId: string,
-	{ projectId }: { projectId?: string } = {},
-) =>
-	[
-		"orgs",
-		orgId,
-		"activities",
-		"list",
-		{ projectId: projectId ?? null },
-	] as const;
 
 /**
  * Flattens infinite pages into one list. Overlapping rows (two page fetches

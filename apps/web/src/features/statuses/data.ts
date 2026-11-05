@@ -11,6 +11,7 @@ import {
 	type UpdateStatusInput,
 } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";
+import { statusesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -161,9 +162,6 @@ export function useDeleteStatus(
 		},
 	});
 }
-
-export const statusesKey = (orgId: string) =>
-	["orgs", orgId, "statuses"] as const;
 
 /**
  * Status writes change board columns and every issue rendering, so refresh

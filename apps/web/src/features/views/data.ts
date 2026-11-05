@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import type { CreateViewInput, UpdateViewInput } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";
+import { viewsKey, viewsRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -70,13 +71,6 @@ export const clearDefaultView = (orgId: string, viewId: string) =>
 			param: { orgId, viewId },
 		}),
 	);
-
-export const viewsRootKey = (orgId: string) =>
-	["orgs", orgId, "views"] as const;
-export const viewsKey = (orgId: string, projectId?: string) =>
-	projectId
-		? ([...viewsRootKey(orgId), projectId] as const)
-		: viewsRootKey(orgId);
 
 /**
  * View writes always refresh the view lists. Applied views drive issue lists,

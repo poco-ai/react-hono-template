@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
+import { projectUpdatesKey } from "../src/features/keys";
 import {
 	createProjectUpdate,
 	deleteProjectUpdate,
 	invalidateProjectUpdateQueries,
-	projectUpdatesKey,
 	updateProjectUpdate,
 } from "../src/features/project-updates/data";
 import { updateProject } from "../src/features/projects/data";

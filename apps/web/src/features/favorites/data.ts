@@ -9,18 +9,9 @@ import type {
 	CreateFavoriteInput,
 	FavoriteEntityType,
 } from "@workspace/shared";
+import { favoritesRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
-
-/**
- * Personal favorites (pinned issues and projects) of the signed-in member.
- *
- * The backend hydrates every row with its issue/project summary and drops
- * favorites whose entity was deleted or archived, so the list is the single
- * source of truth for star state across the app.
- */
-export const favoritesRootKey = (orgId: string) =>
-	["orgs", orgId, "favorites"] as const;
 
 export function favoritesQuery(orgId: string) {
 	return queryOptions({

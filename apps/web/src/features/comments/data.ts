@@ -15,37 +15,21 @@ import {
 	type CommentReactionEmoji,
 } from "@workspace/shared";
 import {
-	issueActivitiesKey,
-	orgActivitiesRootKey,
-} from "@/features/activities/data";
-import {
 	deleteCommentAttachment,
 	uploadCommentAttachment,
 } from "@/features/attachments/data";
-import { billingRootKey } from "@/features/billing/data";
-import { issueSubscriptionKey } from "@/features/notifications/data";
+import {
+	billingRootKey,
+	commentsQueryKey,
+	issueActivitiesKey,
+	issueSubscriptionKey,
+	orgActivitiesRootKey,
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 import { isAbortError } from "@/lib/upload";
 
 export const COMMENTS_PAGE_SIZE = 20;
-
-export function commentsQueryKey(
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) {
-	return [
-		"orgs",
-		orgId,
-		"projects",
-		projectId,
-		"issues",
-		"detail",
-		issueNumber,
-		"comments",
-	] as const;
-}
 
 export function fetchCommentsPage(
 	orgId: string,

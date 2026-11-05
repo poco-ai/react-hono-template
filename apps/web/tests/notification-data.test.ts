@@ -2,16 +2,18 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
 import {
+	issueSubscriptionKey,
+	notificationsRootKey,
+	notificationsUnreadCountKey,
+} from "../src/features/keys";
+import {
 	archiveNotification,
 	invalidateNotificationQueries,
-	issueSubscriptionKey,
 	markAllNotificationsRead,
 	markNotificationRead,
 	notificationHash,
 	notificationsListKey,
 	notificationsQuery,
-	notificationsRootKey,
-	notificationsUnreadCountKey,
 	updateIssueSubscription,
 } from "../src/features/notifications/data";
 import { inboxSearchSchema } from "../src/features/notifications/search";

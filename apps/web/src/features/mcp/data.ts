@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { mcpInfoKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 
 export type McpInfoDto = {
@@ -23,9 +24,6 @@ export type McpInfoDto = {
 	};
 	instructions: string[];
 };
-
-export const mcpInfoKey = (orgId: string) =>
-	["orgs", orgId, "mcp", "info"] as const;
 
 export function mcpInfoQuery(orgId: string) {
 	return queryOptions({

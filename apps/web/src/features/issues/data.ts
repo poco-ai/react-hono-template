@@ -17,10 +17,19 @@ import type {
 	IssueQuerySort,
 	UpdateIssueInput,
 } from "@workspace/shared";
-import { orgActivitiesRootKey } from "@/features/activities/data";
 import { invalidateFavoriteQueries } from "@/features/favorites/data";
-import { projectsRootKey } from "@/features/projects/data";
-import { roadmapRootKey } from "@/features/roadmap/data";
+import {
+	issueDetailRootKey,
+	issueKey,
+	issueRelationsKey,
+	orgActivitiesRootKey,
+	orgIssuesRootKey,
+	projectIssuesRootKey,
+	projectsRootKey,
+	roadmapRootKey,
+	statusesKey,
+	triageRootKey,
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { type CodedError, codedError, errorCode } from "@/lib/errors";
 import {
@@ -340,10 +349,6 @@ export const deleteIssueRelation = (
 
 export type { ListIssuesDto };
 
-/** Triage queue root; owned here so issue writes can invalidate it without an import cycle. */
-export const triageRootKey = (orgId: string) =>
-	["orgs", orgId, "triage"] as const;
-
 export const invalidateIssueQueries = (
 	queryClient: QueryClient,
 	orgId: string,
@@ -644,13 +649,11 @@ export function useIssueFieldUpdate(
 		onMutate: async ({ id, input }) => {
 			await queryClient.cancelQueries({ queryKey: listKey });
 			const previous = queryClient.getQueryData<ListIssuesDto>(listKey);
-			// The statuses cache is owned by features/statuses/data; read its key
-			// directly here to keep the two data modules import-acyclic.
-			const statuses = queryClient.getQueryData<StatusDto[]>([
-				"orgs",
-				orgId,
-				"statuses",
-			]);
+			// The statuses cache is owned by features/statuses/data; its shared
+			// key lives in features/keys so the two data modules stay acyclic.
+			const statuses = queryClient.getQueryData<StatusDto[]>(
+				statusesKey(orgId),
+			);
 			const status = input.statusId
 				? statuses?.find((entry) => entry.id === input.statusId)
 				: undefined;
@@ -698,13 +701,11 @@ export function useMoveIssue(
 		onMutate: async (input) => {
 			await queryClient.cancelQueries({ queryKey: boardKey });
 			const previous = queryClient.getQueryData(boardKey);
-			// The statuses cache is owned by features/statuses/data; read its key
-			// directly here to keep the two data modules import-acyclic.
-			const statuses = queryClient.getQueryData<StatusDto[]>([
-				"orgs",
-				orgId,
-				"statuses",
-			]);
+			// The statuses cache is owned by features/statuses/data; its shared
+			// key lives in features/keys so the two data modules stay acyclic.
+			const statuses = queryClient.getQueryData<StatusDto[]>(
+				statusesKey(orgId),
+			);
 			const status = statuses?.find((entry) => entry.id === input.statusId);
 			queryClient.setQueryData(boardKey, (old) => {
 				if (!old) {
@@ -799,16 +800,7 @@ export const projectIssuesKey = (
 	projectId: string,
 	filters: IssueFilters,
 ) =>
-	[
-		"orgs",
-		orgId,
-		"projects",
-		projectId,
-		"issues",
-		issueListKey(filters),
-	] as const;
-export const orgIssuesRootKey = (orgId: string) =>
-	["orgs", orgId, "issues"] as const;
+	[...projectIssuesRootKey(orgId, projectId), issueListKey(filters)] as const;
 export const orgIssuesKey = (orgId: string, filters: IssueFilters) =>
 	[...orgIssuesRootKey(orgId), issueListKey(filters)] as const;
 export const issueSearchKey = (
@@ -816,12 +808,3 @@ export const issueSearchKey = (
 	term: string,
 	projectId?: string,
 ) => [...orgIssuesRootKey(orgId), "search", projectId ?? "all", term] as const;
-export const issueKey = (orgId: string, projectId: string, number: number) =>
-	["orgs", orgId, "projects", projectId, "issues", "detail", number] as const;
-export const issueDetailRootKey = (orgId: string, projectId: string) =>
-	["orgs", orgId, "projects", projectId, "issues", "detail"] as const;
-export const issueRelationsKey = (
-	orgId: string,
-	projectId: string,
-	number: number,
-) => [...issueKey(orgId, projectId, number), "relations"] as const;

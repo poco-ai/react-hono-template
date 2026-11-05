@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { defaultRoadmapWindow } from "@workspace/shared";
-import { roadmapKey } from "../src/features/roadmap/data";
+import { roadmapKey } from "../src/features/keys";
 import {
 	isWithinTimeline,
 	roadmapMonthTicks,

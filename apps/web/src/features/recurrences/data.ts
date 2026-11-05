@@ -11,8 +11,12 @@ import {
 	type RecurrenceCadence,
 	type UpdateRecurrenceInput,
 } from "@workspace/shared";
-import { projectsRootKey } from "@/features/projects/data";
-import { roadmapRootKey } from "@/features/roadmap/data";
+import {
+	projectIssuesRootKey,
+	projectsRootKey,
+	recurrencesKey,
+	roadmapRootKey,
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import {
 	addCalendarDays,
@@ -29,13 +33,6 @@ export const CADENCE_OPTIONS: readonly RecurrenceCadence[] =
 /** Owner i18n key for a cadence label. */
 export const cadenceLabelKey = (cadence: RecurrenceCadence) =>
 	`recurrences.cadence.${cadence}` as const;
-
-export const recurrencesKey = (orgId: string, projectId: string) =>
-	["orgs", orgId, "projects", projectId, "recurrences"] as const;
-
-/** Prefix covering every filtered/paginated issue list of one project. */
-const projectIssuesRootKey = (orgId: string, projectId: string) =>
-	["orgs", orgId, "projects", projectId, "issues"] as const;
 
 export function recurrencesQuery(orgId: string, projectId: string) {
 	return queryOptions({

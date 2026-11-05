@@ -6,6 +6,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { invalidateIssueQueries } from "@/features/issues/data";
+import { labelsKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -84,7 +85,6 @@ export function useDeleteLabel(
 	});
 }
 
-export const labelsKey = (orgId: string) => ["orgs", orgId, "labels"] as const;
 export const invalidateLabelQueries = (client: QueryClient, orgId: string) =>
 	Promise.all([
 		client.invalidateQueries({ queryKey: labelsKey(orgId) }),

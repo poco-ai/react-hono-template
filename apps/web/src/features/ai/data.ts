@@ -20,6 +20,13 @@ import type {
 	UpdateOrgAiSettingsInput,
 } from "@workspace/shared";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import {
+	aiConversationDetailKey,
+	aiConversationListKey,
+	aiConversationsRootKey,
+	aiSettingsKey,
+	aiUsageKey,
+} from "@/features/keys";
 import { i18n } from "@/i18n";
 import { client, unwrap } from "@/lib/api";
 import type { TranslationKey } from "@/lib/errors";
@@ -40,27 +47,6 @@ export type AiChatContextInput = {
 	type: AiContextType;
 	id: string;
 };
-
-// ---------------------------------------------------------------------------
-// Query keys — always under ["orgs", orgId, "ai", ...].
-// ---------------------------------------------------------------------------
-
-export const aiRootKey = (orgId: string) => ["orgs", orgId, "ai"] as const;
-
-export const aiConversationsRootKey = (orgId: string) =>
-	[...aiRootKey(orgId), "conversations"] as const;
-
-export const aiConversationListKey = (orgId: string) =>
-	[...aiConversationsRootKey(orgId), "list"] as const;
-
-export const aiConversationDetailKey = (orgId: string, id: string) =>
-	[...aiConversationsRootKey(orgId), "detail", id] as const;
-
-export const aiUsageKey = (orgId: string) =>
-	[...aiRootKey(orgId), "usage"] as const;
-
-export const aiSettingsKey = (orgId: string) =>
-	[...aiRootKey(orgId), "settings"] as const;
 
 // ---------------------------------------------------------------------------
 // Requests

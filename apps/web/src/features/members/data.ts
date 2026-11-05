@@ -5,6 +5,7 @@ import {
 	queryOptions,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { invitationsKey, membersKey } from "@/features/keys";
 import { authClient } from "@/lib/auth-client";
 
 export type OrgMember = NonNullable<
@@ -32,10 +33,6 @@ export function membersQuery(orgId: string) {
 	});
 }
 
-export const membersKey = (orgId: string) =>
-	["orgs", orgId, "members"] as const;
-export const invitationsKey = (orgId: string) =>
-	["orgs", orgId, "invitations"] as const;
 export const invalidateMemberQueries = (client: QueryClient, orgId: string) =>
 	Promise.all([
 		client.invalidateQueries({ queryKey: membersKey(orgId) }),

@@ -4,7 +4,6 @@ import { QueryClient } from "@tanstack/react-query";
 import {
 	addFavorite,
 	favoritesQuery,
-	favoritesRootKey,
 	isFavorited,
 	removeFavorite,
 } from "../src/features/favorites/data";
@@ -20,6 +19,7 @@ import {
 	resolveIssueQuery,
 } from "../src/features/issues/query";
 import { issueSearchSchema } from "../src/features/issues/search";
+import { favoritesRootKey } from "../src/features/keys";
 
 interface RequestRecord {
 	url: URL;

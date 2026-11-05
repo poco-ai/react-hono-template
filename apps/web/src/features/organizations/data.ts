@@ -1,4 +1,5 @@
 import { queryOptions, useQueryClient } from "@tanstack/react-query";
+import { organizationsKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { codedError, errorCode } from "@/lib/errors";
@@ -26,8 +27,6 @@ export function orgsQuery() {
 		},
 	});
 }
-
-export const organizationsKey = () => ["orgs"] as const;
 
 /**
  * Reloads the app organization list after a better-auth organization write.

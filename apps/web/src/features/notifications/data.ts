@@ -17,6 +17,11 @@ import type {
 	NotificationFilter,
 	UpdateIssueSubscriptionInput,
 } from "@workspace/shared";
+import {
+	issueSubscriptionKey,
+	notificationsRootKey,
+	notificationsUnreadCountKey,
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -30,32 +35,10 @@ export const NOTIFICATIONS_PAGE_SIZE = 20;
  */
 export const NOTIFICATION_POLL_INTERVAL_MS = 45_000;
 
-export const notificationsRootKey = (orgId: string) =>
-	["orgs", orgId, "notifications"] as const;
-
 export const notificationsListKey = (
 	orgId: string,
 	filter: NotificationFilter,
 ) => [...notificationsRootKey(orgId), "list", filter] as const;
-
-export const notificationsUnreadCountKey = (orgId: string) =>
-	[...notificationsRootKey(orgId), "unread-count"] as const;
-
-export const issueSubscriptionKey = (
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) =>
-	[
-		"orgs",
-		orgId,
-		"projects",
-		projectId,
-		"issues",
-		"detail",
-		issueNumber,
-		"subscription",
-	] as const;
 
 export function fetchNotificationsPage(
 	orgId: string,

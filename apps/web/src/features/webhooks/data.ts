@@ -9,18 +9,11 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import type { WebhookEventName } from "@workspace/shared";
+import { webhookDeliveriesKey, webhooksKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export const WEBHOOK_DELIVERIES_PAGE_SIZE = 10;
-
-export function webhooksKey(orgId: string) {
-	return ["orgs", orgId, "webhooks"] as const;
-}
-
-export function webhookDeliveriesRootKey(orgId: string, webhookId: string) {
-	return ["orgs", orgId, "webhooks", webhookId, "deliveries"] as const;
-}
 
 export function webhooksQuery(orgId: string) {
 	return queryOptions({
@@ -214,9 +207,3 @@ export function useRedeliverWebhook(
 
 export const invalidateWebhookQueries = (client: QueryClient, orgId: string) =>
 	client.invalidateQueries({ queryKey: webhooksKey(orgId) });
-
-export const webhookDeliveriesKey = (
-	orgId: string,
-	webhookId: string,
-	page: number,
-) => [...webhookDeliveriesRootKey(orgId, webhookId), page] as const;

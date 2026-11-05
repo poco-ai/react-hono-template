@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
+import { recurrencesKey } from "../src/features/keys";
 import {
 	buildCreateRecurrenceInput,
 	CADENCE_OPTIONS,
@@ -10,7 +11,6 @@ import {
 	deleteRecurrence,
 	invalidateRecurrenceQueries,
 	recurrenceNextRunAt,
-	recurrencesKey,
 	updateRecurrence,
 } from "../src/features/recurrences/data";
 

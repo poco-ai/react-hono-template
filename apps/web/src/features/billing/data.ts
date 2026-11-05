@@ -13,12 +13,8 @@ import { PLANS } from "@workspace/shared";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { organizationsKey } from "@/features/organizations/data";
+import { billingRootKey, organizationsKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
-
-export function billingRootKey(orgId: string) {
-	return ["orgs", orgId, "billing"] as const;
-}
 
 export function billingQuery(orgId: string) {
 	return queryOptions({

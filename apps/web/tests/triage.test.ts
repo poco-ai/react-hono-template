@@ -3,8 +3,8 @@ import { test } from "node:test";
 import {
 	BULK_PARTIAL_FAILURE,
 	bulkPartialFailure,
-	triageRootKey as issueTriageRootKey,
 } from "../src/features/issues/data";
+import { triageKey, triageRootKey } from "../src/features/keys";
 import type { TriageIssueDto } from "../src/features/triage/data";
 import {
 	firstStatusOfCategory,
@@ -14,8 +14,6 @@ import {
 	triageAction,
 	triageActionInput,
 	triageAvailability,
-	triageKey,
-	triageRootKey,
 	triageSearchSchema,
 } from "../src/features/triage/data";
 import { errorCode } from "../src/lib/errors";
@@ -192,5 +190,5 @@ test("triage cache key separates the project filter", () => {
 	assert.deepEqual(triageKey("org", "p1"), ["orgs", "org", "triage", "p1"]);
 	// Issue writes invalidate the same root, so both modules must agree on it.
 	assert.deepEqual(triageRootKey("org"), ["orgs", "org", "triage"]);
-	assert.equal(triageRootKey, issueTriageRootKey);
+	assert.deepEqual(triageKey("org", "p1").slice(0, 3), triageRootKey("org"));
 });

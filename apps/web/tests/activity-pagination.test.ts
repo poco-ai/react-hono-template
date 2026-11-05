@@ -7,9 +7,8 @@ import {
 	flattenActivityPages,
 	ORG_ACTIVITY_PAGE_SIZE,
 	orgActivitiesInfiniteQuery,
-	orgActivitiesKey,
-	orgActivitiesRootKey,
 } from "../src/features/activities/data";
+import { orgActivitiesKey, orgActivitiesRootKey } from "../src/features/keys";
 
 interface RequestRecord {
 	url: URL;

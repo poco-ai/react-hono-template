@@ -3,10 +3,8 @@ import { test } from "node:test";
 import { billingQueryKeys } from "@better-auth-ui/core/plugins/billing";
 import { QueryClient } from "@tanstack/react-query";
 import { PLANS } from "@workspace/shared";
-import {
-	billingRootKey,
-	createAppBillingAdapter,
-} from "../src/features/billing/data";
+import { createAppBillingAdapter } from "../src/features/billing/data";
+import { billingRootKey } from "../src/features/keys";
 import { i18n } from "../src/i18n";
 
 const scope = {

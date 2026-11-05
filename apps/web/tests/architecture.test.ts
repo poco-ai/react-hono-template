@@ -121,3 +121,19 @@ test("feature data imports never depend on views and remain acyclic", () => {
 	}
 	for (const file of modules) visit(file, []);
 });
+
+test("shared query keys stay dependency-free", () => {
+	const file = path.join(sourceRoot, "features", "keys.ts");
+	const tree = ts.createSourceFile(
+		file,
+		readFileSync(file, "utf8"),
+		ts.ScriptTarget.Latest,
+		true,
+	);
+	const imports = tree.statements.filter(ts.isImportDeclaration);
+	assert.equal(
+		imports.length,
+		0,
+		"features/keys.ts must not import other modules",
+	);
+});

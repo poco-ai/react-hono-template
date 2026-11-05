@@ -11,10 +11,9 @@ import { z } from "zod";
 import {
 	BULK_PARTIAL_FAILURE,
 	invalidateIssueQueries,
-	issueDetailRootKey,
-	triageRootKey,
 	updateIssue,
 } from "@/features/issues/data";
+import { issueDetailRootKey, triageKey, triageRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { codedError } from "@/lib/errors";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -40,13 +39,6 @@ export const resolveTriageProjectFilter = (
 	projects.some((project) => project.id === search.projectId)
 		? search.projectId
 		: undefined;
-
-export const triageKey = (orgId: string, projectId?: string) =>
-	[...triageRootKey(orgId), projectId ?? "all"] as const;
-
-// The root key lives in features/issues/data because issue writes invalidate
-// the queue; re-export it here so triage consumers keep one entry point.
-export { triageRootKey };
 
 /**
  * Triage queue: backlog-category issues without an assignee, newest first and

@@ -15,10 +15,8 @@ import type {
 	RolloverCycleInput,
 	UpdateCycleInput,
 } from "@workspace/shared";
-import {
-	invalidateIssueQueries,
-	issueDetailRootKey,
-} from "@/features/issues/data";
+import { invalidateIssueQueries } from "@/features/issues/data";
+import { cycleKey, cyclesRootKey, issueDetailRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
@@ -210,9 +208,6 @@ export function useRolloverCycle(
 	});
 }
 
-export const cyclesRootKey = (orgId: string, projectId: string) =>
-	["orgs", orgId, "projects", projectId, "cycles"] as const;
-
 /** `status` is omitted for the unfiltered list so one prefix covers them all. */
 export const cyclesKey = (
 	orgId: string,
@@ -222,9 +217,6 @@ export const cyclesKey = (
 	status && status !== "all"
 		? ([...cyclesRootKey(orgId, projectId), status] as const)
 		: cyclesRootKey(orgId, projectId);
-
-export const cycleKey = (orgId: string, projectId: string, cycleId: string) =>
-	[...cyclesRootKey(orgId, projectId), "detail", cycleId] as const;
 
 /**
  * Cycle writes change assignments and progress, so the cycle lists/detail, the

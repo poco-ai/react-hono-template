@@ -12,17 +12,13 @@ import type {
 	CreateProjectUpdateInput,
 	UpdateProjectUpdateInput,
 } from "@workspace/shared";
-import { projectsRootKey } from "@/features/projects/data";
+import { projectsRootKey, projectUpdatesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { ListProjectUpdatesDto, ProjectUpdateDto };
 
 export const PROJECT_UPDATES_PAGE_SIZE = 20;
-
-/** Newest-first project update timeline for one project. */
-export const projectUpdatesKey = (orgId: string, projectId: string) =>
-	["orgs", orgId, "projects", projectId, "updates"] as const;
 
 export function fetchProjectUpdatesPage(
 	orgId: string,

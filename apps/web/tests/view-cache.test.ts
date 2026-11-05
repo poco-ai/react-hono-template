@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
-import { invalidateViewQueries, viewsKey } from "../src/features/views/data";
+import { viewsKey } from "../src/features/keys";
+import { invalidateViewQueries } from "../src/features/views/data";
 
 async function verifyInvalidation(
 	invalidate: (client: QueryClient) => Promise<unknown>,

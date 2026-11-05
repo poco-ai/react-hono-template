@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
+import { issueTemplatesKey, issueTemplatesRootKey } from "../src/features/keys";
 import {
 	applyIssueTemplate,
 	emptyIssueTemplateForm,
@@ -15,8 +16,6 @@ import {
 	createIssueTemplate,
 	deleteIssueTemplate,
 	invalidateIssueTemplateQueries,
-	issueTemplatesKey,
-	issueTemplatesRootKey,
 	updateIssueTemplate,
 } from "../src/features/templates/data";
 

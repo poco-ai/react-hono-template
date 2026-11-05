@@ -14,9 +14,7 @@ import {
 } from "../src/features/cycles/cycle-utils";
 import type { CycleWithProgressDto } from "../src/features/cycles/data";
 import {
-	cycleKey,
 	cyclesKey,
-	cyclesRootKey,
 	invalidateCycleQueries,
 	rolloverRequest,
 } from "../src/features/cycles/data";
@@ -25,6 +23,7 @@ import {
 	resolveIssueQuery,
 } from "../src/features/issues/query";
 import { issueSearchSchema } from "../src/features/issues/search";
+import { cycleKey, cyclesRootKey } from "../src/features/keys";
 import { toDateInputValue } from "../src/lib/format";
 
 const cycle = (

@@ -4,15 +4,10 @@ import type {
 	RoadmapProjectDto,
 } from "@api/dto/roadmap.dto";
 import { queryOptions } from "@tanstack/react-query";
+import { roadmapKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 
 export type { RoadmapCycleDto, RoadmapDto, RoadmapProjectDto };
-
-export const roadmapRootKey = (orgId: string) =>
-	["orgs", orgId, "roadmap"] as const;
-
-export const roadmapKey = (orgId: string, from?: string, to?: string) =>
-	[...roadmapRootKey(orgId), from ?? "default", to ?? "default"] as const;
 
 /**
  * Org roadmap aggregate. The API expands `from`/`to` to UTC day bounds and
