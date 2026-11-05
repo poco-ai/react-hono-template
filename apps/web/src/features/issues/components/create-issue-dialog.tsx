@@ -2,8 +2,9 @@ import type { StatusDto } from "@api/dto/status.dto";
 import { useQuery } from "@tanstack/react-query";
 import {
 	createIssueSchema,
-	ISSUE_PRIORITIES,
 	type IssuePriorityName,
+	priorityName,
+	priorityValue,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -42,8 +43,11 @@ import { MultiSelect } from "@/components/multi-select";
 import { MutationError } from "@/components/mutation-error";
 import type { CycleWithProgressDto } from "@/features/cycles/data";
 import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
-import { PriorityBadge } from "@/features/issues/components/priority-badge";
-import { StatusBadge } from "@/features/issues/components/status-badge";
+import {
+	IssueAssigneeSelect,
+	IssuePrioritySelect,
+	IssueStatusSelect,
+} from "@/features/issues/components/issue-selects";
 import { buildCreateIssueInput } from "@/features/issues/create-issue-input";
 import {
 	applyIssueTemplate,
@@ -58,7 +62,6 @@ import {
 } from "@/lib/form";
 import { useCreateIssue } from "../data";
 
-const UNASSIGNED = "__unassigned__";
 const NO_CYCLE = "__no_cycle__";
 const NO_TEMPLATE = "__no_template__";
 
@@ -98,7 +101,7 @@ export function CreateIssueDialog({
 	const [description, setDescription] = useState("");
 	const [statusId, setStatusId] = useState<string | undefined>(defaultStatusId);
 	const [priority, setPriority] = useState<IssuePriorityName>("none");
-	const [assigneeId, setAssigneeId] = useState(UNASSIGNED);
+	const [assigneeId, setAssigneeId] = useState<string | null>(null);
 	const [labelIds, setLabelIds] = useState<string[]>([]);
 	const [dueDate, setDueDate] = useState("");
 	const [estimate, setEstimate] = useState("");
@@ -129,7 +132,7 @@ export function CreateIssueDialog({
 				description,
 				statusId,
 				priority,
-				assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
+				assigneeId: assigneeId ?? undefined,
 				labelIds,
 				dueDate,
 				estimate,
@@ -161,7 +164,7 @@ export function CreateIssueDialog({
 			setDescription("");
 			setStatusId(defaultStatusId);
 			setPriority("none");
-			setAssigneeId(UNASSIGNED);
+			setAssigneeId(null);
 			setLabelIds([]);
 			setDueDate("");
 			setEstimate("");
@@ -182,7 +185,7 @@ export function CreateIssueDialog({
 					description,
 					statusId,
 					priority,
-					assigneeId: assigneeId === UNASSIGNED ? undefined : assigneeId,
+					assigneeId: assigneeId ?? undefined,
 					labelIds,
 					dueDate,
 					estimate,
@@ -318,70 +321,32 @@ export function CreateIssueDialog({
 					<div className="grid grid-cols-2 gap-4">
 						<Field>
 							<FieldLabel>{t("issues.status")}</FieldLabel>
-							<Select
+							<IssueStatusSelect
+								statuses={statuses}
 								value={statusId ?? null}
-								onValueChange={(value) => value && setStatusId(value)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{statuses.find((status) => status.id === statusId)?.name ??
-											t("issues.status")}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									{statuses.map((status) => (
-										<SelectItem key={status.id} value={status.id}>
-											<StatusBadge status={status} />
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+								showBadge={false}
+								triggerClassName="w-full"
+								onChange={setStatusId}
+							/>
 						</Field>
 						<Field>
 							<FieldLabel>{t("issues.priority")}</FieldLabel>
-							<Select
-								value={priority}
-								onValueChange={(v) => v && setPriority(v as IssuePriorityName)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{t(`issues.priorities.${priority}`)}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									{ISSUE_PRIORITIES.map(({ name, value }) => (
-										<SelectItem key={name} value={name}>
-											<PriorityBadge value={value} />
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<IssuePrioritySelect
+								value={priorityValue(priority)}
+								showBadge={false}
+								triggerClassName="w-full"
+								onChange={(value) => setPriority(priorityName(value))}
+							/>
 						</Field>
 						<Field>
 							<FieldLabel>{t("issues.assignee")}</FieldLabel>
-							<Select
+							<IssueAssigneeSelect
+								members={members}
 								value={assigneeId}
-								onValueChange={(v) => v !== null && setAssigneeId(v)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{assigneeId === UNASSIGNED
-											? t("common.unassigned")
-											: (members.find((m) => m.userId === assigneeId)?.user
-													.name ?? t("common.unassigned"))}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value={UNASSIGNED}>
-										{t("common.unassigned")}
-									</SelectItem>
-									{members.map((member) => (
-										<SelectItem key={member.userId} value={member.userId}>
-											{member.user.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+								showAvatar={false}
+								triggerClassName="w-full"
+								onChange={setAssigneeId}
+							/>
 						</Field>
 						<Field>
 							<FieldLabel>{t("issues.dueDate")}</FieldLabel>

@@ -1,13 +1,7 @@
 import type { IssueDetailDto } from "@api/dto/issue.dto";
 import type { LabelDto } from "@api/dto/label.dto";
 import type { StatusDto } from "@api/dto/status.dto";
-import {
-	ISSUE_PRIORITIES,
-	type IssuePriorityName,
-	priorityName,
-	priorityValue,
-	type UpdateIssueInput,
-} from "@workspace/shared";
+import type { UpdateIssueInput } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
@@ -42,15 +36,17 @@ import { MultiSelect } from "@/components/multi-select";
 import type { CycleWithProgressDto } from "@/features/cycles/data";
 import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
 import {
+	IssueAssigneeSelect,
+	IssuePrioritySelect,
+	IssueStatusSelect,
+} from "@/features/issues/components/issue-selects";
+import {
 	ParentIssueField,
 	type ParentSummary,
 } from "@/features/issues/components/parent-issue-field";
-import { PriorityBadge } from "@/features/issues/components/priority-badge";
-import { StatusBadge } from "@/features/issues/components/status-badge";
 import { LabelBadge } from "@/features/labels/components/label-badge";
 import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 
-const UNASSIGNED = "__unassigned__";
 const NO_CYCLE = "__no_cycle__";
 
 export function IssuePropertiesPanel({
@@ -101,11 +97,6 @@ export function IssuePropertiesPanel({
 				: String(issue.estimate),
 		);
 	}, [issue.estimate]);
-
-	const memberById = new Map(members.map((member) => [member.userId, member]));
-	const assigneeLabel = issue.assigneeId
-		? (memberById.get(issue.assigneeId)?.user.name ?? t("common.unassigned"))
-		: t("common.unassigned");
 
 	return (
 		<>
@@ -191,72 +182,35 @@ export function IssuePropertiesPanel({
 			</PropertyRow>
 
 			<PropertyRow label={t("issues.status")}>
-				<Select
+				<IssueStatusSelect
+					statuses={statuses}
 					value={issue.statusId}
 					disabled={frozen}
-					onValueChange={(value) => value && onUpdate({ statusId: value })}
-				>
-					<SelectTrigger className="w-full">
-						<SelectValue>
-							<StatusBadge status={issue.status} />
-						</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						{statuses.map((status) => (
-							<SelectItem key={status.id} value={status.id}>
-								<StatusBadge status={status} />
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+					fallbackStatus={issue.status}
+					triggerClassName="w-full"
+					onChange={(statusId) => onUpdate({ statusId })}
+				/>
 			</PropertyRow>
 
 			<PropertyRow label={t("issues.priority")}>
-				<Select
-					value={priorityName(issue.priority)}
+				<IssuePrioritySelect
+					value={issue.priority}
 					disabled={frozen}
-					onValueChange={(v) =>
-						v &&
-						onUpdate({
-							priority: priorityValue(v as IssuePriorityName),
-						})
-					}
-				>
-					<SelectTrigger className="w-full">
-						<SelectValue>
-							{t(`issues.priorities.${priorityName(issue.priority)}`)}
-						</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						{ISSUE_PRIORITIES.map(({ name, value }) => (
-							<SelectItem key={name} value={name}>
-								<PriorityBadge value={value} />
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+					showBadge={false}
+					triggerClassName="w-full"
+					onChange={(priority) => onUpdate({ priority })}
+				/>
 			</PropertyRow>
 
 			<PropertyRow label={t("issues.assignee")}>
-				<Select
-					value={issue.assigneeId ?? UNASSIGNED}
+				<IssueAssigneeSelect
+					members={members}
+					value={issue.assigneeId}
 					disabled={frozen}
-					onValueChange={(v) =>
-						onUpdate({ assigneeId: v === UNASSIGNED ? null : v })
-					}
-				>
-					<SelectTrigger className="w-full">
-						<SelectValue>{assigneeLabel}</SelectValue>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value={UNASSIGNED}>{t("common.unassigned")}</SelectItem>
-						{members.map((member) => (
-							<SelectItem key={member.userId} value={member.userId}>
-								{member.user.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+					showAvatar={false}
+					triggerClassName="w-full"
+					onChange={(assigneeId) => onUpdate({ assigneeId })}
+				/>
 			</PropertyRow>
 
 			<PropertyRow label={t("issues.labels")}>

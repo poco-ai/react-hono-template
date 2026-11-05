@@ -1,15 +1,6 @@
-import type { StatusDto } from "@api/dto/status.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@workspace/ui/components/command";
 import {
 	Dialog,
 	DialogContent,
@@ -18,26 +9,19 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
-import { Field, FieldLabel } from "@workspace/ui/components/field";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MutationError } from "@/components/mutation-error";
-import { PriorityBadge } from "@/features/issues/components/priority-badge";
-import { StatusBadge } from "@/features/issues/components/status-badge";
 import {
 	ISSUE_PICKER_PAGE_SIZE,
 	ISSUE_SEARCH_MIN_LENGTH,
 	issueSearchQuery,
 } from "@/features/issues/data";
+import { IssueSearchPicker, type PickableIssue } from "./issue-search-picker";
 
-export type ParentSummary = {
-	id: string;
-	number: number;
-	title: string;
-	status: StatusDto;
-	priority: number;
-};
+/** Current parent summary shown by the property. */
+export type ParentSummary = PickableIssue;
 
 /**
  * "Parent issue" property: shows the current parent with a detach action and,
@@ -158,66 +142,22 @@ export function ParentIssueField({
 							{t("issues.parentSetDescription")}
 						</DialogDescription>
 					</DialogHeader>
-					<Field>
-						<FieldLabel htmlFor="parent-issue-search">
-							{t("issues.parentSearchLabel")}
-						</FieldLabel>
-						<Command
-							shouldFilter={false}
-							className="rounded-lg border bg-transparent"
-						>
-							<CommandInput
-								id="parent-issue-search"
-								value={term}
-								onValueChange={setTerm}
-								placeholder={t("issues.parentSearchPlaceholder")}
-							/>
-							<CommandList>
-								{term.trim().length < ISSUE_SEARCH_MIN_LENGTH ? (
-									<div className="text-muted-foreground py-6 text-center text-sm">
-										{t("issues.parentSearchHint", {
-											count: ISSUE_SEARCH_MIN_LENGTH,
-										})}
-									</div>
-								) : (
-									<>
-										<CommandEmpty>
-											{search.isFetching
-												? t("common.loading")
-												: t("issues.parentNoResults")}
-										</CommandEmpty>
-										<CommandGroup>
-											{results.map((issue) => (
-												<CommandItem
-													key={issue.id}
-													value={issue.id}
-													data-checked={selected?.id === issue.id}
-													onSelect={() =>
-														setSelected({
-															id: issue.id,
-															number: issue.number,
-															title: issue.title,
-															status: issue.status,
-															priority: issue.priority,
-														})
-													}
-												>
-													<span className="font-mono text-xs">
-														{projectKey}-{issue.number}
-													</span>
-													<span className="truncate">{issue.title}</span>
-													<span className="ml-auto flex items-center gap-1.5">
-														<StatusBadge status={issue.status} />
-														<PriorityBadge value={issue.priority} />
-													</span>
-												</CommandItem>
-											))}
-										</CommandGroup>
-									</>
-								)}
-							</CommandList>
-						</Command>
-					</Field>
+					<IssueSearchPicker
+						searchInputId="parent-issue-search"
+						searchLabel={t("issues.parentSearchLabel")}
+						searchPlaceholder={t("issues.parentSearchPlaceholder")}
+						hint={t("issues.parentSearchHint", {
+							count: ISSUE_SEARCH_MIN_LENGTH,
+						})}
+						noResults={t("issues.parentNoResults")}
+						term={term}
+						onTermChange={setTerm}
+						results={results}
+						isFetching={search.isFetching}
+						selectedId={selected?.id ?? null}
+						onSelect={(issue) => setSelected(issue)}
+						projectKey={projectKey}
+					/>
 					<DialogFooter>
 						<Button disabled={!selected} onClick={submit}>
 							{t("issues.parentSubmit")}

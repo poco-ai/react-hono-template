@@ -1,28 +1,18 @@
 import type { LabelDto } from "@api/dto/label.dto";
 import type { StatusDto } from "@api/dto/status.dto";
-import {
-	ISSUE_PRIORITIES,
-	type IssuePriorityName,
-	priorityValue,
-} from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@workspace/ui/components/select";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MultiSelect } from "@/components/multi-select";
-import { UserAvatar } from "@/components/user-avatar";
 import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
-import { PriorityBadge } from "@/features/issues/components/priority-badge";
-import { StatusBadge } from "@/features/issues/components/status-badge";
+import {
+	IssueAssigneeSelect,
+	IssuePrioritySelect,
+	IssueStatusSelect,
+} from "@/features/issues/components/issue-selects";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { fromDateInputValue } from "@/lib/format";
@@ -32,9 +22,6 @@ import {
 	buildBulkUpdates,
 } from "../bulk";
 import { bulkPartialFailure, useBulkUpdateIssues } from "../data";
-
-const NO_ACTION = "__action__";
-const UNASSIGNED = "__unassigned__";
 
 export function BulkActionBar({
 	orgId,
@@ -81,77 +68,32 @@ export function BulkActionBar({
 			<span className="text-sm font-medium whitespace-nowrap">
 				{t("bulk.selected", { count: issues.length })}
 			</span>
-			<Select
-				value={NO_ACTION}
+			<IssueStatusSelect
+				statuses={statuses}
+				value={null}
 				disabled={frozen}
-				onValueChange={(v) =>
-					v && v !== NO_ACTION && run({ type: "status", statusId: v })
-				}
-			>
-				<SelectTrigger className="h-8 w-36">
-					<SelectValue>{t("bulk.changeStatus")}</SelectValue>
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value={NO_ACTION}>{t("bulk.changeStatus")}</SelectItem>
-					{statuses.map((status) => (
-						<SelectItem key={status.id} value={status.id}>
-							<StatusBadge status={status} />
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Select
-				value={NO_ACTION}
+				noSelection
+				placeholder={t("bulk.changeStatus")}
+				triggerClassName="h-8 w-36"
+				onChange={(statusId) => run({ type: "status", statusId })}
+			/>
+			<IssuePrioritySelect
+				value={null}
 				disabled={frozen}
-				onValueChange={(v) =>
-					v &&
-					v !== NO_ACTION &&
-					run({
-						type: "priority",
-						priority: priorityValue(v as IssuePriorityName),
-					})
-				}
-			>
-				<SelectTrigger className="h-8 w-36">
-					<SelectValue>{t("bulk.changePriority")}</SelectValue>
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value={NO_ACTION}>{t("bulk.changePriority")}</SelectItem>
-					{ISSUE_PRIORITIES.map(({ name, value }) => (
-						<SelectItem key={name} value={name}>
-							<PriorityBadge value={value} />
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Select
-				value={NO_ACTION}
+				noSelection
+				placeholder={t("bulk.changePriority")}
+				triggerClassName="h-8 w-36"
+				onChange={(priority) => run({ type: "priority", priority })}
+			/>
+			<IssueAssigneeSelect
+				members={members}
+				value={null}
 				disabled={frozen}
-				onValueChange={(v) =>
-					v &&
-					v !== NO_ACTION &&
-					run({
-						type: "assignee",
-						assigneeId: v === UNASSIGNED ? null : v,
-					})
-				}
-			>
-				<SelectTrigger className="h-8 w-36">
-					<SelectValue>{t("bulk.changeAssignee")}</SelectValue>
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value={NO_ACTION}>{t("bulk.changeAssignee")}</SelectItem>
-					<SelectItem value={UNASSIGNED}>{t("common.unassigned")}</SelectItem>
-					{members.map((member) => (
-						<SelectItem key={member.userId} value={member.userId}>
-							<span className="flex items-center gap-2">
-								<UserAvatar name={member.user.name} image={member.user.image} />
-								{member.user.name}
-							</span>
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
+				noSelection
+				placeholder={t("bulk.changeAssignee")}
+				triggerClassName="h-8 w-36"
+				onChange={(assigneeId) => run({ type: "assignee", assigneeId })}
+			/>
 			<div className="w-36">
 				<IssueDueDateField
 					value=""

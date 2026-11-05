@@ -7,14 +7,6 @@ import {
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@workspace/ui/components/command";
-import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -56,6 +48,7 @@ import {
 	useCreateIssueRelation,
 	useDeleteIssueRelation,
 } from "@/features/issues/data";
+import { IssueSearchPicker, type PickableIssue } from "./issue-search-picker";
 
 type RelationLink = IssueRelationsDto["blocks"][number];
 
@@ -86,13 +79,7 @@ export function RelationsSection({
 	const [addOpen, setAddOpen] = useState(false);
 	const [type, setType] = useState<IssueRelationInputType>("blocks");
 	const [term, setTerm] = useState("");
-	const [selected, setSelected] = useState<{
-		id: string;
-		number: number;
-		title: string;
-		priority: number;
-		status: RelationLink["issue"]["status"];
-	} | null>(null);
+	const [selected, setSelected] = useState<PickableIssue | null>(null);
 	const [removeTarget, setRemoveTarget] = useState<RelationLink | null>(null);
 
 	const search = useQuery(
@@ -264,66 +251,22 @@ export function RelationsSection({
 								</SelectContent>
 							</Select>
 						</Field>
-						<Field>
-							<FieldLabel htmlFor="relation-issue-search">
-								{t("issues.relations.searchLabel")}
-							</FieldLabel>
-							<Command
-								shouldFilter={false}
-								className="rounded-lg border bg-transparent"
-							>
-								<CommandInput
-									id="relation-issue-search"
-									value={term}
-									onValueChange={setTerm}
-									placeholder={t("issues.relations.searchPlaceholder")}
-								/>
-								<CommandList>
-									{term.trim().length < ISSUE_SEARCH_MIN_LENGTH ? (
-										<div className="text-muted-foreground py-6 text-center text-sm">
-											{t("issues.relations.searchHint", {
-												count: ISSUE_SEARCH_MIN_LENGTH,
-											})}
-										</div>
-									) : (
-										<>
-											<CommandEmpty>
-												{search.isFetching
-													? t("common.loading")
-													: t("issues.relations.noResults")}
-											</CommandEmpty>
-											<CommandGroup>
-												{results.map((issue) => (
-													<CommandItem
-														key={issue.id}
-														value={issue.id}
-														data-checked={selected?.id === issue.id}
-														onSelect={() =>
-															setSelected({
-																id: issue.id,
-																number: issue.number,
-																title: issue.title,
-																priority: issue.priority,
-																status: issue.status,
-															})
-														}
-													>
-														<span className="font-mono text-xs">
-															{projectKey}-{issue.number}
-														</span>
-														<span className="truncate">{issue.title}</span>
-														<span className="ml-auto flex items-center gap-1.5">
-															<StatusBadge status={issue.status} />
-															<PriorityBadge value={issue.priority} />
-														</span>
-													</CommandItem>
-												))}
-											</CommandGroup>
-										</>
-									)}
-								</CommandList>
-							</Command>
-						</Field>
+						<IssueSearchPicker
+							searchInputId="relation-issue-search"
+							searchLabel={t("issues.relations.searchLabel")}
+							searchPlaceholder={t("issues.relations.searchPlaceholder")}
+							hint={t("issues.relations.searchHint", {
+								count: ISSUE_SEARCH_MIN_LENGTH,
+							})}
+							noResults={t("issues.relations.noResults")}
+							term={term}
+							onTermChange={setTerm}
+							results={results}
+							isFetching={search.isFetching}
+							selectedId={selected?.id ?? null}
+							onSelect={(issue) => setSelected(issue)}
+							projectKey={projectKey}
+						/>
 						{selected ? (
 							<p className="text-muted-foreground flex items-center gap-2 text-sm">
 								<Link2 className="size-4" />
