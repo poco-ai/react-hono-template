@@ -4,7 +4,7 @@ import { CalendarDays, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { UserAvatar } from "@/components/user-avatar";
 import type { OrgMember } from "@/features/members/data";
-import { formatDate } from "@/lib/format";
+import { formatUtcDate } from "@/lib/format";
 import { projectTargetDateStatus } from "../utils";
 import { ProjectHealthBadge } from "./project-health-badge";
 
@@ -63,7 +63,7 @@ export function ProjectMeta({
 				{project.targetDate ? (
 					<>
 						{t("projects.targetDateValue", {
-							date: formatDate(project.targetDate),
+							date: formatUtcDate(project.targetDate),
 						})}
 						{targetStatus === "overdue" && (
 							<span className="text-destructive">

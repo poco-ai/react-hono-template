@@ -41,7 +41,7 @@ import { MarkdownEditor } from "@/components/markdown-editor";
 import { MultiSelect } from "@/components/multi-select";
 import { MutationError } from "@/components/mutation-error";
 import type { CycleWithProgressDto } from "@/features/cycles/data";
-import { DateField } from "@/features/issues/components/date-field";
+import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { buildCreateIssueInput } from "@/features/issues/create-issue-input";
@@ -385,7 +385,7 @@ export function CreateIssueDialog({
 						</Field>
 						<Field>
 							<FieldLabel>{t("issues.dueDate")}</FieldLabel>
-							<DateField value={dueDate} onChange={setDueDate} />
+							<IssueDueDateField value={dueDate} onChange={setDueDate} />
 						</Field>
 						<Field data-invalid={!estimateValid ? true : undefined}>
 							<FieldLabel>{t("issues.estimate")}</FieldLabel>

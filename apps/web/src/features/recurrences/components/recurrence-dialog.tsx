@@ -9,7 +9,6 @@ import {
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
 import { Field, FieldLabel } from "@workspace/ui/components/field";
-import { Input } from "@workspace/ui/components/input";
 import {
 	Select,
 	SelectContent,
@@ -21,6 +20,7 @@ import { CalendarClock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { DateField } from "@/components/date-field";
 import { MutationError } from "@/components/mutation-error";
 import {
 	buildCreateRecurrenceInput,
@@ -30,6 +30,7 @@ import {
 	recurrenceNextRunAt,
 	useCreateRecurrence,
 } from "@/features/recurrences/data";
+import { todayDateOnly } from "@/lib/date";
 import { formatDate } from "@/lib/format";
 
 /**
@@ -114,12 +115,12 @@ export function RecurrenceDialog({
 						<FieldLabel htmlFor="recurrence-first-run">
 							{t("recurrences.firstRun")}
 						</FieldLabel>
-						<Input
+						<DateField
 							id="recurrence-first-run"
-							type="date"
 							value={date}
-							min={new Date().toISOString().slice(0, 10)}
-							onChange={(event) => setDate(event.target.value)}
+							min={todayDateOnly()}
+							clearable={false}
+							onChange={setDate}
 						/>
 					</Field>
 					<div className="text-muted-foreground flex items-start gap-2 rounded-md border p-3 text-xs">

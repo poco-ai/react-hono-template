@@ -1,4 +1,5 @@
 import { PROJECT_HEALTH_VALUES, type ProjectHealth } from "@workspace/shared";
+import { calendarDayDiff, isoToDateOnly, parseDateOnly } from "@/lib/date";
 
 /** Visual treatment for each project health rollup. */
 export const PROJECT_HEALTH_META = {
@@ -43,16 +44,11 @@ export function projectTargetDateStatus(
 	if (!value) {
 		return null;
 	}
-	const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-	const date = match
-		? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-		: new Date(value);
-	if (Number.isNaN(date.getTime())) {
+	const target = parseDateOnly(isoToDateOnly(value));
+	if (!target) {
 		return null;
 	}
-	const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-	const target = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-	const days = Math.round((target - today) / 86_400_000);
+	const days = calendarDayDiff(now, target);
 	if (days < 0) {
 		return "overdue";
 	}

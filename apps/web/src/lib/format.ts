@@ -1,15 +1,17 @@
 import { i18n } from "@/i18n";
-
-function parseDateValue(value: string): Date {
-	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-	if (match) {
-		return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-	}
-	return new Date(value);
-}
+import {
+	calendarDayDiff,
+	dateOnlyToUtcIso,
+	dateToDateOnly,
+	formatDateOnly,
+	formatShortDateOnly,
+	formatUtcDateOnly,
+	isoToDateOnly,
+	parseDateOnly,
+} from "@/lib/date";
 
 export function formatDate(value: string | null | undefined): string {
-	return value ? parseDateValue(value).toLocaleDateString(i18n.language) : "";
+	return formatDateOnly(value, i18n.language);
 }
 
 /**
@@ -18,16 +20,7 @@ export function formatDate(value: string | null | undefined): string {
  * date as the next day in UTC+ time zones.
  */
 export function formatUtcDate(value: string | null | undefined): string {
-	if (!value) {
-		return "";
-	}
-	const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-	const date = match
-		? new Date(
-				Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
-			)
-		: new Date(value);
-	return date.toLocaleDateString(i18n.language, { timeZone: "UTC" });
+	return formatUtcDateOnly(value, i18n.language);
 }
 
 export function formatDateTime(value: string | null | undefined): string {
@@ -35,32 +28,24 @@ export function formatDateTime(value: string | null | undefined): string {
 }
 
 export function formatDueDate(value: string | null | undefined): string {
-	if (!value) {
-		return "";
-	}
-	const date = parseDateValue(value.slice(0, 10));
-	const sameYear = date.getFullYear() === new Date().getFullYear();
-	return date.toLocaleDateString(
-		i18n.language,
-		sameYear
-			? { month: "short", day: "numeric" }
-			: { year: "numeric", month: "short", day: "numeric" },
-	);
+	return formatShortDateOnly(value, i18n.language);
 }
 
 export type DueDateStatus = "overdue" | "today" | "tomorrow";
 
+/** Due-date emphasis for a date-only value; `now` is injectable for tests. */
 export function getDueDateStatus(
 	value: string | null | undefined,
+	now: Date = new Date(),
 ): DueDateStatus | null {
 	if (!value) {
 		return null;
 	}
-	const date = parseDateValue(value.slice(0, 10));
-	const now = new Date();
-	const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-	const target = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-	const days = Math.round((target - today) / 86_400_000);
+	const date = parseDateOnly(value.slice(0, 10));
+	if (!date) {
+		return null;
+	}
+	const days = calendarDayDiff(now, date);
 	if (days < 0) {
 		return "overdue";
 	}
@@ -73,14 +58,16 @@ export function getDueDateStatus(
 	return null;
 }
 
+/** Local calendar day (`YYYY-MM-DD`) of a timestamp, used for activity groups. */
 export function dayKey(value: string | null | undefined): string {
 	if (!value) {
 		return "";
 	}
 	const date = new Date(value);
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	return `${date.getFullYear()}-${month}-${day}`;
+	if (Number.isNaN(date.getTime())) {
+		return "";
+	}
+	return dateToDateOnly(date);
 }
 
 export function formatRelativeTime(value: string | null | undefined): string {
@@ -132,24 +119,11 @@ export function formatBytes(size: number): string {
  * stored `23:59:59.999Z` end date does not shift into the next day locally.
  */
 export function toDateInputValue(iso: string | null | undefined): string {
-	if (!iso) {
-		return "";
-	}
-	const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-	if (match) {
-		return `${match[1]}-${match[2]}-${match[3]}`;
-	}
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) {
-		return "";
-	}
-	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-	const day = String(date.getUTCDate()).padStart(2, "0");
-	return `${date.getUTCFullYear()}-${month}-${day}`;
+	return isoToDateOnly(iso);
 }
 
 export function fromDateInputValue(value: string): string | null {
-	return value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null;
+	return value ? dateOnlyToUtcIso(value) : null;
 }
 
 export function slugify(value: string): string {

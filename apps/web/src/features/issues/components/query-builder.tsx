@@ -33,6 +33,7 @@ import { ListFilter, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
+import { todayDateOnly } from "@/lib/date";
 import type { TranslationKey } from "@/lib/errors";
 import {
 	emptyFilter,
@@ -44,7 +45,7 @@ import {
 	isRangeOperator,
 	operatorsForField,
 } from "../query";
-import { DateField } from "./date-field";
+import { IssueDueDateField } from "./issue-due-date-field";
 
 type MemberOption = { userId: string; user: { name: string } };
 type LabelOption = { id: string; name: string };
@@ -90,13 +91,6 @@ const isNumericField = (field: IssueFilterField) =>
 
 const isMemberField = (field: IssueFilterField) =>
 	field === "assigneeId" || field === "createdById";
-
-const todayInputValue = () => {
-	const now = new Date();
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const day = String(now.getDate()).padStart(2, "0");
-	return `${now.getFullYear()}-${month}-${day}`;
-};
 
 const toScalar = (field: IssueFilterField, raw: string): IssueFilterScalar =>
 	isNumericField(field) ? Number(raw) : raw;
@@ -160,7 +154,7 @@ export const defaultConditionFor = (
 			type: "condition",
 			field,
 			operator: "before",
-			value: todayInputValue(),
+			value: todayDateOnly(),
 		};
 	}
 	if (field === "priority") {
@@ -221,7 +215,7 @@ const resetCondition = (
 		return { type: "condition", field, operator, value };
 	}
 	if (isRangeOperator(operator)) {
-		const date = todayInputValue();
+		const date = todayDateOnly();
 		return {
 			type: "condition",
 			field,
@@ -239,7 +233,7 @@ const resetCondition = (
 			: fallback !== undefined
 				? toScalar(field, fallback)
 				: isDateField(field)
-					? todayInputValue()
+					? todayDateOnly()
 					: 0;
 	return { type: "condition", field, operator, value: scalar };
 };
@@ -272,7 +266,7 @@ function ScalarValueControl({
 	}
 	if (isDateField(field)) {
 		return (
-			<DateField
+			<IssueDueDateField
 				className="h-8 w-40 text-sm"
 				value={value}
 				onChange={onChange}
@@ -373,7 +367,7 @@ function RangeValueControl({
 		<div className="flex items-center gap-1.5">
 			{isDateField(field) ? (
 				<>
-					<DateField
+					<IssueDueDateField
 						className="h-8 w-36 text-sm"
 						value={String(first ?? "")}
 						onChange={(next) => update(0, next)}
@@ -381,7 +375,7 @@ function RangeValueControl({
 					<span className="text-muted-foreground text-xs">
 						{t("issues.filters.betweenSeparator")}
 					</span>
-					<DateField
+					<IssueDueDateField
 						className="h-8 w-36 text-sm"
 						value={String(second ?? "")}
 						onChange={(next) => update(1, next)}

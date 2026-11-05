@@ -29,6 +29,7 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { DateField } from "@/components/date-field";
 import { MutationError } from "@/components/mutation-error";
 import { membersQuery } from "@/features/members/data";
 import { useUpdateProject } from "@/features/projects/data";
@@ -203,17 +204,16 @@ export function EditProjectDialog({
 									({t("common.optional")})
 								</span>
 							</FieldLabel>
-							<Input
+							<DateField
 								id="edit-project-target-date"
-								type="date"
 								value={targetDate}
-								onChange={(e) => {
-									setTargetDate(e.target.value);
+								invalid={Boolean(fieldErrors.targetDate)}
+								onChange={(value) => {
+									setTargetDate(value);
 									setFieldErrors((prev) =>
 										withoutFieldError(prev, "targetDate"),
 									);
 								}}
-								aria-invalid={fieldErrors.targetDate ? true : undefined}
 							/>
 							<FieldError>{fieldErrors.targetDate}</FieldError>
 						</Field>

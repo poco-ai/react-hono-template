@@ -14,6 +14,11 @@ import {
 import { projectsRootKey } from "@/features/projects/data";
 import { roadmapRootKey } from "@/features/roadmap/data";
 import { client, unwrap } from "@/lib/api";
+import {
+	addCalendarDays,
+	dateOnlyAtLocalTime,
+	dateToDateOnly,
+} from "@/lib/date";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export type { RecurrenceDto };
@@ -161,19 +166,9 @@ export function useDeleteRecurrence(
 	});
 }
 
-const dateInputValue = (date: Date) => {
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
-};
-
 /** Default first run: tomorrow (local calendar day). */
-export const defaultRecurrenceDate = (now: Date = new Date()): string => {
-	const tomorrow = new Date(now);
-	tomorrow.setDate(now.getDate() + 1);
-	return dateInputValue(tomorrow);
-};
+export const defaultRecurrenceDate = (now: Date = new Date()): string =>
+	dateToDateOnly(addCalendarDays(now, 1));
 
 /**
  * Turns the date input into a future ISO timestamp: 09:00 local time on the
@@ -185,10 +180,9 @@ export const recurrenceNextRunAt = (
 	date: string,
 	now: Date = new Date(),
 ): string => {
-	const picked = new Date(`${date}T09:00:00`);
-	if (Number.isNaN(picked.getTime()) || picked.getTime() <= now.getTime()) {
-		const tomorrow = new Date(now);
-		tomorrow.setDate(now.getDate() + 1);
+	const picked = dateOnlyAtLocalTime(date, 9);
+	if (!picked || picked.getTime() <= now.getTime()) {
+		const tomorrow = addCalendarDays(now, 1);
 		tomorrow.setHours(9, 0, 0, 0);
 		return tomorrow.toISOString();
 	}

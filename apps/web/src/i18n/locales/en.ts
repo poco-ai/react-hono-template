@@ -128,6 +128,8 @@ const en = {
 		justNow: "Just now",
 		clear: "Clear",
 		close: "Close",
+		setDate: "Set date",
+		today: "Today",
 		dismiss: "Dismiss",
 		skipToContent: "Skip to content",
 		enabled: "Enabled",

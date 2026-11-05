@@ -128,6 +128,8 @@ const zh: typeof en = {
 		justNow: "刚刚",
 		clear: "清除",
 		close: "关闭",
+		setDate: "设置日期",
+		today: "今天",
 		dismiss: "忽略",
 		skipToContent: "跳到主要内容",
 		enabled: "已启用",

@@ -17,6 +17,7 @@ import {
 	timelineBarGeometry,
 	timelinePercent,
 } from "@/features/roadmap/timeline";
+import { formatDateOnly, isoToDateOnly } from "@/lib/date";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -49,10 +50,11 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 		month: "short",
 		year: "numeric",
 	});
-	const dateFormat = new Intl.DateTimeFormat(i18n.language, {
-		month: "short",
-		day: "numeric",
-	});
+	const formatTargetDate = (value: string) =>
+		formatDateOnly(isoToDateOnly(value), i18n.language, {
+			month: "short",
+			day: "numeric",
+		});
 
 	const openCycle = (project: RoadmapProjectDto, cycle: RoadmapCycleDto) => {
 		void navigate({
@@ -186,7 +188,7 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 										{project.targetDate ? (
 											<span className="text-muted-foreground text-xs">
 												{t("roadmap.target", {
-													date: dateFormat.format(new Date(project.targetDate)),
+													date: formatTargetDate(project.targetDate),
 												})}
 											</span>
 										) : null}
@@ -207,7 +209,7 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 											date={project.targetDate}
 											window={window}
 											label={t("roadmap.targetMarker", {
-												date: dateFormat.format(new Date(project.targetDate)),
+												date: formatTargetDate(project.targetDate),
 											})}
 										/>
 									) : null}

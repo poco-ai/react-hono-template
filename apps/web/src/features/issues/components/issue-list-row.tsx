@@ -53,8 +53,8 @@ import {
 	type IssueListDensity,
 	LIST_DENSITY_ROW_CLASS,
 } from "../list-preferences";
-import { DateField } from "./date-field";
 import { IssueArchiveDialog } from "./issue-archive-dialog";
+import { IssueDueDateField } from "./issue-due-date-field";
 import { PriorityBadge } from "./priority-badge";
 import { StatusBadge } from "./status-badge";
 
@@ -293,7 +293,7 @@ export function IssueListRow({
 				);
 			case "dueDate":
 				return (
-					<DateField
+					<IssueDueDateField
 						key={column}
 						value={toDateInputValue(issue.dueDate)}
 						disabled={frozen}

@@ -65,7 +65,7 @@ import {
 	projectTargetDateStatus,
 } from "@/features/projects/utils";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDate, formatRelativeTime } from "@/lib/format";
+import { formatRelativeTime, formatUtcDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function ProjectsPage({ orgId }: { orgId: string }) {
@@ -388,7 +388,7 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 														}
 														title={t("projects.targetDate")}
 													>
-														{formatDate(project.targetDate)}
+														{formatUtcDate(project.targetDate)}
 													</span>
 												</>
 											)}

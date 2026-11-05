@@ -1,44 +1,16 @@
 import type { CycleStatus } from "@workspace/shared";
+import {
+	dateOnlyToUtcIso,
+	dateOnlyToUtcTime,
+	utcCalendarDayDiff,
+	utcDateToDateOnly,
+} from "@/lib/date";
 import type { CycleWithProgressDto } from "./data";
 
 /** Default length of a new planning cycle, in calendar days (inclusive). */
 export const CYCLE_DEFAULT_DAYS = 14;
 
 const DAY_MS = 86_400_000;
-
-const DATE_INPUT_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-const pad = (value: number): string => String(value).padStart(2, "0");
-
-/** `YYYY-MM-DD` for the UTC calendar day of a timestamp. */
-const toDateInput = (date: Date): string =>
-	`${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
-
-/** UTC midnight of a calendar day, used to compare days without local shifts. */
-const utcDay = (date: Date): number =>
-	Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-
-/** UTC midnight of a `YYYY-MM-DD` input value; NaN when malformed. */
-const parseDateInput = (value: string): number => {
-	const match = DATE_INPUT_RE.exec(value);
-	if (!match) {
-		return Number.NaN;
-	}
-	const year = Number(match[1]);
-	const month = Number(match[2]) - 1;
-	const day = Number(match[3]);
-	const time = Date.UTC(year, month, day);
-	const date = new Date(time);
-	// Date.UTC normalizes impossible days (e.g. 2026-13-40); reject those.
-	if (
-		date.getUTCFullYear() !== year ||
-		date.getUTCMonth() !== month ||
-		date.getUTCDate() !== day
-	) {
-		return Number.NaN;
-	}
-	return time;
-};
 
 /**
  * Whole days until the cycle ends, measured on UTC calendar days (the same day
@@ -53,7 +25,7 @@ export const cycleRemainingDays = (
 	if (Number.isNaN(end.getTime())) {
 		return 0;
 	}
-	return Math.round((utcDay(end) - utcDay(now)) / DAY_MS);
+	return utcCalendarDayDiff(now, end);
 };
 
 /**
@@ -98,21 +70,19 @@ export const groupCyclesByStatus = (
  * authoritative.
  */
 export const cycleRangeValid = (startsAt: string, endsAt: string): boolean => {
-	const start = parseDateInput(startsAt);
-	const end = parseDateInput(endsAt);
-	return !Number.isNaN(start) && !Number.isNaN(end) && end >= start;
+	const start = dateOnlyToUtcTime(startsAt);
+	const end = dateOnlyToUtcTime(endsAt);
+	return start !== undefined && end !== undefined && end >= start;
 };
 
 /** API payload value for a cycle start day: UTC midnight. */
-export const cycleStartsAtIso = (dateInput: string): string | null => {
-	const day = parseDateInput(dateInput);
-	return Number.isNaN(day) ? null : new Date(day).toISOString();
-};
+export const cycleStartsAtIso = (dateInput: string): string | null =>
+	dateOnlyToUtcIso(dateInput);
 
 /** API payload value for a cycle end day: the last millisecond of that UTC day. */
 export const cycleEndsAtIso = (dateInput: string): string | null => {
-	const day = parseDateInput(dateInput);
-	return Number.isNaN(day) ? null : new Date(day + DAY_MS - 1).toISOString();
+	const day = dateOnlyToUtcTime(dateInput);
+	return day === undefined ? null : new Date(day + DAY_MS - 1).toISOString();
 };
 
 /**
@@ -122,10 +92,14 @@ export const cycleEndsAtIso = (dateInput: string): string | null => {
 export const nextCycleRange = (
 	now: Date = new Date(),
 ): { startsAt: string; endsAt: string } => {
-	const start = utcDay(now);
+	const start = new Date(
+		Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+	);
 	return {
-		startsAt: toDateInput(new Date(start)),
-		endsAt: toDateInput(new Date(start + (CYCLE_DEFAULT_DAYS - 1) * DAY_MS)),
+		startsAt: utcDateToDateOnly(start),
+		endsAt: utcDateToDateOnly(
+			new Date(start.getTime() + (CYCLE_DEFAULT_DAYS - 1) * DAY_MS),
+		),
 	};
 };
 

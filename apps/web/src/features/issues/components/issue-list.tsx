@@ -33,7 +33,7 @@ import { StatusBadge } from "@/features/issues/components/status-badge";
 import { LabelBadge } from "@/features/labels/components/label-badge";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
-import { formatDate, formatDueDate, getDueDateStatus } from "@/lib/format";
+import { formatDueDate, formatUtcDate, getDueDateStatus } from "@/lib/format";
 import type { IssueFilters } from "../data";
 import { useDeleteIssue } from "../data";
 import { groupIssues } from "../grouping";
@@ -396,7 +396,7 @@ export function DueDateLabel({
 				: formatDueDate(value);
 	return (
 		<span
-			title={formatDate(value)}
+			title={formatUtcDate(value)}
 			className={cn(
 				"text-muted-foreground whitespace-nowrap",
 				status === "overdue" && "text-destructive",

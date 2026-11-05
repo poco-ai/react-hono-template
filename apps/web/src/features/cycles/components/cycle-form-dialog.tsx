@@ -13,6 +13,7 @@ import { Spinner } from "@workspace/ui/components/spinner";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { DateField } from "@/components/date-field";
 import { MutationError } from "@/components/mutation-error";
 import {
 	cycleEndsAtIso,
@@ -144,29 +145,28 @@ export function CycleFormDialog({
 						<FieldError>{nameError}</FieldError>
 					</Field>
 					<div className="grid grid-cols-2 gap-3">
-						<Field>
+						<Field data-invalid={rangeError ? true : undefined}>
 							<FieldLabel htmlFor="cycle-start">
 								{t("cycles.startsAt")}
 							</FieldLabel>
-							<Input
+							<DateField
 								id="cycle-start"
-								type="date"
 								value={startsAt}
-								onChange={(event) => {
-									setStartsAt(event.target.value);
+								invalid={Boolean(rangeError)}
+								onChange={(value) => {
+									setStartsAt(value);
 									setRangeError(undefined);
 								}}
 							/>
 						</Field>
 						<Field data-invalid={rangeError ? true : undefined}>
 							<FieldLabel htmlFor="cycle-end">{t("cycles.endsAt")}</FieldLabel>
-							<Input
+							<DateField
 								id="cycle-end"
-								type="date"
 								value={endsAt}
-								aria-invalid={rangeError ? true : undefined}
-								onChange={(event) => {
-									setEndsAt(event.target.value);
+								invalid={Boolean(rangeError)}
+								onChange={(value) => {
+									setEndsAt(value);
 									setRangeError(undefined);
 								}}
 							/>

@@ -40,7 +40,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
 import type { CycleWithProgressDto } from "@/features/cycles/data";
-import { DateField } from "@/features/issues/components/date-field";
+import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
 import {
 	ParentIssueField,
 	type ParentSummary,
@@ -287,7 +287,7 @@ export function IssuePropertiesPanel({
 			</PropertyRow>
 
 			<PropertyRow label={t("issues.dueDate")}>
-				<DateField
+				<IssueDueDateField
 					value={toDateInputValue(issue.dueDate)}
 					disabled={frozen}
 					onChange={(v) => onUpdate({ dueDate: fromDateInputValue(v) })}

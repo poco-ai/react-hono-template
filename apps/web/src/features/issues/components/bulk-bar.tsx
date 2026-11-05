@@ -20,7 +20,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MultiSelect } from "@/components/multi-select";
 import { UserAvatar } from "@/components/user-avatar";
-import { DateField } from "@/features/issues/components/date-field";
+import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import type { OrgMember } from "@/features/members/data";
@@ -153,7 +153,7 @@ export function BulkActionBar({
 				</SelectContent>
 			</Select>
 			<div className="w-36">
-				<DateField
+				<IssueDueDateField
 					value=""
 					disabled={frozen}
 					className="h-8 w-full text-xs"
