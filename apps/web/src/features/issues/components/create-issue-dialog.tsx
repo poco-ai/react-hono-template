@@ -1,6 +1,8 @@
 import type { StatusDto } from "@api/dto/status.dto";
+import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import {
+	type CreateIssueInput,
 	createIssueSchema,
 	type IssuePriorityName,
 	priorityName,
@@ -38,6 +40,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { MultiSelect } from "@/components/multi-select";
 import { MutationError } from "@/components/mutation-error";
@@ -48,22 +51,69 @@ import {
 	IssuePrioritySelect,
 	IssueStatusSelect,
 } from "@/features/issues/components/issue-selects";
-import { buildCreateIssueInput } from "@/features/issues/create-issue-input";
+import {
+	buildCreateIssueInput,
+	type CreateIssueFormState,
+} from "@/features/issues/create-issue-input";
 import {
 	applyIssueTemplate,
 	templatesForProject,
 } from "@/features/templates/apply";
 import { issueTemplatesQuery } from "@/features/templates/data";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
+import { useZodForm } from "@/lib/use-zod-form";
 import { useCreateIssue } from "../data";
 
 const NO_CYCLE = "__no_cycle__";
 const NO_TEMPLATE = "__no_template__";
+
+/**
+ * Dialog form values. `assigneeId` uses `null` (not `undefined`) for
+ * "unassigned" so the select value always has a concrete type; `cycleId` keeps
+ * the `NO_CYCLE` sentinel. `toCreateIssueFormState` maps both back to the
+ * `CreateIssueFormState` shape the input/template builders expect.
+ */
+type CreateIssueFormValues = {
+	title: string;
+	description: string;
+	statusId: string | undefined;
+	priority: IssuePriorityName;
+	assigneeId: string | null;
+	labelIds: string[];
+	dueDate: string;
+	estimate: string;
+	cycleId: string;
+};
+
+const toCreateIssueFormState = (
+	values: CreateIssueFormValues,
+): CreateIssueFormState => ({
+	title: values.title,
+	description: values.description,
+	statusId: values.statusId,
+	priority: values.priority,
+	assigneeId: values.assigneeId ?? undefined,
+	labelIds: values.labelIds,
+	dueDate: values.dueDate,
+	estimate: values.estimate,
+	cycleId: values.cycleId === NO_CYCLE ? undefined : values.cycleId,
+});
+
+const formDefaults = (
+	defaultStatusId?: string,
+	defaultCycleId?: string,
+): CreateIssueFormValues => ({
+	title: "",
+	description: "",
+	statusId: defaultStatusId,
+	priority: "none",
+	assigneeId: null,
+	labelIds: [],
+	dueDate: "",
+	estimate: "",
+	cycleId: defaultCycleId ?? NO_CYCLE,
+});
+
+const INPUT_IDS = { title: "issue-title", description: "issue-description" };
 
 export function CreateIssueDialog({
 	orgId,
@@ -97,26 +147,54 @@ export function CreateIssueDialog({
 	cycles?: CycleWithProgressDto[];
 }) {
 	const { t } = useTranslation();
-	const [title, setTitle] = useState("");
-	const [description, setDescription] = useState("");
-	const [statusId, setStatusId] = useState<string | undefined>(defaultStatusId);
-	const [priority, setPriority] = useState<IssuePriorityName>("none");
-	const [assigneeId, setAssigneeId] = useState<string | null>(null);
-	const [labelIds, setLabelIds] = useState<string[]>([]);
-	const [dueDate, setDueDate] = useState("");
-	const [estimate, setEstimate] = useState("");
-	const [cycleId, setCycleId] = useState(defaultCycleId ?? NO_CYCLE);
 	const [templateId, setTemplateId] = useState(NO_TEMPLATE);
 	const [appliedTemplateName, setAppliedTemplateName] = useState<string | null>(
 		null,
 	);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	const templates = useQuery({
 		...issueTemplatesQuery(orgId),
 		enabled: open,
 	});
 	const projectTemplates = templatesForProject(templates.data, projectId);
+
+	const createMutation = useCreateIssue(orgId, projectId);
+
+	const { form, fieldErrors, handleSubmit, reset } = useZodForm<
+		CreateIssueFormValues,
+		CreateIssueInput
+	>({
+		defaultValues: formDefaults(defaultStatusId, defaultCycleId),
+		schema: z.preprocess((values) => {
+			// Guard non-object input so the wrapper cannot throw before zod gets a
+			// chance to report validation issues.
+			if (!values || typeof values !== "object") {
+				return values;
+			}
+			return buildCreateIssueInput(
+				toCreateIssueFormState(values as CreateIssueFormValues),
+				{ parentId },
+			);
+		}, createIssueSchema),
+		onSubmit: (values) => {
+			createMutation.mutate(values, {
+				onSuccess: () => {
+					toast.success(t("toast.issueCreated"));
+					onOpenChange(false);
+				},
+			});
+		},
+		t,
+		inputIds: INPUT_IDS,
+	});
+
+	const statusId = useStore(form.store, (state) => state.values.statusId);
+	const priority = useStore(form.store, (state) => state.values.priority);
+	const assigneeId = useStore(form.store, (state) => state.values.assigneeId);
+	const dueDate = useStore(form.store, (state) => state.values.dueDate);
+	const estimate = useStore(form.store, (state) => state.values.estimate);
+	const cycleId = useStore(form.store, (state) => state.values.cycleId);
+	const labelIds = useStore(form.store, (state) => state.values.labelIds);
 
 	/** Selecting a template overrides the prefill fields; every field stays editable. */
 	const onTemplateChange = (value: string) => {
@@ -126,29 +204,20 @@ export function CreateIssueDialog({
 			setAppliedTemplateName(null);
 			return;
 		}
+		// Event handlers read the live form store; the subsequent change also
+		// clears any previously submitted error map (see useZodForm).
 		const next = applyIssueTemplate(
-			{
-				title,
-				description,
-				statusId,
-				priority,
-				assigneeId: assigneeId ?? undefined,
-				labelIds,
-				dueDate,
-				estimate,
-				cycleId: cycleId === NO_CYCLE ? undefined : cycleId,
-			},
+			toCreateIssueFormState(form.state.values),
 			template,
 			{ availableLabelIds: labels.map((label) => label.id) },
 		);
-		setTitle(next.title);
-		setDescription(next.description);
-		setStatusId(next.statusId);
-		setPriority(next.priority);
-		setLabelIds(next.labelIds);
-		setEstimate(next.estimate);
+		form.setFieldValue("title", next.title);
+		form.setFieldValue("description", next.description);
+		form.setFieldValue("statusId", next.statusId);
+		form.setFieldValue("priority", next.priority);
+		form.setFieldValue("labelIds", next.labelIds);
+		form.setFieldValue("estimate", next.estimate);
 		setAppliedTemplateName(template.name);
-		setFieldErrors({});
 	};
 
 	const estimateNumber = estimate === "" ? undefined : Number(estimate);
@@ -160,56 +229,11 @@ export function CreateIssueDialog({
 
 	useEffect(() => {
 		if (open) {
-			setTitle("");
-			setDescription("");
-			setStatusId(defaultStatusId);
-			setPriority("none");
-			setAssigneeId(null);
-			setLabelIds([]);
-			setDueDate("");
-			setEstimate("");
-			setCycleId(defaultCycleId ?? NO_CYCLE);
+			reset(formDefaults(defaultStatusId, defaultCycleId));
 			setTemplateId(NO_TEMPLATE);
 			setAppliedTemplateName(null);
-			setFieldErrors({});
 		}
-	}, [open, defaultStatusId, defaultCycleId]);
-
-	const createMutation = useCreateIssue(orgId, projectId);
-
-	const onSubmit = () => {
-		const parsed = createIssueSchema.safeParse(
-			buildCreateIssueInput(
-				{
-					title,
-					description,
-					statusId,
-					priority,
-					assigneeId: assigneeId ?? undefined,
-					labelIds,
-					dueDate,
-					estimate,
-					cycleId: cycleId === NO_CYCLE ? undefined : cycleId,
-				},
-				{ parentId },
-			),
-		);
-		if (!parsed.success) {
-			const errors = fieldErrorsFromZod(parsed.error, t);
-			setFieldErrors(errors);
-			focusFirstInvalidField(errors, {
-				title: "issue-title",
-				description: "issue-description",
-			});
-			return;
-		}
-		createMutation.mutate(parsed.data, {
-			onSuccess: () => {
-				toast.success(t("toast.issueCreated"));
-				onOpenChange(false);
-			},
-		});
-	};
+	}, [open, defaultStatusId, defaultCycleId, reset]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,10 +253,7 @@ export function CreateIssueDialog({
 				<form
 					noValidate
 					className="flex flex-col gap-4"
-					onSubmit={(e) => {
-						e.preventDefault();
-						onSubmit();
-					}}
+					onSubmit={handleSubmit}
 				>
 					{projectTemplates.length > 0 && (
 						<Field>
@@ -272,52 +293,56 @@ export function CreateIssueDialog({
 							)}
 						</Field>
 					)}
-					<Field data-invalid={fieldErrors.title ? true : undefined}>
-						<FieldLabel htmlFor="issue-title">
-							{t("issues.titleField")}
-						</FieldLabel>
-						<Input
-							id="issue-title"
-							value={title}
-							placeholder={t("issues.titlePlaceholder")}
-							onChange={(e) => {
-								setTitle(e.target.value);
-								setFieldErrors((prev) => withoutFieldError(prev, "title"));
-							}}
-							aria-invalid={fieldErrors.title ? true : undefined}
-							aria-describedby={
-								fieldErrors.title ? "issue-title-error" : undefined
-							}
-						/>
-						<FieldError id="issue-title-error">{fieldErrors.title}</FieldError>
-					</Field>
-					<Field data-invalid={fieldErrors.description ? true : undefined}>
-						<FieldLabel htmlFor="issue-description">
-							{t("common.description")}
-							<span className="text-muted-foreground">
-								{" "}
-								({t("common.optional")})
-							</span>
-						</FieldLabel>
-						<MarkdownEditor
-							id="issue-description"
-							value={description}
-							onChange={(next) => {
-								setDescription(next);
-								setFieldErrors((prev) =>
-									withoutFieldError(prev, "description"),
-								);
-							}}
-							placeholder={t("issues.descriptionPlaceholder")}
-							ariaInvalid={Boolean(fieldErrors.description)}
-							ariaDescribedBy={
-								fieldErrors.description ? "issue-description-error" : undefined
-							}
-						/>
-						<FieldError id="issue-description-error">
-							{fieldErrors.description}
-						</FieldError>
-					</Field>
+					<form.Field name="title">
+						{(field) => (
+							<Field data-invalid={fieldErrors.title ? true : undefined}>
+								<FieldLabel htmlFor="issue-title">
+									{t("issues.titleField")}
+								</FieldLabel>
+								<Input
+									id="issue-title"
+									value={field.state.value}
+									placeholder={t("issues.titlePlaceholder")}
+									onChange={(e) => field.handleChange(e.target.value)}
+									aria-invalid={fieldErrors.title ? true : undefined}
+									aria-describedby={
+										fieldErrors.title ? "issue-title-error" : undefined
+									}
+								/>
+								<FieldError id="issue-title-error">
+									{fieldErrors.title}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="description">
+						{(field) => (
+							<Field data-invalid={fieldErrors.description ? true : undefined}>
+								<FieldLabel htmlFor="issue-description">
+									{t("common.description")}
+									<span className="text-muted-foreground">
+										{" "}
+										({t("common.optional")})
+									</span>
+								</FieldLabel>
+								<MarkdownEditor
+									id="issue-description"
+									value={field.state.value}
+									onChange={field.handleChange}
+									placeholder={t("issues.descriptionPlaceholder")}
+									ariaInvalid={Boolean(fieldErrors.description)}
+									ariaDescribedBy={
+										fieldErrors.description
+											? "issue-description-error"
+											: undefined
+									}
+								/>
+								<FieldError id="issue-description-error">
+									{fieldErrors.description}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
 					<div className="grid grid-cols-2 gap-4">
 						<Field>
 							<FieldLabel>{t("issues.status")}</FieldLabel>
@@ -326,7 +351,7 @@ export function CreateIssueDialog({
 								value={statusId ?? null}
 								showBadge={false}
 								triggerClassName="w-full"
-								onChange={setStatusId}
+								onChange={(value) => form.setFieldValue("statusId", value)}
 							/>
 						</Field>
 						<Field>
@@ -335,7 +360,9 @@ export function CreateIssueDialog({
 								value={priorityValue(priority)}
 								showBadge={false}
 								triggerClassName="w-full"
-								onChange={(value) => setPriority(priorityName(value))}
+								onChange={(value) =>
+									form.setFieldValue("priority", priorityName(value))
+								}
 							/>
 						</Field>
 						<Field>
@@ -345,12 +372,15 @@ export function CreateIssueDialog({
 								value={assigneeId}
 								showAvatar={false}
 								triggerClassName="w-full"
-								onChange={setAssigneeId}
+								onChange={(value) => form.setFieldValue("assigneeId", value)}
 							/>
 						</Field>
 						<Field>
 							<FieldLabel>{t("issues.dueDate")}</FieldLabel>
-							<IssueDueDateField value={dueDate} onChange={setDueDate} />
+							<IssueDueDateField
+								value={dueDate}
+								onChange={(value) => form.setFieldValue("dueDate", value)}
+							/>
 						</Field>
 						<Field data-invalid={!estimateValid ? true : undefined}>
 							<FieldLabel>{t("issues.estimate")}</FieldLabel>
@@ -361,7 +391,9 @@ export function CreateIssueDialog({
 									max={100}
 									step={1}
 									value={estimate}
-									onChange={(e) => setEstimate(e.target.value)}
+									onChange={(e) =>
+										form.setFieldValue("estimate", e.target.value)
+									}
 								/>
 								<InputGroupAddon align="inline-end">
 									<InputGroupText>{t("issues.estimateUnit")}</InputGroupText>
@@ -378,7 +410,9 @@ export function CreateIssueDialog({
 							<FieldLabel>{t("issues.cycle")}</FieldLabel>
 							<Select
 								value={cycleId}
-								onValueChange={(value) => value && setCycleId(value)}
+								onValueChange={(value) =>
+									value && form.setFieldValue("cycleId", value)
+								}
 							>
 								<SelectTrigger className="w-full">
 									<SelectValue>
@@ -410,7 +444,7 @@ export function CreateIssueDialog({
 								value: label.id,
 								label: label.name,
 							}))}
-							onChange={setLabelIds}
+							onChange={(next) => form.setFieldValue("labelIds", next)}
 						/>
 					</Field>
 					{createMutation.isError && (
