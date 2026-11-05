@@ -1,4 +1,7 @@
-import { createProjectSchema } from "@workspace/shared";
+import {
+	type CreateProjectInput,
+	createProjectSchema,
+} from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
 import {
@@ -20,16 +23,12 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { QuotaError } from "@/components/quota-error";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { useCreateProject } from "@/features/projects/data";
 import { projectKeyFromName } from "@/features/projects/utils";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
+import { useZodForm } from "@/lib/use-zod-form";
 
 const DEFAULT_COLOR = "#6366f1";
 
@@ -38,6 +37,30 @@ const INPUT_IDS = {
 	key: "project-key",
 	description: "project-description",
 };
+
+type ProjectFormValues = {
+	name: string;
+	key: string;
+	description: string;
+	color: string;
+};
+
+const formSchema = z.preprocess((values) => {
+	// Guard non-object input so the wrapper cannot throw a TypeError before zod
+	// gets a chance to report validation issues.
+	if (!values || typeof values !== "object") {
+		return values;
+	}
+	const input = values as ProjectFormValues;
+	return {
+		name: input.name.trim(),
+		key: input.key,
+		description: input.description.trim() || undefined,
+		color: input.color,
+	};
+}, createProjectSchema);
+
+const PATTERN_KEYS = { key: "form.errors.identifierPattern" };
 
 export function CreateProjectDialog({
 	orgId,
@@ -51,23 +74,11 @@ export function CreateProjectDialog({
 	const { t } = useTranslation();
 
 	const { canManage } = useOrgRole(orgId);
-	const [name, setName] = useState("");
-	const [key, setKey] = useState("");
+	// Business-level "the user edited the key" flag: once set, typing a name no
+	// longer rewrites the key. This is distinct from TanStack's field touched
+	// state (focus/blur bookkeeping, cleared by `form.reset`) and must not be
+	// derived from `field.state.meta.isTouched`.
 	const [keyTouched, setKeyTouched] = useState(false);
-	const [description, setDescription] = useState("");
-	const [color, setColor] = useState(DEFAULT_COLOR);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-
-	useEffect(() => {
-		if (open) {
-			setName("");
-			setKey("");
-			setKeyTouched(false);
-			setDescription("");
-			setColor(DEFAULT_COLOR);
-			setFieldErrors({});
-		}
-	}, [open]);
 
 	const createMutation = useCreateProject(orgId, {
 		onSuccess: () => {
@@ -77,47 +88,31 @@ export function CreateProjectDialog({
 		},
 	});
 
-	const onNameChange = (next: string) => {
-		setName(next);
-		setFieldErrors((prev) => withoutFieldError(prev, "name"));
-		if (!keyTouched) {
-			setKey(projectKeyFromName(next));
-		}
-	};
+	const { form, fieldErrors, handleSubmit, reset } = useZodForm<
+		ProjectFormValues,
+		CreateProjectInput
+	>({
+		defaultValues: { name: "", key: "", description: "", color: DEFAULT_COLOR },
+		schema: formSchema,
+		onSubmit: (values) => {
+			createMutation.mutate(values);
+		},
+		t,
+		patternKeys: PATTERN_KEYS,
+		inputIds: INPUT_IDS,
+	});
 
-	const onKeyChange = (next: string) => {
-		setKeyTouched(true);
-		setKey(
-			next
-				.toUpperCase()
-				.replace(/[^A-Z]/g, "")
-				.slice(0, 6),
-		);
-		setFieldErrors((prev) => withoutFieldError(prev, "key"));
-	};
-
-	const onDescriptionChange = (next: string) => {
-		setDescription(next);
-		setFieldErrors((prev) => withoutFieldError(prev, "description"));
-	};
-
-	const onSubmit = () => {
-		const parsed = createProjectSchema.safeParse({
-			name: name.trim(),
-			key,
-			description: description.trim() || undefined,
-			color,
-		});
-		if (!parsed.success) {
-			const errors = fieldErrorsFromZod(parsed.error, t, {
-				key: "form.errors.identifierPattern",
+	useEffect(() => {
+		if (open) {
+			setKeyTouched(false);
+			reset({
+				name: "",
+				key: "",
+				description: "",
+				color: DEFAULT_COLOR,
 			});
-			setFieldErrors(errors);
-			focusFirstInvalidField(errors, INPUT_IDS);
-			return;
 		}
-		createMutation.mutate(parsed.data);
-	};
+	}, [open, reset]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,83 +126,121 @@ export function CreateProjectDialog({
 				<form
 					noValidate
 					className="flex flex-col gap-4"
-					onSubmit={(e) => {
-						e.preventDefault();
-						onSubmit();
-					}}
+					onSubmit={handleSubmit}
 				>
-					<Field data-invalid={fieldErrors.name ? true : undefined}>
-						<FieldLabel htmlFor="project-name">{t("projects.name")}</FieldLabel>
-						<Input
-							id="project-name"
-							value={name}
-							placeholder={t("projects.namePlaceholder")}
-							onChange={(e) => onNameChange(e.target.value)}
-							aria-invalid={fieldErrors.name ? true : undefined}
-							aria-describedby={
-								fieldErrors.name ? "project-name-error" : undefined
-							}
-						/>
-						<FieldError id="project-name-error">{fieldErrors.name}</FieldError>
-					</Field>
-					<Field data-invalid={fieldErrors.key ? true : undefined}>
-						<FieldLabel htmlFor="project-key">{t("projects.key")}</FieldLabel>
-						<Input
-							id="project-key"
-							value={key}
-							placeholder={t("projects.keyPlaceholder")}
-							onChange={(e) => onKeyChange(e.target.value)}
-							className="w-full font-mono uppercase"
-							aria-invalid={fieldErrors.key ? true : undefined}
-							aria-describedby={
-								fieldErrors.key
-									? "project-key-error project-key-hint"
-									: "project-key-hint"
-							}
-						/>
-						<FieldDescription id="project-key-hint">
-							{t("projects.keyHint")}
-						</FieldDescription>
-						<FieldError id="project-key-error">{fieldErrors.key}</FieldError>
-					</Field>
-					<Field data-invalid={fieldErrors.description ? true : undefined}>
-						<FieldLabel htmlFor="project-description">
-							{t("common.description")}
-							<span className="text-muted-foreground">
-								{" "}
-								({t("common.optional")})
-							</span>
-						</FieldLabel>
-						<Textarea
-							id="project-description"
-							value={description}
-							placeholder={t("projects.descriptionPlaceholder")}
-							onChange={(e) => onDescriptionChange(e.target.value)}
-							aria-invalid={fieldErrors.description ? true : undefined}
-							aria-describedby={
-								fieldErrors.description
-									? "project-description-error"
-									: undefined
-							}
-						/>
-						<FieldError id="project-description-error">
-							{fieldErrors.description}
-						</FieldError>
-					</Field>
-					<Field>
-						<FieldLabel>
-							{t("projects.color")}
-							<span className="text-muted-foreground">
-								{" "}
-								({t("common.optional")})
-							</span>
-						</FieldLabel>
-						<ColorSwatchPicker
-							value={color}
-							onChange={setColor}
-							ariaLabel={t("projects.color")}
-						/>
-					</Field>
+					<form.Field name="name">
+						{(field) => (
+							<Field data-invalid={fieldErrors.name ? true : undefined}>
+								<FieldLabel htmlFor="project-name">
+									{t("projects.name")}
+								</FieldLabel>
+								<Input
+									id="project-name"
+									value={field.state.value}
+									placeholder={t("projects.namePlaceholder")}
+									onChange={(e) => {
+										const next = e.target.value;
+										field.handleChange(next);
+										if (!keyTouched) {
+											// Programmatic sibling write: updates the key value
+											// without marking the key field touched, so `keyTouched`
+											// stays the only source of truth for the derivation.
+											form.setFieldValue("key", projectKeyFromName(next));
+										}
+									}}
+									aria-invalid={fieldErrors.name ? true : undefined}
+									aria-describedby={
+										fieldErrors.name ? "project-name-error" : undefined
+									}
+								/>
+								<FieldError id="project-name-error">
+									{fieldErrors.name}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="key">
+						{(field) => (
+							<Field data-invalid={fieldErrors.key ? true : undefined}>
+								<FieldLabel htmlFor="project-key">
+									{t("projects.key")}
+								</FieldLabel>
+								<Input
+									id="project-key"
+									value={field.state.value}
+									placeholder={t("projects.keyPlaceholder")}
+									onChange={(e) => {
+										setKeyTouched(true);
+										field.handleChange(
+											e.target.value
+												.toUpperCase()
+												.replace(/[^A-Z]/g, "")
+												.slice(0, 6),
+										);
+									}}
+									className="w-full font-mono uppercase"
+									aria-invalid={fieldErrors.key ? true : undefined}
+									aria-describedby={
+										fieldErrors.key
+											? "project-key-error project-key-hint"
+											: "project-key-hint"
+									}
+								/>
+								<FieldDescription id="project-key-hint">
+									{t("projects.keyHint")}
+								</FieldDescription>
+								<FieldError id="project-key-error">
+									{fieldErrors.key}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="description">
+						{(field) => (
+							<Field data-invalid={fieldErrors.description ? true : undefined}>
+								<FieldLabel htmlFor="project-description">
+									{t("common.description")}
+									<span className="text-muted-foreground">
+										{" "}
+										({t("common.optional")})
+									</span>
+								</FieldLabel>
+								<Textarea
+									id="project-description"
+									value={field.state.value}
+									placeholder={t("projects.descriptionPlaceholder")}
+									onChange={(e) => field.handleChange(e.target.value)}
+									aria-invalid={fieldErrors.description ? true : undefined}
+									aria-describedby={
+										fieldErrors.description
+											? "project-description-error"
+											: undefined
+									}
+								/>
+								<FieldError id="project-description-error">
+									{fieldErrors.description}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="color">
+						{(field) => (
+							<Field>
+								<FieldLabel>
+									{t("projects.color")}
+									<span className="text-muted-foreground">
+										{" "}
+										({t("common.optional")})
+									</span>
+								</FieldLabel>
+								<ColorSwatchPicker
+									value={field.state.value}
+									onChange={field.handleChange}
+									ariaLabel={t("projects.color")}
+								/>
+							</Field>
+						)}
+					</form.Field>
 					{createMutation.isError && (
 						<QuotaError
 							error={createMutation.error}
