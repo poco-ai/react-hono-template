@@ -15,9 +15,11 @@ import type {
 /**
  * Framework-neutral capability executor.
  *
- * It is the single choke point for authorization: callers (chat, panel, MCP,
- * public API) must go through `execute` so scope, role, freeze, org-scoping and
- * input/output validation cannot be skipped per surface.
+ * It is the single choke point for capability authorization: chat, panel and
+ * MCP must go through `execute` so scope, role, freeze, org-scoping and
+ * input/output validation cannot be skipped per surface. The public `/api/v1`
+ * routes still call services directly; they share `assertApiKeyScope` but not
+ * the capability layer.
  */
 
 export type CapabilityMemberDao = Pick<

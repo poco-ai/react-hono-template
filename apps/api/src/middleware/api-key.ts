@@ -5,6 +5,7 @@ import {
 	type ApiKeyScope,
 	normalizeApiKeyScopes,
 	PLANS,
+	scopeSatisfies,
 } from "@workspace/shared";
 import { createMiddleware } from "hono/factory";
 import type { ApiKeyDao } from "../dao/api-key.dao";
@@ -27,6 +28,29 @@ export type ApiKeyEnv = {
 	Variables: {
 		apiKeyAuth: ApiKeyAuth;
 	};
+};
+
+/** Minimal context surface needed to read the authenticated API key. */
+export type ApiKeyContext = {
+	get: (key: "apiKeyAuth") => ApiKeyAuth;
+};
+
+/**
+ * Scope assertion for the public v1 endpoints. Scopes are cumulative, so a
+ * `write` key can also read and an `admin` key can do everything. Kept next to
+ * `requireApiKey` so the public API never re-implements the check (and cannot
+ * drift on the error code or message).
+ */
+export const assertApiKeyScope = (
+	c: ApiKeyContext,
+	scope: ApiKeyScope,
+): void => {
+	if (!scopeSatisfies(c.get("apiKeyAuth").scopes, scope)) {
+		throw new ApiError(
+			ApiErrorCode.MCP_FORBIDDEN_SCOPE,
+			`This endpoint requires the ${scope} API key scope.`,
+		);
+	}
 };
 
 export const requireApiKey = (apiKeyDao: ApiKeyDao) =>

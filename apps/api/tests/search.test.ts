@@ -14,6 +14,7 @@ import {
 	type CapabilityDeps,
 	createCapabilityLayer,
 } from "../src/capabilities";
+import { searchResultsSchema as capabilitySearchResultsSchema } from "../src/capabilities/projections";
 import { createSearchDao } from "../src/dao/search.dao";
 import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
@@ -259,6 +260,8 @@ test("issue search matches title/description and hides deleted or cross-org rows
 	assert.equal(hit.descriptionExcerpt, "Users cannot sign in");
 	assert.deepEqual(result.comments, []);
 	assert.deepEqual(result.projects, []);
+	// The real DAO/service output must satisfy the strict capability contract.
+	capabilitySearchResultsSchema.parse(result);
 });
 
 test("Chinese substring search works for short (instr) and long (trigram) queries", async () => {

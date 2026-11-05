@@ -210,6 +210,27 @@ export const searchUserSchema = z.object({
 	image: z.string().nullable(),
 });
 
+// ---------------------------------------------------------------------------
+// Search output schemas (strict AI/MCP contract)
+//
+// The schemas below are the output contract checked by the capability executor
+// for `search_all`: every field is required (nullable only where the wire may
+// carry null), with no coercion, no defaults and no per-hit recovery. A payload that
+// drifts (missing field, wrong type) therefore fails loudly instead of reaching
+// a model/MCP client with silently fabricated values.
+//
+// `@workspace/shared` exports a second, deliberately lenient
+// `searchResultsSchema` (packages/shared/src/schemas/search.ts) used by the web
+// command palette: it coerces numbers, fills defaults, generates identifiers
+// and drops malformed hits so an older or partial payload still renders.
+//
+// Do not interchange them. Using the lenient schema here would mask API bugs
+// (missing fields would quietly become ""/0/null); using the strict schema in
+// the palette would fail whole responses on one partially valid hit.
+// apps/api/tests/capability-search-schema.test.ts pins the shared field shape
+// and the intentional fallback difference between the two.
+// ---------------------------------------------------------------------------
+
 export const searchIssueHitSchema = z.object({
 	id: z.string(),
 	projectId: z.string(),
