@@ -1,3 +1,4 @@
+import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
 import type { StatusCategory } from "@workspace/shared";
@@ -53,9 +54,9 @@ import {
 	projectTarget,
 	readRecent,
 	recordRecent,
+	SEARCH_DEBOUNCE_MS,
 	type SearchProjectHitDto,
 	searchQuery,
-	useDebouncedValue,
 } from "@/features/search/data";
 
 /** Unified row shape for server hits and the `KEY-12` detail fallback. */
@@ -90,7 +91,7 @@ export function CommandPalette({
 	// cmdk owns the input; mirror the term so it can be debounced into a search
 	// and reset whenever the palette closes.
 	const [term, setTerm] = useState("");
-	const debouncedTerm = useDebouncedValue(term);
+	const [debouncedTerm] = useDebouncedValue(term, { wait: SEARCH_DEBOUNCE_MS });
 	const inputTerm = term.trim();
 	const searchTerm = debouncedTerm.trim();
 

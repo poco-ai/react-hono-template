@@ -1,16 +1,10 @@
 import { Button } from "@workspace/ui/components/button";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 
 export function SecretReveal({ value }: { value: string }) {
 	const { t } = useTranslation();
-	const [copied, setCopied] = useState(false);
-
-	const copy = async () => {
-		await navigator.clipboard.writeText(value);
-		setCopied(true);
-		window.setTimeout(() => setCopied(false), 1600);
-	};
+	const { copied, copy } = useCopyToClipboard();
 
 	return (
 		<div className="flex items-start gap-2">
@@ -21,7 +15,7 @@ export function SecretReveal({ value }: { value: string }) {
 				type="button"
 				variant="outline"
 				className="shrink-0"
-				onClick={copy}
+				onClick={() => void copy(value)}
 			>
 				{copied ? t("common.copied") : t("common.copy")}
 			</Button>

@@ -48,14 +48,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
-import { useSession } from "@/features/auth/data";
 import {
 	favoritesQuery,
 	isFavorited,
 	useToggleFavorite,
 } from "@/features/favorites/data";
-import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
 import { EditProjectDialog } from "@/features/projects/components/edit-project-dialog";
 import { projectsQuery, useArchiveProject } from "@/features/projects/data";
@@ -77,9 +76,8 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	});
 	const archived = archivedParam ?? false;
 
-	const { data: session } = useSession();
+	const { canManage } = useOrgRole(orgId);
 	const projects = useQuery(projectsQuery(orgId));
-	const members = useQuery(membersQuery(orgId));
 	const frozen = useOrgFrozen(orgId);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
@@ -93,10 +91,6 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 		navigate({
 			search: (prev) => ({ ...prev, archived: next || undefined }),
 		});
-
-	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
-	const canManage =
-		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
 
 	const visibleProjects = (projects.data ?? []).filter(
 		(project) => project.archived === archived,

@@ -13,7 +13,7 @@ import {
 	STATUS_CATEGORIES,
 	type StatusCategory,
 } from "@workspace/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { client, unwrap } from "@/lib/api";
 
 /**
@@ -478,49 +478,6 @@ export function recordRecent(
 }
 
 // --- hooks -----------------------------------------------------------------
-
-export interface Debounced<T> {
-	(value: T): void;
-	cancel: () => void;
-}
-
-/** Minimal trailing-edge debounce, framework-neutral so it can be tested. */
-export function debounce<T>(
-	callback: (value: T) => void,
-	delay: number = SEARCH_DEBOUNCE_MS,
-): Debounced<T> {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	const debounced = ((value: T) => {
-		if (timer !== undefined) {
-			clearTimeout(timer);
-		}
-		timer = setTimeout(() => {
-			timer = undefined;
-			callback(value);
-		}, delay);
-	}) as Debounced<T>;
-	debounced.cancel = () => {
-		if (timer !== undefined) {
-			clearTimeout(timer);
-			timer = undefined;
-		}
-	};
-	return debounced;
-}
-
-/** Mirrors the palette input into the term that actually triggers a request. */
-export function useDebouncedValue<T>(
-	value: T,
-	delay: number = SEARCH_DEBOUNCE_MS,
-): T {
-	const [debounced, setDebounced] = useState(value);
-	const schedule = useMemo(() => debounce(setDebounced, delay), [delay]);
-	useEffect(() => {
-		schedule(value);
-		return schedule.cancel;
-	}, [schedule, value]);
-	return debounced;
-}
 
 /** Writes an issue visit to recent history once its detail data is loaded. */
 export function useRecordRecentIssue(

@@ -22,31 +22,25 @@ import {
 	ShieldCheck,
 	Terminal,
 } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { mcpInfoQuery } from "@/features/mcp/data";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { apiErrorMessage } from "@/lib/errors";
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 function CopyButton({ value }: { value: string }) {
 	const { t } = useTranslation();
-	const [copied, setCopied] = useState(false);
+	const { copied, copy } = useCopyToClipboard({
+		onError: () => toast.error(t("common.copyFailed")),
+	});
 	return (
 		<Button
 			type="button"
 			variant="outline"
 			size="xs"
-			onClick={async () => {
-				try {
-					await navigator.clipboard.writeText(value);
-					setCopied(true);
-					window.setTimeout(() => setCopied(false), 1600);
-				} catch {
-					toast.error(t("common.copyFailed"));
-				}
-			}}
+			onClick={() => void copy(value)}
 		>
 			<Copy />
 			{copied ? t("common.copied") : t("common.copy")}

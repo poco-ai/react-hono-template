@@ -9,7 +9,6 @@ import {
 	buildSearchRequest,
 	clampSearchLimit,
 	commentTarget,
-	debounce,
 	issueTarget,
 	memberTarget,
 	normalizeSearchResults,
@@ -109,21 +108,6 @@ test("search parameters trim the term, cap the limit and skip empty input", () =
 		"web",
 		3,
 	]);
-});
-
-test("debounce only forwards the trailing value", async () => {
-	const seen: string[] = [];
-	const debounced = debounce((value: string) => seen.push(value), 10);
-	debounced("a");
-	debounced("ab");
-	debounced("abc");
-	assert.deepEqual(seen, []);
-	await new Promise((resolve) => setTimeout(resolve, 30));
-	assert.deepEqual(seen, ["abc"]);
-	debounced("abcd");
-	debounced.cancel();
-	await new Promise((resolve) => setTimeout(resolve, 30));
-	assert.deepEqual(seen, ["abc"]);
 });
 
 test("normalization drops malformed sections and rows", () => {

@@ -38,7 +38,7 @@ import {
 } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
 import { billingQuery } from "@/features/billing/data";
-import { membersQuery } from "@/features/members/data";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 
 const ALLOWED_CONTENT_TYPES = ATTACHMENT_CONTENT_TYPES;
@@ -76,7 +76,6 @@ export function IssueAttachments({
 	const { t } = useTranslation();
 
 	const { data: session } = useSession();
-	const members = useQuery(membersQuery(orgId));
 	const billing = useQuery(billingQuery(orgId));
 	const maxSize = billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
 	const attachments = useQuery(attachmentsQuery(orgId, projectId, issueNumber));
@@ -85,10 +84,7 @@ export function IssueAttachments({
 	const [pending, setPending] = useState<PendingUpload[]>([]);
 	const [deleting, setDeleting] = useState<AttachmentWithUrlDto | null>(null);
 
-	const currentRole = members.data?.find(
-		(member) => member.userId === session?.user.id,
-	)?.role;
-	const isAdmin = currentRole === "owner" || currentRole === "admin";
+	const { canManage: isAdmin } = useOrgRole(orgId);
 
 	const uploadMutation = useUploadAttachment(orgId, projectId, issueNumber, {});
 

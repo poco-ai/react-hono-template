@@ -7,9 +7,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@workspace/ui/components/dialog";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { formatRelativeTime } from "@/lib/format";
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { EventBadge } from "./delivery-badges";
 
 const prettyPayload = (payload: string) => {
@@ -28,22 +29,21 @@ export function DeliveryDetailDialog({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { t } = useTranslation();
-	const [copied, setCopied] = useState(false);
+	const { copied, copy, reset } = useCopyToClipboard();
 
 	useEffect(() => {
 		if (delivery) {
-			setCopied(false);
+			reset();
 		}
-	}, [delivery]);
+	}, [delivery, reset]);
 
 	const hasPayload = Boolean(delivery?.payload.trim());
 
-	const copy = async () => {
+	const onCopy = () => {
 		if (!delivery) {
 			return;
 		}
-		await navigator.clipboard.writeText(prettyPayload(delivery.payload));
-		setCopied(true);
+		void copy(prettyPayload(delivery.payload));
 	};
 
 	return (
@@ -76,7 +76,7 @@ export function DeliveryDetailDialog({
 										type="button"
 										variant="outline"
 										size="sm"
-										onClick={copy}
+										onClick={onCopy}
 									>
 										{copied ? t("common.copied") : t("common.copy")}
 									</Button>

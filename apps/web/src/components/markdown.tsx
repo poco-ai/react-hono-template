@@ -10,7 +10,7 @@ import {
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
 import { AtSign, Check, Copy } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { Components } from "react-markdown";
 import Markdown, { defaultUrlTransform } from "react-markdown";
@@ -20,6 +20,7 @@ import {
 	mentionUserIdFromHref,
 	renderMentionMarkup,
 } from "@/lib/mention";
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 
 /** Rendered `@[Name](user:ID)` mentions — never a clickable external link. */
 function MentionLabel({ children }: { children: ReactNode }) {
@@ -43,17 +44,11 @@ function CodeBlock({
 }) {
 	const { t } = useTranslation();
 	const preRef = useRef<HTMLPreElement>(null);
-	const [copied, setCopied] = useState(false);
+	const { copied, copy } = useCopyToClipboard();
 
-	const onCopy = async () => {
+	const onCopy = () => {
 		const text = preRef.current?.querySelector("code")?.textContent ?? "";
-		try {
-			await navigator.clipboard.writeText(text);
-			setCopied(true);
-			window.setTimeout(() => setCopied(false), 1600);
-		} catch {
-			setCopied(false);
-		}
+		void copy(text);
 	};
 
 	return (
@@ -71,7 +66,7 @@ function CodeBlock({
 					type="button"
 					variant="outline"
 					size="xs"
-					onClick={() => void onCopy()}
+					onClick={onCopy}
 					className={cn(
 						"bg-background font-mono text-[10px] opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100",
 						copied ? "text-primary" : "text-muted-foreground",

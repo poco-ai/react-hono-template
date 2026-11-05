@@ -41,6 +41,7 @@ import {
 	useUpdateComment,
 } from "@/features/comments/data";
 import { membersQuery } from "@/features/members/data";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
 
@@ -104,10 +105,7 @@ export function IssueComments({
 	const abortRef = useRef<AbortController | null>(null);
 
 	const currentUserId = session?.user.id;
-	const currentRole = members.data?.find(
-		(member) => member.userId === currentUserId,
-	)?.role;
-	const isAdmin = currentRole === "owner" || currentRole === "admin";
+	const { canManage: isAdmin } = useOrgRole(orgId);
 
 	const query = useInfiniteQuery(commentsQuery(orgId, projectId, issueNumber));
 

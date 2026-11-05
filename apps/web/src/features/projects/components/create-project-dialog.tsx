@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createProjectSchema } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { ColorSwatchPicker } from "@workspace/ui/components/color-swatch-picker";
@@ -22,8 +21,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { QuotaError } from "@/components/quota-error";
-import { useSession } from "@/features/auth/data";
-import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
+import { useOrgRole } from "@/features/organizations/use-org-role";
 import { useCreateProject } from "@/features/projects/data";
 import { projectKeyFromName } from "@/features/projects/utils";
 import {
@@ -52,8 +50,7 @@ export function CreateProjectDialog({
 }) {
 	const { t } = useTranslation();
 
-	const { data: session } = useSession();
-	const members = useQuery(membersQuery(orgId));
+	const { canManage } = useOrgRole(orgId);
 	const [name, setName] = useState("");
 	const [key, setKey] = useState("");
 	const [keyTouched, setKeyTouched] = useState(false);
@@ -103,10 +100,6 @@ export function CreateProjectDialog({
 		setDescription(next);
 		setFieldErrors((prev) => withoutFieldError(prev, "description"));
 	};
-
-	const myRole = members.data?.find((m) => m.userId === session?.user.id)?.role;
-	const canManage =
-		myRole !== undefined && (MANAGE_ROLES as string[]).includes(myRole);
 
 	const onSubmit = () => {
 		const parsed = createProjectSchema.safeParse({
