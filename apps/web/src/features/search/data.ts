@@ -1,7 +1,6 @@
 import type {
 	SearchCommentHitDto,
 	SearchIssueHitDto,
-	SearchMemberHitDto,
 	SearchProjectHitDto,
 	SearchResultsDto,
 } from "@api/dto/search.dto";
@@ -10,8 +9,7 @@ import {
 	SEARCH_DEFAULT_LIMIT,
 	SEARCH_MAX_LIMIT,
 	SEARCH_MAX_QUERY_LENGTH,
-	STATUS_CATEGORIES,
-	type StatusCategory,
+	searchResultsSchema,
 } from "@workspace/shared";
 import { useEffect } from "react";
 import { client, unwrap } from "@/lib/api";
@@ -19,8 +17,8 @@ import { client, unwrap } from "@/lib/api";
 /**
  * Command-palette quick search (`GET /api/orgs/:orgId/search`). The API caps
  * each section independently and returns empty sections for an empty query;
- * this module normalizes the payload defensively, owns the query keys and the
- * per-organization recent-history helpers.
+ * this module parses the payload with the shared `searchResultsSchema`, owns the
+ * query keys and the per-organization recent-history helpers.
  */
 
 export const SEARCH_DEBOUNCE_MS = 250;
@@ -38,12 +36,7 @@ export type {
 	SearchProjectHitDto,
 } from "@api/dto/search.dto";
 
-export const emptySearchResults = (): SearchResults => ({
-	issues: [],
-	comments: [],
-	projects: [],
-	members: [],
-});
+export { emptySearchResults } from "@workspace/shared";
 
 export const normalizeSearchTerm = (term: string) =>
 	term.trim().slice(0, SEARCH_MAX_QUERY_LENGTH);
@@ -115,6 +108,7 @@ export function searchQuery(
 
 // --- response normalization ------------------------------------------------
 
+// Loose readers shared with the persisted recent-history parser below.
 const record = (value: unknown): Record<string, unknown> | null =>
 	typeof value === "object" && value !== null
 		? (value as Record<string, unknown>)
@@ -129,131 +123,14 @@ const numberOf = (value: unknown, fallback = 0) =>
 			? Number(value)
 			: fallback;
 
-const arrayOf = (value: unknown): unknown[] =>
-	Array.isArray(value) ? value : [];
-
-const userOf = (value: unknown) => {
-	const entry = record(value);
-	if (!entry) return null;
-	const id = textOf(entry.id);
-	const name = textOf(entry.name);
-	if (!id || !name) return null;
-	return { id, name, image: textOf(entry.image) || null };
-};
-
-const statusCategoryOf = (value: unknown): StatusCategory => {
-	const category = textOf(value);
-	return (STATUS_CATEGORIES as readonly string[]).includes(category)
-		? (category as StatusCategory)
-		: "unstarted";
-};
-
-function issueOf(value: unknown): SearchIssueHitDto | null {
-	const entry = record(value);
-	if (!entry) return null;
-	const id = textOf(entry.id);
-	const projectId = textOf(entry.projectId);
-	const projectKey = textOf(entry.projectKey);
-	const title = textOf(entry.title);
-	const number = numberOf(entry.number);
-	if (!id || !projectId || !title || number <= 0) return null;
-	return {
-		id,
-		projectId,
-		projectKey,
-		number,
-		identifier: textOf(entry.identifier) || `${projectKey}-${number}`,
-		title,
-		descriptionExcerpt: textOf(entry.descriptionExcerpt) || null,
-		statusId: textOf(entry.statusId),
-		statusName: textOf(entry.statusName),
-		statusColor: textOf(entry.statusColor),
-		statusCategory: textOf(entry.statusCategory)
-			? statusCategoryOf(entry.statusCategory)
-			: "unstarted",
-		priority: numberOf(entry.priority),
-		assignee: userOf(entry.assignee),
-		updatedAt: textOf(entry.updatedAt),
-	};
-}
-
-function commentOf(value: unknown): SearchCommentHitDto | null {
-	const entry = record(value);
-	const issue = record(entry?.issue);
-	if (!entry || !issue) return null;
-	const id = textOf(entry.id);
-	const body = textOf(entry.body);
-	const projectId = textOf(issue.projectId);
-	const issueNumber = numberOf(issue.number);
-	if (!id || !body || !projectId || issueNumber <= 0) return null;
-	const projectKey = textOf(issue.projectKey);
-	const author = userOf(entry.author) ?? { id: "", name: "", image: null };
-	return {
-		id,
-		body,
-		author,
-		issue: {
-			id: textOf(issue.id),
-			projectId,
-			projectKey,
-			number: issueNumber,
-			identifier: textOf(issue.identifier) || `${projectKey}-${issueNumber}`,
-			title: textOf(issue.title),
-		},
-		createdAt: textOf(entry.createdAt),
-	};
-}
-
-function projectOf(value: unknown): SearchProjectHitDto | null {
-	const entry = record(value);
-	if (!entry) return null;
-	const id = textOf(entry.id);
-	const name = textOf(entry.name);
-	if (!id || !name) return null;
-	return {
-		id,
-		name,
-		key: textOf(entry.key),
-		descriptionExcerpt: textOf(entry.descriptionExcerpt) || null,
-		color: textOf(entry.color) || null,
-		archived: entry.archived === true,
-		updatedAt: textOf(entry.updatedAt),
-	};
-}
-
-function memberOf(value: unknown): SearchMemberHitDto | null {
-	const entry = record(value);
-	if (!entry) return null;
-	const id = textOf(entry.id);
-	const name = textOf(entry.name);
-	if (!id || !name) return null;
-	return { id, name, image: textOf(entry.image) || null };
-}
-
-const compact = <T>(
-	entries: unknown[],
-	convert: (value: unknown) => T | null,
-) =>
-	entries.flatMap((entry) => {
-		const converted = convert(entry);
-		return converted ? [converted] : [];
-	});
-
 /**
- * Drops malformed or missing sections instead of failing the whole palette.
- * Older/partial payloads keep whatever valid rows they contain.
+ * Parses the response with the shared `searchResultsSchema`. The schema is
+ * lenient by design: malformed rows are dropped, missing or non-array sections
+ * become empty arrays and non-object payloads parse as empty results, so
+ * `parse` never throws and a partial or older payload still renders.
  */
 export function normalizeSearchResults(raw: unknown): SearchResults {
-	const payload = record(raw);
-	if (!payload) {
-		return emptySearchResults();
-	}
-	return {
-		issues: compact(arrayOf(payload.issues), issueOf),
-		comments: compact(arrayOf(payload.comments), commentOf),
-		projects: compact(arrayOf(payload.projects), projectOf),
-		members: compact(arrayOf(payload.members), memberOf),
-	};
+	return searchResultsSchema.parse(raw);
 }
 
 // --- navigation targets ----------------------------------------------------

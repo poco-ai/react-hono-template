@@ -9,6 +9,7 @@ import {
 	buildSearchRequest,
 	clampSearchLimit,
 	commentTarget,
+	emptySearchResults,
 	issueTarget,
 	memberTarget,
 	normalizeSearchResults,
@@ -157,6 +158,80 @@ test("normalization fills identifiers and clamps unknown status categories", () 
 	});
 	assert.equal(normalized.issues[0].identifier, "WEB-4");
 	assert.equal(normalized.issues[0].statusCategory, "unstarted");
+});
+
+test("normalization treats non-object payloads and non-array sections as empty", () => {
+	assert.deepEqual(normalizeSearchResults([]), emptySearchResults());
+	assert.deepEqual(normalizeSearchResults(42), emptySearchResults());
+	assert.deepEqual(normalizeSearchResults(undefined), emptySearchResults());
+	assert.deepEqual(
+		normalizeSearchResults({
+			issues: "oops",
+			comments: null,
+			projects: { id: "project-1" },
+			members: 7,
+		}),
+		emptySearchResults(),
+	);
+});
+
+test("normalization coerces wire values and degrades optional fields", () => {
+	const normalized = normalizeSearchResults({
+		issues: [
+			{
+				...issueHit(),
+				number: "12",
+				priority: "urgent",
+				assignee: { id: "user-1" },
+				statusCategory: null,
+			},
+		],
+		comments: [
+			{
+				...commentHit(),
+				author: null,
+				issue: { projectId: "project-1", projectKey: "WEB", number: "3" },
+			},
+		],
+		projects: [
+			{
+				...projectHit(),
+				archived: "yes",
+				color: "",
+				descriptionExcerpt: "",
+			},
+		],
+		members: [{ id: "user-1", name: "Ada", image: "" }],
+	});
+	const issue = normalized.issues[0];
+	assert.equal(issue.number, 12);
+	assert.equal(issue.identifier, "WEB-12");
+	assert.equal(issue.priority, 0);
+	assert.equal(issue.assignee, null);
+	assert.equal(issue.statusCategory, "unstarted");
+
+	const comment = normalized.comments[0];
+	assert.deepEqual(comment.author, { id: "", name: "", image: null });
+	assert.equal(comment.issue.number, 3);
+	assert.equal(comment.issue.identifier, "WEB-3");
+
+	const project = normalized.projects[0];
+	assert.equal(project.archived, false);
+	assert.equal(project.color, null);
+	assert.equal(project.descriptionExcerpt, null);
+	assert.equal(normalized.members[0].image, null);
+});
+
+test("normalization returns independent fallback objects", () => {
+	const first = normalizeSearchResults({
+		comments: [{ ...commentHit(), author: null }],
+	});
+	const second = normalizeSearchResults({
+		comments: [{ ...commentHit(), author: null }],
+	});
+	assert.notEqual(first.comments[0].author, second.comments[0].author);
+	first.comments[0].author.name = "mutated";
+	assert.equal(second.comments[0].author.name, "");
 });
 
 test("recent entries de-duplicate, cap and sort newest first", () => {
