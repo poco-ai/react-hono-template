@@ -1,183 +1,93 @@
-# React Hono Template — a multi-tenant SaaS starter on Cloudflare
+<div align="center">
 
-A production-shaped template for building a real SaaS on the Cloudflare platform, demonstrated by **a working mini-Linear issue tracker**: organizations, projects, issues with a kanban board, comments, attachments, an activity log, a public API with keys and webhooks, and Stripe subscriptions with plan quotas — all bilingual (English/中文) and dark-mode ready.
+# React Hono Template
 
-Use it as the starting point for your own multi-tenant product: the issue tracker is the demo, the architecture is the deliverable.
+面向 Cloudflare 的多租户 SaaS 全栈模板。自带一套能跑起来的任务协作应用，用来把组织、项目、看板、订阅和 AI 这条链路走通。克隆之后，换成你自己的业务即可。
 
-## What's inside
+[![stars](https://img.shields.io/github/stars/poco-ai/react-hono-template?style=flat&logo=github&label=stars&color=1f6feb)](https://github.com/poco-ai/react-hono-template/stargazers)
+[![version](https://img.shields.io/badge/version-0.0.1-f97316?style=flat)](https://github.com/poco-ai/react-hono-template)
+[![demo](https://img.shields.io/badge/%E6%BC%94%E7%A4%BA-%E5%9C%A8%E7%BA%BF%E6%9F%A5%E7%9C%8B-7c3aed?style=flat)](https://react-hono-web.poco-ai.workers.dev)
+[![docs](https://img.shields.io/badge/%E6%96%87%E6%A1%A3-%E6%9F%A5%E7%9C%8B%E6%96%87%E6%A1%A3-7c3aed?style=flat)](./docs/README.md)
 
-**Application features**
+<br/>
 
-- Multi-tenant workspaces (better-auth `organization` plugin): owner/admin/member roles, email invitations with shareable links
-- Self-service accounts: public landing page at `/`, register/login with email and password, optional passwordless email-code login via Resend (`/email-otp`), optional Google and GitHub sign-in (a provider's button appears only when both its client id and secret are set), `/forgot-password` + `/reset-password`, and an `/account` page (display name, password change, linked sign-in accounts, active sessions and appearance)
-- Projects with per-project issue numbering (`PROJ-123`), statuses, priorities, labels, assignees, due dates
-- Issue list with URL-driven filters + pagination, drag-and-drop kanban board, bulk edits, my-issues view
-- Per-project CSV export/import: export includes key, project, status/priority names, assignee **display name** (not email), comma-separated labels, ISO dates and timestamps, capped at 2000 active (non-archived) issues; import accepts up to 100 rows, resolves status/assignee/label/cycle by name and reports per-row errors while importing valid rows
-- Markdown descriptions and comments, R2-backed attachments with presigned direct upload, field-level activity timeline + org activity feed
-- Public API (`/api/v1`) with `sk_` API keys, per-plan rate limiting, auto-generated OpenAPI docs (Scalar), and outbound webhooks (HMAC-SHA256 signed, delivery log, retries, ping/redeliver)
-- Stripe subscriptions with Free/Pro quota enforcement (members, projects, webhooks, attachment size, API rate) and a mock mode that runs the whole upgrade/downgrade flow without Stripe
-- Platform admin area: Better Auth UI user management with URL-driven email/name search, filters, roles, bans and session controls; org overview with freeze/unfreeze and global stats
-- **AI assistant** (`/ai` + a global `Cmd/Ctrl+J` side panel): streaming chat over the organization's data, tool calls rendered inline, read tools run automatically, writes/deletes require explicit approval, conversation history, per-plan monthly token quotas and usage meters
-- **Remote MCP server** (`POST /mcp`): the same capability layer exposed to Claude, Cursor, ChatGPT and custom agents, with API-key scopes (`read`/`write`/`admin`) or better-auth MCP OAuth (PKCE, JWKS, consent screen, opt-in dynamic client registration), plus issue/project resources and prompt templates
+![React](https://img.shields.io/badge/React-19-087EA4?style=flat&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-E36002?style=flat&logo=hono&logoColor=white)
+![Cloudflare](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=flat&logo=cloudflare&logoColor=white)
+![Bun](https://img.shields.io/badge/Bun-000000?style=flat&logo=bun&logoColor=white)
+![Drizzle](https://img.shields.io/badge/Drizzle-000000?style=flat&logo=drizzle&logoColor=C5F74F)
 
-**Template capabilities**
+</div>
 
-| Layer | Choice |
-|---|---|
-| Runtime | Hono on Cloudflare Workers (`apps/api`), React 19 SPA served as Workers static assets (`apps/web`) |
-| Database | Cloudflare D1 via drizzle-orm (classic `controller → service → dao → db` layering) |
-| Auth | better-auth (email/password, email OTP via Resend, optional Google/GitHub, admin + organization plugins, RBAC at platform and org level) |
-| Data fetching | TanStack Query + typed `hc<AppType>` client — API responses type-check end to end |
-| Routing | TanStack Router (file-based, `beforeLoad` guards, URL-as-state filters validated with zod) |
-| Validation | zod schemas shared between API and web forms (`packages/shared`) |
-| Storage | S3-compatible presigned uploads (R2 by default, MinIO/OSS work too) |
-| Rate limiting | Workers Rate Limiting binding (per plan tier) |
-| UI | Better Auth UI registry components + Tailwind v4 + shadcn/ui (Base UI), i18next (en/zh with typed keys), class-based theming |
-| Tooling | Bun, Turborepo, Biome, drizzle-kit migrations, GitHub Actions deploy |
+界面支持中文 / English，以及浅色、深色和跟随系统。
 
-Better Auth UI components are copied into `apps/web/src/components/auth/` and adapted locally. App requests and cache policies remain in feature `data.ts` modules, including registry integrations, and the architecture tests enforce that boundary. The admin UI uses Better Auth endpoints while server hooks preserve self-role and administrator-ban protections. Billing uses a custom UI adapter over the existing Stripe/mock endpoints; API-key UI retains the existing key storage, one-time secrets, authentication and rate limiting. These two integrations do not migrate backend data to Better Auth plugins.
+## 功能
 
-## Quickstart
+- **组织与账号**：多租户工作区，owner / admin / member，邮件邀请；邮箱密码、邮箱验证码，可选 Google、GitHub 登录
+- **任务协作**：项目内编号（`PROJ-123`）、状态、优先级、标签、负责人、截止日期；列表筛选、拖拽看板、批量编辑、CSV 导入导出
+- **内容与附件**：Markdown 描述和评论，活动时间线，走 S3 协议的预签名直传
+- **开放能力**：`sk_` API Key、按套餐限流、OpenAPI 文档、带签名的出站 Webhook
+- **订阅**：Stripe 的 Free / Pro 配额；本地可以不开 Stripe，用模拟账单走完升级
+- **AI 与 MCP**：组织数据上的流式对话，写操作需要确认；同一套能力暴露给 Claude、Cursor 等客户端
+
+## 技术栈
+
+| | |
+| --- | --- |
+| 前端 | React 19、Vite、TanStack Router / Query、Tailwind CSS v4、shadcn/ui |
+| 后端 | Hono，运行在 Cloudflare Workers |
+| 数据 | Cloudflare D1、Drizzle ORM |
+| 认证 | better-auth |
+| 校验 | Zod，API 和表单共用 `packages/shared` |
+| 工程 | Bun、Turborepo、Biome |
+
+## 快速开始
+
+需要 [Bun](https://bun.sh) 1.4 及以上。
 
 ```sh
 bun install
-cp apps/api/.dev.vars.example apps/api/.dev.vars   # minimum: BETTER_AUTH_SECRET
-(cd apps/api && bun run db:migrate:local)           # local miniflare D1 (script lives in apps/api)
-bun run dev                                         # api :8787 + web :5173
+cp apps/api/.dev.vars.example apps/api/.dev.vars
+bun run --cwd apps/api db:migrate:local
+bun run dev
 ```
 
-Open http://localhost:5173 — the first registered user becomes the platform admin. With no further config the app runs fully locally: billing runs in mock mode and attachment endpoints return a storage 503.
+打开 <http://localhost:5173>。第一个注册的用户会成为平台管理员。API 在 `:8787`，页面上的 `/api` 会代理过去。
 
-### Local attachment storage (optional)
+到这一步就可以在本地用起来：账单走模拟模式，附件在配好存储之前会返回 503，验证码和重置链接打在 Worker 控制台。接 MinIO、邮件、Stripe 或真实模型见 [本地开发](docs/本地开发.md)。
 
-Uploads are presigned against `S3_ENDPOINT` (the browser then PUTs directly to `${S3_ENDPOINT}/${S3_BUCKET}/...`), so a local S3-compatible service is required for attachments — any MinIO instance works:
+## 目录
 
-```sh
-docker run -d --name minio -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-  minio/minio server /data --console-address ":9001"
+```text
+apps/api           Hono API，部署到 Cloudflare Workers
+apps/web           React 单页应用，部署为 Workers 静态资源
+packages/shared    前后端共用的 Zod schema、套餐限额、错误码
+packages/ui        shadcn/ui 组件
+docs               部署、环境变量、架构和生产说明
 ```
 
-Create a bucket (e.g. `test-bucket`) in the MinIO console at http://localhost:9001 — or from the CLI: `docker run --rm --network host minio/mc sh -c "mc alias set local http://localhost:9000 minioadmin minioadmin && mc mb local/test-bucket"`. Then set in `apps/api/.dev.vars`:
+## 常用命令
 
-```sh
-S3_ENDPOINT=http://localhost:9000
-S3_REGION=us-east-1
-S3_ACCESS_KEY_ID=minioadmin
-S3_SECRET_ACCESS_KEY=minioadmin
-S3_BUCKET=test-bucket
-```
+| 命令 | 作用 |
+| --- | --- |
+| `bun run dev` | 同时启动 API（:8787）和 Web（:5173） |
+| `bun run test` | API 与 Web 回归测试 |
+| `bun run lint` | Biome 检查 |
+| `bun run typecheck` | 全仓类型检查 |
+| `bun run build` | 构建 Web |
 
-Browser uploads go straight to the bucket, so it must allow CORS `PUT` with `content-type` (MinIO's defaults allow this; R2 needs the CORS config in [apps/api/README.md](apps/api/README.md)). Without an S3-compatible service, uploads fail with a storage error before any bytes are sent.
+## 文档
 
-## Validation
+| 文档 | 内容 |
+| --- | --- |
+| [本地开发](docs/本地开发.md) | 附件、邮件、社交登录、AI |
+| [环境变量](docs/环境变量.md) | 全部配置项，本地和生产怎么放 |
+| [部署](docs/部署.md) | 首次上线、CI、发布前检查 |
+| [架构](docs/架构.md) | 目录、分层、加一个资源要动哪里 |
+| [AI 与 MCP](docs/AI与MCP.md) | 对话、工具调用、远程 MCP |
+| [生产说明](docs/生产说明.md) | 模板里故意留下的简化，以及对应的升级方向 |
 
-```sh
-bun run test       # focused API and web regression tests
-bun run lint
-bun run typecheck
-bun run build
-```
-
-## Environment variables
-
-All optional except `BETTER_AUTH_SECRET`. Local: `apps/api/.dev.vars`; production: `bunx wrangler secret put <NAME>`.
-
-| Variable | Purpose |
-|---|---|
-| `BETTER_AUTH_SECRET` | Auth secret (required) |
-| `BETTER_AUTH_URL` | Public auth base URL. Local social OAuth can use `http://localhost:5173` so providers redirect to Vite and the `/api` proxy reaches the Worker. If you enable MCP OAuth, use the API origin (`http://localhost:8787` locally, the Worker origin in production) so the OAuth issuer/JWKS and MCP resource agree; social callbacks then target the API origin. Production uses the API origin, so callbacks are `${BETTER_AUTH_URL}/api/auth/callback/github` and `${BETTER_AUTH_URL}/api/auth/callback/google`. |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional GitHub OAuth. Both must be non-empty; otherwise the GitHub button is hidden. |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google OAuth. Both must be non-empty; otherwise the Google button is hidden. |
-| `RESEND_API_KEY` / `EMAIL_FROM` | Email OTP sign-in through [Resend](https://resend.com). Set both or neither; without them the code is written to the Worker console (local development only). `EMAIL_FROM` must be a verified sender, e.g. `Acme <no-reply@example.com>`. |
-| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_BASE_URL` | S3-compatible storage for issue attachments — R2 in production, MinIO locally (see Quickstart); without it, attachment endpoints return 503 and uploads fail with a storage error. See [apps/api/README.md](apps/api/README.md) incl. bucket CORS |
-| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | Real Stripe billing (all three or none; partial config returns 503) |
-| `BILLING_MOCK_MODE` | `true` enables simulated upgrades when Stripe is absent (intended for local/dev only) |
-| `AI_ENABLED` | `true` enables the in-app AI assistant and its routes. |
-| `AI_PROVIDER` | `mock` (deterministic, offline; default in dev) or `openai-compatible`. |
-| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | OpenAI-compatible endpoint credentials. All three are required for a real provider; partial config fails closed with `AI_NOT_CONFIGURED`. Works with OpenAI, DeepSeek/SiliconFlow, Qwen, OpenRouter, Ollama and AI Gateway. |
-| `AI_MODEL_ALLOWLIST` | Optional comma-separated models the UI may select; `AI_MODEL` must be included when set. |
-| `AI_MAX_STEPS` / `AI_MAX_OUTPUT_TOKENS` | Optional caps for a chat turn. |
-| `APP_WEB_URL` | Public web origin used for AI deep links and MCP login/consent redirects. |
-| `MCP_ENABLED` | `true` exposes `POST /mcp`. |
-| `MCP_RESOURCE` | Canonical MCP protected-resource URL / OAuth audience, e.g. `https://api.example.com/mcp`. |
-| `MCP_LOGIN_PAGE` / `MCP_CONSENT_PAGE` | Web login and consent pages used by MCP OAuth. Defaults to `${APP_WEB_URL}/login` and `/consent`. |
-| `MCP_DCR_ENABLED` | Enables unauthenticated RFC 7591 dynamic client registration. Local/dev only; production should leave it off and use CIMD or manually provisioned clients. |
-
-## Layout
-
-```
-apps/api          Hono API — src/routes (resource routers), src/dependencies.ts, src/{controllers,services,dao,dto,middleware,lib}, src/v1 (public API), drizzle/ migrations
-apps/web          React SPA — src/routes (file-based), src/pages, src/features/<domain>/{data.ts,components/}, src/lib (infrastructure), src/i18n
-packages/shared   zod schemas, plan limits, error codes, ApiResult envelope — imported by both apps
-packages/ui       shadcn/ui components (add via `bunx shadcn@latest add <name> -c apps/web`)
-```
-
-Conventions, workflows and per-app notes live in [AGENTS.md](AGENTS.md), [apps/api/README.md](apps/api/README.md) and [apps/web/README.md](apps/web/README.md).
-
-Every frontend domain exposes its data layer through `features/<domain>/data.ts`: query keys/factories, requests, mutation hooks and cache policies live together. Pages and components consume that entry point and own forms, dialogs, navigation and translated feedback. This convention applies to all domains, without a separate location for simpler features.
-
-## AI assistant and MCP
-
-The AI and MCP surfaces share one framework-neutral capability registry in `apps/api/src/capabilities`: the chat adapter (`apps/web` → AI SDK) and the MCP adapter (`apps/api/src/mcp`) only translate protocols. Authorization (org membership, role, API-key scope, frozen org), input validation and safe output projections live in the capability executor, so a new domain operation is added once and appears in both surfaces.
-
-**Local chat (no API key required).** Set `AI_ENABLED=true` and leave `AI_PROVIDER=mock`; the deterministic mock provider streams a fixed reply so the full UI, conversation persistence, quotas and tool cards work offline. To use a real model, set `AI_PROVIDER=openai-compatible` plus `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL` (all three; the deployment fails closed otherwise). `AI_MODEL` must support tool calling and streaming. The model receives a server-owned system prompt; client history is persisted in D1, and write tools pause for explicit approval.
-
-**MCP.** Set `MCP_ENABLED=true`, `MCP_RESOURCE` (the public API origin + `/mcp`), `APP_WEB_URL` and the login/consent pages. Connect with either an `sk_...` API key (`Authorization: Bearer`) or OAuth. The protected-resource metadata is served at `/.well-known/oauth-protected-resource/mcp`; the authorization server metadata/JWKS live under `/api/auth/...`. API keys are pinned to one organization; OAuth callers pass `orgId` (or call `list_orgs` first when they belong to multiple organizations). `tools/list` is scope-filtered; `tools/call` re-authorizes. Read-only keys are the recommended default for unattended agents.
-
-**Quotas and cost.** Free/Pro limits live in `packages/shared/src/plans.ts` (`aiMonthlyTokens`, `aiRequestsPerMinute`, `aiMaxSteps`). Chat usage is recorded per org/user/day in D1 and checked before the model call; MCP does not consume AI tokens, it uses the plan API rate limit. Use the organization AI settings page for enablement, model selection, retention and the strict MCP write toggle. Provider keys stay server-side and are never returned by `/api/config`.
-
-**Production notes.** `MCP_DCR_ENABLED` is intentionally off by default in production; enable CIMD or provision clients explicitly. OAuth tables are part of the normal drizzle migration. The auth instance is created lazily per Worker isolate because the MCP OAuth plugin seeds a resource row during init and Workers disallow D1 I/O at module scope. CIMD on Workers needs an application-owned metadata fetch transport; DCR is the simpler local/dev path. Conversations are private to their creator; admins see aggregate usage only. A scheduled cleanup removes conversations past the organization retention window.
-
-## Production notes — honest simplifications
-
-These are deliberate template-level simplifications. Each works correctly for demos and moderate traffic; the upgrade path on Cloudflare is noted.
-
-- **Webhook delivery** writes the delivery row, then publishes `{ deliveryId }` to the Cloudflare Queue `react-hono-webhooks` (`WEBHOOK_QUEUE`) when that binding exists. The same Worker's consumer makes one HTTP attempt per message (5s timeout, `redirect: manual`, dual signatures — the legacy `x-webhook-signature` header (hex HMAC-SHA256 over the raw payload) plus the Standard Webhooks headers `webhook-id`, `webhook-timestamp` and `webhook-signature` (`v1,<base64>` HMAC-SHA256 over `${id}.${timestamp}.${payload}`), along with `content-type`, `x-webhook-event`, and `x-webhook-delivery`). A failure calls `message.retry()` while `message.attempts` is below 2; the last attempt leaves the row `failed` and acks the message (`max_retries` is 2). `attempts` starts at 1 and includes the current delivery. With no queue binding — unit tests, or a Worker config that omits it — delivery falls back to in-request `waitUntil` (2 attempts, 5s timeout, 500ms backoff).
-- **Rate limiting** uses two Workers Rate Limiting bindings (60/min free, 600/min pro, keyed by API-key hash). Counters consolidate per Cloudflare location, not globally — suitable for plan entitlements and abuse mitigation, not exact metering. Keep `wrangler.jsonc` limits in sync with `PLANS` in `packages/shared` (the binding API cannot be introspected at runtime). *Upgrade path: Durable Objects for exact global limits.*
-- **Cron cleanup** runs every 15 minutes (`*/15 * * * *`) on the same Worker. Pending invitations with a non-null `expiresAt` in the past are deleted; invitations with a null `expiresAt` are kept. Webhook deliveries that are still `pending`, have `attempts = 0`, and were created more than 15 minutes ago are marked `failed` with `lastError` `delivery timed out`. Pending rows that already have attempts stay in the queue retry loop and are not touched. Read notifications older than 30 days and unread notifications older than 90 days are deleted in batches of at most 500 each. Soft-deleted issues and historical webhook delivery rows are still retained.
-- **API-key mutations** via `/api/v1` don't write activity-log rows (no acting user); webhook events still fire.
-- **Webhook signatures** are sent in both formats for backward compatibility. The legacy `x-webhook-signature` header is a hex HMAC-SHA256 over the raw payload (no timestamp, so no replay protection); the recommended Standard Webhooks headers are `webhook-id`, `webhook-timestamp` (Unix seconds, regenerated on every attempt) and `webhook-signature` (`v1,<base64>` HMAC-SHA256 over `${id}.${timestamp}.${payload}`). Consumers should verify the standard signature and reject timestamps outside a short tolerance (e.g. 5 minutes) to prevent replay, while still accepting the legacy header until old receivers migrate. Secrets are the raw secret string used directly as the HMAC key (not the `whsec_`-prefixed base64 form some Standard Webhooks libraries expect); to interoperate with one of those libraries, pass `whsec_` + base64(rawSecret) as its secret. Secrets are stored plaintext with no rotation endpoint.
-- **Plan changes** invalidate both the in-isolate cache and the `cache:v1:plan:<orgId>` KV entry. Normal changes converge across colos in ~30–60s (KV eventual consistency); the 1h KV TTL is only a write-quota fallback, so a missed invalidation may briefly allow the old limits.
-- **Activity feeds** are capped at the latest 100 entries per issue/org.
-- **Password reset email** is not sent out of the box: with no email provider configured, better-auth's `sendResetPassword` writes the reset link to the Worker console (`wrangler dev` / `wrangler tail`). This is fine for local dev, but production deployments must wire `sendResetPassword` to a real email provider — otherwise users never receive the link.
-- **Runtime config** lives in KV (`config:global`) behind a 60s in-isolate cache: writes refresh the writing isolate immediately, while other isolates converge within ~60s (KV eventual consistency). `GET /api/config` is public — never store secrets there.
-- **CSV export/import** run in a single request: export is capped at 2000 active issues and import at 100 rows. Larger projects need chunked exports or a queued job.
-- **Full-text search** uses FTS5 trigram indexes, which cannot serve terms shorter than three characters — 1–2 character queries fall back to an unindexed `instr()` scan over the organization's issues/comments. The web command palette keeps the common case indexed by requiring two characters, but short CJK/ASCII terms are the most expensive query path.
-- **Recurring issues** are materialized by the 15-minute cron, so a recurrence can appear up to ~15 minutes after its scheduled slot. Each generated issue notifies its creator and assignee (the creator is notified even though they are the actor) and dispatches an `issue.created` webhook through `waitUntil` inside the cron; a delivery failure never blocks the remaining recurrences. Notifications are retained for 30 days once read and 90 days while unread — the cleanup cron deletes at most 500 read and 500 unread rows per tick, so a large backlog drains over several runs.
-
-## Deploying
-
-Relevant pushes to `main` deploy the Workers via GitHub Actions (needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` secrets; web is built with `VITE_API_URL` pointing at the API Worker). Manual: `bun run deploy` inside each app.
-
-Both deployment workflows call the reusable CI quality workflow and wait for it through `needs: quality`: dependency installation, lint, typecheck and tests must pass before deployment. CI also runs on pull requests. All workflows select the Bun version from the root `package.json`.
-
-First production setup:
-
-1. `wrangler d1 create` + update `database_id` in `apps/api/wrangler.jsonc`; create the `KV` namespace (`wrangler kv namespace create react-hono-kv --binding KV --update-config`) and run `bun run db:migrate:remote` inside `apps/api`
-2. Set secrets (`BETTER_AUTH_SECRET`, optionally `BETTER_AUTH_URL` plus GitHub/Google client ids and secrets, and S3/Stripe vars) and add your web origin to `trustedOrigins` in `apps/api/src/index.ts`. In production `BETTER_AUTH_URL` is the API origin. The API Worker also needs the `react-hono-webhooks` queue (`wrangler queues create react-hono-webhooks`) before the first deploy that includes the queue consumer.
-3. Stripe: create a subscription price, set the three secrets, add a webhook endpoint `<api-url>/api/stripe/webhook` (events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`)
-
-See [apps/web/README.md](apps/web/README.md) for the web-side notes.
-
-## Release checklist / 发布前
-
-Run this before pushing to `main` when the release includes API changes:
-
-1. Apply migrations to the production D1 **first** — a Worker that expects new columns or triggers fails on the old schema:
-   ```sh
-   cd apps/api
-   bunx wrangler d1 migrations apply react-hono-db --remote
-   ```
-2. Verify the six full-text search triggers survived. SQLite table rebuilds (D1 implements them as create/copy/drop/rename) silently drop triggers on `issues`/`comments`, and search then returns stale or empty results:
-   ```sh
-   bunx wrangler d1 execute react-hono-db --remote --command \
-     "select name from sqlite_master where type='trigger' and name like '%_search_a%' order by name"
-   ```
-   Expect `comment_search_ad`, `comment_search_ai`, `comment_search_au`, `issue_search_ad`, `issue_search_ai`, `issue_search_au`.
-3. If that release rebuilt `issues` or `comments` (any migration that copied or recreated either table), re-run the re-index script to restore the triggers and rebuild the index:
-   ```sh
-   bunx wrangler d1 execute react-hono-db --remote --file=drizzle/fts/search_fts.sql
-   ```
-   `apps/api/tests/search*.test.ts` check the same six triggers locally, so run `bun run test` before deploying.
-4. Push to `main`; the CI `quality` job (lint, typecheck, tests) must pass before either Worker deploys.
+线上示例：<https://react-hono-web.poco-ai.workers.dev> · API <https://react-hono-api.poco-ai.workers.dev>

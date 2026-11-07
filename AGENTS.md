@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Bun + Turborepo monorepo: Vite/React SPA (`apps/web`) and Hono API (`apps/api`), both deployed to Cloudflare Workers. The app is a multi-tenant issue tracker (mini Linear) used as the SaaS template showcase — see README.md for the feature/production notes. Focused regression tests live in `apps/api/tests` and `apps/web/tests` and run with Bun (using `node:test`).
+Bun + Turborepo monorepo: Vite/React SPA (`apps/web`) and Hono API (`apps/api`), both deployed to Cloudflare Workers. The app is a multi-tenant issue tracker (mini Linear) used as the SaaS template showcase — see README.md for the overview and `docs/` for setup, deploy, and production notes. Focused regression tests live in `apps/api/tests` and `apps/web/tests` and run with Bun (using `node:test`).
 
 ## Commands
 
@@ -32,7 +32,7 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
 ## API (apps/api)
 
 - Env files (both gitignored):
-  - `.dev.vars` — local Worker secrets (`BETTER_AUTH_SECRET`, optional `S3_*` / `STRIPE_*` / `BILLING_MOCK_MODE`, `RESEND_API_KEY` / `EMAIL_FROM` for email OTP); copy from `.dev.vars.example`. Attachment uploads need a local S3-compatible service (the presign points at `S3_ENDPOINT`, e.g. `http://localhost:9000/test-bucket`): run MinIO (`docker run -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data`), create a bucket, then set `S3_ENDPOINT`/`S3_REGION=us-east-1`/`S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY`/`S3_BUCKET`; without it uploads fail with a storage 503. See README.md Quickstart.
+  - `.dev.vars` — local Worker secrets (`BETTER_AUTH_SECRET`, optional `S3_*` / `STRIPE_*` / `BILLING_MOCK_MODE`, `RESEND_API_KEY` / `EMAIL_FROM` for email OTP); copy from `.dev.vars.example`. Attachment uploads need a local S3-compatible service (the presign points at `S3_ENDPOINT`, e.g. `http://localhost:9000/test-bucket`): run MinIO (`docker run -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data`), create a bucket, then set `S3_ENDPOINT`/`S3_REGION=us-east-1`/`S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY`/`S3_BUCKET`; without it uploads fail with a storage 503. See `docs/本地开发.md`.
   - `.env` — drizzle-kit remote D1 credentials (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, `CLOUDFLARE_D1_TOKEN`), only needed for `db:migrate:remote` / `db:push`
   - Prod secrets: `bunx wrangler secret put <NAME>` (never put them in `wrangler.jsonc`)
 - `worker-configuration.d.ts` is generated. After editing `wrangler.jsonc` (e.g. new bindings), run `bun run cf-typegen`; never edit it by hand. Optional env vars are declared in `src/env.d.ts`.
