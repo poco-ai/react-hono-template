@@ -237,7 +237,11 @@ export function CreateIssueDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-lg">
+			<DialogContent
+				className={
+					"sm:max-w-lg max-md:top-0 max-md:left-0 max-md:h-svh max-md:max-h-svh max-md:max-w-full max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:ring-0 max-md:grid-rows-[auto_minmax(0,1fr)]"
+				}
+			>
 				<DialogHeader>
 					<DialogTitle>
 						{parentId
@@ -252,7 +256,7 @@ export function CreateIssueDialog({
 				</DialogHeader>
 				<form
 					noValidate
-					className="flex flex-col gap-4"
+					className="flex flex-col gap-4 max-md:min-h-0 max-md:overflow-y-auto max-md:pb-[calc(env(safe-area-inset-bottom)+1rem)]"
 					onSubmit={handleSubmit}
 				>
 					{projectTemplates.length > 0 && (

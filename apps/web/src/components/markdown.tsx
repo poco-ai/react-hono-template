@@ -68,7 +68,7 @@ function CodeBlock({
 					size="xs"
 					onClick={onCopy}
 					className={cn(
-						"bg-background font-mono text-[10px] opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100",
+						"bg-background font-mono text-[10px] opacity-0 transition-opacity group-hover/code:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
 						copied ? "text-primary" : "text-muted-foreground",
 					)}
 				>

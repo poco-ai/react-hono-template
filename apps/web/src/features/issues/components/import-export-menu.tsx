@@ -38,6 +38,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@workspace/ui/components/table";
+import type { TFunction } from "i18next";
 import { ChevronDown, Download, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -65,21 +66,69 @@ const CSV_ERROR_KEYS = {
 } as const;
 
 /**
+ * Downloads the project's issues as a CSV, toasting the outcome. Shared by the
+ * header menu trigger and the mobile "more actions" menu.
+ */
+export async function exportProjectIssuesCsv(
+	orgId: string,
+	projectId: string,
+	t: TFunction,
+): Promise<void> {
+	try {
+		const { blob, filename, truncated, total } = await exportProjectIssues(
+			orgId,
+			projectId,
+		);
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = filename;
+		document.body.appendChild(anchor);
+		anchor.click();
+		anchor.remove();
+		// Revoke on the next task so the download has started.
+		setTimeout(() => URL.revokeObjectURL(url), 0);
+		toast.success(t("issues.csv.exportSuccess", { filename }));
+		if (truncated) {
+			toast.warning(
+				t("issues.csv.exportTruncated", {
+					total,
+					count: ISSUE_CSV_MAX_EXPORT_ROWS,
+				}),
+			);
+		}
+	} catch (error) {
+		toast.error(apiErrorMessage(t, error));
+	}
+}
+
+/**
  * Project header "Import / export" menu. Export downloads the CSV Blob;
  * import parses the file in the browser, previews the first rows, then sends
  * the mapped rows to the API (which re-validates against org data).
+ *
+ * The dialog can be driven externally (`open`/`onOpenChange`) so the mobile
+ * "more actions" menu can open it while the trigger itself is hidden.
  */
 export function ImportExportMenu({
 	orgId,
 	projectId,
 	frozen,
+	open,
+	onOpenChange,
+	triggerClassName,
 }: {
 	orgId: string;
 	projectId: string;
 	frozen: boolean;
+	/** Controlled dialog visibility; omit to keep the internal state. */
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+	/** Extra classes for the trigger (e.g. hiding it on mobile). */
+	triggerClassName?: string;
 }) {
 	const { t } = useTranslation();
-	const [open, setOpen] = useState(false);
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const [fileName, setFileName] = useState("");
 	const [preview, setPreview] = useState<IssueCsvPreview | null>(null);
 	const [fileError, setFileError] = useState<"tooLarge" | "unreadable" | null>(
@@ -88,6 +137,8 @@ export function ImportExportMenu({
 	const [result, setResult] = useState<IssueImportResultDto | null>(null);
 	const fileInput = useRef<HTMLInputElement>(null);
 	const importMutation = useImportIssues(orgId, projectId);
+	const isControlled = open !== undefined;
+	const dialogOpen = isControlled ? open : uncontrolledOpen;
 
 	const resetImport = () => {
 		setFileName("");
@@ -99,41 +150,17 @@ export function ImportExportMenu({
 		}
 	};
 
-	const onOpenChange = (next: boolean) => {
-		setOpen(next);
+	const handleOpenChange = (next: boolean) => {
+		if (!isControlled) {
+			setUncontrolledOpen(next);
+		}
+		onOpenChange?.(next);
 		if (!next) {
 			resetImport();
 		}
 	};
 
-	const handleExport = async () => {
-		try {
-			const { blob, filename, truncated, total } = await exportProjectIssues(
-				orgId,
-				projectId,
-			);
-			const url = URL.createObjectURL(blob);
-			const anchor = document.createElement("a");
-			anchor.href = url;
-			anchor.download = filename;
-			document.body.appendChild(anchor);
-			anchor.click();
-			anchor.remove();
-			// Revoke on the next task so the download has started.
-			setTimeout(() => URL.revokeObjectURL(url), 0);
-			toast.success(t("issues.csv.exportSuccess", { filename }));
-			if (truncated) {
-				toast.warning(
-					t("issues.csv.exportTruncated", {
-						total,
-						count: ISSUE_CSV_MAX_EXPORT_ROWS,
-					}),
-				);
-			}
-		} catch (error) {
-			toast.error(apiErrorMessage(t, error));
-		}
-	};
+	const handleExport = () => exportProjectIssuesCsv(orgId, projectId, t);
 
 	const onFile = async (file: File | undefined) => {
 		setResult(null);
@@ -188,9 +215,9 @@ export function ImportExportMenu({
 			<DropdownMenu>
 				<DropdownMenuTrigger
 					render={
-						<Button variant="outline" size="sm">
+						<Button variant="outline" size="sm" className={triggerClassName}>
 							<Upload className="size-4" />
-							<span className="max-sm:hidden">{t("issues.csv.menu")}</span>
+							<span className="hidden md:inline">{t("issues.csv.menu")}</span>
 							<ChevronDown className="size-3" />
 						</Button>
 					}
@@ -200,14 +227,17 @@ export function ImportExportMenu({
 						<Download />
 						{t("issues.csv.export")}
 					</DropdownMenuItem>
-					<DropdownMenuItem disabled={frozen} onClick={() => setOpen(true)}>
+					<DropdownMenuItem
+						disabled={frozen}
+						onClick={() => handleOpenChange(true)}
+					>
 						<Upload />
 						{t("issues.csv.import")}
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 
-			<Dialog open={open} onOpenChange={onOpenChange}>
+			<Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
 				<DialogContent className="sm:max-w-2xl">
 					<DialogHeader>
 						<DialogTitle>{t("issues.csv.importTitle")}</DialogTitle>
@@ -248,7 +278,7 @@ export function ImportExportMenu({
 								</Alert>
 							)}
 							<DialogFooter>
-								<Button onClick={() => onOpenChange(false)}>
+								<Button onClick={() => handleOpenChange(false)}>
 									{t("issues.csv.done")}
 								</Button>
 							</DialogFooter>
@@ -352,7 +382,10 @@ export function ImportExportMenu({
 							)}
 
 							<DialogFooter>
-								<Button variant="outline" onClick={() => onOpenChange(false)}>
+								<Button
+									variant="outline"
+									onClick={() => handleOpenChange(false)}
+								>
 									{t("common.cancel")}
 								</Button>
 								<Button

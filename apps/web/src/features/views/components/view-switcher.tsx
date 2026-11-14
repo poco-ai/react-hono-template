@@ -210,12 +210,12 @@ export function ViewSwitcher({
 						<Button
 							variant="outline"
 							size="sm"
-							className="h-8 max-w-52 gap-1.5"
+							className="h-8 max-w-52 gap-1.5 max-md:max-w-24"
 						/>
 					}
 				>
 					<ListFilter className="size-4" />
-					<span className="truncate">{currentName}</span>
+					<span className="min-w-0 truncate">{currentName}</span>
 					{dirtyView && (
 						<span className="text-muted-foreground text-xs">
 							{t("issues.views.unsaved")}

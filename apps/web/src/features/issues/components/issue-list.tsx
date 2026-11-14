@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { TablePagination } from "@/components/table-pagination";
 import { UserAvatar } from "@/components/user-avatar";
+import { IssueCardList } from "@/features/issues/components/issue-card-list";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import {
 	ISSUE_COLUMN_CLASS,
@@ -34,6 +35,7 @@ import { LabelBadge } from "@/features/labels/components/label-badge";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDueDate, formatUtcDate, getDueDateStatus } from "@/lib/format";
+import { useMediaQuery } from "@/lib/use-media-query";
 import type { IssueFilters } from "../data";
 import { useDeleteIssue } from "../data";
 import { groupIssues } from "../grouping";
@@ -60,6 +62,7 @@ export function IssueList({
 	statuses,
 	page,
 	selected,
+	selectionMode = false,
 	frozen,
 	hasFilters,
 	filters,
@@ -81,6 +84,8 @@ export function IssueList({
 	statuses: StatusDto[];
 	page: number;
 	selected: Set<string>;
+	/** Mobile-only: cards toggle selection instead of navigating. */
+	selectionMode: boolean;
 	frozen: boolean;
 	hasFilters: boolean;
 	/** Same request state as the list query, used for optimistic edits. */
@@ -114,6 +119,33 @@ export function IssueList({
 		projectId,
 		deleteTarget?.number ?? 0,
 	);
+	// Below the md breakpoint the table is replaced by the mobile card list.
+	// The branch sits after every hook so the hook order stays stable when the
+	// viewport crosses 768px.
+	const isMobile = useMediaQuery("(max-width: 767px)");
+	if (isMobile) {
+		return (
+			<IssueCardList
+				orgId={orgId}
+				projectId={projectId}
+				projectKey={projectKey}
+				issues={issues}
+				members={members}
+				labels={labels}
+				statuses={statuses}
+				page={page}
+				selected={selected}
+				selectionMode={selectionMode}
+				frozen={frozen}
+				hasFilters={hasFilters}
+				groupBy={groupBy}
+				toggleOne={toggleOne}
+				onPageChange={onPageChange}
+				onClearFilters={onClearFilters}
+				onNewIssue={onNewIssue}
+			/>
+		);
+	}
 
 	const groups = groupBy
 		? groupIssues(items, groupBy, {

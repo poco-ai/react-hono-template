@@ -134,6 +134,7 @@ const en = {
 		skipToContent: "Skip to content",
 		enabled: "Enabled",
 		disabled: "Disabled",
+		moreActions: "More actions",
 	},
 	nav: {
 		openMenu: "Open menu",
@@ -1034,6 +1035,8 @@ const en = {
 		showingCap: "Showing the latest {{count}} issues.",
 		viewList: "List",
 		viewBoard: "Board",
+		selectMode: "Select",
+		properties: "Properties",
 		columns: {
 			label: "Columns",
 			status: "Status",

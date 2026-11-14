@@ -134,6 +134,7 @@ const zh: typeof en = {
 		skipToContent: "跳到主要内容",
 		enabled: "已启用",
 		disabled: "已禁用",
+		moreActions: "更多操作",
 	},
 	nav: {
 		openMenu: "打开菜单",
@@ -977,6 +978,8 @@ const zh: typeof en = {
 		showingCap: "仅显示最近 {{count}} 条事项。",
 		viewList: "列表",
 		viewBoard: "看板",
+		selectMode: "选择",
+		properties: "属性",
 		columns: {
 			label: "列",
 			status: "状态",

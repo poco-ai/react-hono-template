@@ -1,7 +1,14 @@
 import type { LabelDto } from "@api/dto/label.dto";
 import type { StatusDto } from "@api/dto/status.dto";
 import { Button } from "@workspace/ui/components/button";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+} from "@workspace/ui/components/sheet";
 import { Spinner } from "@workspace/ui/components/spinner";
+import { cn } from "@workspace/ui/lib/utils";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +23,7 @@ import {
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { fromDateInputValue } from "@/lib/format";
+import { useMediaQuery } from "@/lib/use-media-query";
 import {
 	type BulkIssueAction,
 	type BulkIssueRef,
@@ -43,6 +51,7 @@ export function BulkActionBar({
 	onDone: () => void;
 }) {
 	const { t } = useTranslation();
+	const isMobile = useMediaQuery("(max-width: 767px)");
 	const bulkMutation = useBulkUpdateIssues(orgId, projectId);
 	const partialFailure = bulkPartialFailure(bulkMutation.error);
 	const [addLabels, setAddLabels] = useState<string[]>([]);
@@ -63,27 +72,127 @@ export function BulkActionBar({
 		});
 	};
 
+	const controls = (
+		<BulkActionControls
+			statuses={statuses}
+			members={members}
+			labels={labels}
+			frozen={frozen}
+			pending={bulkMutation.isPending}
+			error={bulkMutation.error}
+			partialFailure={partialFailure}
+			addLabels={addLabels}
+			removeLabels={removeLabels}
+			onAddLabelsChange={setAddLabels}
+			onRemoveLabelsChange={setRemoveLabels}
+			onRun={run}
+			onDone={onDone}
+			stacked={isMobile}
+		/>
+	);
+
+	if (isMobile) {
+		return (
+			<Sheet
+				open
+				onOpenChange={(next) => {
+					if (!next) {
+						onDone();
+					}
+				}}
+			>
+				<SheetContent
+					side="bottom"
+					className="max-h-[85svh] gap-0 pb-[env(safe-area-inset-bottom)]"
+				>
+					<SheetHeader className="border-b">
+						<SheetTitle>
+							{t("bulk.selected", { count: issues.length })}
+						</SheetTitle>
+					</SheetHeader>
+					<div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-4">
+						{controls}
+					</div>
+				</SheetContent>
+			</Sheet>
+		);
+	}
+
 	return (
 		<div className="fixed bottom-10 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border bg-background px-4 py-2 shadow-xl ring-1 ring-foreground/10">
 			<span className="text-sm font-medium whitespace-nowrap">
 				{t("bulk.selected", { count: issues.length })}
 			</span>
+			{controls}
+		</div>
+	);
+}
+
+/**
+ * The bulk actions themselves, shared by the desktop pill and the mobile
+ * bottom sheet so both layouts run identical mutation logic.
+ */
+function BulkActionControls({
+	statuses,
+	members,
+	labels,
+	frozen,
+	pending,
+	error,
+	partialFailure,
+	addLabels,
+	removeLabels,
+	onAddLabelsChange,
+	onRemoveLabelsChange,
+	onRun,
+	onDone,
+	stacked,
+}: {
+	statuses: StatusDto[];
+	members: OrgMember[];
+	labels: LabelDto[];
+	frozen: boolean;
+	pending: boolean;
+	error: Error | null;
+	partialFailure: ReturnType<typeof bulkPartialFailure>;
+	addLabels: string[];
+	removeLabels: string[];
+	onAddLabelsChange: (next: string[]) => void;
+	onRemoveLabelsChange: (next: string[]) => void;
+	onRun: (action: BulkIssueAction) => void;
+	onDone: () => void;
+	/** Mobile sheet layout: full-width controls stacked vertically. */
+	stacked: boolean;
+}) {
+	const { t } = useTranslation();
+	const labelOptions = labels.map((label) => ({
+		value: label.id,
+		label: label.name,
+	}));
+
+	return (
+		<div
+			className={cn(
+				"flex items-center gap-2",
+				stacked && "flex flex-col items-stretch",
+			)}
+		>
 			<IssueStatusSelect
 				statuses={statuses}
 				value={null}
 				disabled={frozen}
 				noSelection
 				placeholder={t("bulk.changeStatus")}
-				triggerClassName="h-8 w-36"
-				onChange={(statusId) => run({ type: "status", statusId })}
+				triggerClassName={stacked ? "w-full" : "h-8 w-36"}
+				onChange={(statusId) => onRun({ type: "status", statusId })}
 			/>
 			<IssuePrioritySelect
 				value={null}
 				disabled={frozen}
 				noSelection
 				placeholder={t("bulk.changePriority")}
-				triggerClassName="h-8 w-36"
-				onChange={(priority) => run({ type: "priority", priority })}
+				triggerClassName={stacked ? "w-full" : "h-8 w-36"}
+				onChange={(priority) => onRun({ type: "priority", priority })}
 			/>
 			<IssueAssigneeSelect
 				members={members}
@@ -91,16 +200,16 @@ export function BulkActionBar({
 				disabled={frozen}
 				noSelection
 				placeholder={t("bulk.changeAssignee")}
-				triggerClassName="h-8 w-36"
-				onChange={(assigneeId) => run({ type: "assignee", assigneeId })}
+				triggerClassName={stacked ? "w-full" : "h-8 w-36"}
+				onChange={(assigneeId) => onRun({ type: "assignee", assigneeId })}
 			/>
-			<div className="w-36">
+			<div className={stacked ? "w-full" : "w-36"}>
 				<IssueDueDateField
 					value=""
 					disabled={frozen}
-					className="h-8 w-full text-xs"
+					className={cn("w-full", stacked ? "text-sm" : "h-8 text-xs")}
 					onChange={(value) =>
-						run({
+						onRun({
 							type: "dueDate",
 							dueDate: value ? fromDateInputValue(value) : null,
 						})
@@ -108,63 +217,64 @@ export function BulkActionBar({
 				/>
 			</div>
 			<MultiSelect
-				className="h-8"
+				className={stacked ? "w-full" : "h-8"}
 				placeholder={t("bulk.addLabels")}
 				value={addLabels}
 				disabled={frozen}
-				options={labels.map((label) => ({
-					value: label.id,
-					label: label.name,
-				}))}
-				onChange={setAddLabels}
+				options={labelOptions}
+				onChange={onAddLabelsChange}
 			/>
 			<MultiSelect
-				className="h-8"
+				className={stacked ? "w-full" : "h-8"}
 				placeholder={t("bulk.removeLabels")}
 				value={removeLabels}
 				disabled={frozen}
-				options={labels.map((label) => ({
-					value: label.id,
-					label: label.name,
-				}))}
-				onChange={setRemoveLabels}
+				options={labelOptions}
+				onChange={onRemoveLabelsChange}
 			/>
 			<Button
 				variant="outline"
 				size="sm"
-				className="h-8"
+				className={cn("h-8", stacked && "w-full")}
 				disabled={
 					frozen ||
-					bulkMutation.isPending ||
+					pending ||
 					(addLabels.length === 0 && removeLabels.length === 0)
 				}
 				onClick={() => {
-					run({
+					onRun({
 						type: "labels",
 						add: addLabels,
 						remove: removeLabels,
 					});
-					setAddLabels([]);
-					setRemoveLabels([]);
+					onAddLabelsChange([]);
+					onRemoveLabelsChange([]);
 				}}
 			>
 				{t("bulk.applyLabels")}
 			</Button>
-			{bulkMutation.isPending && <Spinner className="text-muted-foreground" />}
-			<Button
-				variant="ghost"
-				size="icon-sm"
-				aria-label={t("bulk.clear")}
-				disabled={bulkMutation.isPending}
-				onClick={onDone}
-			>
-				<X />
-			</Button>
-			{bulkMutation.isError && (
-				<span className="text-destructive max-w-48 truncate text-xs">
+			{pending && <Spinner className="text-muted-foreground" />}
+			{!stacked && (
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					aria-label={t("bulk.clear")}
+					disabled={pending}
+					onClick={onDone}
+				>
+					<X />
+				</Button>
+			)}
+			{error && (
+				<span
+					className={cn(
+						"text-destructive text-xs",
+						!stacked && "max-w-48 truncate",
+					)}
+				>
 					{partialFailure
 						? t("bulk.partialFailure", partialFailure)
-						: apiErrorMessage(t, bulkMutation.error)}
+						: apiErrorMessage(t, error)}
 				</span>
 			)}
 		</div>

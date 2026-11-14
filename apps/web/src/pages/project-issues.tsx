@@ -5,6 +5,13 @@ import type { IssueFilterGroup, IssueQuery } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu";
+import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
@@ -21,11 +28,15 @@ import {
 	CalendarRange,
 	Clock3,
 	Columns3,
+	Download,
 	List,
+	ListChecks,
 	Megaphone,
+	MoreHorizontal,
 	Plus,
 	SlidersHorizontal,
 	Star,
+	Upload,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
@@ -44,7 +55,10 @@ import {
 import { BoardView } from "@/features/issues/components/board-view";
 import { BulkActionBar } from "@/features/issues/components/bulk-bar";
 import { CreateIssueDialog } from "@/features/issues/components/create-issue-dialog";
-import { ImportExportMenu } from "@/features/issues/components/import-export-menu";
+import {
+	exportProjectIssuesCsv,
+	ImportExportMenu,
+} from "@/features/issues/components/import-export-menu";
 import { IssueFilterControls } from "@/features/issues/components/issue-filter-controls";
 import { IssueList } from "@/features/issues/components/issue-list";
 import { IssueListToolbar } from "@/features/issues/components/list-toolbar";
@@ -100,6 +114,8 @@ export function ProjectIssuesPage({
 	const [createOpen, setCreateOpen] = useState(false);
 	const [updatesOpen, setUpdatesOpen] = useState(false);
 	const [recurrencesOpen, setRecurrencesOpen] = useState(false);
+	const [importOpen, setImportOpen] = useState(false);
+	const [selectionMode, setSelectionMode] = useState(false);
 	const [createStatusId, setCreateStatusId] = useState<string | undefined>(
 		undefined,
 	);
@@ -378,8 +394,15 @@ export function ProjectIssuesPage({
 		setCreateOpen(true);
 	}, [search.new, statuses.data]);
 
+	// Mobile card-list selection mode; entering or leaving it drops the
+	// selection so stale checks never leak into the bulk bar.
+	const toggleSelectionMode = () => {
+		setSelectionMode((previous) => !previous);
+		setSelected(new Set());
+	};
+
 	const searchInputRef = useRef<HTMLInputElement>(null);
-	const isDesktop = useMediaQuery("(min-width: 640px)");
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 	const [filterOpen, setFilterOpen] = useState(false);
 	const focusSearchOnOpenRef = useRef(false);
 
@@ -507,10 +530,11 @@ export function ProjectIssuesPage({
 							/>
 						)}
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="flex max-md:flex-wrap items-center gap-2">
 						<Button
 							variant="outline"
 							size="icon-sm"
+							className="hidden md:inline-flex"
 							aria-label={projectFavoriteLabel}
 							aria-pressed={projectFavorited}
 							title={projectFavoriteLabel}
@@ -524,6 +548,7 @@ export function ProjectIssuesPage({
 						<Button
 							variant="outline"
 							size="sm"
+							className="hidden md:inline-flex"
 							onClick={() => setUpdatesOpen(true)}
 						>
 							<Megaphone className="size-4" />
@@ -532,7 +557,11 @@ export function ProjectIssuesPage({
 						<Link
 							to="/orgs/$orgId/projects/$projectId/cycles"
 							params={{ orgId, projectId }}
-							className={buttonVariants({ variant: "outline", size: "sm" })}
+							className={buttonVariants({
+								variant: "outline",
+								size: "sm",
+								className: "hidden md:inline-flex",
+							})}
 						>
 							<CalendarRange className="size-4" />
 							{t("cycles.title")}
@@ -540,20 +569,23 @@ export function ProjectIssuesPage({
 						<Button
 							variant="outline"
 							size="sm"
+							className="hidden md:inline-flex"
 							onClick={() => setRecurrencesOpen(true)}
 						>
 							<Clock3 className="size-4" />
 							{t("recurrences.title")}
 						</Button>
 						{view === "list" && (
-							<IssueListToolbar
-								groupBy={resolved.groupBy}
-								onGroupByChange={setGroupBy}
-								density={density}
-								onDensityChange={setDensity}
-								columns={columns}
-								onToggleColumn={toggleColumn}
-							/>
+							<div className="hidden md:block">
+								<IssueListToolbar
+									groupBy={resolved.groupBy}
+									onGroupByChange={setGroupBy}
+									density={density}
+									onDensityChange={setDensity}
+									columns={columns}
+									onToggleColumn={toggleColumn}
+								/>
+							</div>
 						)}
 						<ViewSwitcher
 							orgId={orgId}
@@ -588,18 +620,90 @@ export function ProjectIssuesPage({
 						>
 							<ToggleGroupItem value="list" size="sm">
 								<List />
-								{t("issues.viewList")}
+								<span className="hidden sm:inline">{t("issues.viewList")}</span>
 							</ToggleGroupItem>
 							<ToggleGroupItem value="board" size="sm">
 								<Columns3 />
-								{t("issues.viewBoard")}
+								<span className="hidden sm:inline">
+									{t("issues.viewBoard")}
+								</span>
 							</ToggleGroupItem>
 						</ToggleGroup>
 						<ImportExportMenu
 							orgId={orgId}
 							projectId={projectId}
 							frozen={frozen}
+							open={importOpen}
+							onOpenChange={setImportOpen}
+							triggerClassName="hidden md:inline-flex"
 						/>
+						{/* Mobile-only overflow menu for the controls that no longer
+						    fit the action row below md. */}
+						<DropdownMenu>
+							<DropdownMenuTrigger
+								render={
+									<Button
+										variant="outline"
+										size="icon-sm"
+										className="max-md:size-9 md:hidden"
+										aria-label={t("common.moreActions")}
+										title={t("common.moreActions")}
+									>
+										<MoreHorizontal />
+									</Button>
+								}
+							/>
+							<DropdownMenuContent align="end" className="w-52">
+								<DropdownMenuItem
+									disabled={
+										!project.data ||
+										projectArchived ||
+										favoriteMutation.isPending
+									}
+									onClick={toggleProjectFavorite}
+								>
+									<Star
+										className={projectFavorited ? "fill-current" : undefined}
+									/>
+									{projectFavoriteLabel}
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setUpdatesOpen(true)}>
+									<Megaphone className="size-4" />
+									{t("projectUpdates.title")}
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									render={
+										<Link
+											to="/orgs/$orgId/projects/$projectId/cycles"
+											params={{ orgId, projectId }}
+										/>
+									}
+								>
+									<CalendarRange className="size-4" />
+									{t("cycles.title")}
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setRecurrencesOpen(true)}>
+									<Clock3 className="size-4" />
+									{t("recurrences.title")}
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									disabled={frozen}
+									onClick={() => setImportOpen(true)}
+								>
+									<Upload className="size-4" />
+									{t("issues.csv.import")}
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									onClick={() =>
+										void exportProjectIssuesCsv(orgId, projectId, t)
+									}
+								>
+									<Download className="size-4" />
+									{t("issues.csv.export")}
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 						{!hideHeaderCreate && (
 							<Button onClick={() => openCreate()} disabled={frozen} title="C">
 								<Plus />
@@ -650,6 +754,20 @@ export function ProjectIssuesPage({
 							name={cycleFilterCycle.name}
 							onClear={() => setSearch({ cycleId: "", page: 1 })}
 						/>
+					)}
+					{view === "list" && (
+						<Toggle
+							variant="outline"
+							size="sm"
+							className="h-9"
+							pressed={selectionMode}
+							aria-label={t("issues.selectMode")}
+							title={t("issues.selectMode")}
+							onPressedChange={toggleSelectionMode}
+						>
+							<ListChecks />
+							{t("issues.selectMode")}
+						</Toggle>
 					)}
 					<Button
 						variant="outline"
@@ -727,6 +845,7 @@ export function ProjectIssuesPage({
 					statuses={statuses.data ?? []}
 					page={search.page}
 					selected={selected}
+					selectionMode={selectionMode}
 					frozen={frozen}
 					hasFilters={hasFilters}
 					filters={listFilters}

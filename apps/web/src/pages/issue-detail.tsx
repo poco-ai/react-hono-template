@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MutationError } from "@/components/mutation-error";
 import { NotFoundState } from "@/components/not-found-state";
+import { UserAvatar } from "@/components/user-avatar";
 import { IssueActivityTimeline } from "@/features/activities/components/issue-activity";
 import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
 import { useSession } from "@/features/auth/data";
@@ -43,7 +44,10 @@ import { IssueArchiveDialog } from "@/features/issues/components/issue-archive-d
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
 import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
+import { IssuePropertiesSheet } from "@/features/issues/components/issue-properties-sheet";
+import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { RelationsSection } from "@/features/issues/components/relations-section";
+import { StatusBadge } from "@/features/issues/components/status-badge";
 import { SubIssuesSection } from "@/features/issues/components/sub-issues-section";
 import {
 	issueArchiveAction,
@@ -104,6 +108,7 @@ export function IssueDetailPage({
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [archiveOpen, setArchiveOpen] = useState(false);
 	const [recurringOpen, setRecurringOpen] = useState(false);
+	const [propertiesOpen, setPropertiesOpen] = useState(false);
 
 	useEffect(() => {
 		setTitle(issue.data?.title ?? "");
@@ -218,6 +223,9 @@ export function IssueDetailPage({
 	}
 
 	const data = issue.data;
+	const assignee = data.assigneeId
+		? (members.data ?? []).find((member) => member.userId === data.assigneeId)
+		: undefined;
 	const favoriteLabel = data.archivedAt
 		? t("favorites.archivedIssue")
 		: t(favorited ? "favorites.removeIssue" : "favorites.addIssue");
@@ -364,6 +372,50 @@ export function IssueDetailPage({
 					</time>
 				</p>
 
+				{/* Mobile (<lg) properties summary: taps open the bottom sheet
+				    that hosts the full properties panel. */}
+				<div className="mt-3 flex flex-wrap items-center gap-2 lg:hidden">
+					<Button
+						variant="outline"
+						size="sm"
+						className="max-md:h-9"
+						aria-label={t("issues.status")}
+						onClick={() => setPropertiesOpen(true)}
+					>
+						<StatusBadge status={data.status} />
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						className="max-md:h-9"
+						aria-label={t("issues.priority")}
+						onClick={() => setPropertiesOpen(true)}
+					>
+						<PriorityBadge value={data.priority} />
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						className="max-md:h-9"
+						aria-label={t("issues.assignee")}
+						onClick={() => setPropertiesOpen(true)}
+					>
+						{assignee ? (
+							<>
+								<UserAvatar
+									name={assignee.user.name}
+									image={assignee.user.image}
+								/>
+								<span className="text-xs">{assignee.user.name}</span>
+							</>
+						) : (
+							<span className="text-muted-foreground text-xs">
+								{t("common.unassigned")}
+							</span>
+						)}
+					</Button>
+				</div>
+
 				<div className="mt-6">
 					<IssueDescription
 						description={issue.data?.description ?? null}
@@ -429,7 +481,9 @@ export function IssueDetailPage({
 				</div>
 			</div>
 
-			<aside className="flex w-full shrink-0 flex-col gap-4 lg:w-64">
+			{/* Desktop aside: hidden below lg, where the properties sheet in the
+		    main column takes over. The dialogs below stay mounted (portals). */}
+			<aside className="hidden w-full shrink-0 flex-col gap-4 lg:flex lg:w-64">
 				<IssuePropertiesPanel
 					orgId={orgId}
 					projectId={projectId}
@@ -481,6 +535,43 @@ export function IssueDetailPage({
 					<MutationError error={updateMutation.error} />
 				)}
 			</aside>
+
+			{/* Mobile (<lg) properties editor hosting the same panel as the
+			    aside; error surfaces from the aside are hidden below lg, so
+			    they are repeated here. */}
+			<IssuePropertiesSheet
+				open={propertiesOpen}
+				onOpenChange={setPropertiesOpen}
+				orgId={orgId}
+				projectId={projectId}
+				projectKey={project.data?.key ?? ""}
+				issue={data}
+				parent={data.parent}
+				canSetParent={data.subIssues.length === 0}
+				members={members.data ?? []}
+				labels={labels.data ?? []}
+				statuses={statuses.data ?? []}
+				cycles={cycles.data?.items ?? []}
+				frozen={frozen}
+				onUpdate={update}
+				onArchive={() =>
+					issueArchiveAction(data) === "restore"
+						? setArchived(false)
+						: setArchiveOpen(true)
+				}
+				onDelete={() => setDeleteOpen(true)}
+				onMakeRecurring={() => setRecurringOpen(true)}
+				footer={
+					<>
+						{deleteMutation.isError && (
+							<MutationError error={deleteMutation.error} />
+						)}
+						{updateMutation.isError && (
+							<MutationError error={updateMutation.error} />
+						)}
+					</>
+				}
+			/>
 		</div>
 	);
 }

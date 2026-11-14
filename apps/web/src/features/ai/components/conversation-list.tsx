@@ -212,7 +212,7 @@ export function AiConversationList({
 												<Button
 													variant="ghost"
 													size="icon-xs"
-													className="mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100"
+													className="mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100 pointer-coarse:opacity-100"
 													aria-label={t("ai.conversations.actions")}
 												>
 													<MoreHorizontal />
