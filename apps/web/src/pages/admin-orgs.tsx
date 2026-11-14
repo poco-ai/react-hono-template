@@ -147,11 +147,21 @@ export function AdminOrgsPage() {
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("adminOrgs.org")}</TableHead>
-								<TableHead>{t("adminOrgs.plan")}</TableHead>
-								<TableHead>{t("adminOrgs.members")}</TableHead>
-								<TableHead>{t("adminOrgs.issues")}</TableHead>
-								<TableHead>{t("adminOrgs.created")}</TableHead>
-								<TableHead>{t("adminOrgs.status")}</TableHead>
+								<TableHead className="hidden sm:table-cell">
+									{t("adminOrgs.plan")}
+								</TableHead>
+								<TableHead className="hidden sm:table-cell">
+									{t("adminOrgs.members")}
+								</TableHead>
+								<TableHead className="hidden md:table-cell">
+									{t("adminOrgs.issues")}
+								</TableHead>
+								<TableHead className="hidden lg:table-cell">
+									{t("adminOrgs.created")}
+								</TableHead>
+								<TableHead className="hidden md:table-cell">
+									{t("adminOrgs.status")}
+								</TableHead>
 								<TableHead className="text-right">
 									{t("adminOrgs.actions")}
 								</TableHead>
@@ -167,7 +177,7 @@ export function AdminOrgsPage() {
 										{org.slug}
 									</div>
 								</TableCell>
-								<TableCell>
+								<TableCell className="hidden sm:table-cell">
 									{org.plan === "pro" ? (
 										<Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
 											{t("billing.planPro")}
@@ -176,12 +186,16 @@ export function AdminOrgsPage() {
 										<Badge variant="outline">{t("billing.planFree")}</Badge>
 									)}
 								</TableCell>
-								<TableCell>{org.members}</TableCell>
-								<TableCell>{org.issues}</TableCell>
-								<TableCell className="text-muted-foreground text-xs">
+								<TableCell className="hidden sm:table-cell">
+									{org.members}
+								</TableCell>
+								<TableCell className="hidden md:table-cell">
+									{org.issues}
+								</TableCell>
+								<TableCell className="hidden text-muted-foreground text-xs lg:table-cell">
 									{formatDate(org.createdAt)}
 								</TableCell>
-								<TableCell>
+								<TableCell className="hidden md:table-cell">
 									{org.frozen ? (
 										<Badge variant="destructive">{t("adminOrgs.frozen")}</Badge>
 									) : (

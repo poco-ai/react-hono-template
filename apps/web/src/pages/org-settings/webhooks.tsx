@@ -89,9 +89,15 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 					<TableHeader>
 						<TableRow>
 							<TableHead>{t("webhooks.url")}</TableHead>
-							<TableHead>{t("webhooks.eventsLabel")}</TableHead>
-							<TableHead className="w-20">{t("webhooks.active")}</TableHead>
-							<TableHead>{t("apiKeys.created")}</TableHead>
+							<TableHead className="hidden sm:table-cell">
+								{t("webhooks.eventsLabel")}
+							</TableHead>
+							<TableHead className="hidden w-20 sm:table-cell">
+								{t("webhooks.active")}
+							</TableHead>
+							<TableHead className="hidden md:table-cell">
+								{t("apiKeys.created")}
+							</TableHead>
 							<TableHead className="text-right">
 								{t("common.actions")}
 							</TableHead>
@@ -106,14 +112,14 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 									{webhook.url}
 								</span>
 							</TableCell>
-							<TableCell>
+							<TableCell className="hidden sm:table-cell">
 								<div className="flex flex-wrap gap-1">
 									{webhook.events.map((event) => (
 										<EventBadge key={event} event={event} />
 									))}
 								</div>
 							</TableCell>
-							<TableCell>
+							<TableCell className="hidden sm:table-cell">
 								<Switch
 									aria-label={t("webhooks.activeLabel", { url: webhook.url })}
 									checked={webhook.active}
@@ -123,7 +129,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 									}
 								/>
 							</TableCell>
-							<TableCell className="text-muted-foreground text-xs">
+							<TableCell className="hidden text-muted-foreground text-xs md:table-cell">
 								{formatDate(webhook.createdAt)}
 							</TableCell>
 							<TableCell className="text-right">

@@ -5,6 +5,12 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu";
+import {
 	Item,
 	ItemActions,
 	ItemContent,
@@ -19,7 +25,7 @@ import {
 	SelectValue,
 } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { CircleAlert, Filter, Inbox, X } from "lucide-react";
+import { CircleAlert, Filter, Inbox, MoreHorizontal, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -298,7 +304,7 @@ export function TriagePage({
 
 			{items.length > 0 ? (
 				<>
-					<div className="mt-6 flex items-center gap-2">
+					<div className="mt-6 flex flex-wrap items-center gap-2">
 						<Checkbox
 							aria-label={t("triage.selectAll")}
 							checked={selected.size === items.length && items.length > 0}
@@ -312,7 +318,7 @@ export function TriagePage({
 								: t("triage.selectAll")}
 						</span>
 						{selected.size > 0 ? (
-							<div className="ml-auto flex items-center gap-2">
+							<div className="ml-auto flex items-center gap-2 max-md:ml-0 max-md:w-full max-md:justify-start">
 								<Button
 									size="sm"
 									disabled={!availability.accept}
@@ -395,8 +401,12 @@ export function TriagePage({
 									</span>
 								</ItemContent>
 								<ItemActions className="gap-1">
+									{/* Same handlers and disabled states in both shapes; below md
+									    the two buttons collapse into the overflow menu so the row
+									    keeps room at 375px. */}
 									<Button
 										size="sm"
+										className="hidden md:inline-flex"
 										disabled={!availability.accept}
 										onClick={() => run(issue, "accept")}
 									>
@@ -405,11 +415,41 @@ export function TriagePage({
 									<Button
 										variant="outline"
 										size="sm"
+										className="hidden md:inline-flex"
 										disabled={!availability.decline}
 										onClick={() => run(issue, "decline")}
 									>
 										{t("triage.decline")}
 									</Button>
+									<DropdownMenu>
+										<DropdownMenuTrigger
+											render={
+												<Button
+													variant="ghost"
+													size="icon-sm"
+													className="max-md:size-9 md:hidden"
+													aria-label={t("common.moreActions")}
+													title={t("common.moreActions")}
+												>
+													<MoreHorizontal />
+												</Button>
+											}
+										/>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem
+												disabled={!availability.accept}
+												onClick={() => run(issue, "accept")}
+											>
+												{t("triage.accept")}
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												disabled={!availability.decline}
+												onClick={() => run(issue, "decline")}
+											>
+												{t("triage.decline")}
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</ItemActions>
 							</Item>
 						))}

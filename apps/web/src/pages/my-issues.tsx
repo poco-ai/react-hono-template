@@ -14,19 +14,23 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { CircleAlert } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
 import { useSession } from "@/features/auth/data";
+import { IssueCardList } from "@/features/issues/components/issue-card-list";
 import { DueDateLabel } from "@/features/issues/components/issue-list";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { orgIssuesQuery } from "@/features/issues/data";
+import { labelsQuery } from "@/features/labels/data";
+import { membersQuery } from "@/features/members/data";
 import { projectsQuery } from "@/features/projects/data";
 import { statusesQuery } from "@/features/statuses/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 function MyIssuesTableHeader() {
 	const { t } = useTranslation();
@@ -51,14 +55,22 @@ function MyIssuesTableHeader() {
 	);
 }
 
+/** Selection stays off on this page: it has no bulk actions. */
+const NO_SELECTION = new Set<string>();
+const ignoreToggle = () => {};
+
 export function MyIssuesPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	useDocumentTitle(t("issues.myIssuesTitle"));
+	const isMobile = useMediaQuery("(max-width: 767px)");
+	const [page, setPage] = useState(1);
 	const { data: session } = useSession();
 	const userId = session?.user.id;
 	const projects = useQuery(projectsQuery(orgId));
 	const statuses = useQuery(statusesQuery(orgId));
+	const members = useQuery(membersQuery(orgId));
+	const labels = useQuery(labelsQuery(orgId));
 	const issues = useQuery({
 		...orgIssuesQuery(orgId, {
 			filter: userId
@@ -77,7 +89,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 				: undefined,
 			sorts: [{ field: "updated", direction: "desc" }],
 			search: "",
-			page: 1,
+			page,
 			pageSize: 100,
 		}),
 		enabled: userId !== undefined,
@@ -99,13 +111,42 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 		}
 	}
 
+	const listLoadedEmpty =
+		!issues.isPending && !issues.isError && issues.data?.items.length === 0;
+
 	return (
 		<div className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6">
 			<h1 className="text-2xl font-semibold tracking-tight">
 				{t("issues.myIssuesTitle")}
 			</h1>
 			<div className="mt-6 flex flex-col gap-8">
-				{issues.isPending && (
+				{/* Below md the table (and its skeleton) is replaced by the
+					    cross-project mobile card list; the error and empty states
+					    below stay shared. */}
+				{isMobile && !issues.isError && !listLoadedEmpty ? (
+					<IssueCardList
+						orgId={orgId}
+						projectKey=""
+						issues={issues}
+						members={members.data ?? []}
+						labels={labels.data ?? []}
+						statuses={statuses.data ?? []}
+						page={page}
+						selected={NO_SELECTION}
+						selectionMode={false}
+						frozen={false}
+						hasFilters={false}
+						groupBy="status"
+						toggleOne={ignoreToggle}
+						onPageChange={setPage}
+						onClearFilters={ignoreToggle}
+						onNewIssue={ignoreToggle}
+						identifierPrefixOf={(issue) =>
+							projectById.get(issue.projectId)?.key ?? ""
+						}
+					/>
+				) : null}
+				{!isMobile && issues.isPending && (
 					<Table className="table-fixed" aria-hidden="true" aria-busy="true">
 						<MyIssuesTableHeader />
 						<TableBody>
@@ -142,7 +183,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 						</AlertDescription>
 					</Alert>
 				)}
-				{grouped.size > 0 && (
+				{!isMobile && grouped.size > 0 && (
 					<Table className="table-fixed">
 						<MyIssuesTableHeader />
 						<TableBody>
@@ -218,7 +259,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 						</TableBody>
 					</Table>
 				)}
-				{!issues.isPending && grouped.size === 0 && !issues.isError && (
+				{listLoadedEmpty && (
 					<EmptyState
 						title={t("issues.myIssuesEmpty")}
 						action={
@@ -233,11 +274,15 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 						}
 					/>
 				)}
-				{issues.data && issues.data.total > issues.data.items.length && (
-					<p className="text-muted-foreground text-sm">
-						{t("issues.showingCap", { count: issues.data.items.length })}
-					</p>
-				)}
+				{/* Desktop-only: mobile paginates inside the card list, so the
+					    cap note would be wrong there. */}
+				{!isMobile &&
+					issues.data &&
+					issues.data.total > issues.data.items.length && (
+						<p className="text-muted-foreground text-sm">
+							{t("issues.showingCap", { count: issues.data.items.length })}
+						</p>
+					)}
 			</div>
 		</div>
 	);

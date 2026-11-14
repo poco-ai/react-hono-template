@@ -88,9 +88,15 @@ export function DeliveriesDialog({
 						<TableRow>
 							<TableHead>{t("webhooks.event")}</TableHead>
 							<TableHead>{t("webhooks.status")}</TableHead>
-							<TableHead>{t("webhooks.responseStatus")}</TableHead>
-							<TableHead>{t("webhooks.attempts")}</TableHead>
-							<TableHead>{t("webhooks.time")}</TableHead>
+							<TableHead className="hidden sm:table-cell">
+								{t("webhooks.responseStatus")}
+							</TableHead>
+							<TableHead className="hidden sm:table-cell">
+								{t("webhooks.attempts")}
+							</TableHead>
+							<TableHead className="hidden md:table-cell">
+								{t("webhooks.time")}
+							</TableHead>
 							<TableHead className="text-right">
 								{t("common.actions")}
 							</TableHead>
@@ -109,11 +115,13 @@ export function DeliveriesDialog({
 								<TableCell>
 									<DeliveryStatusBadge status={delivery.status} />
 								</TableCell>
-								<TableCell className="font-mono text-xs">
+								<TableCell className="hidden font-mono text-xs sm:table-cell">
 									{delivery.responseStatus ?? "—"}
 								</TableCell>
-								<TableCell>{delivery.attempts}</TableCell>
-								<TableCell className="text-muted-foreground text-xs">
+								<TableCell className="hidden sm:table-cell">
+									{delivery.attempts}
+								</TableCell>
+								<TableCell className="hidden text-muted-foreground text-xs md:table-cell">
 									{formatRelativeTime(
 										delivery.lastAttemptAt ?? delivery.createdAt,
 									)}

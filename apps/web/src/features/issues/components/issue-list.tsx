@@ -127,7 +127,6 @@ export function IssueList({
 		return (
 			<IssueCardList
 				orgId={orgId}
-				projectId={projectId}
 				projectKey={projectKey}
 				issues={issues}
 				members={members}

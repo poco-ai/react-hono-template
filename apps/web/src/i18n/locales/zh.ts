@@ -763,6 +763,7 @@ const zh: typeof en = {
 		target: "目标 {{date}}",
 		targetMarker: "目标日期 {{date}}",
 		cycleProgress: "{{percent}}% · {{total}} 个事项",
+		cycleRange: "{{start}} 至 {{end}}",
 		openCycle: "在项目事项中打开 {{name}}",
 		truncated: "时间窗口已按 12 个月截断",
 		empty: "暂无可展示的项目",

@@ -9,6 +9,10 @@ import { CircleAlert, Map as MapIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { ProjectHealthBadge } from "@/features/projects/components/project-health-badge";
+import {
+	cycleTone,
+	RoadmapStackedList,
+} from "@/features/roadmap/components/stacked-list";
 import { roadmapQuery } from "@/features/roadmap/data";
 import {
 	isWithinTimeline,
@@ -20,15 +24,10 @@ import {
 import { formatDateOnly, isoToDateOnly } from "@/lib/date";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 const GRID_COLUMNS = "14rem minmax(40rem, 1fr)";
 const SKELETON_ROWS = ["roadmap-1", "roadmap-2", "roadmap-3", "roadmap-4"];
-
-const cycleTone: Record<RoadmapCycleDto["status"], string> = {
-	current: "border-primary/60 bg-primary/15 text-primary",
-	upcoming: "border-border bg-muted text-foreground",
-	past: "border-border/60 bg-muted/50 text-muted-foreground",
-};
 
 /**
  * Read-only roadmap: one row per active project, cycles positioned on a
@@ -40,6 +39,7 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 	const { t, i18n } = useTranslation();
 	useDocumentTitle(t("roadmap.title"));
 	const navigate = useNavigate();
+	const isMobile = useMediaQuery("(max-width: 767px)");
 	const roadmap = useQuery(roadmapQuery(orgId));
 
 	const window: TimelineWindow | null = roadmap.data
@@ -123,7 +123,20 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 				/>
 			) : null}
 
-			{window && roadmap.data && roadmap.data.projects.length > 0 ? (
+			{roadmap.data && roadmap.data.projects.length > 0 && isMobile ? (
+				<div className="min-h-0 flex-1 pb-6">
+					<RoadmapStackedList
+						projects={roadmap.data.projects}
+						onOpenCycle={openCycle}
+						formatDate={formatTargetDate}
+					/>
+				</div>
+			) : null}
+
+			{window &&
+			roadmap.data &&
+			roadmap.data.projects.length > 0 &&
+			!isMobile ? (
 				<div className="min-h-0 flex-1 overflow-auto">
 					<div className="min-w-[54rem]">
 						<div

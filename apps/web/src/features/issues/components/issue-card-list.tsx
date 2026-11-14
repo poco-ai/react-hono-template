@@ -32,7 +32,6 @@ const MAX_LABELS = 3;
  */
 export function IssueCardList({
 	orgId,
-	projectId,
 	projectKey,
 	issues,
 	members,
@@ -51,7 +50,6 @@ export function IssueCardList({
 	identifierPrefixOf,
 }: {
 	orgId: string;
-	projectId: string;
 	projectKey: string;
 	issues: UseQueryResult<ListIssuesDto, Error>;
 	members: OrgMember[];
@@ -153,7 +151,6 @@ export function IssueCardList({
 							<IssueCard
 								key={`${group.key}:${issue.id}`}
 								orgId={orgId}
-								projectId={projectId}
 								issue={issue}
 								identifier={`${prefixOf(issue)}-${issue.number}`}
 								isSelected={selected.has(issue.id)}
@@ -247,7 +244,6 @@ export function IssueCardList({
 
 function IssueCard({
 	orgId,
-	projectId,
 	issue,
 	identifier,
 	isSelected,
@@ -258,7 +254,6 @@ function IssueCard({
 	onToggle,
 }: {
 	orgId: string;
-	projectId: string;
 	issue: IssueDetailDto;
 	identifier: string;
 	isSelected: boolean;
@@ -353,7 +348,12 @@ function IssueCard({
 	return (
 		<Link
 			to="/orgs/$orgId/projects/$projectId/$issueNumber"
-			params={{ orgId, projectId, issueNumber: String(issue.number) }}
+			// Cross-project lists (My Issues) rely on the per-issue project.
+			params={{
+				orgId,
+				projectId: issue.projectId,
+				issueNumber: String(issue.number),
+			}}
 			className="block border-b px-4 py-3 active:bg-accent/40"
 		>
 			{body}
