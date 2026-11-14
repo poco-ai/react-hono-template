@@ -389,7 +389,7 @@ function TemplateDialog({
 						onSubmit(parsed.data);
 					}}
 				>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Field data-invalid={fieldErrors.name ? true : undefined}>
 							<FieldLabel htmlFor="template-name">
 								{t("templates.name")}
@@ -464,7 +464,7 @@ function TemplateDialog({
 						<FieldError>{fieldErrors.description}</FieldError>
 					</Field>
 
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Field>
 							<FieldLabel>{t("issues.status")}</FieldLabel>
 							<Select

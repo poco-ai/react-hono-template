@@ -59,7 +59,7 @@ export function IssueSubscriptionButton({
 					<Button
 						variant="ghost"
 						size="icon-sm"
-						className="size-7"
+						className="size-7 max-md:size-9"
 						aria-label={label}
 						aria-pressed={subscribed}
 						title={hint}

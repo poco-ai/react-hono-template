@@ -256,7 +256,7 @@ export function IssueDetailPage({
 							<Button
 								variant="ghost"
 								size="icon-sm"
-								className="size-7"
+								className="size-7 max-md:size-9"
 								aria-label={favoriteLabel}
 								aria-pressed={favorited}
 								title={favoriteLabel}
@@ -274,7 +274,7 @@ export function IssueDetailPage({
 							<Button
 								variant="ghost"
 								size="icon-sm"
-								className="size-7"
+								className="size-7 max-md:size-9"
 								disabled={data.prevNumber === null}
 								aria-label={t("issues.prevIssue")}
 								onClick={() => navigateToIssue(data.prevNumber)}
@@ -284,7 +284,7 @@ export function IssueDetailPage({
 							<Button
 								variant="ghost"
 								size="icon-sm"
-								className="size-7"
+								className="size-7 max-md:size-9"
 								disabled={data.nextNumber === null}
 								aria-label={t("issues.nextIssue")}
 								onClick={() => navigateToIssue(data.nextNumber)}
@@ -345,7 +345,7 @@ export function IssueDetailPage({
 						className="w-full rounded-md border-none bg-transparent pr-8 text-2xl font-semibold tracking-tight outline-none hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/50"
 						maxLength={500}
 					/>
-					<Pencil className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 opacity-0 transition-opacity group-hover/title:opacity-50 group-focus-within/title:opacity-50" />
+					<Pencil className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 opacity-50 transition-opacity md:opacity-0 md:group-hover/title:opacity-50 md:group-focus-within/title:opacity-50" />
 				</div>
 				<p className="text-muted-foreground mt-2 text-xs">
 					{t("issues.created")}{" "}

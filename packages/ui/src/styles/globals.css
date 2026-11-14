@@ -135,3 +135,12 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+/* Prevent iOS auto-zoom on focus below 768px */
+@media (max-width: 767px) {
+	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+	textarea,
+	select {
+		font-size: 16px;
+	}
+}
