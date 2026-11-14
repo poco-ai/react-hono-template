@@ -338,7 +338,6 @@ const en = {
 		panel: {
 			expand: "Open full page",
 			close: "Close AI panel",
-			toggle: "Toggle AI panel",
 			shortcut: "⌘J",
 		},
 		page: {

@@ -76,7 +76,7 @@ export function AiChatPanel() {
 				side="right"
 				showCloseButton={false}
 				showOverlay={false}
-				className="w-full max-w-full gap-0 p-0 sm:max-w-md"
+				className="w-full max-w-full gap-0 p-0 pb-[env(safe-area-inset-bottom)] sm:max-w-md"
 			>
 				<SheetHeader className="flex-row items-center gap-1 border-b p-2 pl-3">
 					<SheetTitle className="flex min-w-0 flex-1 items-center gap-2 text-sm">

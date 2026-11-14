@@ -115,7 +115,12 @@ const AiChatContext = createContext<AiChatContextValue | null>(null);
 
 function readPanelState(orgId: string): boolean {
 	try {
-		return localStorage.getItem(`${PANEL_STORAGE_PREFIX}${orgId}`) === "1";
+		if (localStorage.getItem(`${PANEL_STORAGE_PREFIX}${orgId}`) !== "1") {
+			return false;
+		}
+		// Restoring the panel over the mobile tab bar on load is jarring; keep
+		// the flag persisted so desktop reloads still reopen the panel.
+		return !window.matchMedia("(max-width: 767px)").matches;
 	} catch {
 		return false;
 	}

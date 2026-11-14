@@ -252,7 +252,7 @@ export function InboxPage({
 											</time>
 										</div>
 									</ItemContent>
-									<ItemActions className="opacity-0 transition-opacity group-hover/item:opacity-100 group-focus-within/item:opacity-100 max-sm:opacity-100">
+									<ItemActions className="opacity-0 transition-opacity group-hover/item:opacity-100 group-focus-within/item:opacity-100 pointer-coarse:opacity-100 max-sm:opacity-100">
 										<Button
 											variant="ghost"
 											size="icon-sm"

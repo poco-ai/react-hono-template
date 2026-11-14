@@ -78,6 +78,12 @@ export function IssueCardList({
 	const memberById = new Map(members.map((member) => [member.userId, member]));
 	const labelById = new Map(labels.map((label) => [label.id, label]));
 	const prefixOf = identifierPrefixOf ?? (() => projectKey);
+	// Skip the KEY- separator while the project query is still loading (empty
+	// prefix) so identifiers never flash as "-42".
+	const identifierOf = (issue: IssueDetailDto) => {
+		const prefix = prefixOf(issue);
+		return prefix ? `${prefix}-${issue.number}` : `${issue.number}`;
+	};
 
 	const groups = groupBy
 		? groupIssues(items, groupBy, {
@@ -152,7 +158,7 @@ export function IssueCardList({
 								key={`${group.key}:${issue.id}`}
 								orgId={orgId}
 								issue={issue}
-								identifier={`${prefixOf(issue)}-${issue.number}`}
+								identifier={identifierOf(issue)}
 								isSelected={selected.has(issue.id)}
 								selectionMode={selectionMode}
 								frozen={frozen}

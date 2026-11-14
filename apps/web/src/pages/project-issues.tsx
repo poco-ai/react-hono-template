@@ -490,6 +490,7 @@ export function ProjectIssuesPage({
 		<Toggle
 			variant="outline"
 			size="sm"
+			className="max-md:h-9"
 			pressed={includeArchived}
 			aria-label={t("issues.showArchived")}
 			title={t("issues.showArchived")}
@@ -620,11 +621,11 @@ export function ProjectIssuesPage({
 						>
 							<ToggleGroupItem value="list" size="sm">
 								<List />
-								<span className="hidden sm:inline">{t("issues.viewList")}</span>
+								<span className="hidden md:inline">{t("issues.viewList")}</span>
 							</ToggleGroupItem>
 							<ToggleGroupItem value="board" size="sm">
 								<Columns3 />
-								<span className="hidden sm:inline">
+								<span className="hidden md:inline">
 									{t("issues.viewBoard")}
 								</span>
 							</ToggleGroupItem>
@@ -748,7 +749,7 @@ export function ProjectIssuesPage({
 					{archivedToggle}
 				</div>
 			) : (
-				<div className="border-b flex items-center gap-2 px-4 py-3 lg:px-6">
+				<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
 					{cycleFilterCycle && (
 						<CycleFilterBadge
 							name={cycleFilterCycle.name}
@@ -772,7 +773,7 @@ export function ProjectIssuesPage({
 					<Button
 						variant="outline"
 						size="sm"
-						className="gap-1.5"
+						className="gap-1.5 h-9"
 						onClick={() => setFilterOpen(true)}
 					>
 						<SlidersHorizontal className="size-4" />
@@ -784,7 +785,10 @@ export function ProjectIssuesPage({
 					</Button>
 					{archivedToggle}
 					<Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-						<SheetContent side="bottom" className="max-h-[85svh] gap-0">
+						<SheetContent
+							side="bottom"
+							className="max-h-[85svh] gap-0 pb-[env(safe-area-inset-bottom)]"
+						>
 							<SheetHeader className="border-b">
 								<SheetTitle>{t("issues.filterButton")}</SheetTitle>
 							</SheetHeader>

@@ -328,7 +328,6 @@ const zh: typeof en = {
 		panel: {
 			expand: "打开完整页面",
 			close: "关闭 AI 面板",
-			toggle: "切换 AI 面板",
 			shortcut: "⌘J",
 		},
 		page: {

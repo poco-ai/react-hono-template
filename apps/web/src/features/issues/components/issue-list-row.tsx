@@ -109,7 +109,11 @@ export function IssueListRow({
 	const archiveMutation = useSetIssueArchived(orgId, projectId, issue.number);
 	const [archiveOpen, setArchiveOpen] = useState(false);
 	const archiveAction = issueArchiveAction(issue);
-	const issueKey = `${projectKey}-${issue.number}`;
+	// Skip the KEY- separator while the project query is still loading (empty
+	// prefix) so identifiers never flash as "-42".
+	const issueKey = projectKey
+		? `${projectKey}-${issue.number}`
+		: `${issue.number}`;
 	const assignee = issue.assigneeId
 		? memberById.get(issue.assigneeId)
 		: undefined;
@@ -359,7 +363,7 @@ export function IssueListRow({
 					/>
 				</TableCell>
 				<TableCell className="text-muted-foreground font-mono text-xs">
-					{projectKey}-{issue.number}
+					{issueKey}
 				</TableCell>
 				<TableCell>
 					<span className="inline-flex min-w-0 items-center gap-2">
@@ -419,9 +423,7 @@ export function IssueListRow({
 						/>
 						<DropdownMenuContent align="end" className="min-w-44">
 							<DropdownMenuGroup>
-								<DropdownMenuLabel>
-									{projectKey}-{issue.number}
-								</DropdownMenuLabel>
+								<DropdownMenuLabel>{issueKey}</DropdownMenuLabel>
 							</DropdownMenuGroup>
 							<DropdownMenuSub>
 								<DropdownMenuSubTrigger disabled={frozen}>

@@ -37,7 +37,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@workspace/ui/components/select";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -147,6 +147,9 @@ export function CreateIssueDialog({
 	cycles?: CycleWithProgressDto[];
 }) {
 	const { t } = useTranslation();
+	// The mobile layout pins the footer outside the scrollable form; the id
+	// lets the submit button target the form across that boundary.
+	const formId = useId();
 	const [templateId, setTemplateId] = useState(NO_TEMPLATE);
 	const [appliedTemplateName, setAppliedTemplateName] = useState<string | null>(
 		null,
@@ -239,10 +242,10 @@ export function CreateIssueDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				className={
-					"sm:max-w-lg max-md:top-0 max-md:left-0 max-md:h-svh max-md:max-h-svh max-md:max-w-full max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:ring-0 max-md:grid-rows-[auto_minmax(0,1fr)]"
+					"sm:max-w-lg max-md:top-0 max-md:left-0 max-md:h-svh max-md:max-h-svh max-md:max-w-full max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:p-0 max-md:ring-0 max-md:grid-rows-[auto_minmax(0,1fr)_auto]"
 				}
 			>
-				<DialogHeader>
+				<DialogHeader className="max-md:px-4 max-md:pt-4">
 					<DialogTitle>
 						{parentId
 							? t("issues.subIssues.createTitle")
@@ -255,8 +258,9 @@ export function CreateIssueDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<form
+					id={formId}
 					noValidate
-					className="flex flex-col gap-4 max-md:min-h-0 max-md:overflow-y-auto max-md:pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+					className="flex flex-col gap-4 max-md:min-h-0 max-md:overflow-y-auto max-md:px-4 max-md:pb-4"
 					onSubmit={handleSubmit}
 				>
 					{projectTemplates.length > 0 && (
@@ -454,15 +458,18 @@ export function CreateIssueDialog({
 					{createMutation.isError && (
 						<MutationError error={createMutation.error} />
 					)}
-					<DialogFooter>
-						<Button
-							type="submit"
-							disabled={createMutation.isPending || !estimateValid}
-						>
-							{t("common.create")}
-						</Button>
-					</DialogFooter>
 				</form>
+				{/* Pinned outside the scrollable form below md so the primary action
+				    stays reachable; `form={formId}` keeps it submitting the form. */}
+				<DialogFooter className="max-md:mx-0 max-md:mb-0 max-md:rounded-none max-md:px-4 max-md:pt-4 max-md:pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+					<Button
+						type="submit"
+						form={formId}
+						disabled={createMutation.isPending || !estimateValid}
+					>
+						{t("common.create")}
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);
