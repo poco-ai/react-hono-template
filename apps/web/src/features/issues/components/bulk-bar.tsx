@@ -52,6 +52,7 @@ export function BulkActionBar({
 }) {
 	const { t } = useTranslation();
 	const isMobile = useMediaQuery("(max-width: 767px)");
+	const [sheetOpen, setSheetOpen] = useState(false);
 	const bulkMutation = useBulkUpdateIssues(orgId, projectId);
 	const partialFailure = bulkPartialFailure(bulkMutation.error);
 	const [addLabels, setAddLabels] = useState<string[]>([]);
@@ -92,29 +93,58 @@ export function BulkActionBar({
 	);
 
 	if (isMobile) {
+		// A non-modal bar above the tab bar (the mobile counterpart of the
+		// desktop pill): the list stays interactive so more cards can be
+		// selected, and the action sheet opens on demand. Dismissing the
+		// sheet keeps the selection; only the X (or a successful run)
+		// clears it.
 		return (
-			<Sheet
-				open
-				onOpenChange={(next) => {
-					if (!next) {
-						onDone();
-					}
-				}}
-			>
-				<SheetContent
-					side="bottom"
-					className="max-h-[85svh] gap-0 pb-[env(safe-area-inset-bottom)]"
-				>
-					<SheetHeader className="border-b">
-						<SheetTitle>
+			<>
+				<div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t bg-background px-4 py-2 shadow-lg">
+					<div className="flex items-center gap-2">
+						<span className="text-sm font-medium whitespace-nowrap">
 							{t("bulk.selected", { count: issues.length })}
-						</SheetTitle>
-					</SheetHeader>
-					<div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-4">
-						{controls}
+						</span>
+						<span className="min-w-0 flex-1" />
+						{bulkMutation.isPending && (
+							<Spinner className="text-muted-foreground" />
+						)}
+						<Button
+							size="sm"
+							className="h-9"
+							disabled={frozen || bulkMutation.isPending}
+							onClick={() => setSheetOpen(true)}
+						>
+							{t("common.actions")}
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							className="size-9"
+							aria-label={t("bulk.clear")}
+							disabled={bulkMutation.isPending}
+							onClick={onDone}
+						>
+							<X />
+						</Button>
 					</div>
-				</SheetContent>
-			</Sheet>
+				</div>
+				<Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+					<SheetContent
+						side="bottom"
+						className="max-h-[85svh] gap-0 pb-[env(safe-area-inset-bottom)]"
+					>
+						<SheetHeader className="border-b">
+							<SheetTitle>
+								{t("bulk.selected", { count: issues.length })}
+							</SheetTitle>
+						</SheetHeader>
+						<div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-4">
+							{controls}
+						</div>
+					</SheetContent>
+				</Sheet>
+			</>
 		);
 	}
 
@@ -174,7 +204,9 @@ function BulkActionControls({
 		<div
 			className={cn(
 				"flex items-center gap-2",
-				stacked && "flex flex-col items-stretch",
+				// flex-wrap keeps the desktop pill wrapping exactly as it did
+				// before the controls were extracted into this wrapper.
+				stacked ? "flex flex-col items-stretch" : "flex-wrap",
 			)}
 		>
 			<IssueStatusSelect

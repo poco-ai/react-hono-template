@@ -241,8 +241,10 @@ export function CreateIssueDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
+				// md (not sm) for the width cap: sm:max-w-lg would beat the
+				// max-md fullscreen overrides in CSS order at 640–768px.
 				className={
-					"sm:max-w-lg max-md:top-0 max-md:left-0 max-md:h-svh max-md:max-h-svh max-md:max-w-full max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:p-0 max-md:ring-0 max-md:grid-rows-[auto_minmax(0,1fr)_auto]"
+					"md:max-w-lg max-md:top-0 max-md:left-0 max-md:h-svh max-md:max-h-svh max-md:max-w-full max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:p-0 max-md:ring-0 max-md:grid-rows-[auto_minmax(0,1fr)_auto]"
 				}
 			>
 				<DialogHeader className="max-md:px-4 max-md:pt-4">
