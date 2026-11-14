@@ -45,7 +45,6 @@ import {
 	Map as MapIcon,
 	Search,
 	Snowflake,
-	Sparkles,
 	SquarePen,
 	Star,
 } from "lucide-react";
@@ -53,6 +52,7 @@ import { type CSSProperties, Fragment, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OrganizationSwitcher } from "@/components/auth/organization/organization-switcher";
 import { CommandPalette } from "@/components/command-palette";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
 import { AiChatProvider, useAiChat } from "@/features/ai/chat-provider";
@@ -548,7 +548,6 @@ function readSidebarOpen() {
 
 function OrgLayoutContent({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
-	const { togglePanel } = useAiChat();
 	const navigate = useNavigate();
 	const orgs = useQuery(orgsQuery());
 	const frozen = useOrgFrozen(orgId);
@@ -583,20 +582,12 @@ function OrgLayoutContent({ orgId }: { orgId: string }) {
 					className="max-md:hidden"
 				/>
 			</Sidebar>
-			<div className="flex min-w-0 flex-1 flex-col">
+			<div className="flex min-w-0 flex-1 flex-col max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
 				<header className="bg-background sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 md:hidden">
 					<SidebarTrigger aria-label={t("nav.openMenu")} />
 					<span className="min-w-0 flex-1 truncate text-sm font-medium">
 						{currentOrg?.name ?? t("common.loading")}
 					</span>
-					<Button
-						variant="ghost"
-						size="icon"
-						aria-label={t("ai.panel.toggle")}
-						onClick={togglePanel}
-					>
-						<Sparkles />
-					</Button>
 					<Button
 						variant="ghost"
 						size="icon"
@@ -622,6 +613,7 @@ function OrgLayoutContent({ orgId }: { orgId: string }) {
 				</ActiveOrganizationSync>
 			</div>
 			<AiChatPanel />
+			<MobileTabBar />
 			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 		</SidebarProvider>
 	);

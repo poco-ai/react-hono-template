@@ -361,7 +361,7 @@ export function AiChatPage({ conversationId }: { conversationId?: string }) {
 		: null;
 
 	return (
-		<div className="flex h-[calc(100dvh-3rem)] min-h-0 w-full overflow-hidden md:h-dvh">
+		<div className="flex h-[calc(100dvh-3rem-3.5rem-env(safe-area-inset-bottom))] min-h-0 w-full overflow-hidden md:h-dvh">
 			<aside className="hidden w-64 shrink-0 border-r lg:block">
 				<AiConversationList
 					className="h-full"

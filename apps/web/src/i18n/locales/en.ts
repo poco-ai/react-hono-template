@@ -160,6 +160,7 @@ const en = {
 		collapseSidebar: "Collapse sidebar",
 		expandSidebar: "Expand sidebar",
 		toggleSidebar: "Toggle sidebar",
+		mobileNav: "Mobile navigation",
 		workspace: "Workspace",
 		signOutTitle: "Sign out?",
 		signOutDescription:
