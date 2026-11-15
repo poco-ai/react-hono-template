@@ -1,7 +1,4 @@
-import {
-	shouldRetryWebhookDelivery,
-	type WebhookDeliveryService,
-} from "./services/webhook-delivery.service";
+import type { WebhookDeliveryService } from "./services/webhook-delivery.service";
 
 export type WebhookQueueMessage = {
 	body: { deliveryId: string };
@@ -20,24 +17,19 @@ export const handleWebhookQueue = async (
 				message.body.deliveryId,
 				message.attempts,
 			);
-			// "success", "missing" and "duplicate" are terminal; only a failed
-			// attempt below the max is retried. A duplicate already shipped or
-			// was claimed by another message, so retrying would double-deliver.
-			if (
-				outcome === "failed" &&
-				shouldRetryWebhookDelivery(message.attempts)
-			) {
+			// "success", "missing" and "duplicate" are terminal; a duplicate
+			// already shipped or was claimed by another message, so retrying
+			// would double-deliver. A failed attempt always retries: Queues caps
+			// it at max_retries and routes the last failure to the DLQ, whereas
+			// acking would silently drop it.
+			if (outcome === "failed") {
 				message.retry();
 			} else {
 				message.ack();
 			}
 		} catch (err) {
 			console.error("[webhook] queue delivery failed:", err);
-			if (shouldRetryWebhookDelivery(message.attempts)) {
-				message.retry();
-			} else {
-				message.ack();
-			}
+			message.retry();
 		}
 	}
 };

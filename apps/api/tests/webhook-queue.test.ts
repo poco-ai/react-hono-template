@@ -18,8 +18,8 @@ import {
 import { handleWebhookQueue } from "../src/queue";
 import {
 	createWebhookDeliveryService,
-	shouldRetryWebhookDelivery,
 	WEBHOOK_MAX_ATTEMPTS,
+	type WebhookDeliveryService,
 	type WebhookJobQueue,
 	type WebhookTarget,
 } from "../src/services/webhook-delivery.service";
@@ -81,12 +81,9 @@ const installFetch = (status: number) => {
 	};
 };
 
-test("retries while attempts are below the max and acks on the last attempt", () => {
+test("max attempts stays aligned with the queue retry budget", () => {
+	// 1 initial delivery + max_retries (2); see wrangler.jsonc.
 	assert.equal(WEBHOOK_MAX_ATTEMPTS, 3);
-	assert.equal(shouldRetryWebhookDelivery(1), true);
-	assert.equal(shouldRetryWebhookDelivery(2), true);
-	assert.equal(shouldRetryWebhookDelivery(WEBHOOK_MAX_ATTEMPTS), false);
-	assert.equal(shouldRetryWebhookDelivery(WEBHOOK_MAX_ATTEMPTS + 1), false);
 });
 
 test("queue configured: enqueue writes the row and sends the delivery id without fetching", async () => {
@@ -385,7 +382,7 @@ test("consumer records failed and retries a non-2xx attempt below the max", asyn
 	}
 });
 
-test("consumer leaves the row failed and acks the last attempt", async () => {
+test("consumer retries the last failed attempt so Queues dead-letters it", async () => {
 	const fetchMock = installFetch(500);
 	const { service, attempts } = queueConsumer();
 	const { message, calls } = messageFor(WEBHOOK_MAX_ATTEMPTS);
@@ -394,10 +391,22 @@ test("consumer leaves the row failed and acks the last attempt", async () => {
 		assert.equal(attempts[0]?.status, "failed");
 		assert.equal(attempts[0]?.lastError, "HTTP 500");
 		assert.equal(attempts[0]?.attempts, WEBHOOK_MAX_ATTEMPTS);
-		assert.deepEqual(calls, ["ack"]);
+		// Acking would drop the failure; Queues routes the final retry to the DLQ.
+		assert.deepEqual(calls, ["retry"]);
 	} finally {
 		fetchMock.restore();
 	}
+});
+
+test("consumer retries when the delivery service throws", async () => {
+	const service = {
+		deliverFromQueue: async () => {
+			throw new Error("boom");
+		},
+	} as unknown as WebhookDeliveryService;
+	const { message, calls } = messageFor(2);
+	await handleWebhookQueue({ messages: [message] }, service);
+	assert.deepEqual(calls, ["retry"]);
 });
 
 test("consumer acks without fetching when the delivery or webhook is gone", async () => {

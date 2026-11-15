@@ -29,10 +29,6 @@ export type QueuedDeliveryOutcome =
 	| "missing"
 	| "duplicate";
 
-// `attempts` includes the current delivery and starts at 1.
-export const shouldRetryWebhookDelivery = (attempts: number) =>
-	attempts < WEBHOOK_MAX_ATTEMPTS;
-
 type AttemptResult = {
 	success: boolean;
 	responseStatus: number | null;
