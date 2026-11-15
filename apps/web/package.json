@@ -30,7 +30,7 @@
 		"better-auth": "^1.7.6",
 		"bowser": "^2.15.0",
 		"class-variance-authority": "^0.7.1",
-		"cn": "^0.5.1",
+		"cn": "^0.5.2",
 		"date-fns": "^4.4.0",
 		"hono": "^4.13.9",
 		"i18next": "^26.4.2",

@@ -1,12 +1,7 @@
 {
+	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"strict": true,
-		"target": "ES2022",
 		"lib": ["ESNext"],
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"noEmit": true,
-		"skipLibCheck": true,
 		"types": ["node"],
 		"paths": {
 			"@workspace/shared": ["../../packages/shared/src/index.ts"],
