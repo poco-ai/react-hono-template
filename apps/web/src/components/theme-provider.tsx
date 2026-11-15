@@ -1,5 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
+import { useHotkey } from "@tanstack/react-hotkeys";
 import * as React from "react";
+import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";
 
 export type Theme = "dark" | "light" | "system";
 type ResolvedTheme = "dark" | "light";
@@ -56,25 +58,6 @@ function disableTransitionsTemporarily() {
 			});
 		});
 	};
-}
-
-function isEditableTarget(target: EventTarget | null) {
-	if (!(target instanceof HTMLElement)) {
-		return false;
-	}
-
-	if (target.isContentEditable) {
-		return true;
-	}
-
-	const editableParent = target.closest(
-		"input, textarea, select, [contenteditable='true']",
-	);
-	if (editableParent) {
-		return true;
-	}
-
-	return false;
 }
 
 export function ThemeProvider({
@@ -139,45 +122,26 @@ export function ThemeProvider({
 		};
 	}, [theme, applyTheme]);
 
-	React.useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.repeat) {
-				return;
-			}
+	const toggleTheme = React.useCallback(() => {
+		setThemeState((currentTheme) => {
+			const nextTheme =
+				currentTheme === "dark"
+					? "light"
+					: currentTheme === "light"
+						? "dark"
+						: getSystemTheme() === "dark"
+							? "light"
+							: "dark";
 
-			if (event.metaKey || event.ctrlKey || event.altKey) {
-				return;
-			}
-
-			if (isEditableTarget(event.target)) {
-				return;
-			}
-
-			if (event.key.toLowerCase() !== "d") {
-				return;
-			}
-
-			setThemeState((currentTheme) => {
-				const nextTheme =
-					currentTheme === "dark"
-						? "light"
-						: currentTheme === "light"
-							? "dark"
-							: getSystemTheme() === "dark"
-								? "light"
-								: "dark";
-
-				localStorage.setItem(storageKey, nextTheme);
-				return nextTheme;
-			});
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-		};
+			localStorage.setItem(storageKey, nextTheme);
+			return nextTheme;
+		});
 	}, [storageKey]);
+
+	useHotkey(APP_HOTKEYS.toggleTheme.hotkey, () => {
+		if (isHotkeyBlocked()) return;
+		toggleTheme();
+	});
 
 	React.useEffect(() => {
 		const handleStorageChange = (event: StorageEvent) => {

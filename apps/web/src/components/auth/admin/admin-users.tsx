@@ -119,6 +119,8 @@ import {
 } from "@workspace/ui/components/tabs";
 import type { BetterFetchError } from "better-auth/react";
 import {
+	ArrowDownIcon,
+	ArrowUpIcon,
 	BanIcon,
 	CheckIcon,
 	ChevronLeftIcon,
@@ -737,14 +739,24 @@ function SortButton({
 	sorted: false | "asc" | "desc";
 }) {
 	return (
-		<button
-			className="inline-flex items-center gap-1 hover:text-foreground"
+		<Button
+			variant="ghost"
+			size="sm"
+			// Header sort affordance is text-only: drop the ghost hover fill and
+			// the size's height/padding so the header cell keeps its metrics.
+			className="h-auto gap-1 px-0 text-sm hover:bg-transparent dark:hover:bg-transparent"
 			onClick={onClick}
 			type="button"
 		>
 			{children}
-			{sorted ? (sorted === "asc" ? "↑" : "↓") : null}
-		</button>
+			{sorted ? (
+				sorted === "asc" ? (
+					<ArrowUpIcon className="size-3.5" />
+				) : (
+					<ArrowDownIcon className="size-3.5" />
+				)
+			) : null}
+		</Button>
 	);
 }
 

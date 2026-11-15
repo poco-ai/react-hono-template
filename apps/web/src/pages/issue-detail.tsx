@@ -11,6 +11,7 @@ import {
 	BreadcrumbSeparator,
 } from "@workspace/ui/components/breadcrumb";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
 import { Separator } from "@workspace/ui/components/separator";
 import { Spinner } from "@workspace/ui/components/spinner";
 import {
@@ -338,7 +339,10 @@ export function IssueDetailPage({
 					</Link>
 				) : null}
 				<div className="group/title relative mt-1">
-					<input
+					{/* Input is used only for its shared focus/disabled semantics; its
+					    default box (height, border, padding, dark fill) is reset so the
+					    title stays a borderless transparent 2xl heading. */}
+					<Input
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 						onBlur={commitTitle}
@@ -350,7 +354,7 @@ export function IssueDetailPage({
 								e.currentTarget.blur();
 							}
 						}}
-						className="w-full rounded-md border-none bg-transparent pr-8 text-2xl font-semibold tracking-tight outline-none hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/50"
+						className="h-auto rounded-md border-0 bg-transparent px-0 py-0 pr-8 text-2xl font-semibold tracking-tight transition-none hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/50 md:text-2xl dark:bg-transparent"
 						maxLength={500}
 					/>
 					<Pencil className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 opacity-50 transition-opacity md:opacity-0 md:group-hover/title:opacity-50 md:group-focus-within/title:opacity-50" />

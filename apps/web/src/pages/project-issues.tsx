@@ -1,4 +1,5 @@
 import type { ListIssuesDto } from "@api/dto/issue.dto";
+import { useHotkeys } from "@tanstack/react-hotkeys";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { IssueFilterGroup, IssueQuery } from "@workspace/shared";
@@ -87,8 +88,8 @@ import { defaultStatusOf, statusesQuery } from "@/features/statuses/data";
 import { ViewSwitcher } from "@/features/views/components/view-switcher";
 import { type ViewDto, viewsQuery } from "@/features/views/data";
 import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
+import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { useHotkeys } from "@/lib/use-hotkeys";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 export function ProjectIssuesPage({
@@ -422,21 +423,27 @@ export function ProjectIssuesPage({
 		return () => cancelAnimationFrame(frame);
 	}, [filterOpen]);
 
-	useHotkeys({
-		c: () => {
-			if (!frozen) {
+	useHotkeys([
+		{
+			hotkey: APP_HOTKEYS.newIssue.hotkey,
+			callback: () => {
+				if (isHotkeyBlocked() || frozen) return;
 				openCreate();
-			}
+			},
 		},
-		"/": () => {
-			if (searchInputRef.current) {
-				searchInputRef.current.focus();
-			} else {
-				focusSearchOnOpenRef.current = true;
-				setFilterOpen(true);
-			}
+		{
+			hotkey: APP_HOTKEYS.focusIssueSearch.hotkey,
+			callback: () => {
+				if (isHotkeyBlocked()) return;
+				if (searchInputRef.current) {
+					searchInputRef.current.focus();
+				} else {
+					focusSearchOnOpenRef.current = true;
+					setFilterOpen(true);
+				}
+			},
 		},
-	});
+	]);
 
 	const toggleAllOnPage = (checked: boolean) => {
 		setSelected((prev) => {

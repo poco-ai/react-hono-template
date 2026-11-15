@@ -65,6 +65,9 @@ export function RoadmapStackedList({
 						<ul className="mt-3 space-y-2 px-4">
 							{project.cycles.map((cycle) => (
 								<li key={cycle.id}>
+									{/* Native button on purpose: this cycle bar is a timeline
+									    graphic (tone border + progress track), so Button's
+									    variant/size padding and border would break it. */}
 									<button
 										type="button"
 										title={t("roadmap.openCycle", { name: cycle.name })}

@@ -23,6 +23,39 @@ export function groupActivitiesByDay(
 	return groups;
 }
 
+export interface ActivityDayRow {
+	type: "day";
+	/** Virtualizer row key; prefixed so it can never collide with an activity id. */
+	key: string;
+	dayKey: string;
+}
+
+export interface ActivityItemRow {
+	type: "activity";
+	key: string;
+	activity: OrgActivityDto;
+}
+
+export type ActivityRow = ActivityDayRow | ActivityItemRow;
+
+/**
+ * Flattens day groups into the single row list the feed virtualizes, keeping
+ * the original day/activity order so rendering the rows in sequence reproduces
+ * the grouped markup.
+ */
+export function buildActivityRows(
+	groups: OrgActivityDayGroup[],
+): ActivityRow[] {
+	const rows: ActivityRow[] = [];
+	for (const group of groups) {
+		rows.push({ type: "day", key: `day:${group.key}`, dayKey: group.key });
+		for (const activity of group.activities) {
+			rows.push({ type: "activity", key: activity.id, activity });
+		}
+	}
+	return rows;
+}
+
 export function activityDayLabel(key: string, t: TFunction): string {
 	const yesterday = new Date();
 	yesterday.setDate(yesterday.getDate() - 1);

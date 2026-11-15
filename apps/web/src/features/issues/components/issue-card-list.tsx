@@ -337,15 +337,19 @@ function IssueCard({
 					disabled={frozen}
 					onCheckedChange={(checked) => onToggle(issue.id, checked)}
 				/>
-				<button
+				<Button
 					type="button"
-					className="min-w-0 flex-1 text-left"
+					variant="ghost"
+					// Ghost's hover fill, fixed height, centered row layout and
+					// disabled dimming would change the card, so reset them; the card
+					// body stacks block rows at full width.
+					className="h-auto min-w-0 flex-1 shrink flex-col items-stretch justify-start gap-0 rounded-lg border-0 p-0 text-left font-normal whitespace-normal select-text hover:bg-transparent hover:text-inherit active:not-aria-[haspopup]:translate-y-0 disabled:opacity-100 dark:hover:bg-transparent"
 					aria-pressed={isSelected}
 					disabled={frozen}
 					onClick={() => onToggle(issue.id, !isSelected)}
 				>
 					{body}
-				</button>
+				</Button>
 			</div>
 		);
 	}

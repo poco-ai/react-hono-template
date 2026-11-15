@@ -1,4 +1,5 @@
 import type { AiConversationDto } from "@api/dto/ai.dto";
+import { useHotkeys } from "@tanstack/react-hotkeys";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Link,
@@ -65,7 +66,7 @@ import { orgsQuery } from "@/features/organizations/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { projectsQuery } from "@/features/projects/data";
-import { useHotkeys } from "@/lib/use-hotkeys";
+import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";
 
 const ACTIVE_ITEM_CLASS =
 	"bg-sidebar-accent text-sidebar-accent-foreground font-medium";
@@ -554,12 +555,36 @@ function OrgLayoutContent({ orgId }: { orgId: string }) {
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [defaultSidebarOpen] = useState(readSidebarOpen);
 
-	useHotkeys({
-		"g p": () => navigate({ to: "/orgs/$orgId/projects", params: { orgId } }),
-		"g i": () => navigate({ to: "/orgs/$orgId/my-issues", params: { orgId } }),
-		"g a": () => navigate({ to: "/orgs/$orgId/activity", params: { orgId } }),
-		"g s": () => navigate({ to: "/orgs/$orgId/settings", params: { orgId } }),
-	});
+	useHotkeys([
+		{
+			hotkey: APP_HOTKEYS.navigateProjects.hotkey,
+			callback: () => {
+				if (isHotkeyBlocked()) return;
+				void navigate({ to: "/orgs/$orgId/projects", params: { orgId } });
+			},
+		},
+		{
+			hotkey: APP_HOTKEYS.navigateMyIssues.hotkey,
+			callback: () => {
+				if (isHotkeyBlocked()) return;
+				void navigate({ to: "/orgs/$orgId/my-issues", params: { orgId } });
+			},
+		},
+		{
+			hotkey: APP_HOTKEYS.navigateActivity.hotkey,
+			callback: () => {
+				if (isHotkeyBlocked()) return;
+				void navigate({ to: "/orgs/$orgId/activity", params: { orgId } });
+			},
+		},
+		{
+			hotkey: APP_HOTKEYS.navigateSettings.hotkey,
+			callback: () => {
+				if (isHotkeyBlocked()) return;
+				void navigate({ to: "/orgs/$orgId/settings", params: { orgId } });
+			},
+		},
+	]);
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 

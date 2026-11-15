@@ -1,3 +1,4 @@
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
@@ -50,6 +51,7 @@ import {
 	type SearchProjectHitDto,
 	searchQuery,
 } from "@/features/search/data";
+import { APP_HOTKEYS } from "@/lib/hotkeys";
 
 /** Unified row shape for server hits and the `KEY-12` detail fallback. */
 type PaletteIssue = {
@@ -128,16 +130,9 @@ export function CommandPalette({
 			? issueDetailMatch.projectId
 			: undefined;
 
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-				event.preventDefault();
-				onOpenChange((previous) => !previous);
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [onOpenChange]);
+	useHotkey(APP_HOTKEYS.toggleCommandPalette.hotkey, () => {
+		onOpenChange((previous) => !previous);
+	});
 
 	const run = (navigateFn: () => void) => {
 		onOpenChange(false);

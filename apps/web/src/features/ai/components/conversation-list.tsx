@@ -186,11 +186,15 @@ export function AiConversationList({
 										active ? "bg-muted text-foreground" : "hover:bg-muted/60",
 									)}
 								>
-									<button
+									<Button
 										type="button"
+										variant="ghost"
 										onClick={() => onSelect(conversation.id)}
 										aria-current={active ? "page" : undefined}
-										className="focus-visible:ring-ring/50 flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left outline-none focus-visible:ring-3"
+										// Ghost's hover fill, border, fixed height and centered
+										// column would repaint the row, so neutralize them and
+										// keep the original disclosure geometry/ring.
+										className="h-auto min-w-0 flex-1 shrink flex-col items-start justify-start gap-0.5 rounded-lg border-0 px-2.5 py-2 text-left font-normal whitespace-normal select-text hover:bg-transparent hover:text-inherit active:not-aria-[haspopup]:translate-y-0 dark:hover:bg-transparent"
 									>
 										<span className="flex w-full min-w-0 items-center gap-1.5">
 											{conversation.pinned ? (
@@ -205,7 +209,7 @@ export function AiConversationList({
 												conversation.lastMessageAt ?? conversation.createdAt,
 											)}
 										</span>
-									</button>
+									</Button>
 									<DropdownMenu>
 										<DropdownMenuTrigger
 											render={

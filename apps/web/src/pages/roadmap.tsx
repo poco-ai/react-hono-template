@@ -234,6 +234,10 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 											window,
 										);
 										return (
+											// Native button on purpose: this absolutely positioned
+											// cycle bar is a timeline graphic, and Button's
+											// variant/size border and padding would break its
+											// geometry.
 											<button
 												key={cycle.id}
 												type="button"

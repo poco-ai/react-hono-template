@@ -5,6 +5,7 @@ import type {
 	AiConversationListDto,
 	AiUsageSummaryDto,
 } from "@api/dto/ai.dto";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import {
 	type UseQueryResult,
 	useQuery,
@@ -44,6 +45,7 @@ import {
 } from "@/features/ai/data";
 import { issueQuery } from "@/features/issues/data";
 import { projectsQuery } from "@/features/projects/data";
+import { APP_HOTKEYS } from "@/lib/hotkeys";
 
 const PANEL_STORAGE_PREFIX = "ai:panel:";
 
@@ -435,22 +437,12 @@ export function AiChatProvider({
 		});
 	}, [orgId]);
 
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (
-				(event.metaKey || event.ctrlKey) &&
-				!event.altKey &&
-				event.key.toLowerCase() === "j"
-			) {
-				event.preventDefault();
-				if (!onAiRoute) {
-					togglePanel();
-				}
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [togglePanel, onAiRoute]);
+	useHotkey(APP_HOTKEYS.toggleAiPanel.hotkey, togglePanel, {
+		// Keep the browser default suppressed on /ai too, where the panel is
+		// already visible and there is nothing to toggle.
+		enabled: !onAiRoute,
+		preventDefault: "always",
+	});
 
 	// ---------------------------------------------------------------------
 	// Availability / usage
