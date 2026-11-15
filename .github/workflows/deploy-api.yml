@@ -8,6 +8,7 @@ on:
       - "packages/shared/**"
       - "bun.lock"
       - "package.json"
+      - "tsconfig.base.json"
       - ".github/workflows/**"
   workflow_dispatch:
 

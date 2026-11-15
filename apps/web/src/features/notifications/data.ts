@@ -340,9 +340,11 @@ const markAllReadLocally = (
 });
 
 /**
- * The optimistic pages stay usable without refetching (and without offset
- * drift). Mark them stale so the next mount/focus reconciles with the server,
- * and refresh only the counter, which is not paginated.
+ * The optimistic pages stay usable without refetching. They are marked stale
+ * rather than refetched: under the unread filter a locally removed row can
+ * shift the server offset until the next mount/focus reconciles, which is
+ * preferable to blanking the list on every read. The counter is refetched
+ * because it is not paginated.
  */
 const markNotificationCachesStale = (
 	queryClient: QueryClient,
