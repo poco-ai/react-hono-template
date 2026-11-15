@@ -30,12 +30,12 @@ const app = () => {
 	);
 	return hono
 		.get(
-			"/projects/:projectId/issues/:number",
+			"/orgs/:orgId/projects/:projectId/issues/:number",
 			validate(issueParams, "param"),
 			(c) => c.json({ data: c.req.valid("param") }),
 		)
 		.delete(
-			"/favorites/:entityType/:entityId",
+			"/orgs/:orgId/favorites/:entityType/:entityId",
 			validate(favoriteParams, "param"),
 			(c) => c.json({ data: c.req.valid("param") }),
 		)
@@ -60,10 +60,10 @@ test("issue number params parse positive integers with leading zeros", () => {
 		["007", 7],
 	] as const) {
 		assert.equal(issueNumberParam.parse(raw), expected);
-		assert.deepEqual(issueParams.parse({ projectId: "p1", number: raw }), {
-			projectId: "p1",
-			number: expected,
-		});
+		assert.deepEqual(
+			issueParams.parse({ orgId: "o1", projectId: "p1", number: raw }),
+			{ orgId: "o1", projectId: "p1", number: expected },
+		);
 	}
 });
 
@@ -78,7 +78,11 @@ test("issue number params reject zero, negatives, fractions and non-numerics", (
 });
 
 test("issue params require a non-empty project id", () => {
-	const result = issueParams.safeParse({ projectId: "", number: "1" });
+	const result = issueParams.safeParse({
+		orgId: "o1",
+		projectId: "",
+		number: "1",
+	});
 	assert.equal(result.success, false);
 	if (!result.success) {
 		assert.equal(result.error.issues[0]?.path.join("."), "projectId");
@@ -87,12 +91,13 @@ test("issue params require a non-empty project id", () => {
 
 test("favorite params only accept known entity types", () => {
 	for (const entityType of FAVORITE_ENTITY_TYPES) {
-		assert.deepEqual(favoriteParams.parse({ entityType, entityId: "x1" }), {
-			entityType,
-			entityId: "x1",
-		});
+		assert.deepEqual(
+			favoriteParams.parse({ orgId: "o1", entityType, entityId: "x1" }),
+			{ orgId: "o1", entityType, entityId: "x1" },
+		);
 	}
 	const invalid = favoriteParams.safeParse({
+		orgId: "o1",
 		entityType: "comment",
 		entityId: "c1",
 	});
@@ -100,24 +105,25 @@ test("favorite params only accept known entity types", () => {
 });
 
 test("param validation middleware returns parsed values with INVALID_PARAM", async () => {
-	const response = await app().request("/projects/p1/issues/007");
+	const response = await app().request("/orgs/o1/projects/p1/issues/007");
 	assert.equal(response.status, 200);
 	assert.deepEqual(await response.json(), {
-		data: { projectId: "p1", number: 7 },
+		data: { orgId: "o1", projectId: "p1", number: 7 },
 	});
 
 	await expectParamError(
-		await app().request("/projects/p1/issues/abc"),
+		await app().request("/orgs/o1/projects/p1/issues/abc"),
 		`number: ${ISSUE_NUMBER_MESSAGE}`,
 	);
 
 	const invalidType = favoriteParams.safeParse({
+		orgId: "o1",
 		entityType: "comment",
 		entityId: "c1",
 	});
 	assert.equal(invalidType.success, false);
 	await expectParamError(
-		await app().request("/favorites/comment/c1", { method: "DELETE" }),
+		await app().request("/orgs/o1/favorites/comment/c1", { method: "DELETE" }),
 		`entityType: ${invalidType.success ? "" : (invalidType.error.issues[0]?.message ?? "")}`,
 	);
 });

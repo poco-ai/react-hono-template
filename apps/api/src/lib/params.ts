@@ -29,7 +29,14 @@ export const issueNumberParam = z
 	})
 	.transform(Number);
 
-export const projectParams = z.object({
+// Validated shapes must list every path segment the RPC client sees: Hono
+// infers `c.req.valid("param")` from the schema, and an omitted parent segment
+// (orgId/projectId) would disappear from the web client's param type.
+export const orgParams = z.object({
+	orgId: idParam,
+});
+
+export const projectParams = orgParams.extend({
 	projectId: idParam,
 });
 
@@ -65,39 +72,39 @@ export const relationParams = issueParams.extend({
 	relationId: idParam,
 });
 
-export const labelParams = z.object({
+export const labelParams = orgParams.extend({
 	labelId: idParam,
 });
 
-export const statusParams = z.object({
+export const statusParams = orgParams.extend({
 	statusId: idParam,
 });
 
-export const viewParams = z.object({
+export const viewParams = orgParams.extend({
 	viewId: idParam,
 });
 
-export const webhookParams = z.object({
+export const webhookParams = orgParams.extend({
 	webhookId: idParam,
 });
 
-export const webhookDeliveryParams = z.object({
+export const webhookDeliveryParams = orgParams.extend({
 	deliveryId: idParam,
 });
 
-export const notificationParams = z.object({
+export const notificationParams = orgParams.extend({
 	notificationId: idParam,
 });
 
-export const apiKeyParams = z.object({
+export const apiKeyParams = orgParams.extend({
 	keyId: idParam,
 });
 
-export const aiConversationParams = z.object({
+export const aiConversationParams = orgParams.extend({
 	id: idParam,
 });
 
-export const favoriteParams = z.object({
+export const favoriteParams = orgParams.extend({
 	entityType: z.enum(FAVORITE_ENTITY_TYPES),
 	entityId: idParam,
 });
@@ -110,7 +117,7 @@ export const adminOrgParams = z.object({
 	orgId: idParam,
 });
 
-export const issueTemplateParams = z.object({
+export const issueTemplateParams = orgParams.extend({
 	templateId: idParam,
 });
 
