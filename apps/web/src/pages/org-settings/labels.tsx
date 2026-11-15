@@ -29,6 +29,7 @@ import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
@@ -41,15 +42,24 @@ import {
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { apiErrorMessage } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useZodForm } from "@/lib/use-zod-form";
 
 const DEFAULT_COLOR = "#94a3b8";
+
+type LabelFormValues = { name: string; color: string };
+
+const labelFormSchema = z.preprocess((values) => {
+	// Guard non-object input so the wrapper cannot throw a TypeError before zod
+	// gets a chance to report validation issues.
+	if (!values || typeof values !== "object") {
+		return values;
+	}
+	const input = values as LabelFormValues;
+	return { name: input.name.trim(), color: input.color };
+}, createLabelSchema);
+
+const INPUT_IDS = { name: "label-name" };
 
 export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -208,17 +218,23 @@ function LabelDialog({
 	onSubmit: (input: { name: string; color: string }) => void;
 }) {
 	const { t } = useTranslation();
-	const [name, setName] = useState("");
-	const [color, setColor] = useState(DEFAULT_COLOR);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+	const { form, fieldErrors, handleSubmit, reset } =
+		useZodForm<LabelFormValues>({
+			defaultValues: { name: "", color: DEFAULT_COLOR },
+			schema: labelFormSchema,
+			onSubmit,
+			t,
+			inputIds: INPUT_IDS,
+		});
 
 	useEffect(() => {
 		if (open) {
-			setName(label?.name ?? "");
-			setColor(label?.color ?? DEFAULT_COLOR);
-			setFieldErrors({});
+			reset({
+				name: label?.name ?? "",
+				color: label?.color ?? DEFAULT_COLOR,
+			});
 		}
-	}, [open, label]);
+	}, [open, label, reset]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,47 +248,41 @@ function LabelDialog({
 				<form
 					noValidate
 					className="flex flex-col gap-4"
-					onSubmit={(e) => {
-						e.preventDefault();
-						const parsed = createLabelSchema.safeParse({
-							name: name.trim(),
-							color,
-						});
-						if (!parsed.success) {
-							const errors = fieldErrorsFromZod(parsed.error, t);
-							setFieldErrors(errors);
-							focusFirstInvalidField(errors, { name: "label-name" });
-							return;
-						}
-						onSubmit(parsed.data);
-					}}
+					onSubmit={handleSubmit}
 				>
-					<Field data-invalid={fieldErrors.name ? true : undefined}>
-						<FieldLabel htmlFor="label-name">{t("labels.name")}</FieldLabel>
-						<Input
-							id="label-name"
-							value={name}
-							placeholder={t("labels.namePlaceholder")}
-							onChange={(e) => {
-								setName(e.target.value);
-								setFieldErrors((prev) => withoutFieldError(prev, "name"));
-							}}
-							maxLength={30}
-							aria-invalid={fieldErrors.name ? true : undefined}
-							aria-describedby={
-								fieldErrors.name ? "label-name-error" : undefined
-							}
-						/>
-						<FieldError id="label-name-error">{fieldErrors.name}</FieldError>
-					</Field>
-					<Field>
-						<FieldLabel>{t("labels.color")}</FieldLabel>
-						<ColorSwatchPicker
-							value={color}
-							onChange={setColor}
-							ariaLabel={t("labels.color")}
-						/>
-					</Field>
+					<form.Field name="name">
+						{(field) => (
+							<Field data-invalid={fieldErrors.name ? true : undefined}>
+								<FieldLabel htmlFor="label-name">{t("labels.name")}</FieldLabel>
+								<Input
+									id="label-name"
+									value={field.state.value}
+									placeholder={t("labels.namePlaceholder")}
+									onChange={(e) => field.handleChange(e.target.value)}
+									maxLength={30}
+									aria-invalid={fieldErrors.name ? true : undefined}
+									aria-describedby={
+										fieldErrors.name ? "label-name-error" : undefined
+									}
+								/>
+								<FieldError id="label-name-error">
+									{fieldErrors.name}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="color">
+						{(field) => (
+							<Field>
+								<FieldLabel>{t("labels.color")}</FieldLabel>
+								<ColorSwatchPicker
+									value={field.state.value}
+									onChange={field.handleChange}
+									ariaLabel={t("labels.color")}
+								/>
+							</Field>
+						)}
+					</form.Field>
 					{error && <MutationError error={error} />}
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>

@@ -18,37 +18,14 @@ export function fieldErrorsFromZod(
 		if (!field || errors[field] !== undefined) {
 			continue;
 		}
-		switch (issue.code) {
-			case "invalid_format":
-				errors[field] =
-					issue.format === "email"
-						? translate("form.errors.email")
-						: patternKeys[field]
-							? translate(patternKeys[field])
-							: translate("form.errors.required");
-				break;
-			case "too_small":
-				errors[field] = patternKeys[field]
-					? translate(patternKeys[field])
-					: field === "password"
-						? translate("form.errors.passwordMin", {
-								count: Number(issue.minimum),
-							})
-						: translate("form.errors.required");
-				break;
-			case "too_big":
-				errors[field] = patternKeys[field]
-					? translate(patternKeys[field])
-					: translate("form.errors.maxLength", {
-							count: Number(issue.maximum),
-						});
-				break;
-			default:
-				errors[field] = patternKeys[field]
-					? translate(patternKeys[field])
-					: translate("form.errors.required");
-				break;
-		}
+		// `lib/zod-i18n.ts` translates the default messages at parse time, so the
+		// issue message is already localized. `patternKeys` still wins for fields
+		// whose copy is more specific than the generic zod wording (regex hints,
+		// feature-specific limits).
+		const patternKey = patternKeys[field];
+		errors[field] = patternKey
+			? translate(patternKey)
+			: issue.message || translate("form.errors.required");
 	}
 	return errors;
 }
@@ -68,16 +45,4 @@ export function focusFirstInvalidField(
 			return;
 		}
 	}
-}
-
-export function withoutFieldError(
-	errors: FieldErrors,
-	field: string,
-): FieldErrors {
-	if (!(field in errors)) {
-		return errors;
-	}
-	const next = { ...errors };
-	delete next[field];
-	return next;
 }

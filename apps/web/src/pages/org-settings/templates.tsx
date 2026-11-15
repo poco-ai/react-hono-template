@@ -55,6 +55,7 @@ import { CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MarkdownEditor } from "@/components/markdown-editor";
@@ -83,13 +84,23 @@ import {
 	useUpdateIssueTemplate,
 } from "@/features/templates/data";
 import { apiErrorMessage } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useZodForm } from "@/lib/use-zod-form";
+
+const templateFormSchema = z.preprocess((values) => {
+	// Guard non-object input so the wrapper cannot throw a TypeError before zod
+	// gets a chance to report validation issues.
+	if (!values || typeof values !== "object") {
+		return values;
+	}
+	return templateInputFromForm(values as IssueTemplateFormState);
+}, createIssueTemplateSchema);
+
+const INPUT_IDS = {
+	name: "template-name",
+	title: "template-title",
+	description: "template-description",
+};
 
 export function TemplatesSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -331,29 +342,26 @@ function TemplateDialog({
 	onSubmit: (input: CreateIssueTemplateInput) => void;
 }) {
 	const { t } = useTranslation();
-	const [form, setForm] = useState<IssueTemplateFormState>(
-		emptyIssueTemplateForm,
-	);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+	const { form, fieldErrors, handleSubmit, reset } = useZodForm<
+		IssueTemplateFormState,
+		CreateIssueTemplateInput
+	>({
+		defaultValues: emptyIssueTemplateForm(),
+		schema: templateFormSchema,
+		onSubmit,
+		t,
+		inputIds: INPUT_IDS,
+	});
 
 	useEffect(() => {
 		if (open) {
-			setForm(
+			reset(
 				template
 					? issueTemplateFormFromDto(template)
 					: emptyIssueTemplateForm(),
 			);
-			setFieldErrors({});
 		}
-	}, [open, template]);
-
-	const update = <K extends keyof IssueTemplateFormState>(
-		key: K,
-		value: IssueTemplateFormState[K],
-	) => {
-		setForm((prev) => ({ ...prev, [key]: value }));
-		setFieldErrors((prev) => withoutFieldError(prev, key));
-	};
+	}, [open, template, reset]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -371,181 +379,204 @@ function TemplateDialog({
 				<form
 					noValidate
 					className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1"
-					onSubmit={(e) => {
-						e.preventDefault();
-						const parsed = createIssueTemplateSchema.safeParse(
-							templateInputFromForm(form),
-						);
-						if (!parsed.success) {
-							const errors = fieldErrorsFromZod(parsed.error, t);
-							setFieldErrors(errors);
-							focusFirstInvalidField(errors, {
-								name: "template-name",
-								title: "template-title",
-								description: "template-description",
-							});
-							return;
-						}
-						onSubmit(parsed.data);
-					}}
+					onSubmit={handleSubmit}
 				>
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<Field data-invalid={fieldErrors.name ? true : undefined}>
-							<FieldLabel htmlFor="template-name">
-								{t("templates.name")}
-							</FieldLabel>
-							<Input
-								id="template-name"
-								value={form.name}
-								placeholder={t("templates.namePlaceholder")}
-								onChange={(e) => update("name", e.target.value)}
-								maxLength={100}
-								aria-invalid={fieldErrors.name ? true : undefined}
-							/>
-							<FieldError>{fieldErrors.name}</FieldError>
-						</Field>
-						<Field>
-							<FieldLabel>{t("templates.scope")}</FieldLabel>
-							<Select
-								value={form.projectId}
-								onValueChange={(value) => value && update("projectId", value)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{form.projectId === ORG_WIDE_TEMPLATE_SCOPE
-											? t("templates.orgWide")
-											: (projects.find(
-													(project) => project.id === form.projectId,
-												)?.name ?? t("templates.orgWide"))}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value={ORG_WIDE_TEMPLATE_SCOPE}>
-										{t("templates.orgWide")}
-									</SelectItem>
-									{projects.map((project) => (
-										<SelectItem key={project.id} value={project.id}>
-											{project.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</Field>
+						<form.Field name="name">
+							{(field) => (
+								<Field data-invalid={fieldErrors.name ? true : undefined}>
+									<FieldLabel htmlFor="template-name">
+										{t("templates.name")}
+									</FieldLabel>
+									<Input
+										id="template-name"
+										value={field.state.value}
+										placeholder={t("templates.namePlaceholder")}
+										onChange={(e) => field.handleChange(e.target.value)}
+										maxLength={100}
+										aria-invalid={fieldErrors.name ? true : undefined}
+									/>
+									<FieldError>{fieldErrors.name}</FieldError>
+								</Field>
+							)}
+						</form.Field>
+						<form.Field name="projectId">
+							{(field) => (
+								<Field>
+									<FieldLabel>{t("templates.scope")}</FieldLabel>
+									<Select
+										value={field.state.value}
+										onValueChange={(value) =>
+											value && field.handleChange(value)
+										}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue>
+												{field.state.value === ORG_WIDE_TEMPLATE_SCOPE
+													? t("templates.orgWide")
+													: (projects.find(
+															(project) => project.id === field.state.value,
+														)?.name ?? t("templates.orgWide"))}
+											</SelectValue>
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value={ORG_WIDE_TEMPLATE_SCOPE}>
+												{t("templates.orgWide")}
+											</SelectItem>
+											{projects.map((project) => (
+												<SelectItem key={project.id} value={project.id}>
+													{project.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+							)}
+						</form.Field>
 					</div>
 
-					<Field data-invalid={fieldErrors.title ? true : undefined}>
-						<FieldLabel htmlFor="template-title">
-							{t("templates.title")}
-						</FieldLabel>
-						<Input
-							id="template-title"
-							value={form.title}
-							placeholder={t("issues.titlePlaceholder")}
-							onChange={(e) => update("title", e.target.value)}
-							aria-invalid={fieldErrors.title ? true : undefined}
-						/>
-						<FieldError>{fieldErrors.title}</FieldError>
-					</Field>
+					<form.Field name="title">
+						{(field) => (
+							<Field data-invalid={fieldErrors.title ? true : undefined}>
+								<FieldLabel htmlFor="template-title">
+									{t("templates.title")}
+								</FieldLabel>
+								<Input
+									id="template-title"
+									value={field.state.value}
+									placeholder={t("issues.titlePlaceholder")}
+									onChange={(e) => field.handleChange(e.target.value)}
+									aria-invalid={fieldErrors.title ? true : undefined}
+								/>
+								<FieldError>{fieldErrors.title}</FieldError>
+							</Field>
+						)}
+					</form.Field>
 
-					<Field>
-						<FieldLabel htmlFor="template-description">
-							{t("common.description")}
-							<span className="text-muted-foreground">
-								{" "}
-								({t("common.optional")})
-							</span>
-						</FieldLabel>
-						<MarkdownEditor
-							id="template-description"
-							value={form.description}
-							onChange={(next) => update("description", next)}
-							placeholder={t("issues.descriptionPlaceholder")}
-						/>
-						<FieldError>{fieldErrors.description}</FieldError>
-					</Field>
+					<form.Field name="description">
+						{(field) => (
+							<Field>
+								<FieldLabel htmlFor="template-description">
+									{t("common.description")}
+									<span className="text-muted-foreground">
+										{" "}
+										({t("common.optional")})
+									</span>
+								</FieldLabel>
+								<MarkdownEditor
+									id="template-description"
+									value={field.state.value}
+									onChange={field.handleChange}
+									placeholder={t("issues.descriptionPlaceholder")}
+								/>
+								<FieldError>{fieldErrors.description}</FieldError>
+							</Field>
+						)}
+					</form.Field>
 
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<Field>
-							<FieldLabel>{t("issues.status")}</FieldLabel>
-							<Select
-								value={form.statusId}
-								onValueChange={(value) => value && update("statusId", value)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{form.statusId === TEMPLATE_NO_STATUS
-											? t("templates.noStatus")
-											: (statuses.find((status) => status.id === form.statusId)
-													?.name ?? t("templates.noStatus"))}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value={TEMPLATE_NO_STATUS}>
-										{t("templates.noStatus")}
-									</SelectItem>
-									{statuses.map((status) => (
-										<SelectItem key={status.id} value={status.id}>
-											<StatusBadge status={status} />
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</Field>
-						<Field>
-							<FieldLabel>{t("issues.priority")}</FieldLabel>
-							<Select
-								value={form.priority}
-								onValueChange={(value) =>
-									value && update("priority", value as IssuePriorityName)
-								}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue>
-										{t(`issues.priorities.${form.priority}`)}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									{ISSUE_PRIORITIES.map(({ name, value }) => (
-										<SelectItem key={name} value={name}>
-											<PriorityBadge value={value} />
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</Field>
+						<form.Field name="statusId">
+							{(field) => (
+								<Field>
+									<FieldLabel>{t("issues.status")}</FieldLabel>
+									<Select
+										value={field.state.value}
+										onValueChange={(value) =>
+											value && field.handleChange(value)
+										}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue>
+												{field.state.value === TEMPLATE_NO_STATUS
+													? t("templates.noStatus")
+													: (statuses.find(
+															(status) => status.id === field.state.value,
+														)?.name ?? t("templates.noStatus"))}
+											</SelectValue>
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value={TEMPLATE_NO_STATUS}>
+												{t("templates.noStatus")}
+											</SelectItem>
+											{statuses.map((status) => (
+												<SelectItem key={status.id} value={status.id}>
+													<StatusBadge status={status} />
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+							)}
+						</form.Field>
+						<form.Field name="priority">
+							{(field) => (
+								<Field>
+									<FieldLabel>{t("issues.priority")}</FieldLabel>
+									<Select
+										value={field.state.value}
+										onValueChange={(value) =>
+											value && field.handleChange(value as IssuePriorityName)
+										}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue>
+												{t(`issues.priorities.${field.state.value}`)}
+											</SelectValue>
+										</SelectTrigger>
+										<SelectContent>
+											{ISSUE_PRIORITIES.map(({ name, value }) => (
+												<SelectItem key={name} value={name}>
+													<PriorityBadge value={value} />
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Field>
+							)}
+						</form.Field>
 					</div>
 
-					<Field>
-						<FieldLabel>{t("issues.labels")}</FieldLabel>
-						<MultiSelect
-							placeholder={t("issues.noLabels")}
-							value={form.labelIds}
-							options={labels.map((label) => ({
-								value: label.id,
-								label: label.name,
-							}))}
-							onChange={(next) => update("labelIds", next)}
-						/>
-					</Field>
+					<form.Field name="labelIds">
+						{(field) => (
+							<Field>
+								<FieldLabel>{t("issues.labels")}</FieldLabel>
+								<MultiSelect
+									placeholder={t("issues.noLabels")}
+									value={field.state.value}
+									options={labels.map((label) => ({
+										value: label.id,
+										label: label.name,
+									}))}
+									onChange={field.handleChange}
+								/>
+							</Field>
+						)}
+					</form.Field>
 
-					<Field data-invalid={fieldErrors.estimate ? true : undefined}>
-						<FieldLabel>{t("issues.estimate")}</FieldLabel>
-						<InputGroup>
-							<InputGroupInput
-								type="number"
-								min={0}
-								max={100}
-								step={1}
-								value={form.estimate}
-								onChange={(e) => update("estimate", e.target.value)}
-							/>
-							<InputGroupAddon align="inline-end">
-								<InputGroupText>{t("issues.estimateUnit")}</InputGroupText>
-							</InputGroupAddon>
-						</InputGroup>
-						<FieldDescription>{t("templates.estimateHint")}</FieldDescription>
-						<FieldError>{fieldErrors.estimate}</FieldError>
-					</Field>
+					<form.Field name="estimate">
+						{(field) => (
+							<Field data-invalid={fieldErrors.estimate ? true : undefined}>
+								<FieldLabel>{t("issues.estimate")}</FieldLabel>
+								<InputGroup>
+									<InputGroupInput
+										type="number"
+										min={0}
+										max={100}
+										step={1}
+										value={field.state.value}
+										onChange={(e) => field.handleChange(e.target.value)}
+									/>
+									<InputGroupAddon align="inline-end">
+										<InputGroupText>{t("issues.estimateUnit")}</InputGroupText>
+									</InputGroupAddon>
+								</InputGroup>
+								<FieldDescription>
+									{t("templates.estimateHint")}
+								</FieldDescription>
+								<FieldError>{fieldErrors.estimate}</FieldError>
+							</Field>
+						)}
+					</form.Field>
 
 					{error && <MutationError error={error} />}
 					<DialogFooter>

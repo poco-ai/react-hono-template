@@ -4,6 +4,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "@workspace/ui/globals.css";
+// Installs the zod error map before any form schema runs; must load with i18n.
+import "@/lib/zod-i18n";
 import { ThemeProvider } from "@/components/theme-provider.tsx";
 import { isClientError } from "@/lib/errors";
 import { createAppRouter } from "./router.tsx";

@@ -63,6 +63,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
@@ -75,15 +76,32 @@ import {
 	useSetDefaultStatus,
 } from "@/features/statuses/data";
 import { apiErrorMessage } from "@/lib/errors";
-import {
-	type FieldErrors,
-	fieldErrorsFromZod,
-	focusFirstInvalidField,
-	withoutFieldError,
-} from "@/lib/form";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { useZodForm } from "@/lib/use-zod-form";
 
 const DEFAULT_COLOR = STATUS_CATEGORY_COLORS.backlog;
+
+type StatusFormValues = {
+	name: string;
+	category: StatusCategory;
+	color: string;
+};
+
+const statusFormSchema = z.preprocess((values) => {
+	// Guard non-object input so the wrapper cannot throw a TypeError before zod
+	// gets a chance to report validation issues.
+	if (!values || typeof values !== "object") {
+		return values;
+	}
+	const input = values as StatusFormValues;
+	return {
+		name: input.name.trim(),
+		category: input.category,
+		color: input.color,
+	};
+}, createStatusSchema);
+
+const INPUT_IDS = { name: "status-name" };
 
 export function StatusesSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
@@ -367,19 +385,28 @@ function StatusDialog({
 	}) => void;
 }) {
 	const { t } = useTranslation();
-	const [name, setName] = useState("");
-	const [category, setCategory] = useState<StatusCategory>("backlog");
-	const [color, setColor] = useState(DEFAULT_COLOR);
-	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+	const { form, fieldErrors, handleSubmit, reset } =
+		useZodForm<StatusFormValues>({
+			defaultValues: {
+				name: "",
+				category: "backlog",
+				color: DEFAULT_COLOR,
+			},
+			schema: statusFormSchema,
+			onSubmit,
+			t,
+			inputIds: INPUT_IDS,
+		});
 
 	useEffect(() => {
 		if (open) {
-			setName(status?.name ?? "");
-			setCategory((status?.category as StatusCategory) ?? "backlog");
-			setColor(status?.color ?? DEFAULT_COLOR);
-			setFieldErrors({});
+			reset({
+				name: status?.name ?? "",
+				category: (status?.category as StatusCategory) ?? "backlog",
+				color: status?.color ?? DEFAULT_COLOR,
+			});
 		}
-	}, [open, status]);
+	}, [open, status, reset]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -397,76 +424,78 @@ function StatusDialog({
 				<form
 					noValidate
 					className="flex flex-col gap-4"
-					onSubmit={(event) => {
-						event.preventDefault();
-						const parsed = createStatusSchema.safeParse({
-							name: name.trim(),
-							category,
-							color,
-						});
-						if (!parsed.success) {
-							const errors = fieldErrorsFromZod(parsed.error, t);
-							setFieldErrors(errors);
-							focusFirstInvalidField(errors, { name: "status-name" });
-							return;
-						}
-						onSubmit(parsed.data);
-					}}
+					onSubmit={handleSubmit}
 				>
-					<Field data-invalid={fieldErrors.name ? true : undefined}>
-						<FieldLabel htmlFor="status-name">{t("statuses.name")}</FieldLabel>
-						<Input
-							id="status-name"
-							value={name}
-							placeholder={t("statuses.namePlaceholder")}
-							onChange={(event) => {
-								setName(event.target.value);
-								setFieldErrors((prev) => withoutFieldError(prev, "name"));
-							}}
-							maxLength={30}
-							aria-invalid={fieldErrors.name ? true : undefined}
-							aria-describedby={
-								fieldErrors.name ? "status-name-error" : undefined
-							}
-						/>
-						<FieldError id="status-name-error">{fieldErrors.name}</FieldError>
-					</Field>
-					<Field>
-						<FieldLabel>{t("statuses.category")}</FieldLabel>
-						<Select
-							value={category}
-							onValueChange={(value) => {
-								if (value) {
-									const next = value as StatusCategory;
-									setCategory(next);
-									if (!status) {
-										setColor(STATUS_CATEGORY_COLORS[next]);
+					<form.Field name="name">
+						{(field) => (
+							<Field data-invalid={fieldErrors.name ? true : undefined}>
+								<FieldLabel htmlFor="status-name">
+									{t("statuses.name")}
+								</FieldLabel>
+								<Input
+									id="status-name"
+									value={field.state.value}
+									placeholder={t("statuses.namePlaceholder")}
+									onChange={(event) => field.handleChange(event.target.value)}
+									maxLength={30}
+									aria-invalid={fieldErrors.name ? true : undefined}
+									aria-describedby={
+										fieldErrors.name ? "status-name-error" : undefined
 									}
-								}
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue>
-									{t(`statuses.categories.${category}`)}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								{STATUS_CATEGORIES.map((value) => (
-									<SelectItem key={value} value={value}>
-										{t(`statuses.categories.${value}`)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</Field>
-					<Field>
-						<FieldLabel>{t("statuses.color")}</FieldLabel>
-						<ColorSwatchPicker
-							value={color}
-							onChange={setColor}
-							ariaLabel={t("statuses.color")}
-						/>
-					</Field>
+								/>
+								<FieldError id="status-name-error">
+									{fieldErrors.name}
+								</FieldError>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="category">
+						{(field) => (
+							<Field>
+								<FieldLabel>{t("statuses.category")}</FieldLabel>
+								<Select
+									value={field.state.value}
+									onValueChange={(value) => {
+										if (value) {
+											const next = value as StatusCategory;
+											field.handleChange(next);
+											if (!status) {
+												form.setFieldValue(
+													"color",
+													STATUS_CATEGORY_COLORS[next],
+												);
+											}
+										}
+									}}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue>
+											{t(`statuses.categories.${field.state.value}`)}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{STATUS_CATEGORIES.map((value) => (
+											<SelectItem key={value} value={value}>
+												{t(`statuses.categories.${value}`)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</Field>
+						)}
+					</form.Field>
+					<form.Field name="color">
+						{(field) => (
+							<Field>
+								<FieldLabel>{t("statuses.color")}</FieldLabel>
+								<ColorSwatchPicker
+									value={field.state.value}
+									onChange={field.handleChange}
+									ariaLabel={t("statuses.color")}
+								/>
+							</Field>
+						)}
+					</form.Field>
 					{error && <MutationError error={error} />}
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>

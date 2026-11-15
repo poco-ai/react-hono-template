@@ -1,3 +1,4 @@
+import { createCycleSchema } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,
@@ -10,14 +11,14 @@ import {
 import { Field, FieldError, FieldLabel } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { DateField } from "@/components/date-field";
 import { MutationError } from "@/components/mutation-error";
 import {
 	cycleEndsAtIso,
-	cycleRangeValid,
 	cycleStartsAtIso,
 	nextCycleRange,
 } from "@/features/cycles/cycle-utils";
@@ -27,6 +28,37 @@ import {
 	useUpdateCycle,
 } from "@/features/cycles/data";
 import { toDateInputValue } from "@/lib/format";
+import { useZodForm } from "@/lib/use-zod-form";
+
+type CycleFormValues = { name: string; startsAt: string; endsAt: string };
+
+/**
+ * Date inputs are UTC calendar days: the cycle starts at UTC midnight and ends
+ * at the last millisecond of the end day, matching the API's inclusive end-day
+ * rule. `createCycleSchema` still owns the "end after start" refinement.
+ */
+const cycleFormSchema = z.preprocess((values) => {
+	// Guard non-object input so the wrapper cannot throw a TypeError before zod
+	// gets a chance to report validation issues.
+	if (!values || typeof values !== "object") {
+		return values;
+	}
+	const input = values as CycleFormValues;
+	return {
+		name: input.name.trim(),
+		startsAt: cycleStartsAtIso(input.startsAt),
+		endsAt: cycleEndsAtIso(input.endsAt),
+	};
+}, createCycleSchema);
+
+const INPUT_IDS = { name: "cycle-name" };
+
+/** Both date controls share the range error; the copy matches the old dialog. */
+const PATTERN_KEYS = {
+	name: "cycles.nameRequired",
+	startsAt: "cycles.rangeInvalid",
+	endsAt: "cycles.rangeInvalid",
+};
 
 /** Create/edit dialog for a cycle: name plus a two-date range. */
 export function CycleFormDialog({
@@ -44,70 +76,54 @@ export function CycleFormDialog({
 	cycle?: CycleWithProgressDto;
 }) {
 	const { t } = useTranslation();
-	const [name, setName] = useState("");
-	const [startsAt, setStartsAt] = useState("");
-	const [endsAt, setEndsAt] = useState("");
-	const [nameError, setNameError] = useState<string>();
-	const [rangeError, setRangeError] = useState<string>();
-
 	const createMutation = useCreateCycle(orgId, projectId);
 	const updateMutation = useUpdateCycle(orgId, projectId);
 	const pending = createMutation.isPending || updateMutation.isPending;
 	const error = cycle ? updateMutation.error : createMutation.error;
 	const editing = Boolean(cycle);
 
+	const close = () => onOpenChange(false);
+
+	const { form, fieldErrors, handleSubmit, reset } =
+		useZodForm<CycleFormValues>({
+			defaultValues: { name: "", startsAt: "", endsAt: "" },
+			schema: cycleFormSchema,
+			onSubmit: (input) => {
+				const onSuccess = () => {
+					toast.success(
+						editing ? t("toast.cycleUpdated") : t("toast.cycleCreated"),
+					);
+					close();
+				};
+				if (cycle) {
+					updateMutation.mutate({ cycleId: cycle.id, input }, { onSuccess });
+				} else {
+					createMutation.mutate(input, { onSuccess });
+				}
+			},
+			t,
+			patternKeys: PATTERN_KEYS,
+			inputIds: INPUT_IDS,
+		});
+
 	useEffect(() => {
 		if (!open) {
 			return;
 		}
 		if (cycle) {
-			setName(cycle.name);
-			setStartsAt(toDateInputValue(cycle.startsAt));
-			setEndsAt(toDateInputValue(cycle.endsAt));
+			reset({
+				name: cycle.name,
+				startsAt: toDateInputValue(cycle.startsAt),
+				endsAt: toDateInputValue(cycle.endsAt),
+			});
 		} else {
 			const range = nextCycleRange();
-			setName("");
-			setStartsAt(range.startsAt);
-			setEndsAt(range.endsAt);
+			reset({ name: "", startsAt: range.startsAt, endsAt: range.endsAt });
 		}
-		setNameError(undefined);
-		setRangeError(undefined);
-	}, [open, cycle]);
+	}, [open, cycle, reset]);
 
-	const close = () => onOpenChange(false);
-
-	const submit = () => {
-		const trimmed = name.trim();
-		if (!trimmed) {
-			setNameError(t("cycles.nameRequired"));
-			return;
-		}
-		if (!cycleRangeValid(startsAt, endsAt)) {
-			setRangeError(t("cycles.rangeInvalid"));
-			return;
-		}
-		// Date inputs are UTC calendar days: the cycle starts at UTC midnight and
-		// ends at the last millisecond of the end day, matching the API's
-		// inclusive end-day rule.
-		const startsAtIso = cycleStartsAtIso(startsAt);
-		const endsAtIso = cycleEndsAtIso(endsAt);
-		if (!startsAtIso || !endsAtIso) {
-			setRangeError(t("cycles.rangeInvalid"));
-			return;
-		}
-		const input = { name: trimmed, startsAt: startsAtIso, endsAt: endsAtIso };
-		const onSuccess = () => {
-			toast.success(
-				editing ? t("toast.cycleUpdated") : t("toast.cycleCreated"),
-			);
-			close();
-		};
-		if (cycle) {
-			updateMutation.mutate({ cycleId: cycle.id, input }, { onSuccess });
-		} else {
-			createMutation.mutate(input, { onSuccess });
-		}
-	};
+	// One message under the date grid, like the previous dialog.
+	const rangeError = fieldErrors.startsAt ?? fieldErrors.endsAt;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,52 +141,55 @@ export function CycleFormDialog({
 				<form
 					noValidate
 					className="flex flex-col gap-4"
-					onSubmit={(event) => {
-						event.preventDefault();
-						submit();
-					}}
+					onSubmit={handleSubmit}
 				>
-					<Field data-invalid={nameError ? true : undefined}>
-						<FieldLabel htmlFor="cycle-name">{t("cycles.name")}</FieldLabel>
-						<Input
-							id="cycle-name"
-							value={name}
-							placeholder={t("cycles.namePlaceholder")}
-							aria-invalid={nameError ? true : undefined}
-							onChange={(event) => {
-								setName(event.target.value);
-								setNameError(undefined);
-							}}
-						/>
-						<FieldError>{nameError}</FieldError>
-					</Field>
+					<form.Field name="name">
+						{(field) => (
+							<Field data-invalid={fieldErrors.name ? true : undefined}>
+								<FieldLabel htmlFor="cycle-name">{t("cycles.name")}</FieldLabel>
+								<Input
+									id="cycle-name"
+									value={field.state.value}
+									placeholder={t("cycles.namePlaceholder")}
+									maxLength={100}
+									aria-invalid={fieldErrors.name ? true : undefined}
+									onChange={(event) => field.handleChange(event.target.value)}
+								/>
+								<FieldError>{fieldErrors.name}</FieldError>
+							</Field>
+						)}
+					</form.Field>
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-						<Field data-invalid={rangeError ? true : undefined}>
-							<FieldLabel htmlFor="cycle-start">
-								{t("cycles.startsAt")}
-							</FieldLabel>
-							<DateField
-								id="cycle-start"
-								value={startsAt}
-								invalid={Boolean(rangeError)}
-								onChange={(value) => {
-									setStartsAt(value);
-									setRangeError(undefined);
-								}}
-							/>
-						</Field>
-						<Field data-invalid={rangeError ? true : undefined}>
-							<FieldLabel htmlFor="cycle-end">{t("cycles.endsAt")}</FieldLabel>
-							<DateField
-								id="cycle-end"
-								value={endsAt}
-								invalid={Boolean(rangeError)}
-								onChange={(value) => {
-									setEndsAt(value);
-									setRangeError(undefined);
-								}}
-							/>
-						</Field>
+						<form.Field name="startsAt">
+							{(field) => (
+								<Field data-invalid={rangeError ? true : undefined}>
+									<FieldLabel htmlFor="cycle-start">
+										{t("cycles.startsAt")}
+									</FieldLabel>
+									<DateField
+										id="cycle-start"
+										value={field.state.value}
+										invalid={Boolean(rangeError)}
+										onChange={field.handleChange}
+									/>
+								</Field>
+							)}
+						</form.Field>
+						<form.Field name="endsAt">
+							{(field) => (
+								<Field data-invalid={rangeError ? true : undefined}>
+									<FieldLabel htmlFor="cycle-end">
+										{t("cycles.endsAt")}
+									</FieldLabel>
+									<DateField
+										id="cycle-end"
+										value={field.state.value}
+										invalid={Boolean(rangeError)}
+										onChange={field.handleChange}
+									/>
+								</Field>
+							)}
+						</form.Field>
 					</div>
 					<FieldError>{rangeError}</FieldError>
 					{error && <MutationError error={error} />}
