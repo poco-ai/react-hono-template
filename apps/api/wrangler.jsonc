@@ -66,8 +66,13 @@
 			{
 				"queue": "react-hono-webhooks",
 				"max_batch_size": 10,
-				// Matches WEBHOOK_MAX_ATTEMPTS. `attempts` starts at 1 and includes the current delivery.
-				"max_retries": 2
+				// WEBHOOK_MAX_ATTEMPTS = 3 = 1 initial delivery + max_retries (2).
+				// Cloudflare's `attempts` starts at 1 and includes the current delivery.
+				"max_retries": 2,
+				// Queues owns retries now; the Worker no longer sleeps between attempts.
+				"retry_delay": 5,
+				// Messages that still fail after the final attempt are kept for inspection.
+				"dead_letter_queue": "react-hono-webhooks-dlq"
 			}
 		]
 	},

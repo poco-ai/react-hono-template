@@ -1,4 +1,4 @@
-import { and, count, desc, eq, lt } from "drizzle-orm";
+import { and, count, desc, eq, lt, ne } from "drizzle-orm";
 import { webhookDeliveries } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -86,6 +86,34 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 			)
 			.returning({ id: webhookDeliveries.id });
 		return rows.length;
+	},
+
+	/**
+	 * Atomically claims one queue attempt before the HTTP call.
+	 *
+	 * Returns false when the delivery already succeeded or when this attempt
+	 * number was already claimed (`attempts` is written first), i.e. the
+	 * message is a duplicate caused by at-least-once queue delivery. The
+	 * conditional UPDATE keeps the check-and-set in a single statement so two
+	 * concurrent consumers cannot both POST.
+	 */
+	claimAttempt: async (id: string, attempt: number): Promise<boolean> => {
+		const rows = await db
+			.update(webhookDeliveries)
+			.set({
+				attempts: attempt,
+				status: "pending",
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(webhookDeliveries.id, id),
+					lt(webhookDeliveries.attempts, attempt),
+					ne(webhookDeliveries.status, "success"),
+				),
+			)
+			.returning({ id: webhookDeliveries.id });
+		return rows.length > 0;
 	},
 
 	recordAttempt: async (

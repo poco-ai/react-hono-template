@@ -82,7 +82,9 @@ const installFetch = (status: number) => {
 };
 
 test("retries while attempts are below the max and acks on the last attempt", () => {
+	assert.equal(WEBHOOK_MAX_ATTEMPTS, 3);
 	assert.equal(shouldRetryWebhookDelivery(1), true);
+	assert.equal(shouldRetryWebhookDelivery(2), true);
 	assert.equal(shouldRetryWebhookDelivery(WEBHOOK_MAX_ATTEMPTS), false);
 	assert.equal(shouldRetryWebhookDelivery(WEBHOOK_MAX_ATTEMPTS + 1), false);
 });
@@ -217,6 +219,39 @@ test("queue absent: fallback invokes the background function and does not fetch 
 	}
 });
 
+test("queue absent: a failing delivery posts once and records one failed attempt", async () => {
+	const fetchMock = installFetch(500);
+	const attempts: WebhookDeliveryAttemptPatch[] = [];
+	const tasks: Array<() => Promise<void>> = [];
+	const deliveryDao = {
+		create: async (data: WebhookDeliveryInsert) =>
+			deliveryDto({ id: data.id, payload: data.payload, event: data.event }),
+		recordAttempt: async (id: string, patch: WebhookDeliveryAttemptPatch) => {
+			assert.equal(id.length > 0, true);
+			attempts.push(patch);
+		},
+	} as unknown as WebhookDeliveryDao;
+	try {
+		const service = createWebhookDeliveryService({
+			webhookDao: {} as WebhookDao,
+			deliveryDao,
+			queue: null,
+		});
+		await service.enqueue(hook, "org-1", "ping", { ping: true }, (fn) => {
+			tasks.push(fn);
+		});
+		await tasks[0]?.();
+		// Retries are owned by Queues; the in-process fallback must not sleep
+		// and POST a second time within the request.
+		assert.equal(fetchMock.calls.length, 1);
+		assert.equal(attempts.length, 1);
+		assert.equal(attempts[0]?.status, "failed");
+		assert.equal(attempts[0]?.attempts, 1);
+	} finally {
+		fetchMock.restore();
+	}
+});
+
 const queueConsumer = ({
 	delivery = deliveryDto(),
 	hookRow = storedHook(),
@@ -225,12 +260,29 @@ const queueConsumer = ({
 	hookRow?: WebhookWithSecretDto | null;
 } = {}) => {
 	const attempts: WebhookDeliveryAttemptPatch[] = [];
+	const claims: number[] = [];
 	const deliveryDao = {
 		findByIdUnscoped: async (id: string) =>
 			delivery && delivery.id === id ? delivery : null,
+		// Mirrors the DAO's conditional UPDATE; mutating the in-memory row lets
+		// later messages observe the claim/record results.
+		claimAttempt: async (id: string, attempt: number) => {
+			if (!delivery || delivery.id !== id) return false;
+			if (delivery.status === "success" || delivery.attempts >= attempt) {
+				return false;
+			}
+			claims.push(attempt);
+			delivery.attempts = attempt;
+			delivery.status = "pending";
+			return true;
+		},
 		recordAttempt: async (id: string, patch: WebhookDeliveryAttemptPatch) => {
 			assert.equal(id, delivery?.id);
 			attempts.push(patch);
+			if (delivery) {
+				delivery.attempts = patch.attempts;
+				delivery.status = patch.status;
+			}
 		},
 	} as unknown as WebhookDeliveryDao;
 	const webhookDao = {
@@ -244,7 +296,7 @@ const queueConsumer = ({
 		deliveryDao,
 		queue: null,
 	});
-	return { service, attempts };
+	return { service, attempts, claims };
 };
 
 const messageFor = (attempts: number) => {
@@ -266,10 +318,11 @@ const messageFor = (attempts: number) => {
 
 test("consumer records success and acks a 2xx attempt", async () => {
 	const fetchMock = installFetch(204);
-	const { service, attempts } = queueConsumer();
+	const { service, attempts, claims } = queueConsumer();
 	const { message, calls } = messageFor(1);
 	try {
 		await handleWebhookQueue({ messages: [message] }, service);
+		assert.deepEqual(claims, [1]);
 		assert.equal(attempts.length, 1);
 		assert.equal(attempts[0]?.status, "success");
 		assert.equal(attempts[0]?.responseStatus, 204);
@@ -314,10 +367,11 @@ test("consumer records success and acks a 2xx attempt", async () => {
 
 test("consumer records failed and retries a non-2xx attempt below the max", async () => {
 	const fetchMock = installFetch(500);
-	const { service, attempts } = queueConsumer();
+	const { service, attempts, claims } = queueConsumer();
 	const { message, calls } = messageFor(1);
 	try {
 		await handleWebhookQueue({ messages: [message] }, service);
+		assert.deepEqual(claims, [1]);
 		assert.equal(attempts[0]?.status, "failed");
 		assert.equal(attempts[0]?.responseStatus, 500);
 		assert.equal(attempts[0]?.lastError, "HTTP 500");
@@ -365,6 +419,45 @@ test("consumer acks without fetching when the delivery or webhook is gone", asyn
 		assert.deepEqual(hookMessage.calls, ["ack"]);
 		assert.equal(missingHook.attempts.length, 0);
 		assert.equal(fetchMock.calls.length, 0);
+	} finally {
+		fetchMock.restore();
+	}
+});
+
+test("consumer acks a duplicate without posting when the delivery already succeeded", async () => {
+	const fetchMock = installFetch(200);
+	const { service, attempts, claims } = queueConsumer({
+		delivery: deliveryDto({ status: "success", attempts: 1 }),
+	});
+	// A later queue attempt would still lose the claim because status=success.
+	const { message, calls } = messageFor(2);
+	try {
+		await handleWebhookQueue({ messages: [message] }, service);
+		assert.deepEqual(claims, []);
+		assert.equal(attempts.length, 0);
+		assert.equal(fetchMock.calls.length, 0);
+		assert.deepEqual(calls, ["ack"]);
+	} finally {
+		fetchMock.restore();
+	}
+});
+
+test("consumer delivers a re-delivered message only once", async () => {
+	const fetchMock = installFetch(204);
+	const { service, attempts, claims } = queueConsumer();
+	const first = messageFor(1);
+	const duplicate = messageFor(1);
+	try {
+		await handleWebhookQueue(
+			{ messages: [first.message, duplicate.message] },
+			service,
+		);
+		// The second message loses the claim: no second POST, no retry.
+		assert.deepEqual(claims, [1]);
+		assert.equal(fetchMock.calls.length, 1);
+		assert.equal(attempts.length, 1);
+		assert.deepEqual(first.calls, ["ack"]);
+		assert.deepEqual(duplicate.calls, ["ack"]);
 	} finally {
 		fetchMock.restore();
 	}

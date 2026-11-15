@@ -6,14 +6,14 @@
  * treated as retryable uniqueness races.
  */
 export const isUniqueConstraintViolation = (err: unknown): boolean => {
-	if (!(err instanceof Error)) {
-		return false;
+	const seen = new Set<Error>();
+	let current: unknown = err;
+	while (current instanceof Error && !seen.has(current)) {
+		if (/unique constraint failed/i.test(current.message)) {
+			return true;
+		}
+		seen.add(current);
+		current = (current as { cause?: unknown }).cause;
 	}
-	if (/unique constraint failed/i.test(err.message)) {
-		return true;
-	}
-	const cause = (err as { cause?: unknown }).cause;
-	return (
-		cause !== undefined && cause !== err && isUniqueConstraintViolation(cause)
-	);
+	return false;
 };

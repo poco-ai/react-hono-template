@@ -8,8 +8,10 @@ import {
 } from "../lib/webhook-signature";
 
 const WEBHOOK_TIMEOUT_MS = 5_000;
-export const WEBHOOK_MAX_ATTEMPTS = 2;
-const WEBHOOK_BACKOFF_MS = [500];
+// Mirrors the queue consumer's `max_retries + 1` (Cloudflare starts `attempts`
+// at 1 and includes the current delivery). Retries are owned by Queues; the
+// in-process fallback makes a single attempt.
+export const WEBHOOK_MAX_ATTEMPTS = 3;
 
 export type WebhookJobQueue = {
 	send(message: { deliveryId: string }): Promise<void>;
@@ -21,13 +23,15 @@ export type WebhookTarget = {
 	secret: string;
 };
 
-export type QueuedDeliveryOutcome = "success" | "failed" | "missing";
+export type QueuedDeliveryOutcome =
+	| "success"
+	| "failed"
+	| "missing"
+	| "duplicate";
 
 // `attempts` includes the current delivery and starts at 1.
 export const shouldRetryWebhookDelivery = (attempts: number) =>
 	attempts < WEBHOOK_MAX_ATTEMPTS;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type AttemptResult = {
 	success: boolean;
@@ -95,29 +99,25 @@ export const createWebhookDeliveryService = ({
 	deliveryDao: WebhookDeliveryDao;
 	queue?: WebhookJobQueue | null;
 }) => {
-	const deliverWithRetries = async (
+	/**
+	 * One HTTP attempt for the queue-less path. Retries belong to Queues so a
+	 * slow endpoint cannot stack in-request sleeps on top of queue retries.
+	 */
+	const deliverOnce = async (
 		deliveryId: string,
 		url: string,
 		secret: string,
 		event: string,
 		payload: string,
 	) => {
-		for (let attempt = 1; attempt <= WEBHOOK_MAX_ATTEMPTS; attempt++) {
-			const result = await postWebhook(deliveryId, url, secret, event, payload);
-			await deliveryDao.recordAttempt(deliveryId, {
-				attempts: attempt,
-				status: result.success ? "success" : "failed",
-				responseStatus: result.responseStatus,
-				lastError: result.lastError,
-				lastAttemptAt: new Date(),
-			});
-			if (result.success) {
-				return;
-			}
-			if (attempt < WEBHOOK_MAX_ATTEMPTS) {
-				await sleep(WEBHOOK_BACKOFF_MS[attempt - 1]);
-			}
-		}
+		const result = await postWebhook(deliveryId, url, secret, event, payload);
+		await deliveryDao.recordAttempt(deliveryId, {
+			attempts: 1,
+			status: result.success ? "success" : "failed",
+			responseStatus: result.responseStatus,
+			lastError: result.lastError,
+			lastAttemptAt: new Date(),
+		});
 	};
 
 	const runInBackground = (
@@ -149,7 +149,7 @@ export const createWebhookDeliveryService = ({
 		}
 		runInBackground(
 			() =>
-				deliverWithRetries(
+				deliverOnce(
 					deliveryId,
 					target.url,
 					target.secret,
@@ -241,6 +241,14 @@ export const createWebhookDeliveryService = ({
 			);
 			if (!hook) {
 				return "missing";
+			}
+			// At-least-once delivery: claim this attempt atomically before the
+			// POST. A message re-delivered after an ack was lost, or a duplicate
+			// of an already-successful delivery, loses the claim and is acked
+			// without contacting the customer endpoint again.
+			const claimed = await deliveryDao.claimAttempt(delivery.id, attempts);
+			if (!claimed) {
+				return "duplicate";
 			}
 			const result = await postWebhook(
 				delivery.id,

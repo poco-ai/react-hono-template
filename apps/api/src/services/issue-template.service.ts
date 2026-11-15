@@ -9,6 +9,7 @@ import type { LabelDao } from "../dao/label.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { StatusDao } from "../dao/status.dao";
 import type { IssueTemplateDto } from "../dto/issue-template.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 
 const MAX_TEMPLATE_LABELS = 20;
 
@@ -22,9 +23,6 @@ type TemplatePatch = Partial<{
 	labelIds: string[];
 	estimate: number | null;
 }>;
-
-const isUniqueViolation = (err: unknown) =>
-	err instanceof Error && /unique constraint/i.test(err.message);
 
 const nameTaken = (name: string) =>
 	new ApiError(
@@ -170,7 +168,7 @@ export const createIssueTemplateService = ({
 				});
 			} catch (err) {
 				// Concurrent creates can still race past the name check.
-				if (isUniqueViolation(err)) {
+				if (isUniqueConstraintViolation(err)) {
 					throw nameTaken(input.name);
 				}
 				throw err;
@@ -215,7 +213,7 @@ export const createIssueTemplateService = ({
 				}
 				return updated;
 			} catch (err) {
-				if (isUniqueViolation(err)) {
+				if (isUniqueConstraintViolation(err)) {
 					throw nameTaken(name);
 				}
 				throw err;

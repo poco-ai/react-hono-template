@@ -7,6 +7,7 @@ import {
 import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 import type { PlanService } from "./plan.service";
 
 export const createProjectService = ({
@@ -68,7 +69,7 @@ export const createProjectService = ({
 				color: input.color ?? null,
 			});
 		} catch (err) {
-			if (err instanceof Error && /unique constraint/i.test(err.message)) {
+			if (isUniqueConstraintViolation(err)) {
 				throw new ApiError(
 					ApiErrorCode.PROJECT_KEY_TAKEN,
 					`Project key "${input.key}" is already used in this organization`,
@@ -132,7 +133,7 @@ export const createProjectService = ({
 			}
 			return updated;
 		} catch (err) {
-			if (err instanceof Error && /unique constraint/i.test(err.message)) {
+			if (isUniqueConstraintViolation(err)) {
 				throw new ApiError(
 					ApiErrorCode.PROJECT_KEY_TAKEN,
 					`Project key "${input.key}" is already used in this organization`,

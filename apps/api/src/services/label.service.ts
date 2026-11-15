@@ -6,6 +6,7 @@ import {
 } from "@workspace/shared";
 import type { LabelDao } from "../dao/label.dao";
 import type { LabelDto } from "../dto/label.dto";
+import { isUniqueConstraintViolation } from "../lib/db-errors";
 import type { CacheStore } from "../lib/kv/types";
 
 export const labelsCacheKey = (orgId: string) =>
@@ -63,7 +64,7 @@ export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
 				color: input.color,
 			});
 		} catch (err) {
-			if (err instanceof Error && /unique constraint/i.test(err.message)) {
+			if (isUniqueConstraintViolation(err)) {
 				throw new ApiError(
 					ApiErrorCode.LABEL_NAME_TAKEN,
 					`Label name "${input.name}" is already used in this organization`,

@@ -20,6 +20,9 @@ export const handleWebhookQueue = async (
 				message.body.deliveryId,
 				message.attempts,
 			);
+			// "success", "missing" and "duplicate" are terminal; only a failed
+			// attempt below the max is retried. A duplicate already shipped or
+			// was claimed by another message, so retrying would double-deliver.
 			if (
 				outcome === "failed" &&
 				shouldRetryWebhookDelivery(message.attempts)
