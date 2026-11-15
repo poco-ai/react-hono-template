@@ -36,39 +36,29 @@ import type { Database } from "../db/types";
  * are always bound parameters.
  */
 
-const TEXT_FIELDS = new Set<IssueFilterField>([
-	"statusId",
-	"assigneeId",
-	"createdById",
-	"projectId",
-	"cycleId",
-]);
+type FieldKind = "text" | "number" | "date" | "label";
 
-const NUMBER_FIELDS = new Set<IssueFilterField>(["priority", "estimate"]);
-
-const DATE_FIELDS = new Set<IssueFilterField>([
-	"dueDate",
-	"createdAt",
-	"updatedAt",
-]);
-
-const TEXT_COLUMNS: Partial<Record<IssueFilterField, AnySQLiteColumn>> = {
-	statusId: issues.statusId,
-	assigneeId: issues.assigneeId,
-	createdById: issues.createdById,
-	projectId: issues.projectId,
-	cycleId: issues.cycleId,
+type FieldSpec = {
+	kind: FieldKind;
+	column?: AnySQLiteColumn;
 };
 
-const NUMBER_COLUMNS: Partial<Record<IssueFilterField, AnySQLiteColumn>> = {
-	priority: issues.priority,
-	estimate: issues.estimate,
-};
-
-const DATE_COLUMNS: Partial<Record<IssueFilterField, AnySQLiteColumn>> = {
-	dueDate: issues.dueDate,
-	createdAt: issues.createdAt,
-	updatedAt: issues.updatedAt,
+/**
+ * Single source of truth for which compiler handles a filter field. Label
+ * filters join through `issue_labels`, so they carry no column of their own.
+ */
+const FIELD_SPEC: Record<IssueFilterField, FieldSpec> = {
+	statusId: { kind: "text", column: issues.statusId },
+	priority: { kind: "number", column: issues.priority },
+	assigneeId: { kind: "text", column: issues.assigneeId },
+	createdById: { kind: "text", column: issues.createdById },
+	labelId: { kind: "label" },
+	projectId: { kind: "text", column: issues.projectId },
+	cycleId: { kind: "text", column: issues.cycleId },
+	dueDate: { kind: "date", column: issues.dueDate },
+	createdAt: { kind: "date", column: issues.createdAt },
+	updatedAt: { kind: "date", column: issues.updatedAt },
+	estimate: { kind: "number", column: issues.estimate },
 };
 
 /**
@@ -323,22 +313,27 @@ const compileCondition = (
 	node: Extract<IssueFilterNode, { type: "condition" }>,
 ): SQL | undefined => {
 	const { field, operator, value } = node;
-	if (field === "labelId") {
+	const spec = FIELD_SPEC[field] as FieldSpec | undefined;
+	if (!spec) {
+		return undefined;
+	}
+	const { kind, column } = spec;
+	if (kind === "label") {
 		return compileLabelCondition(db, operator, value);
 	}
-	if (DATE_FIELDS.has(field)) {
-		const column = DATE_COLUMNS[field];
-		return column ? compileDateCondition(column, operator, value) : undefined;
+	if (!column) {
+		return undefined;
 	}
-	if (NUMBER_FIELDS.has(field)) {
-		const column = NUMBER_COLUMNS[field];
-		return column ? compileNumberCondition(column, operator, value) : undefined;
+	switch (kind) {
+		case "date":
+			return compileDateCondition(column, operator, value);
+		case "number":
+			return compileNumberCondition(column, operator, value);
+		case "text":
+			return compileTextCondition(column, operator, value);
+		default:
+			return undefined;
 	}
-	if (TEXT_FIELDS.has(field)) {
-		const column = TEXT_COLUMNS[field];
-		return column ? compileTextCondition(column, operator, value) : undefined;
-	}
-	return undefined;
 };
 
 /** Compiles a validated filter tree; groups with no usable leaf return undefined. */

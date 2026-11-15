@@ -54,7 +54,7 @@ export const createCleanupService = ({
 		cleanup: async (now = new Date()) => {
 			const olderThan = new Date(now.getTime() - ABANDONED_DELIVERY_AGE_MS);
 			const expiredInvitations = await memberDao.deleteExpiredPending(now);
-			const failedDeliveries = await deliveryDao.failNeverAttempted(
+			const failedDeliveries = await deliveryDao.failAbandoned(
 				olderThan,
 				now,
 				ABANDONED_DELIVERY_ERROR,

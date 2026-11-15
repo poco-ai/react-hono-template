@@ -110,6 +110,11 @@ export const createWebhookDeliveryService = ({
 		event: string,
 		payload: string,
 	) => {
+		// The queue send may have committed even though it threw; claiming here
+		// makes the in-process fallback and the consumer mutually exclusive.
+		if (!(await deliveryDao.claimAttempt(deliveryId, 1))) {
+			return;
+		}
 		const result = await postWebhook(deliveryId, url, secret, event, payload);
 		await deliveryDao.recordAttempt(deliveryId, {
 			attempts: 1,

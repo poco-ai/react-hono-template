@@ -65,7 +65,12 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 		return row ? toDeliveryDto(row) : null;
 	},
 
-	failNeverAttempted: async (
+	/**
+	 * Fails pending deliveries that stopped making progress. `updatedAt` moves
+	 * on every claim/attempt, so a queue retry in flight is never swept up,
+	 * while a crash between claim and POST is reclaimed after the timeout.
+	 */
+	failAbandoned: async (
 		olderThan: Date,
 		now: Date,
 		lastError: string,
@@ -80,8 +85,7 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 			.where(
 				and(
 					eq(webhookDeliveries.status, "pending"),
-					eq(webhookDeliveries.attempts, 0),
-					lt(webhookDeliveries.createdAt, olderThan),
+					lt(webhookDeliveries.updatedAt, olderThan),
 				),
 			)
 			.returning({ id: webhookDeliveries.id });

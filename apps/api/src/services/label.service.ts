@@ -7,14 +7,21 @@ import {
 import type { LabelDao } from "../dao/label.dao";
 import type { LabelDto } from "../dto/label.dto";
 import { isUniqueConstraintViolation } from "../lib/db-errors";
+import { createResourceCache } from "../lib/kv/resource-cache";
 import type { CacheStore } from "../lib/kv/types";
 
+const LABELS_KEY_PREFIX = "cache:v1:labels:";
+
 export const labelsCacheKey = (orgId: string) =>
-	`cache:v1:labels:${encodeURIComponent(orgId)}`;
+	`${LABELS_KEY_PREFIX}${encodeURIComponent(orgId)}`;
+
+const orgIdFromLabelsKey = (key: string) =>
+	decodeURIComponent(key.slice(LABELS_KEY_PREFIX.length));
 
 // Label writes invalidate explicitly; the long TTL is only a fallback that
 // keeps KV writes well inside the free-tier daily quota.
 const LABELS_KV_TTL_SECONDS = 3600;
+const LABELS_KV_CACHE_TTL_SECONDS = 30;
 
 const isCachedLabelList = (value: unknown): value is LabelDto[] =>
 	Array.isArray(value) &&
@@ -41,88 +48,89 @@ const assertNameAvailable = async (
 	}
 };
 
-export const createLabelService = (dao: LabelDao, cache: CacheStore) => ({
-	listLabels: async (orgId: string) => {
-		const key = labelsCacheKey(orgId);
-		const cached = await cache.get<unknown>(key, { cacheTtl: 30 });
-		if (isCachedLabelList(cached)) {
-			return cached;
-		}
-		const labels = await dao.listByOrg(orgId);
-		await cache.set(key, labels, { ttlSeconds: LABELS_KV_TTL_SECONDS });
-		return labels;
-	},
+export const createLabelService = (dao: LabelDao, cache: CacheStore) => {
+	const labels = createResourceCache<LabelDto[]>({
+		cache,
+		ttlSeconds: LABELS_KV_TTL_SECONDS,
+		cacheTtlSeconds: LABELS_KV_CACHE_TTL_SECONDS,
+		parse: (stored) => (isCachedLabelList(stored) ? stored : null),
+		load: (key) => dao.listByOrg(orgIdFromLabelsKey(key)),
+	});
 
-	createLabel: async (orgId: string, input: CreateLabelInput) => {
-		await assertNameAvailable(dao, orgId, input.name);
-		let created: LabelDto;
-		try {
-			created = await dao.create({
-				id: crypto.randomUUID(),
-				orgId,
+	return {
+		listLabels: async (orgId: string) => labels.get(labelsCacheKey(orgId)),
+
+		createLabel: async (orgId: string, input: CreateLabelInput) => {
+			await assertNameAvailable(dao, orgId, input.name);
+			let created: LabelDto;
+			try {
+				created = await dao.create({
+					id: crypto.randomUUID(),
+					orgId,
+					name: input.name,
+					color: input.color,
+				});
+			} catch (err) {
+				if (isUniqueConstraintViolation(err)) {
+					throw new ApiError(
+						ApiErrorCode.LABEL_NAME_TAKEN,
+						`Label name "${input.name}" is already used in this organization`,
+					);
+				}
+				throw err;
+			}
+			await labels.invalidate(labelsCacheKey(orgId));
+			return created;
+		},
+
+		updateLabel: async (
+			orgId: string,
+			labelId: string,
+			input: UpdateLabelInput,
+		): Promise<LabelDto> => {
+			const label = await dao.findById(orgId, labelId);
+			if (!label) {
+				throw new ApiError(
+					ApiErrorCode.LABEL_NOT_FOUND,
+					`Label ${labelId} not found`,
+				);
+			}
+			if (input.name && input.name !== label.name) {
+				await assertNameAvailable(dao, orgId, input.name, label.id);
+			}
+			const updated = await dao.update(orgId, labelId, {
 				name: input.name,
 				color: input.color,
 			});
-		} catch (err) {
-			if (isUniqueConstraintViolation(err)) {
+			if (!updated) {
 				throw new ApiError(
-					ApiErrorCode.LABEL_NAME_TAKEN,
-					`Label name "${input.name}" is already used in this organization`,
+					ApiErrorCode.LABEL_NOT_FOUND,
+					`Label ${labelId} not found`,
 				);
 			}
-			throw err;
-		}
-		await cache.delete(labelsCacheKey(orgId));
-		return created;
-	},
+			await labels.invalidate(labelsCacheKey(orgId));
+			return updated;
+		},
 
-	updateLabel: async (
-		orgId: string,
-		labelId: string,
-		input: UpdateLabelInput,
-	): Promise<LabelDto> => {
-		const label = await dao.findById(orgId, labelId);
-		if (!label) {
-			throw new ApiError(
-				ApiErrorCode.LABEL_NOT_FOUND,
-				`Label ${labelId} not found`,
-			);
-		}
-		if (input.name && input.name !== label.name) {
-			await assertNameAvailable(dao, orgId, input.name, label.id);
-		}
-		const updated = await dao.update(orgId, labelId, {
-			name: input.name,
-			color: input.color,
-		});
-		if (!updated) {
-			throw new ApiError(
-				ApiErrorCode.LABEL_NOT_FOUND,
-				`Label ${labelId} not found`,
-			);
-		}
-		await cache.delete(labelsCacheKey(orgId));
-		return updated;
-	},
-
-	deleteLabel: async (orgId: string, labelId: string) => {
-		const label = await dao.findById(orgId, labelId);
-		if (!label) {
-			throw new ApiError(
-				ApiErrorCode.LABEL_NOT_FOUND,
-				`Label ${labelId} not found`,
-			);
-		}
-		const references = await dao.countIssueReferences(orgId, labelId);
-		if (references > 0) {
-			throw new ApiError(
-				ApiErrorCode.LABEL_IN_USE,
-				`Label "${label.name}" is used by ${references} issue(s)`,
-			);
-		}
-		await dao.delete(orgId, labelId);
-		await cache.delete(labelsCacheKey(orgId));
-	},
-});
+		deleteLabel: async (orgId: string, labelId: string) => {
+			const label = await dao.findById(orgId, labelId);
+			if (!label) {
+				throw new ApiError(
+					ApiErrorCode.LABEL_NOT_FOUND,
+					`Label ${labelId} not found`,
+				);
+			}
+			const references = await dao.countIssueReferences(orgId, labelId);
+			if (references > 0) {
+				throw new ApiError(
+					ApiErrorCode.LABEL_IN_USE,
+					`Label "${label.name}" is used by ${references} issue(s)`,
+				);
+			}
+			await dao.delete(orgId, labelId);
+			await labels.invalidate(labelsCacheKey(orgId));
+		},
+	};
+};
 
 export type LabelService = ReturnType<typeof createLabelService>;

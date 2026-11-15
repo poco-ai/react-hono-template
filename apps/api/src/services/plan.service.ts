@@ -6,6 +6,7 @@ import {
 	type PlanName,
 } from "@workspace/shared";
 import type { BillingDao } from "../dao/billing.dao";
+import { createResourceCache } from "../lib/kv/resource-cache";
 import type { CacheStore } from "../lib/kv/types";
 
 const PLAN_CACHE_TTL_MS = 60_000;
@@ -13,11 +14,7 @@ const PLAN_CACHE_TTL_MS = 60_000;
 // keeps KV writes well inside the free-tier daily quota.
 const PLAN_KV_TTL_SECONDS = 3600;
 const PLAN_KV_CACHE_TTL_SECONDS = 30;
-
-type PlanCacheEntry = {
-	plan: PlanName;
-	fetchedAt: number;
-};
+const PLAN_KEY_PREFIX = "cache:v1:plan:";
 
 /** Count quotas mirrored from `PLANS`; a `-1` limit means unlimited. */
 export type QuotaKind =
@@ -33,7 +30,10 @@ const isPlanName = (value: unknown): value is PlanName =>
 	value === "free" || value === "pro";
 
 export const planCacheKey = (orgId: string) =>
-	`cache:v1:plan:${encodeURIComponent(orgId)}`;
+	`${PLAN_KEY_PREFIX}${encodeURIComponent(orgId)}`;
+
+const orgIdFromPlanKey = (key: string) =>
+	decodeURIComponent(key.slice(PLAN_KEY_PREFIX.length));
 
 export type PlanService = {
 	getPlanForOrg: (orgId: string) => Promise<PlanName>;
@@ -101,37 +101,22 @@ export const createPlanService = (
 	billingDao: BillingDao,
 	cache: CacheStore,
 ): PlanService => {
-	// Per-instance state: the cache must be invalidated through the injected service.
-	const planCache = new Map<string, PlanCacheEntry>();
+	// The resource cache owns the short-lived L1 map; billing changes must be
+	// invalidated through this service instance.
+	const plans = createResourceCache<PlanName>({
+		cache,
+		l1TtlMs: PLAN_CACHE_TTL_MS,
+		ttlSeconds: PLAN_KV_TTL_SECONDS,
+		cacheTtlSeconds: PLAN_KV_CACHE_TTL_SECONDS,
+		parse: (stored) => (isPlanName(stored) ? stored : null),
+		load: async (key) => {
+			const subscription = await billingDao.findByOrg(orgIdFromPlanKey(key));
+			return subscription.plan === "pro" ? "pro" : "free";
+		},
+	});
 
-	const remember = (orgId: string, plan: PlanName) => {
-		planCache.set(orgId, { plan, fetchedAt: Date.now() });
-	};
-
-	const fetchPlan = async (orgId: string): Promise<PlanName> => {
-		const subscription = await billingDao.findByOrg(orgId);
-		const plan = subscription.plan === "pro" ? "pro" : "free";
-		remember(orgId, plan);
-		await cache.set(planCacheKey(orgId), plan, {
-			ttlSeconds: PLAN_KV_TTL_SECONDS,
-		});
-		return plan;
-	};
-
-	const getPlanForOrg = async (orgId: string): Promise<PlanName> => {
-		const cached = planCache.get(orgId);
-		if (cached && Date.now() - cached.fetchedAt < PLAN_CACHE_TTL_MS) {
-			return cached.plan;
-		}
-		const stored = await cache.get<unknown>(planCacheKey(orgId), {
-			cacheTtl: PLAN_KV_CACHE_TTL_SECONDS,
-		});
-		if (isPlanName(stored)) {
-			remember(orgId, stored);
-			return stored;
-		}
-		return fetchPlan(orgId);
-	};
+	const getPlanForOrg = (orgId: string): Promise<PlanName> =>
+		plans.get(planCacheKey(orgId));
 
 	return {
 		getPlanForOrg,
@@ -141,8 +126,7 @@ export const createPlanService = (
 			quotaAssertFor(await getPlanForOrg(orgId))(kind, count, options),
 
 		invalidatePlanCache: async (orgId) => {
-			planCache.delete(orgId);
-			await cache.delete(planCacheKey(orgId));
+			await plans.invalidate(planCacheKey(orgId));
 		},
 	};
 };

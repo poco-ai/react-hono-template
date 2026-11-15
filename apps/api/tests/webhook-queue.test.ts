@@ -194,6 +194,7 @@ test("queue absent: fallback invokes the background function and does not fetch 
 	const deliveryDao = {
 		create: async (data: WebhookDeliveryInsert) =>
 			deliveryDto({ id: data.id, payload: data.payload, event: data.event }),
+		claimAttempt: async () => true,
 		recordAttempt: async (id: string, patch: WebhookDeliveryAttemptPatch) => {
 			assert.equal(id.length > 0, true);
 			attempts.push(patch);
@@ -226,6 +227,7 @@ test("queue absent: a failing delivery posts once and records one failed attempt
 	const deliveryDao = {
 		create: async (data: WebhookDeliveryInsert) =>
 			deliveryDto({ id: data.id, payload: data.payload, event: data.event }),
+		claimAttempt: async () => true,
 		recordAttempt: async (id: string, patch: WebhookDeliveryAttemptPatch) => {
 			assert.equal(id.length > 0, true);
 			attempts.push(patch);

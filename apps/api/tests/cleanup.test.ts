@@ -103,7 +103,7 @@ test("cleanup deletes expired pending invitations and fails never-attempted stal
 	} as unknown as MemberDao;
 
 	const deliveryDao = {
-		failNeverAttempted: async (
+		failAbandoned: async (
 			olderThan: Date,
 			attemptedAt: Date,
 			lastError: string,
@@ -245,7 +245,7 @@ test("cleanup applies 30/90-day notification retention in bounded batches", asyn
 			deleteExpiredPending: async () => 0,
 		} as unknown as MemberDao,
 		deliveryDao: {
-			failNeverAttempted: async () => 0,
+			failAbandoned: async () => 0,
 		} as unknown as WebhookDeliveryDao,
 		notificationDao: {
 			deleteOlderThan: async (args) => {
@@ -286,7 +286,7 @@ test("cleanup removes expired pending objects but keeps registered ones", async 
 			deleteExpiredPending: async () => 0,
 		} as unknown as MemberDao,
 		deliveryDao: {
-			failNeverAttempted: async () => 0,
+			failAbandoned: async () => 0,
 		} as unknown as WebhookDeliveryDao,
 		pendingUploadDao: {
 			findExpired: async (asOf: Date) =>
@@ -351,7 +351,7 @@ test("superseded avatars and logos are deleted after the one-day grace period", 
 			deleteExpiredPending: async () => 0,
 		} as unknown as MemberDao,
 		deliveryDao: {
-			failNeverAttempted: async () => 0,
+			failAbandoned: async () => 0,
 		} as unknown as WebhookDeliveryDao,
 		mediaAssetDao: {
 			findSupersededBefore: async (before: Date) =>
