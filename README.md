@@ -75,6 +75,7 @@ docs               部署、环境变量、架构和生产说明
 | --- | --- |
 | `bun run dev` | 同时启动 API（:8787）和 Web（:5173） |
 | `bun run test` | API 与 Web 回归测试 |
+| `bun run check` | Biome CI（格式 + lint + assist，只读） |
 | `bun run lint` | Biome 检查 |
 | `bun run typecheck` | 全仓类型检查 |
 | `bun run build` | 构建 Web |

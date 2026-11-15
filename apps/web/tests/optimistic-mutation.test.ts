@@ -6,7 +6,6 @@ import {
 	normalizeOptimisticPatches,
 	optimisticPatch,
 	rollbackOptimisticPatches,
-	shouldRollback,
 } from "../src/lib/optimistic";
 
 test("multi-key patches snapshot every key and roll back all of them", async () => {
@@ -58,27 +57,6 @@ test("normalizeOptimisticPatches accepts a single patch or a list", () => {
 	const patch = optimisticPatch<number>(["optimistic-single"], (old) => old);
 	assert.deepEqual(normalizeOptimisticPatches(patch), [patch]);
 	assert.deepEqual(normalizeOptimisticPatches([patch, patch]), [patch, patch]);
-});
-
-test("shouldRollback defaults to rolling back and honours overrides", () => {
-	const error = new Error("failed");
-
-	assert.equal(shouldRollback(undefined, error, "id"), true);
-	assert.equal(shouldRollback(false, error, "id"), false);
-	assert.equal(shouldRollback(true, error, "id"), true);
-	assert.equal(
-		shouldRollback(
-			(cause: Error, variables: string) =>
-				cause.message === "failed" && variables === "id",
-			error,
-			"id",
-		),
-		true,
-	);
-	assert.equal(
-		shouldRollback(() => false, error, "id"),
-		false,
-	);
 });
 
 test("rollback tolerates a missing onMutate result", () => {

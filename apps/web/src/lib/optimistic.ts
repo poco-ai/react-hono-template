@@ -16,15 +16,6 @@ export type OptimisticPatches =
 export type OptimisticSnapshot = { queryKey: QueryKey; previous: unknown };
 
 /**
- * Error policy for an optimistic mutation: `true` (default) rolls every
- * patched key back, `false` keeps the optimistic result (partial success), and
- * a predicate decides per error.
- */
-export type OptimisticRollbackPolicy<TVariables> =
-	| boolean
-	| ((error: Error, variables: TVariables) => boolean);
-
-/**
  * Typed patch builder. `update` receives the value currently cached under
  * `queryKey` (possibly `undefined`) and returns the optimistic replacement;
  * returning the argument unchanged is a no-op.
@@ -74,16 +65,4 @@ export function rollbackOptimisticPatches(
 			client.setQueryData(queryKey, previous);
 		}
 	}
-}
-
-/** Resolves the mutation's rollback policy for one failure. */
-export function shouldRollback<TVariables>(
-	policy: OptimisticRollbackPolicy<TVariables> | undefined,
-	error: Error,
-	variables: TVariables,
-): boolean {
-	if (typeof policy === "function") {
-		return policy(error, variables);
-	}
-	return policy ?? true;
 }

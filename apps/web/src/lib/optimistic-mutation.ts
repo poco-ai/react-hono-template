@@ -8,10 +8,8 @@ import {
 	applyOptimisticPatches,
 	normalizeOptimisticPatches,
 	type OptimisticPatches,
-	type OptimisticRollbackPolicy,
 	type OptimisticSnapshot,
 	rollbackOptimisticPatches,
-	shouldRollback,
 } from "@/lib/optimistic";
 
 /**
@@ -26,14 +24,13 @@ export type OptimisticMutationCallbacks<TData, TVariables> = Omit<
 /**
  * Mutation with the shared optimistic lifecycle: `onMutate` cancels in-flight
  * refetches, snapshots and patches every requested key; `onError` rolls the
- * snapshots back unless `rollbackOnError` opts out (bulk partial success);
- * `onSettled` runs the feature's `invalidate` before the caller's callbacks.
+ * snapshots back; `onSettled` runs the feature's `invalidate` before the
+ * caller's callbacks.
  */
 export function useOptimisticMutation<TData, TVariables = void>({
 	mutationFn,
 	optimistic,
 	invalidate,
-	rollbackOnError,
 	callbacks,
 }: {
 	mutationFn: (variables: TVariables) => Promise<TData>;
@@ -43,7 +40,6 @@ export function useOptimisticMutation<TData, TVariables = void>({
 		variables: TVariables,
 		data: TData | undefined,
 	) => unknown;
-	rollbackOnError?: OptimisticRollbackPolicy<TVariables>;
 	callbacks?: OptimisticMutationCallbacks<TData, TVariables>;
 }) {
 	const queryClient = useQueryClient();
@@ -61,9 +57,7 @@ export function useOptimisticMutation<TData, TVariables = void>({
 			);
 		},
 		onError: (error, variables, snapshots, context) => {
-			if (shouldRollback(rollbackOnError, error, variables)) {
-				rollbackOptimisticPatches(queryClient, snapshots);
-			}
+			rollbackOptimisticPatches(queryClient, snapshots);
 			return callbacks?.onError?.(error, variables, snapshots, context);
 		},
 		onSuccess: (data, variables, snapshots, context) =>
