@@ -5,93 +5,101 @@ import type {
 	ResolveCommentInput,
 	UpdateCommentInput,
 } from "@workspace/shared";
-import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
-import {
-	requireIssueNumber,
-	requireParam,
-	requireProjectId,
-} from "../lib/params";
+import type { CommentParams, IssueParams, ParamContext } from "../lib/params";
 import { ok } from "../lib/response";
-import type { SessionEnv } from "../middleware/auth";
-import type { OrgEnv } from "../middleware/org";
 import type { CommentService } from "../services/comment.service";
 
-type Env = SessionEnv & OrgEnv;
-
 export const createCommentController = (service: CommentService) => ({
-	list: async (c: Context<Env>, query: CommentListQuery) =>
-		ok(
+	list: async (c: ParamContext<IssueParams>, query: CommentListQuery) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.listComments(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				query,
 				c.get("session").user.id,
 			),
-		),
+		);
+	},
 
-	create: async (c: Context<Env>, input: CreateCommentInput) =>
-		ok(
+	create: async (c: ParamContext<IssueParams>, input: CreateCommentInput) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.createComment(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				input,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 
-	update: async (c: Context<Env>, input: UpdateCommentInput) =>
-		ok(
+	update: async (c: ParamContext<CommentParams>, input: UpdateCommentInput) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.updateComment(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
 				c.get("session").user.id,
 				input,
 			),
-		),
+		);
+	},
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<CommentParams>) => {
+		const params = c.req.valid("param");
 		await service.deleteComment(
 			c.get("orgMember").orgId,
-			requireProjectId(c),
-			requireIssueNumber(c),
-			requireParam(c, "commentId"),
+			params.projectId,
+			params.number,
+			params.commentId,
 			c.get("session").user.id,
 		);
 		return ok(c, { deleted: true });
 	},
 
-	resolve: async (c: Context<Env>, input: ResolveCommentInput) =>
-		ok(
+	resolve: async (
+		c: ParamContext<CommentParams>,
+		input: ResolveCommentInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.resolveComment(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
 				c.get("session").user.id,
 				input.resolved,
 			),
-		),
+		);
+	},
 
-	react: async (c: Context<Env>, input: CommentReactionInput) =>
-		ok(
+	react: async (
+		c: ParamContext<CommentParams>,
+		input: CommentReactionInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.toggleReaction(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
 				c.get("session").user.id,
 				input,
 			),
-		),
+		);
+	},
 });

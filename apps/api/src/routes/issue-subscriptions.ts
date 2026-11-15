@@ -1,6 +1,7 @@
 import { updateIssueSubscriptionSchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createIssueSubscriptionController } from "../controllers/issue-subscription.controller";
+import { issueParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -13,10 +14,12 @@ export const createIssueSubscriptionsRoutes = (
 	return new Hono<SessionEnv & OrgEnv>()
 		.get(
 			"/api/orgs/:orgId/projects/:projectId/issues/:number/subscription",
+			validate(issueParams, "param"),
 			(c) => controller.get(c),
 		)
 		.put(
 			"/api/orgs/:orgId/projects/:projectId/issues/:number/subscription",
+			validate(issueParams, "param"),
 			validate(updateIssueSubscriptionSchema, "json"),
 			(c) => controller.update(c, c.req.valid("json")),
 		);

@@ -4,7 +4,7 @@ import type {
 	ViewListQuery,
 } from "@workspace/shared";
 import type { Context } from "hono";
-import { requireParam } from "../lib/params";
+import type { ParamContext, ViewParams } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -34,44 +34,44 @@ export const createViewController = (service: ViewService) => ({
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateViewInput) =>
+	update: async (c: ParamContext<ViewParams>, input: UpdateViewInput) =>
 		ok(
 			c,
 			await service.updateView(
 				c.get("orgMember").orgId,
 				c.get("session").user.id,
 				c.get("orgMember").role,
-				requireParam(c, "viewId"),
+				c.req.valid("param").viewId,
 				input,
 			),
 		),
 
-	setDefault: async (c: Context<Env>, isDefault: boolean) =>
+	setDefault: async (c: ParamContext<ViewParams>, isDefault: boolean) =>
 		ok(
 			c,
 			await service.setDefaultView(
 				c.get("orgMember").orgId,
 				c.get("session").user.id,
-				requireParam(c, "viewId"),
+				c.req.valid("param").viewId,
 				isDefault,
 			),
 		),
 
-	clearDefault: async (c: Context<Env>) => {
+	clearDefault: async (c: ParamContext<ViewParams>) => {
 		await service.clearDefaultView(
 			c.get("orgMember").orgId,
 			c.get("session").user.id,
-			requireParam(c, "viewId"),
+			c.req.valid("param").viewId,
 		);
 		return ok(c, { cleared: true });
 	},
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<ViewParams>) => {
 		await service.deleteView(
 			c.get("orgMember").orgId,
 			c.get("session").user.id,
 			c.get("orgMember").role,
-			requireParam(c, "viewId"),
+			c.req.valid("param").viewId,
 		);
 		return ok(c, { deleted: true });
 	},

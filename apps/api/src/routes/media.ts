@@ -5,6 +5,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createMediaController } from "../controllers/media.controller";
+import { mediaParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import { type OrgEnv, requireOrgRole } from "../middleware/org";
@@ -12,7 +13,11 @@ import type { MediaService } from "../services/media.service";
 
 export const createMediaRoutes = (service: MediaService) => {
 	const media = createMediaController(service);
-	return new Hono().get("/api/media/:assetId", (c) => media.get(c));
+	return new Hono().get(
+		"/api/media/:assetId",
+		validate(mediaParams, "param"),
+		(c) => media.get(c),
+	);
 };
 
 export const createMeMediaRoutes = (service: MediaService) => {

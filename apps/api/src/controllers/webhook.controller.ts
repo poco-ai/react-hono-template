@@ -5,7 +5,11 @@ import type {
 } from "@workspace/shared";
 import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
-import { requireParam } from "../lib/params";
+import type {
+	ParamContext,
+	WebhookDeliveryParams,
+	WebhookParams,
+} from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -27,31 +31,34 @@ export const createWebhookController = (service: WebhookService) => ({
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateWebhookInput) =>
+	update: async (c: ParamContext<WebhookParams>, input: UpdateWebhookInput) =>
 		ok(
 			c,
 			await service.updateWebhook(
 				c.get("orgMember").orgId,
-				requireParam(c, "webhookId"),
+				c.req.valid("param").webhookId,
 				input,
 			),
 		),
 
-	remove: async (c: Context<Env>) =>
+	remove: async (c: ParamContext<WebhookParams>) =>
 		ok(
 			c,
 			await service.deleteWebhook(
 				c.get("orgMember").orgId,
-				requireParam(c, "webhookId"),
+				c.req.valid("param").webhookId,
 			),
 		),
 
-	listDeliveries: async (c: Context<Env>, query: WebhookDeliveryListQuery) =>
+	listDeliveries: async (
+		c: ParamContext<WebhookParams>,
+		query: WebhookDeliveryListQuery,
+	) =>
 		ok(
 			c,
 			await service.listDeliveries(
 				c.get("orgMember").orgId,
-				requireParam(c, "webhookId"),
+				c.req.valid("param").webhookId,
 				query.page,
 				query.pageSize,
 			),
@@ -67,22 +74,22 @@ export const createWebhookController = (service: WebhookService) => ({
 			),
 		),
 
-	ping: async (c: Context<Env>) =>
+	ping: async (c: ParamContext<WebhookParams>) =>
 		ok(
 			c,
 			await service.ping(
 				c.get("orgMember").orgId,
-				requireParam(c, "webhookId"),
+				c.req.valid("param").webhookId,
 				backgroundFromContext(c),
 			),
 		),
 
-	redeliver: async (c: Context<Env>) =>
+	redeliver: async (c: ParamContext<WebhookDeliveryParams>) =>
 		ok(
 			c,
 			await service.redeliver(
 				c.get("orgMember").orgId,
-				requireParam(c, "deliveryId"),
+				c.req.valid("param").deliveryId,
 				backgroundFromContext(c),
 			),
 		),

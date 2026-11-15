@@ -3,59 +3,67 @@ import type {
 	ProjectUpdateListQuery,
 	UpdateProjectUpdateInput,
 } from "@workspace/shared";
-import type { Context } from "hono";
-import { requireProjectId, requireUpdateId } from "../lib/params";
+import type {
+	ParamContext,
+	ProjectParams,
+	ProjectUpdateParams,
+} from "../lib/params";
 import { ok } from "../lib/response";
-import type { SessionEnv } from "../middleware/auth";
-import type { OrgEnv } from "../middleware/org";
 import type { ProjectUpdateService } from "../services/project-update.service";
-
-type Env = SessionEnv & OrgEnv;
 
 export const createProjectUpdateController = (
 	service: ProjectUpdateService,
 ) => ({
-	list: async (c: Context<Env>, query: ProjectUpdateListQuery) =>
+	list: async (c: ParamContext<ProjectParams>, query: ProjectUpdateListQuery) =>
 		ok(
 			c,
 			await service.listUpdates(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
+				c.req.valid("param").projectId,
 				query,
 			),
 		),
 
-	create: async (c: Context<Env>, input: CreateProjectUpdateInput) =>
+	create: async (
+		c: ParamContext<ProjectParams>,
+		input: CreateProjectUpdateInput,
+	) =>
 		ok(
 			c,
 			await service.createUpdate(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
+				c.req.valid("param").projectId,
 				c.get("session").user.id,
 				input,
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateProjectUpdateInput) =>
-		ok(
+	update: async (
+		c: ParamContext<ProjectUpdateParams>,
+		input: UpdateProjectUpdateInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.updateUpdate(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireUpdateId(c),
+				params.projectId,
+				params.updateId,
 				{
 					userId: c.get("orgMember").userId,
 					role: c.get("orgMember").role,
 				},
 				input,
 			),
-		),
+		);
+	},
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<ProjectUpdateParams>) => {
+		const params = c.req.valid("param");
 		await service.deleteUpdate(
 			c.get("orgMember").orgId,
-			requireProjectId(c),
-			requireUpdateId(c),
+			params.projectId,
+			params.updateId,
 			{
 				userId: c.get("orgMember").userId,
 				role: c.get("orgMember").role,

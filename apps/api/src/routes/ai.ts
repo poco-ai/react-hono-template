@@ -8,6 +8,7 @@ import {
 import { Hono } from "hono";
 import type { AiProviderInfo } from "../ai/provider";
 import { createAiController } from "../controllers/ai.controller";
+import { aiConversationParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import {
 	aiChatRateLimit,
@@ -64,16 +65,21 @@ export const createAiRoutes = ({
 			validate(createAiConversationSchema, "json"),
 			(c) => controller.createConversation(c, c.req.valid("json")),
 		)
-		.get("/api/orgs/:orgId/ai/conversations/:id", (c) =>
-			controller.getConversation(c),
+		.get(
+			"/api/orgs/:orgId/ai/conversations/:id",
+			validate(aiConversationParams, "param"),
+			(c) => controller.getConversation(c),
 		)
 		.patch(
 			"/api/orgs/:orgId/ai/conversations/:id",
+			validate(aiConversationParams, "param"),
 			validate(updateAiConversationSchema, "json"),
 			(c) => controller.updateConversation(c, c.req.valid("json")),
 		)
-		.delete("/api/orgs/:orgId/ai/conversations/:id", (c) =>
-			controller.deleteConversation(c),
+		.delete(
+			"/api/orgs/:orgId/ai/conversations/:id",
+			validate(aiConversationParams, "param"),
+			(c) => controller.deleteConversation(c),
 		)
 		.get("/api/orgs/:orgId/ai/usage", (c) => controller.usage(c))
 		.get("/api/orgs/:orgId/settings/ai", (c) => controller.getSettings(c))

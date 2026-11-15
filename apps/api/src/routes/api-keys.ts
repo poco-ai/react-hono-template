@@ -1,6 +1,7 @@
 import { apiKeyListQuerySchema, createApiKeySchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createApiKeyController } from "../controllers/api-key.controller";
+import { apiKeyParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -25,6 +26,7 @@ export const createApiKeysRoutes = (service: ApiKeyService) => {
 		.delete(
 			"/api/orgs/:orgId/api-keys/:keyId",
 			requireOrgRole("owner", "admin"),
+			validate(apiKeyParams, "param"),
 			(c) => apiKeyController.revoke(c),
 		);
 };

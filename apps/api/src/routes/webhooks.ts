@@ -5,6 +5,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createWebhookController } from "../controllers/webhook.controller";
+import { webhookDeliveryParams, webhookParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -26,17 +27,20 @@ export const createWebhooksRoutes = (service: WebhookService) => {
 		.patch(
 			"/api/orgs/:orgId/webhooks/:webhookId",
 			requireOrgRole("owner", "admin"),
+			validate(webhookParams, "param"),
 			validate(updateWebhookSchema, "json"),
 			(c) => webhookController.update(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/orgs/:orgId/webhooks/:webhookId",
 			requireOrgRole("owner", "admin"),
+			validate(webhookParams, "param"),
 			(c) => webhookController.remove(c),
 		)
 		.get(
 			"/api/orgs/:orgId/webhooks/:webhookId/deliveries",
 			requireOrgRole("owner", "admin"),
+			validate(webhookParams, "param"),
 			validate(webhookDeliveryListQuerySchema, "query"),
 			(c) => webhookController.listDeliveries(c, c.req.valid("query")),
 		)
@@ -49,11 +53,13 @@ export const createWebhooksRoutes = (service: WebhookService) => {
 		.post(
 			"/api/orgs/:orgId/webhooks/:webhookId/ping",
 			requireOrgRole("owner", "admin"),
+			validate(webhookParams, "param"),
 			(c) => webhookController.ping(c),
 		)
 		.post(
 			"/api/orgs/:orgId/webhook-deliveries/:deliveryId/redeliver",
 			requireOrgRole("owner", "admin"),
+			validate(webhookDeliveryParams, "param"),
 			(c) => webhookController.redeliver(c),
 		);
 };

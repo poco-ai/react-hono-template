@@ -6,6 +6,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createCycleController } from "../controllers/cycle.controller";
+import { cycleParams, projectParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -18,32 +19,39 @@ export const createCyclesRoutes = (service: CycleService) => {
 	return new Hono<SessionEnv & OrgEnv>()
 		.get(
 			"/api/orgs/:orgId/projects/:projectId/cycles",
+			validate(projectParams, "param"),
 			validate(cycleListQuerySchema, "query"),
 			(c) => controller.list(c, c.req.valid("query")),
 		)
 		.post(
 			"/api/orgs/:orgId/projects/:projectId/cycles",
 			canWrite,
+			validate(projectParams, "param"),
 			validate(createCycleSchema, "json"),
 			(c) => controller.create(c, c.req.valid("json")),
 		)
-		.get("/api/orgs/:orgId/projects/:projectId/cycles/:cycleId", (c) =>
-			controller.get(c),
+		.get(
+			"/api/orgs/:orgId/projects/:projectId/cycles/:cycleId",
+			validate(cycleParams, "param"),
+			(c) => controller.get(c),
 		)
 		.patch(
 			"/api/orgs/:orgId/projects/:projectId/cycles/:cycleId",
 			canWrite,
+			validate(cycleParams, "param"),
 			validate(updateCycleSchema, "json"),
 			(c) => controller.update(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/orgs/:orgId/projects/:projectId/cycles/:cycleId",
 			canWrite,
+			validate(cycleParams, "param"),
 			(c) => controller.remove(c),
 		)
 		.post(
 			"/api/orgs/:orgId/projects/:projectId/cycles/:cycleId/rollover",
 			canWrite,
+			validate(cycleParams, "param"),
 			validate(rolloverCycleSchema, "json"),
 			(c) => controller.rollover(c, c.req.valid("json")),
 		);

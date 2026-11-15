@@ -1,6 +1,7 @@
 import { activityListQuerySchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createActivityController } from "../controllers/activity.controller";
+import { issueParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -11,6 +12,7 @@ export const createActivitiesRoutes = (service: ActivityService) => {
 	return new Hono<SessionEnv & OrgEnv>()
 		.get(
 			"/api/orgs/:orgId/projects/:projectId/issues/:number/activities",
+			validate(issueParams, "param"),
 			(c) => activityController.listByIssue(c),
 		)
 		.get(

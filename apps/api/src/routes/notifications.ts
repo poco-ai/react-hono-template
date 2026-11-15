@@ -1,6 +1,7 @@
 import { notificationListQuerySchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createNotificationController } from "../controllers/notification.controller";
+import { notificationParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -22,11 +23,15 @@ export const createNotificationsRoutes = (service: NotificationService) => {
 			.post("/api/orgs/:orgId/notifications/read-all", (c) =>
 				controller.readAll(c),
 			)
-			.post("/api/orgs/:orgId/notifications/:notificationId/read", (c) =>
-				controller.read(c),
+			.post(
+				"/api/orgs/:orgId/notifications/:notificationId/read",
+				validate(notificationParams, "param"),
+				(c) => controller.read(c),
 			)
-			.delete("/api/orgs/:orgId/notifications/:notificationId", (c) =>
-				controller.remove(c),
+			.delete(
+				"/api/orgs/:orgId/notifications/:notificationId",
+				validate(notificationParams, "param"),
+				(c) => controller.remove(c),
 			)
 	);
 };

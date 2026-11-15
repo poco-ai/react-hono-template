@@ -7,6 +7,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createIssueController } from "../controllers/issue.controller";
+import { issueParams, projectParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -18,41 +19,53 @@ export const createIssuesRoutes = (service: IssueService) => {
 		new Hono<SessionEnv & OrgEnv>()
 			.get(
 				"/api/orgs/:orgId/projects/:projectId/issues",
+				validate(projectParams, "param"),
 				validate(issueListQuerySchema, "query"),
 				(c) => issueController.listByProject(c, c.req.valid("query")),
 			)
 			.post(
 				"/api/orgs/:orgId/projects/:projectId/issues",
+				validate(projectParams, "param"),
 				validate(createIssueSchema, "json"),
 				(c) => issueController.create(c, c.req.valid("json")),
 			)
 			// Static paths are registered before `:number` so `export.csv` never
 			// reaches the issue-detail handler.
-			.get("/api/orgs/:orgId/projects/:projectId/issues/export.csv", (c) =>
-				issueController.exportCsv(c),
+			.get(
+				"/api/orgs/:orgId/projects/:projectId/issues/export.csv",
+				validate(projectParams, "param"),
+				(c) => issueController.exportCsv(c),
 			)
 			.post(
 				"/api/orgs/:orgId/projects/:projectId/issues/import",
+				validate(projectParams, "param"),
 				validate(importIssuesSchema, "json"),
 				(c) => issueController.import(c, c.req.valid("json")),
 			)
-			.get("/api/orgs/:orgId/projects/:projectId/issues/:number", (c) =>
-				issueController.get(c),
+			.get(
+				"/api/orgs/:orgId/projects/:projectId/issues/:number",
+				validate(issueParams, "param"),
+				(c) => issueController.get(c),
 			)
 			.patch(
 				"/api/orgs/:orgId/projects/:projectId/issues/:number",
+				validate(issueParams, "param"),
 				validate(updateIssueSchema, "json"),
 				(c) => issueController.update(c, c.req.valid("json")),
 			)
-			.delete("/api/orgs/:orgId/projects/:projectId/issues/:number", (c) =>
-				issueController.remove(c),
+			.delete(
+				"/api/orgs/:orgId/projects/:projectId/issues/:number",
+				validate(issueParams, "param"),
+				(c) => issueController.remove(c),
 			)
 			.post(
 				"/api/orgs/:orgId/projects/:projectId/issues/:number/archive",
+				validate(issueParams, "param"),
 				(c) => issueController.archive(c),
 			)
 			.post(
 				"/api/orgs/:orgId/projects/:projectId/issues/:number/restore",
+				validate(issueParams, "param"),
 				(c) => issueController.restore(c),
 			)
 			.get(

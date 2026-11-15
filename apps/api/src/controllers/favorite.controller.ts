@@ -1,23 +1,12 @@
-import type {
-	CreateFavoriteInput,
-	FavoriteEntityType,
-} from "@workspace/shared";
-import { FAVORITE_ENTITY_TYPES } from "@workspace/shared";
+import type { CreateFavoriteInput } from "@workspace/shared";
 import type { Context } from "hono";
-import { requireEnumParamValue } from "../lib/params";
+import type { FavoriteParams, ParamContext } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import type { FavoriteService } from "../services/favorite.service";
 
 type Env = SessionEnv & OrgEnv;
-
-const requireEntityType = (c: Context<Env>): FavoriteEntityType =>
-	requireEnumParamValue(
-		c.req.param("entityType"),
-		"entityType",
-		FAVORITE_ENTITY_TYPES,
-	);
 
 export const createFavoriteController = (service: FavoriteService) => ({
 	list: async (c: Context<Env>) =>
@@ -39,14 +28,16 @@ export const createFavoriteController = (service: FavoriteService) => ({
 			),
 		),
 
-	remove: async (c: Context<Env>) =>
-		ok(
+	remove: async (c: ParamContext<FavoriteParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.removeFavorite(
 				c.get("orgMember").orgId,
 				c.get("session").user.id,
-				requireEntityType(c),
-				c.req.param("entityId") ?? "",
+				params.entityType,
+				params.entityId,
 			),
-		),
+		);
+	},
 });

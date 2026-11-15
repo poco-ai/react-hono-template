@@ -4,14 +4,13 @@ import type {
 	UpdateIssueTemplateInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
+import type { IssueTemplateParams, ParamContext } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
 import type { IssueTemplateService } from "../services/issue-template.service";
 
 type Env = SessionEnv & OrgEnv;
-
-const templateId = (c: Context<Env>) => c.req.param("templateId") ?? "";
 
 export const createIssueTemplateController = (
 	service: IssueTemplateService,
@@ -29,18 +28,24 @@ export const createIssueTemplateController = (
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateIssueTemplateInput) =>
+	update: async (
+		c: ParamContext<IssueTemplateParams>,
+		input: UpdateIssueTemplateInput,
+	) =>
 		ok(
 			c,
 			await service.updateTemplate(
 				c.get("orgMember").orgId,
-				templateId(c),
+				c.req.valid("param").templateId,
 				input,
 			),
 		),
 
-	remove: async (c: Context<Env>) => {
-		await service.deleteTemplate(c.get("orgMember").orgId, templateId(c));
+	remove: async (c: ParamContext<IssueTemplateParams>) => {
+		await service.deleteTemplate(
+			c.get("orgMember").orgId,
+			c.req.valid("param").templateId,
+		);
 		return ok(c, { deleted: true });
 	},
 });

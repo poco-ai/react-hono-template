@@ -4,6 +4,7 @@ import type {
 	MediaRegisterInput,
 } from "@workspace/shared";
 import type { Context } from "hono";
+import type { MediaParams, PublicParamContext } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -56,8 +57,8 @@ export const createMediaController = (service: MediaService) => ({
 		input: DeleteMediaInput,
 	) => ok(c, await service.deleteOrgLogo(c.get("orgMember").orgId, input.url)),
 
-	get: async (c: Context) => {
-		const media = await service.getMedia(c.req.param("assetId") ?? "");
+	get: async (c: PublicParamContext<MediaParams>) => {
+		const media = await service.getMedia(c.req.valid("param").assetId);
 		const headers: Record<string, string> = {
 			"Content-Type": media.contentType,
 			"Cache-Control": PUBLIC_MEDIA_CACHE,

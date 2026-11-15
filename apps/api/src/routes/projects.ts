@@ -1,6 +1,7 @@
 import { createProjectSchema, updateProjectSchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createProjectController } from "../controllers/project.controller";
+import { projectParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -17,12 +18,15 @@ export const createProjectsRoutes = (service: ProjectService) => {
 			validate(createProjectSchema, "json"),
 			(c) => projectController.create(c, c.req.valid("json")),
 		)
-		.get("/api/orgs/:orgId/projects/:projectId", (c) =>
-			projectController.get(c),
+		.get(
+			"/api/orgs/:orgId/projects/:projectId",
+			validate(projectParams, "param"),
+			(c) => projectController.get(c),
 		)
 		.patch(
 			"/api/orgs/:orgId/projects/:projectId",
 			requireOrgRole("owner", "admin"),
+			validate(projectParams, "param"),
 			validate(updateProjectSchema, "json"),
 			(c) => projectController.update(c, c.req.valid("json")),
 		);

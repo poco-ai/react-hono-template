@@ -1,49 +1,48 @@
 import type { CreateIssueRelationInput } from "@workspace/shared";
-import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
-import {
-	requireIssueNumber,
-	requireParam,
-	requireProjectId,
-} from "../lib/params";
+import type { IssueParams, ParamContext, RelationParams } from "../lib/params";
 import { ok } from "../lib/response";
-import type { SessionEnv } from "../middleware/auth";
-import type { OrgEnv } from "../middleware/org";
 import type { RelationService } from "../services/relation.service";
 
-type Env = SessionEnv & OrgEnv;
-
 export const createRelationController = (service: RelationService) => ({
-	list: async (c: Context<Env>) =>
-		ok(
+	list: async (c: ParamContext<IssueParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.listRelations(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 			),
-		),
+		);
+	},
 
-	create: async (c: Context<Env>, input: CreateIssueRelationInput) =>
-		ok(
+	create: async (
+		c: ParamContext<IssueParams>,
+		input: CreateIssueRelationInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.createRelation(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				input,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<RelationParams>) => {
+		const params = c.req.valid("param");
 		await service.deleteRelation(
 			c.get("orgMember").orgId,
-			requireProjectId(c),
-			requireIssueNumber(c),
+			params.projectId,
+			params.number,
 			c.get("session").user.id,
-			requireParam(c, "relationId"),
+			params.relationId,
 			backgroundFromContext(c),
 		);
 		return ok(c, { deleted: true });

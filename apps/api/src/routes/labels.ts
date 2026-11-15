@@ -1,6 +1,7 @@
 import { createLabelSchema, updateLabelSchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createLabelController } from "../controllers/label.controller";
+import { labelParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -20,12 +21,14 @@ export const createLabelsRoutes = (service: LabelService) => {
 		.patch(
 			"/api/orgs/:orgId/labels/:labelId",
 			requireOrgRole("owner", "admin"),
+			validate(labelParams, "param"),
 			validate(updateLabelSchema, "json"),
 			(c) => labelController.update(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/orgs/:orgId/labels/:labelId",
 			requireOrgRole("owner", "admin"),
+			validate(labelParams, "param"),
 			(c) => labelController.remove(c),
 		);
 };

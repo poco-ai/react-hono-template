@@ -7,7 +7,7 @@ import type {
 } from "@workspace/shared";
 import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
-import { requireIssueNumber, requireProjectId } from "../lib/params";
+import type { IssueParams, ParamContext, ProjectParams } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -16,12 +16,15 @@ import type { IssueService } from "../services/issue.service";
 type Env = SessionEnv & OrgEnv;
 
 export const createIssueController = (service: IssueService) => ({
-	listByProject: async (c: Context<Env>, query: IssueListQuery) =>
+	listByProject: async (
+		c: ParamContext<ProjectParams>,
+		query: IssueListQuery,
+	) =>
 		ok(
 			c,
 			await service.listIssues(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
+				c.req.valid("param").projectId,
 				query,
 			),
 		),
@@ -32,22 +35,24 @@ export const createIssueController = (service: IssueService) => ({
 	listTriage: async (c: Context<Env>, query: TriageQuery) =>
 		ok(c, await service.listTriage(c.get("orgMember").orgId, query)),
 
-	get: async (c: Context<Env>) =>
-		ok(
+	get: async (c: ParamContext<IssueParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.getIssue(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 			),
-		),
+		);
+	},
 
-	create: async (c: Context<Env>, input: CreateIssueInput) =>
+	create: async (c: ParamContext<ProjectParams>, input: CreateIssueInput) =>
 		ok(
 			c,
 			await service.createIssue(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
+				c.req.valid("param").projectId,
 				c.get("session").user.id,
 				input,
 				backgroundFromContext(c),
@@ -55,10 +60,10 @@ export const createIssueController = (service: IssueService) => ({
 		),
 
 	/** Streams the project CSV; truncation is visible in response headers. */
-	exportCsv: async (c: Context<Env>) => {
+	exportCsv: async (c: ParamContext<ProjectParams>) => {
 		const result = await service.exportIssues(
 			c.get("orgMember").orgId,
-			requireProjectId(c),
+			c.req.valid("param").projectId,
 		);
 		c.header("Content-Type", "text/csv; charset=utf-8");
 		c.header(
@@ -74,62 +79,69 @@ export const createIssueController = (service: IssueService) => ({
 		return c.body(`\uFEFF${result.csv}`);
 	},
 
-	import: async (c: Context<Env>, input: ImportIssuesInput) =>
+	import: async (c: ParamContext<ProjectParams>, input: ImportIssuesInput) =>
 		ok(
 			c,
 			await service.importIssues(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
+				c.req.valid("param").projectId,
 				c.get("session").user.id,
 				input,
 			),
 		),
 
-	update: async (c: Context<Env>, input: UpdateIssueInput) =>
-		ok(
+	update: async (c: ParamContext<IssueParams>, input: UpdateIssueInput) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.updateIssue(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				input,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<IssueParams>) => {
+		const params = c.req.valid("param");
 		await service.deleteIssue(
 			c.get("orgMember").orgId,
-			requireProjectId(c),
-			requireIssueNumber(c),
+			params.projectId,
+			params.number,
 			c.get("session").user.id,
 			backgroundFromContext(c),
 		);
 		return ok(c, { deleted: true });
 	},
 
-	archive: async (c: Context<Env>) =>
-		ok(
+	archive: async (c: ParamContext<IssueParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.archiveIssue(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 
-	restore: async (c: Context<Env>) =>
-		ok(
+	restore: async (c: ParamContext<IssueParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.restoreIssue(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 });

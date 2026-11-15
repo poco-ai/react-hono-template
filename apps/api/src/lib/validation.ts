@@ -9,14 +9,21 @@ export const formatZodError = (error: {
 		.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
 		.join("; ");
 
-export const validate = <T, const S extends "json" | "query">(
+export const validate = <T, const S extends "json" | "query" | "param">(
 	schema: ZodType<T>,
 	source: S,
+	{ code }: { code?: ApiErrorCode } = {},
 ) =>
 	validator(source, (value) => {
 		const result = schema.safeParse(value);
 		if (result.error) {
-			throw new ApiError(ApiErrorCode.VALIDATION, formatZodError(result.error));
+			throw new ApiError(
+				code ??
+					(source === "param"
+						? ApiErrorCode.INVALID_PARAM
+						: ApiErrorCode.VALIDATION),
+				formatZodError(result.error),
+			);
 		}
-		return result.data as T;
+		return result.data;
 	});

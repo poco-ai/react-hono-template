@@ -1,6 +1,6 @@
 import type { CreateLabelInput, UpdateLabelInput } from "@workspace/shared";
 import type { Context } from "hono";
-import { requireParam } from "../lib/params";
+import type { LabelParams, ParamContext } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -15,20 +15,20 @@ export const createLabelController = (service: LabelService) => ({
 	create: async (c: Context<Env>, input: CreateLabelInput) =>
 		ok(c, await service.createLabel(c.get("orgMember").orgId, input)),
 
-	update: async (c: Context<Env>, input: UpdateLabelInput) =>
+	update: async (c: ParamContext<LabelParams>, input: UpdateLabelInput) =>
 		ok(
 			c,
 			await service.updateLabel(
 				c.get("orgMember").orgId,
-				requireParam(c, "labelId"),
+				c.req.valid("param").labelId,
 				input,
 			),
 		),
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<LabelParams>) => {
 		await service.deleteLabel(
 			c.get("orgMember").orgId,
-			requireParam(c, "labelId"),
+			c.req.valid("param").labelId,
 		);
 		return ok(c, { deleted: true });
 	},

@@ -1,6 +1,7 @@
 import { createFavoriteSchema } from "@workspace/shared";
 import { Hono } from "hono";
 import { createFavoriteController } from "../controllers/favorite.controller";
+import { favoriteParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -15,7 +16,9 @@ export const createFavoritesRoutes = (service: FavoriteService) => {
 			validate(createFavoriteSchema, "json"),
 			(c) => controller.create(c, c.req.valid("json")),
 		)
-		.delete("/api/orgs/:orgId/favorites/:entityType/:entityId", (c) =>
-			controller.remove(c),
+		.delete(
+			"/api/orgs/:orgId/favorites/:entityType/:entityId",
+			validate(favoriteParams, "param"),
+			(c) => controller.remove(c),
 		);
 };

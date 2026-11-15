@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { createAdminOrgController } from "../controllers/admin-org.controller";
 import { createAdminController } from "../controllers/admin-user.controller";
 import { createConfigController } from "../controllers/config.controller";
+import { adminOrgParams, adminUserParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import { requirePermission } from "../middleware/auth";
@@ -42,18 +43,21 @@ export const createAdminRoutes = ({
 		.patch(
 			"/api/admin/users/:id/role",
 			requirePermission({ user: ["set-role"] }),
+			validate(adminUserParams, "param"),
 			validate(updateAdminUserRoleSchema, "json"),
 			(c) => adminController.updateRole(c, c.req.valid("json")),
 		)
 		.post(
 			"/api/admin/users/:id/ban",
 			requirePermission({ user: ["ban"] }),
+			validate(adminUserParams, "param"),
 			validate(banAdminUserSchema, "json"),
 			(c) => adminController.ban(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/admin/users/:id/ban",
 			requirePermission({ user: ["ban"] }),
+			validate(adminUserParams, "param"),
 			(c) => adminController.unban(c),
 		)
 		.get(
@@ -65,11 +69,13 @@ export const createAdminRoutes = ({
 		.post(
 			"/api/admin/orgs/:orgId/freeze",
 			requirePermission({ org: ["freeze"] }),
+			validate(adminOrgParams, "param"),
 			(c) => adminOrgController.freeze(c),
 		)
 		.delete(
 			"/api/admin/orgs/:orgId/freeze",
 			requirePermission({ org: ["freeze"] }),
+			validate(adminOrgParams, "param"),
 			(c) => adminOrgController.unfreeze(c),
 		)
 		.get("/api/admin/stats", requirePermission({ org: ["stats"] }), (c) =>

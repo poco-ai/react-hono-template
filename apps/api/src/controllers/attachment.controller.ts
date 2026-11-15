@@ -2,118 +2,141 @@ import type {
 	AttachmentPresignInput,
 	RegisterAttachmentInput,
 } from "@workspace/shared";
-import type { Context } from "hono";
 import { backgroundFromContext } from "../lib/background";
-import {
-	requireIssueNumber,
-	requireParam,
-	requireProjectId,
+import type {
+	AttachmentParams,
+	CommentAttachmentParams,
+	CommentParams,
+	IssueParams,
+	ParamContext,
 } from "../lib/params";
 import { ok } from "../lib/response";
-import type { SessionEnv } from "../middleware/auth";
-import type { OrgEnv } from "../middleware/org";
 import type { AttachmentService } from "../services/attachment.service";
 
-type Env = SessionEnv & OrgEnv;
-
 export const createAttachmentController = (service: AttachmentService) => ({
-	list: async (c: Context<Env>) =>
-		ok(
+	list: async (c: ParamContext<IssueParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.list(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 			),
-		),
+		);
+	},
 
-	presign: async (c: Context<Env>, input: AttachmentPresignInput) =>
-		ok(
+	presign: async (
+		c: ParamContext<IssueParams>,
+		input: AttachmentPresignInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.presignUpload(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				input,
 			),
-		),
+		);
+	},
 
-	register: async (c: Context<Env>, input: RegisterAttachmentInput) =>
-		ok(
+	register: async (
+		c: ParamContext<IssueParams>,
+		input: RegisterAttachmentInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.register(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
+				params.projectId,
+				params.number,
 				c.get("session").user.id,
 				input,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<AttachmentParams>) => {
 		const orgMember = c.get("orgMember");
+		const params = c.req.valid("param");
 		return ok(
 			c,
 			await service.remove(
 				orgMember.orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "attachmentId"),
+				params.projectId,
+				params.number,
+				params.attachmentId,
 				{ userId: orgMember.userId, role: orgMember.role },
 			),
 		);
 	},
 
-	presignComment: async (c: Context<Env>, input: AttachmentPresignInput) =>
-		ok(
+	presignComment: async (
+		c: ParamContext<CommentParams>,
+		input: AttachmentPresignInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.presignCommentUpload(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
 				c.get("session").user.id,
 				input,
 			),
-		),
+		);
+	},
 
-	registerComment: async (c: Context<Env>, input: RegisterAttachmentInput) =>
-		ok(
+	registerComment: async (
+		c: ParamContext<CommentParams>,
+		input: RegisterAttachmentInput,
+	) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.registerComment(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
 				c.get("session").user.id,
 				input,
 				backgroundFromContext(c),
 			),
-		),
+		);
+	},
 
-	listComment: async (c: Context<Env>) =>
-		ok(
+	listComment: async (c: ParamContext<CommentParams>) => {
+		const params = c.req.valid("param");
+		return ok(
 			c,
 			await service.listComment(
 				c.get("orgMember").orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
 			),
-		),
+		);
+	},
 
-	removeComment: async (c: Context<Env>) => {
+	removeComment: async (c: ParamContext<CommentAttachmentParams>) => {
 		const orgMember = c.get("orgMember");
+		const params = c.req.valid("param");
 		return ok(
 			c,
 			await service.removeComment(
 				orgMember.orgId,
-				requireProjectId(c),
-				requireIssueNumber(c),
-				requireParam(c, "commentId"),
-				requireParam(c, "attachmentId"),
+				params.projectId,
+				params.number,
+				params.commentId,
+				params.attachmentId,
 				{ userId: orgMember.userId, role: orgMember.role },
 			),
 		);

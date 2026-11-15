@@ -6,6 +6,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createStatusController } from "../controllers/status.controller";
+import { statusParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -31,12 +32,14 @@ export const createStatusesRoutes = (service: StatusService) => {
 		.patch(
 			"/api/orgs/:orgId/statuses/:statusId",
 			requireOrgRole("owner", "admin"),
+			validate(statusParams, "param"),
 			validate(updateStatusSchema, "json"),
 			(c) => controller.update(c, c.req.valid("json")),
 		)
 		.delete(
 			"/api/orgs/:orgId/statuses/:statusId",
 			requireOrgRole("owner", "admin"),
+			validate(statusParams, "param"),
 			validate(deleteStatusQuerySchema, "query"),
 			(c) => controller.remove(c, c.req.valid("query")),
 		);

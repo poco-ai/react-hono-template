@@ -5,6 +5,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createViewController } from "../controllers/view.controller";
+import { viewParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -27,18 +28,27 @@ export const createViewsRoutes = (service: ViewService) => {
 			.post("/api/orgs/:orgId/views", validate(createViewSchema, "json"), (c) =>
 				controller.create(c, c.req.valid("json")),
 			)
-			.put("/api/orgs/:orgId/views/:viewId/default", (c) =>
-				controller.setDefault(c, true),
+			.put(
+				"/api/orgs/:orgId/views/:viewId/default",
+				validate(viewParams, "param"),
+				(c) => controller.setDefault(c, true),
 			)
 			// Registered before the generic delete so `default` is not read as a view id.
-			.delete("/api/orgs/:orgId/views/:viewId/default", (c) =>
-				controller.clearDefault(c),
+			.delete(
+				"/api/orgs/:orgId/views/:viewId/default",
+				validate(viewParams, "param"),
+				(c) => controller.clearDefault(c),
 			)
 			.patch(
 				"/api/orgs/:orgId/views/:viewId",
+				validate(viewParams, "param"),
 				validate(updateViewSchema, "json"),
 				(c) => controller.update(c, c.req.valid("json")),
 			)
-			.delete("/api/orgs/:orgId/views/:viewId", (c) => controller.remove(c))
+			.delete(
+				"/api/orgs/:orgId/views/:viewId",
+				validate(viewParams, "param"),
+				(c) => controller.remove(c),
+			)
 	);
 };

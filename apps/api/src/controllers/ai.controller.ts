@@ -9,7 +9,7 @@ import type { UIMessage } from "ai";
 import type { Context } from "hono";
 import type { AiProviderInfo } from "../ai/provider";
 import { backgroundFromContext } from "../lib/background";
-import { requireParam } from "../lib/params";
+import type { AiConversationParams, ParamContext } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -58,18 +58,18 @@ export const createAiController = ({
 			),
 		),
 
-	getConversation: async (c: Context<Env>) =>
+	getConversation: async (c: ParamContext<AiConversationParams>) =>
 		ok(
 			c,
 			await conversations.detail(
 				c.get("orgMember").orgId,
 				c.get("session").user.id,
-				requireParam(c, "id"),
+				c.req.valid("param").id,
 			),
 		),
 
 	updateConversation: async (
-		c: Context<Env>,
+		c: ParamContext<AiConversationParams>,
 		input: UpdateAiConversationInput,
 	) =>
 		ok(
@@ -77,16 +77,16 @@ export const createAiController = ({
 			await conversations.update(
 				c.get("orgMember").orgId,
 				c.get("session").user.id,
-				requireParam(c, "id"),
+				c.req.valid("param").id,
 				input,
 			),
 		),
 
-	deleteConversation: async (c: Context<Env>) => {
+	deleteConversation: async (c: ParamContext<AiConversationParams>) => {
 		await conversations.remove(
 			c.get("orgMember").orgId,
 			c.get("session").user.id,
-			requireParam(c, "id"),
+			c.req.valid("param").id,
 		);
 		return ok(c, { deleted: true });
 	},

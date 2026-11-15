@@ -1,6 +1,6 @@
 import type { NotificationListQuery } from "@workspace/shared";
 import type { Context } from "hono";
-import { requireParam } from "../lib/params";
+import type { NotificationParams, ParamContext } from "../lib/params";
 import { ok } from "../lib/response";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -27,13 +27,13 @@ export const createNotificationController = (service: NotificationService) => ({
 			),
 		}),
 
-	read: async (c: Context<Env>) =>
+	read: async (c: ParamContext<NotificationParams>) =>
 		ok(
 			c,
 			await service.markRead(
 				c.get("orgMember").orgId,
 				c.get("session").user.id,
-				requireParam(c, "notificationId"),
+				c.req.valid("param").notificationId,
 			),
 		),
 
@@ -46,11 +46,11 @@ export const createNotificationController = (service: NotificationService) => ({
 			),
 		),
 
-	remove: async (c: Context<Env>) => {
+	remove: async (c: ParamContext<NotificationParams>) => {
 		await service.delete(
 			c.get("orgMember").orgId,
 			c.get("session").user.id,
-			requireParam(c, "notificationId"),
+			c.req.valid("param").notificationId,
 		);
 		return ok(c, { deleted: true });
 	},

@@ -241,6 +241,33 @@ test("freeze checks still allow reads and billing while blocking writes", async 
 	}
 });
 
+test("path params validate after organization access checks", async () => {
+	await expectError(
+		await appFor({ member: false }).request(
+			"/api/orgs/org/projects/p/issues/abc",
+		),
+		404,
+		"NOT_FOUND",
+	);
+	await expectError(
+		await appFor({ frozen: true }).request(
+			"/api/orgs/org/projects/p/issues/abc",
+			{
+				method: "PATCH",
+				headers: { "content-type": "application/json" },
+				body: "{}",
+			},
+		),
+		403,
+		"ORG_FROZEN",
+	);
+	await expectError(
+		await appFor().request("/api/orgs/org/projects/p/issues/abc"),
+		400,
+		"INVALID_PARAM",
+	);
+});
+
 test("resource routes retain organization and platform permission checks", async () => {
 	await expectError(
 		await appFor({ orgRole: "member" }).request("/api/orgs/org/projects", {

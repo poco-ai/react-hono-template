@@ -5,6 +5,7 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createIssueTemplateController } from "../controllers/issue-template.controller";
+import { issueTemplateParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import type { OrgEnv } from "../middleware/org";
@@ -29,10 +30,14 @@ export const createIssueTemplatesRoutes = (service: IssueTemplateService) => {
 		.patch(
 			"/api/orgs/:orgId/issue-templates/:templateId",
 			canWrite,
+			validate(issueTemplateParams, "param"),
 			validate(updateIssueTemplateSchema, "json"),
 			(c) => controller.update(c, c.req.valid("json")),
 		)
-		.delete("/api/orgs/:orgId/issue-templates/:templateId", canWrite, (c) =>
-			controller.remove(c),
+		.delete(
+			"/api/orgs/:orgId/issue-templates/:templateId",
+			canWrite,
+			validate(issueTemplateParams, "param"),
+			(c) => controller.remove(c),
 		);
 };
