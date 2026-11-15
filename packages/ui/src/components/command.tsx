@@ -36,6 +36,7 @@ function CommandDialog({
 	children,
 	className,
 	showCloseButton = false,
+	commandProps,
 	...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
 	title?: string;
@@ -43,6 +44,8 @@ function CommandDialog({
 	className?: string;
 	showCloseButton?: boolean;
 	children: React.ReactNode;
+	/** Extra `cmdk` props for the underlying `Command` (e.g. `shouldFilter`). */
+	commandProps?: React.ComponentProps<typeof Command>;
 }) {
 	return (
 		<Dialog {...props}>
@@ -57,7 +60,7 @@ function CommandDialog({
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
-				<Command>{children}</Command>
+				<Command {...commandProps}>{children}</Command>
 			</DialogContent>
 		</Dialog>
 	);

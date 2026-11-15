@@ -10,31 +10,23 @@ import {
 	CommandItem,
 	CommandList,
 	CommandSeparator,
+	CommandShortcut,
 } from "@workspace/ui/components/command";
 import { Spinner } from "@workspace/ui/components/spinner";
 import {
-	ActivityIcon,
-	BookOpenIcon,
 	CircleAlertIcon,
-	CirclePlusIcon,
-	CreditCardIcon,
 	FolderIcon,
-	InboxIcon,
-	KeyRoundIcon,
 	ListTodoIcon,
 	MessageSquareIcon,
-	PlusIcon,
 	RotateCcwIcon,
-	SettingsIcon,
-	ShieldIcon,
-	Sparkles,
-	TagIcon,
-	UsersIcon,
-	WebhookIcon,
 } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import {
+	buildPaletteActions,
+	type PaletteActionContext,
+} from "@/components/command-palette/actions";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAiChat } from "@/features/ai/chat-provider";
 import { useSession } from "@/features/auth/data";
@@ -202,6 +194,15 @@ export function CommandPalette({
 		});
 	}
 	const isAdmin = session?.user.role === "admin";
+	const actionCtx: PaletteActionContext = {
+		orgId,
+		currentProjectId,
+		navigate,
+		setPanelOpen,
+		canManage,
+		isAdmin,
+	};
+	const paletteActions = buildPaletteActions(actionCtx);
 	const hasSearchResults =
 		issueResults.length > 0 ||
 		results.comments.length > 0 ||
@@ -464,181 +465,22 @@ export function CommandPalette({
 							</>
 						)}
 						<CommandGroup heading={t("command.groups.actions")}>
-							<CommandItem
-								onSelect={() =>
-									run(() => {
-										setPanelOpen(true);
-									})
-								}
-							>
-								<Sparkles />
-								{t("command.askAi")}
-							</CommandItem>
-							{currentProjectId && (
-								<CommandItem
-									onSelect={() =>
-										run(() =>
-											navigate({
-												to: "/orgs/$orgId/projects/$projectId",
-												params: { orgId, projectId: currentProjectId },
-												search: { page: 1, sort: "updated", new: true },
-											}),
-										)
-									}
-								>
-									<CirclePlusIcon />
-									{t("command.newIssue")}
-								</CommandItem>
-							)}
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/projects",
-											params: { orgId },
-										}),
-									)
-								}
-							>
-								<PlusIcon />
-								{t("command.newProject")}
-							</CommandItem>
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/inbox",
-											params: { orgId },
-											search: { filter: "all" },
-										}),
-									)
-								}
-							>
-								<InboxIcon />
-								{t("command.goToInbox")}
-							</CommandItem>
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/my-issues",
-											params: { orgId },
-										}),
-									)
-								}
-							>
-								<ListTodoIcon />
-								{t("command.goToMyIssues")}
-							</CommandItem>
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/activity",
-											params: { orgId },
-										}),
-									)
-								}
-							>
-								<ActivityIcon />
-								{t("command.goToActivity")}
-							</CommandItem>
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/settings",
-											params: { orgId },
-										}),
-									)
-								}
-							>
-								<SettingsIcon />
-								{t("command.settingsGeneral")}
-							</CommandItem>
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/settings/members",
-											params: { orgId },
-										}),
-									)
-								}
-							>
-								<UsersIcon />
-								{t("command.settingsMembers")}
-							</CommandItem>
-							<CommandItem
-								onSelect={() =>
-									run(() =>
-										navigate({
-											to: "/orgs/$orgId/settings/labels",
-											params: { orgId },
-										}),
-									)
-								}
-							>
-								<TagIcon />
-								{t("command.settingsLabels")}
-							</CommandItem>
-							{canManage && (
-								<>
+							{paletteActions.map((action) => {
+								const Icon = action.icon;
+								return (
 									<CommandItem
-										onSelect={() =>
-											run(() =>
-												navigate({
-													to: "/orgs/$orgId/settings/api-keys",
-													params: { orgId },
-												}),
-											)
-										}
+										key={action.id}
+										keywords={action.keywords}
+										onSelect={() => run(() => action.run(actionCtx))}
 									>
-										<KeyRoundIcon />
-										{t("command.settingsApiKeys")}
+										<Icon />
+										{t(action.labelKey)}
+										{action.shortcut && (
+											<CommandShortcut>{action.shortcut}</CommandShortcut>
+										)}
 									</CommandItem>
-									<CommandItem
-										onSelect={() =>
-											run(() =>
-												navigate({
-													to: "/orgs/$orgId/settings/webhooks",
-													params: { orgId },
-												}),
-											)
-										}
-									>
-										<WebhookIcon />
-										{t("command.settingsWebhooks")}
-									</CommandItem>
-									<CommandItem
-										onSelect={() =>
-											run(() =>
-												navigate({
-													to: "/orgs/$orgId/settings/billing",
-													params: { orgId },
-												}),
-											)
-										}
-									>
-										<CreditCardIcon />
-										{t("command.settingsBilling")}
-									</CommandItem>
-								</>
-							)}
-							<CommandItem
-								onSelect={() => run(() => navigate({ to: "/api-docs" }))}
-							>
-								<BookOpenIcon />
-								{t("command.goToApiDocs")}
-							</CommandItem>
-							{isAdmin && (
-								<CommandItem
-									onSelect={() => run(() => navigate({ to: "/admin" }))}
-								>
-									<ShieldIcon />
-									{t("command.goToAdmin")}
-								</CommandItem>
-							)}
+								);
+							})}
 						</CommandGroup>
 						{activeProjects.length > 0 && (
 							<>
