@@ -181,6 +181,8 @@ function ChatRuntime({
 		id: conversationId ?? "new",
 		messages: initialMessages,
 		transport,
+		// Batch streaming token updates; the list re-renders at most every 50ms.
+		throttle: 50,
 		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
 		onFinish: () => onSettled(),
 		onError: () => onSettled(),

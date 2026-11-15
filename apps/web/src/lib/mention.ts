@@ -1,15 +1,11 @@
 /**
- * Mention markup helpers. The API recognises `@[Display Name](user:USER_ID)`
+ * Mention editor helpers. The API recognises `@[Display Name](user:USER_ID)`
  * (see `parseMentionUserIds` in `@workspace/shared`); the display name is
- * decorative and only the id is load-bearing.
+ * decorative and only the id is load-bearing. Rendering is handled by the
+ * `remarkMentions` plugin (`lib/remark-mentions.ts`), not by string rewrites.
  */
 
-import {
-	buildMentionMarkup as buildSharedMentionMarkup,
-	createMentionRegex,
-} from "@workspace/shared";
-
-export const MENTION_HREF_PREFIX = "mention:";
+import { buildMentionMarkup as buildSharedMentionMarkup } from "@workspace/shared";
 
 export type MentionTarget = { id: string; name: string };
 
@@ -91,135 +87,3 @@ export function insertMention(
 		value.slice(0, context.start) + markup + value.slice(context.end);
 	return { value: next, caret: context.start + markup.length };
 }
-
-type MarkdownSegment = { text: string; code: boolean };
-
-const FENCE_START = /^( {0,3})(`{3,}|~{3,})/;
-const FENCE_END = /^( {0,3})(`{3,}|~{3,})[ \t]*$/;
-
-/**
- * Splits markdown into plain text and code segments (fenced blocks and inline
- * code spans). Mentions inside code are examples, not mentions, so callers can
- * leave those segments untouched.
- */
-function splitMarkdownCode(source: string): MarkdownSegment[] {
-	const segments: MarkdownSegment[] = [];
-	let cursor = 0;
-	let textStart = 0;
-
-	const pushText = (end: number) => {
-		if (end > textStart) {
-			segments.push({ text: source.slice(textStart, end), code: false });
-		}
-	};
-	const pushCode = (start: number, end: number) => {
-		pushText(start);
-		segments.push({ text: source.slice(start, end), code: true });
-		cursor = end;
-		textStart = end;
-	};
-
-	while (cursor < source.length) {
-		const atLineStart = cursor === 0 || source[cursor - 1] === "\n";
-		if (atLineStart) {
-			const lineEnd = source.indexOf("\n", cursor);
-			const line = source.slice(
-				cursor,
-				lineEnd === -1 ? source.length : lineEnd,
-			);
-			const fence = FENCE_START.exec(line);
-			if (fence) {
-				const marker = fence[2];
-				let scan = lineEnd === -1 ? source.length : lineEnd + 1;
-				let blockEnd = source.length;
-				while (scan < source.length) {
-					const closeEnd = source.indexOf("\n", scan);
-					const closeLine = source.slice(
-						scan,
-						closeEnd === -1 ? source.length : closeEnd,
-					);
-					const close = FENCE_END.exec(closeLine);
-					if (
-						close &&
-						close[2][0] === marker[0] &&
-						close[2].length >= marker.length
-					) {
-						blockEnd = closeEnd === -1 ? source.length : closeEnd;
-						break;
-					}
-					if (closeEnd === -1) {
-						break;
-					}
-					scan = closeEnd + 1;
-				}
-				pushCode(cursor, blockEnd);
-				continue;
-			}
-		}
-
-		if (source[cursor] === "`") {
-			let openRun = 1;
-			while (source[cursor + openRun] === "`") {
-				openRun += 1;
-			}
-			let scan = cursor + openRun;
-			let closeAt = -1;
-			while (scan < source.length) {
-				const next = source.indexOf("`", scan);
-				if (next === -1) {
-					break;
-				}
-				let closeRun = 1;
-				while (source[next + closeRun] === "`") {
-					closeRun += 1;
-				}
-				if (closeRun === openRun) {
-					closeAt = next;
-					break;
-				}
-				scan = next + closeRun;
-			}
-			if (closeAt !== -1) {
-				pushCode(cursor, closeAt + openRun);
-				continue;
-			}
-			cursor += openRun;
-			continue;
-		}
-
-		cursor += 1;
-	}
-
-	pushText(source.length);
-	return segments;
-}
-
-/**
- * Rewrites `@[Name](user:ID)` into `[Name](mention:ID)` so react-markdown parses
- * the label as a link node we can render as a mention badge. Code fences and
- * inline code are skipped so examples such as `` `@[a](user:1)` `` stay literal.
- */
-export function renderMentionMarkup(body: string): string {
-	return splitMarkdownCode(body)
-		.map((segment) =>
-			segment.code
-				? segment.text
-				: segment.text.replace(
-						createMentionRegex(),
-						(_match, name: string, id: string) => {
-							const label = name.replace(/[\\[\]]/g, "\\$&").trim() || "user";
-							return `[${label}](${MENTION_HREF_PREFIX}${id})`;
-						},
-					),
-		)
-		.join("");
-}
-
-/** Reads the user id back out of a rendered mention href. */
-export const mentionUserIdFromHref = (href: string | undefined) => {
-	if (!href?.startsWith(MENTION_HREF_PREFIX)) {
-		return null;
-	}
-	const id = href.slice(MENTION_HREF_PREFIX.length).trim();
-	return id.length > 0 ? id : null;
-};

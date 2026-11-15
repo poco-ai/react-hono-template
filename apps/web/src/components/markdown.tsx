@@ -10,16 +10,12 @@ import {
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
 import { AtSign, Check, Copy } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { memo, type ReactNode, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { Components } from "react-markdown";
-import Markdown, { defaultUrlTransform } from "react-markdown";
+import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-	MENTION_HREF_PREFIX,
-	mentionUserIdFromHref,
-	renderMentionMarkup,
-} from "@/lib/mention";
+import { remarkMentions } from "@/lib/remark-mentions";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 
 /** Rendered `@[Name](user:ID)` mentions — never a clickable external link. */
@@ -102,11 +98,8 @@ const components: Components = {
 	),
 	li: ({ children }) => <li className="mb-0.5 last:mb-0">{children}</li>,
 	a: ({ href, children }) => {
-		if (mentionUserIdFromHref(href)) {
-			return <MentionLabel>{children}</MentionLabel>;
-		}
-		// Unsafe schemes (including hand-written `user:` links) are stripped by
-		// the url transform; never render them as anchors.
+		// Unsafe schemes are stripped by the default URL transform (no custom
+		// exception: mentions are not anchors anymore); never render them.
 		if (!href) {
 			return <span className="font-medium">{children}</span>;
 		}
@@ -120,6 +113,13 @@ const components: Components = {
 				{children}
 			</a>
 		);
+	},
+	span: ({ node, children }) => {
+		const mentionId = node?.properties?.["data-mention-id"];
+		if (typeof mentionId === "string" || typeof mentionId === "number") {
+			return <MentionLabel>{children}</MentionLabel>;
+		}
+		return <span>{children}</span>;
 	},
 	blockquote: ({ children }) => (
 		<blockquote className="border-l-2 pl-3 italic">{children}</blockquote>
@@ -180,18 +180,18 @@ const components: Components = {
 	),
 };
 
-export function MarkdownContent({ children }: { children: string }) {
+const remarkPlugins = [remarkGfm, remarkMentions];
+
+export const MarkdownContent = memo(function MarkdownContent({
+	children,
+}: {
+	children: string;
+}) {
 	return (
 		<div className="text-sm leading-relaxed break-words">
-			<Markdown
-				remarkPlugins={[remarkGfm]}
-				components={components}
-				urlTransform={(url) =>
-					url.startsWith(MENTION_HREF_PREFIX) ? url : defaultUrlTransform(url)
-				}
-			>
-				{renderMentionMarkup(children)}
+			<Markdown remarkPlugins={remarkPlugins} components={components}>
+				{children}
 			</Markdown>
 		</div>
 	);
-}
+});

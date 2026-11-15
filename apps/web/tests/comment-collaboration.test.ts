@@ -11,7 +11,6 @@ import {
 	filterMentionCandidates,
 	getMentionContext,
 	insertMention,
-	renderMentionMarkup,
 } from "../src/lib/mention";
 
 const comment = (
@@ -142,27 +141,6 @@ test("mention candidates match names and emails case-insensitively", () => {
 		["1", "2", "3"],
 	);
 	assert.equal(filterMentionCandidates(members, "", 2).length, 2);
-});
-
-test("rendering rewrites mention markup into badges, never user: links", () => {
-	const rendered = renderMentionMarkup("hi @[Alice Chen](user:u1)!");
-	assert.equal(rendered, "hi [Alice Chen](mention:u1)!");
-	assert.ok(!rendered.includes("(user:"));
-	assert.equal(
-		renderMentionMarkup("[docs](https://example.com) @[Bob](user:u2)"),
-		"[docs](https://example.com) [Bob](mention:u2)",
-	);
-});
-
-test("mention rendering leaves fenced and inline code untouched", () => {
-	const inline = "`@[Ada](user:u1)`";
-	const fenced = "```md\n@[Ada](user:u1)\n```";
-	assert.equal(renderMentionMarkup(inline), inline);
-	assert.equal(renderMentionMarkup(fenced), fenced);
-	assert.equal(
-		renderMentionMarkup("`code` @[Ada](user:u1)"),
-		"`code` [Ada](mention:u1)",
-	);
 });
 
 test("reaction toggling adds, removes and re-orders within the whitelist order", () => {

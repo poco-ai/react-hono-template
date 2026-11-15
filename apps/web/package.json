@@ -38,23 +38,28 @@
 		"i18next": "^26.4.2",
 		"input-otp": "^1.5.0",
 		"lucide-react": "^1.48.0",
+		"mdast-util-to-string": "^4.0.0",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
 		"react-i18next": "^17.0.15",
 		"react-markdown": "^10.1.0",
 		"remark-gfm": "^4.0.1",
 		"sonner": "^2.0.8",
+		"unist-util-visit": "^5.2.0",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4",
 		"@tanstack/router-plugin": "^1.168.41",
+		"@types/mdast": "^4.0.0",
 		"@types/node": "^24",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"@vitejs/plugin-react": "^6",
 		"happy-dom": "^21.0.4",
+		"remark-parse": "^11.0.0",
 		"typescript": "~6",
+		"unified": "^11.0.5",
 		"vite": "^8",
 		"wrangler": "^4.141.0"
 	}
