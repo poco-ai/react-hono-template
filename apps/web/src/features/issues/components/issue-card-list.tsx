@@ -21,6 +21,7 @@ import { LabelBadge } from "@/features/labels/components/label-badge";
 import type { OrgMember } from "@/features/members/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
+import { pageCount } from "@/lib/pagination";
 import { groupIssues } from "../grouping";
 
 const MAX_LABELS = 3;
@@ -72,9 +73,7 @@ export function IssueCardList({
 	const result = issues.data;
 	const items = result?.items ?? [];
 	const listEmpty = !issues.isPending && result?.items.length === 0;
-	const totalPages = result
-		? Math.max(1, Math.ceil(result.total / result.pageSize))
-		: 1;
+	const totalPages = result ? pageCount(result) : 1;
 	const memberById = new Map(members.map((member) => [member.userId, member]));
 	const labelById = new Map(labels.map((label) => [label.id, label]));
 	const prefixOf = identifierPrefixOf ?? (() => projectKey);

@@ -11,6 +11,7 @@ import { projectsRootKey, projectUpdatesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
+import { nextPageParam } from "@/lib/pagination";
 
 export type { ListProjectUpdatesDto, ProjectUpdateDto };
 
@@ -38,10 +39,7 @@ export function projectUpdatesQuery(orgId: string, projectId: string) {
 		queryFn: ({ pageParam }) =>
 			fetchProjectUpdatesPage(orgId, projectId, pageParam),
 		initialPageParam: 1,
-		getNextPageParam: (lastPage) =>
-			lastPage.page < Math.max(1, Math.ceil(lastPage.total / lastPage.pageSize))
-				? lastPage.page + 1
-				: undefined,
+		getNextPageParam: nextPageParam,
 	});
 }
 

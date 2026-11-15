@@ -21,7 +21,7 @@ import {
 	timelineBarGeometry,
 	timelinePercent,
 } from "@/features/roadmap/timeline";
-import { formatDateOnly, isoToDateOnly } from "@/lib/date";
+import { dateFormatter, formatDateOnly, isoToDateOnly } from "@/lib/date";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -46,7 +46,7 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 		? { from: roadmap.data.from, to: roadmap.data.to }
 		: null;
 	const ticks = window ? roadmapMonthTicks(window) : [];
-	const monthFormat = new Intl.DateTimeFormat(i18n.language, {
+	const monthFormat = dateFormatter(i18n.language, {
 		month: "short",
 		year: "numeric",
 	});

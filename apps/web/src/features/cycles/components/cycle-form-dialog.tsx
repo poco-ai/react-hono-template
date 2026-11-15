@@ -51,7 +51,11 @@ const cycleFormSchema = z.preprocess((values) => {
 	};
 }, createCycleSchema);
 
-const INPUT_IDS = { name: "cycle-name" };
+const INPUT_IDS = {
+	name: "cycle-name",
+	startsAt: "cycle-start",
+	endsAt: "cycle-end",
+};
 
 /** Both date controls share the range error; the copy matches the old dialog. */
 const PATTERN_KEYS = {

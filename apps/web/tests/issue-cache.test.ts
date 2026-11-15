@@ -83,6 +83,8 @@ test("inline updates patch a list row immutably and resolve the status object", 
 	const status = { id: "s2", name: "Done" } as StatusDto;
 	const issue = {
 		id: "i1",
+		title: "Old title",
+		description: "Old body",
 		statusId: "s1",
 		status: { id: "s1", name: "Todo" } as StatusDto,
 		priority: 0,
@@ -95,6 +97,8 @@ test("inline updates patch a list row immutably and resolve the status object", 
 	const patched = applyIssueUpdate(
 		issue,
 		{
+			title: "New title",
+			description: "New body",
 			statusId: "s2",
 			priority: 2,
 			assigneeId: "u1",
@@ -104,6 +108,8 @@ test("inline updates patch a list row immutably and resolve the status object", 
 		},
 		status,
 	);
+	assert.equal(patched.title, "New title");
+	assert.equal(patched.description, "New body");
 	assert.equal(patched.statusId, "s2");
 	assert.equal(patched.status, status);
 	assert.equal(patched.priority, 2);

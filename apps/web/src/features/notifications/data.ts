@@ -8,9 +8,7 @@ import {
 	type InfiniteData,
 	infiniteQueryOptions,
 	type QueryClient,
-	type QueryKey,
 	queryOptions,
-	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
 import type {
@@ -23,8 +21,12 @@ import {
 	notificationsUnreadCountKey,
 } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
-import type { MutationCallbacks } from "@/lib/mutation-callbacks";
-import { optimisticUpdate, rollbackOptimistic } from "@/lib/optimistic";
+import { type OptimisticPatch, optimisticPatch } from "@/lib/optimistic";
+import {
+	type OptimisticMutationCallbacks,
+	useOptimisticMutation,
+} from "@/lib/optimistic-mutation";
+import { nextPageParam } from "@/lib/pagination";
 
 /** Page size of the inbox list; the API caps `pageSize` at 100. */
 export const NOTIFICATIONS_PAGE_SIZE = 20;
@@ -65,10 +67,7 @@ export function notificationsQuery(orgId: string, filter: NotificationFilter) {
 		queryFn: ({ pageParam }): Promise<NotificationListDto> =>
 			fetchNotificationsPage(orgId, filter, pageParam),
 		initialPageParam: 1,
-		getNextPageParam: (lastPage) =>
-			lastPage.page * lastPage.pageSize < lastPage.total
-				? lastPage.page + 1
-				: undefined,
+		getNextPageParam: nextPageParam,
 	});
 }
 
@@ -123,50 +122,76 @@ export const invalidateNotificationQueries = (
 
 type NotificationListData = InfiniteData<NotificationListDto, number>;
 
-type NotificationCacheSnapshot = {
-	lists: Array<[QueryKey, NotificationListData | undefined]>;
-	unread: NotificationUnreadCountDto | undefined;
-};
-
 const notificationListPrefix = (orgId: string) =>
 	[...notificationsRootKey(orgId), "list"] as const;
 
-const snapshotNotificationCaches = (
-	queryClient: QueryClient,
-	orgId: string,
-): NotificationCacheSnapshot => ({
-	lists: queryClient.getQueriesData<NotificationListData>({
-		queryKey: notificationListPrefix(orgId),
-	}),
-	unread: queryClient.getQueryData<NotificationUnreadCountDto>(
-		notificationsUnreadCountKey(orgId),
-	),
-});
+const isNotificationFilter = (value: unknown): value is NotificationFilter =>
+	value === "all" || value === "unread";
 
-const restoreNotificationCaches = (
+/** Keeps the per-page unread badge in sync with the unpaginated counter. */
+const withUnread = (
+	data: NotificationListData,
+	unread: number | undefined,
+): NotificationListData =>
+	unread === undefined || data.pages.every((page) => page.unread === unread)
+		? data
+		: {
+				...data,
+				pages: data.pages.map((page) =>
+					page.unread === unread ? page : { ...page, unread },
+				),
+			};
+
+/**
+ * One patch per cached inbox page, covering every mounted filter. The keys are
+ * read from the cache at mutate time so the optimistic write and its rollback
+ * always target the pages the user can see.
+ */
+const notificationListPatches = (
 	queryClient: QueryClient,
 	orgId: string,
-	snapshot: NotificationCacheSnapshot | undefined,
-) => {
-	if (!snapshot) {
-		return;
-	}
-	for (const [key, data] of snapshot.lists) {
-		if (data) {
-			queryClient.setQueryData(key, data);
-		}
-	}
-	if (snapshot.unread) {
-		queryClient.setQueryData(
-			notificationsUnreadCountKey(orgId),
-			snapshot.unread,
-		);
-	} else {
-		queryClient.removeQueries({
-			queryKey: notificationsUnreadCountKey(orgId),
-			exact: true,
+	update: (
+		data: NotificationListData,
+		filter: NotificationFilter,
+	) => NotificationListData,
+	unread: number | undefined,
+): OptimisticPatch[] =>
+	queryClient
+		.getQueriesData<NotificationListData>({
+			queryKey: notificationListPrefix(orgId),
+		})
+		.flatMap(([queryKey]) => {
+			const filter = queryKey[queryKey.length - 1];
+			if (!isNotificationFilter(filter)) {
+				return [];
+			}
+			return [
+				optimisticPatch<NotificationListData>(queryKey, (previous) =>
+					previous ? withUnread(update(previous, filter), unread) : previous,
+				),
+			];
 		});
+
+/**
+ * Patches the unpaginated counter only when it is already cached: without a
+ * counter the badge falls back to `pages[0].unread`, which the list patches
+ * already update (and which roll back together with them).
+ */
+const unreadCounterPatches = (
+	queryClient: QueryClient,
+	orgId: string,
+	unread: number | undefined,
+): OptimisticPatch[] => {
+	const queryKey = notificationsUnreadCountKey(orgId);
+	if (
+		unread === undefined ||
+		queryClient.getQueryData(queryKey) === undefined
+	) {
+		return [];
 	}
+	return [
+		optimisticPatch<NotificationUnreadCountDto>(queryKey, () => ({ unread })),
+	];
 };
 
 const updateNotificationLists = (
@@ -334,135 +359,120 @@ const markNotificationCachesStale = (
 
 export function useMarkNotificationRead(
 	orgId: string,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		Awaited<ReturnType<typeof markNotificationRead>>,
 		string
 	>,
 ) {
 	const queryClient = useQueryClient();
 
-	return useMutation({
-		...callbacks,
+	return useOptimisticMutation({
 		mutationFn: (notificationId: string) =>
 			markNotificationRead(orgId, notificationId),
-		onMutate: async (notificationId) => {
-			await queryClient.cancelQueries({
-				queryKey: notificationsRootKey(orgId),
-			});
-			const snapshot = snapshotNotificationCaches(queryClient, orgId);
+		optimistic: (notificationId) => {
 			const existing = findNotification(queryClient, orgId, notificationId);
 			if (!existing || existing.readAt) {
-				return snapshot;
+				return [];
 			}
-			updateNotificationLists(queryClient, orgId, (data, filter) =>
-				filter === "unread"
-					? removeNotification(data, notificationId)
-					: applyReadAt(data, notificationId, new Date().toISOString()),
-			);
+			const readAt = new Date().toISOString();
 			const unread = readUnreadCount(queryClient, orgId);
-			if (unread !== undefined) {
-				applyUnreadCount(queryClient, orgId, Math.max(0, unread - 1));
+			const nextUnread =
+				unread === undefined ? undefined : Math.max(0, unread - 1);
+			return [
+				...notificationListPatches(
+					queryClient,
+					orgId,
+					(data, filter) =>
+						filter === "unread"
+							? removeNotification(data, notificationId)
+							: applyReadAt(data, notificationId, readAt),
+					nextUnread,
+				),
+				...unreadCounterPatches(queryClient, orgId, nextUnread),
+			];
+		},
+		// The optimistic pages stay usable without refetching (and without
+		// offset drift). On success, reconcile with the timestamp the server
+		// persisted; in every case mark the pages stale and refresh the counter.
+		invalidate: (client, _notificationId, data) => {
+			if (data) {
+				updateNotificationLists(client, orgId, (list, filter) =>
+					filter === "unread" ? list : applyReadAt(list, data.id, data.readAt),
+				);
 			}
-			return snapshot;
+			markNotificationCachesStale(client, orgId);
 		},
-		onError: (error, notificationId, result, context) => {
-			restoreNotificationCaches(queryClient, orgId, result);
-			return callbacks?.onError?.(error, notificationId, result, context);
-		},
-		onSuccess: (data, _notificationId, _result, context) => {
-			// Reconcile with the timestamp the server persisted.
-			updateNotificationLists(queryClient, orgId, (list, filter) =>
-				filter === "unread" ? list : applyReadAt(list, data.id, data.readAt),
-			);
-			return callbacks?.onSuccess?.(data, _notificationId, _result, context);
-		},
-		onSettled: (...args) => {
-			markNotificationCachesStale(queryClient, orgId);
-			return callbacks?.onSettled?.(...args);
-		},
+		callbacks,
 	});
 }
 
 export function useMarkAllNotificationsRead(
 	orgId: string,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		Awaited<ReturnType<typeof markAllNotificationsRead>>,
 		void
 	>,
 ) {
 	const queryClient = useQueryClient();
 
-	return useMutation({
-		...callbacks,
+	return useOptimisticMutation({
 		mutationFn: () => markAllNotificationsRead(orgId),
-		onMutate: async () => {
-			await queryClient.cancelQueries({
-				queryKey: notificationsRootKey(orgId),
-			});
-			const snapshot = snapshotNotificationCaches(queryClient, orgId);
+		optimistic: () => {
 			const readAt = new Date().toISOString();
-			updateNotificationLists(queryClient, orgId, (data, filter) =>
-				markAllReadLocally(data, filter, readAt),
-			);
-			applyUnreadCount(queryClient, orgId, 0);
-			return snapshot;
+			return [
+				...notificationListPatches(
+					queryClient,
+					orgId,
+					(data, filter) => markAllReadLocally(data, filter, readAt),
+					0,
+				),
+				...unreadCounterPatches(queryClient, orgId, 0),
+			];
 		},
-		onError: (error, variables, result, context) => {
-			restoreNotificationCaches(queryClient, orgId, result);
-			return callbacks?.onError?.(error, variables, result, context);
+		invalidate: (client, _variables, data) => {
+			if (data) {
+				applyUnreadCount(client, orgId, data.unread);
+			}
+			markNotificationCachesStale(client, orgId);
 		},
-		onSuccess: (data, _variables, _result, context) => {
-			applyUnreadCount(queryClient, orgId, data.unread);
-			return callbacks?.onSuccess?.(data, _variables, _result, context);
-		},
-		onSettled: (...args) => {
-			markNotificationCachesStale(queryClient, orgId);
-			return callbacks?.onSettled?.(...args);
-		},
+		callbacks,
 	});
 }
 
 export function useArchiveNotification(
 	orgId: string,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		Awaited<ReturnType<typeof archiveNotification>>,
 		string
 	>,
 ) {
 	const queryClient = useQueryClient();
 
-	return useMutation({
-		...callbacks,
+	return useOptimisticMutation({
 		mutationFn: (notificationId: string) =>
 			archiveNotification(orgId, notificationId),
-		onMutate: async (notificationId) => {
-			await queryClient.cancelQueries({
-				queryKey: notificationsRootKey(orgId),
-			});
-			const snapshot = snapshotNotificationCaches(queryClient, orgId);
+		optimistic: (notificationId) => {
 			const existing = findNotification(queryClient, orgId, notificationId);
 			if (!existing) {
-				return snapshot;
+				return [];
 			}
-			updateNotificationLists(queryClient, orgId, (data) =>
-				removeNotification(data, notificationId),
-			);
-			if (!existing.readAt) {
-				const unread = readUnreadCount(queryClient, orgId);
-				if (unread !== undefined) {
-					applyUnreadCount(queryClient, orgId, Math.max(0, unread - 1));
-				}
-			}
-			return snapshot;
+			const unread = existing.readAt
+				? undefined
+				: readUnreadCount(queryClient, orgId);
+			const nextUnread =
+				unread === undefined ? undefined : Math.max(0, unread - 1);
+			return [
+				...notificationListPatches(
+					queryClient,
+					orgId,
+					(data) => removeNotification(data, notificationId),
+					nextUnread,
+				),
+				...unreadCounterPatches(queryClient, orgId, nextUnread),
+			];
 		},
-		onError: (error, notificationId, result, context) => {
-			restoreNotificationCaches(queryClient, orgId, result);
-			return callbacks?.onError?.(error, notificationId, result, context);
-		},
-		onSettled: (...args) => {
-			markNotificationCachesStale(queryClient, orgId);
-			return callbacks?.onSettled?.(...args);
-		},
+		invalidate: (client) => markNotificationCachesStale(client, orgId),
+		callbacks,
 	});
 }
 
@@ -512,20 +522,18 @@ export function useUpdateIssueSubscription(
 	orgId: string,
 	projectId: string,
 	issueNumber: number,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		Awaited<ReturnType<typeof updateIssueSubscription>>,
 		UpdateIssueSubscriptionInput
 	>,
 ) {
-	const queryClient = useQueryClient();
 	const queryKey = issueSubscriptionKey(orgId, projectId, issueNumber);
 
-	return useMutation({
-		...callbacks,
+	return useOptimisticMutation({
 		mutationFn: (input: UpdateIssueSubscriptionInput) =>
 			updateIssueSubscription(orgId, projectId, issueNumber, input),
-		onMutate: (input) =>
-			optimisticUpdate<IssueSubscriptionDto>(queryClient, queryKey, (old) =>
+		optimistic: (input) =>
+			optimisticPatch<IssueSubscriptionDto>(queryKey, (old) =>
 				old
 					? {
 							...old,
@@ -534,13 +542,7 @@ export function useUpdateIssueSubscription(
 						}
 					: old,
 			),
-		onError: (error, input, result, context) => {
-			rollbackOptimistic(queryClient, queryKey, result);
-			return callbacks?.onError?.(error, input, result, context);
-		},
-		onSettled: (...args) => {
-			void queryClient.invalidateQueries({ queryKey });
-			return callbacks?.onSettled?.(...args);
-		},
+		invalidate: (client) => client.invalidateQueries({ queryKey }),
+		callbacks,
 	});
 }

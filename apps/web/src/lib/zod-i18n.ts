@@ -25,7 +25,13 @@ z.config({
 	customError: (issue) => {
 		switch (issue.code) {
 			case "invalid_type":
-				return translate("form.errors.required");
+				// An absent value is "required"; a present value of the wrong
+				// type (e.g. text in a number field) is an invalid value.
+				return issue.input === undefined
+					? translate("form.errors.required")
+					: isNumericOrigin(String(issue.origin))
+						? translate("form.errors.invalidNumber")
+						: translate("form.errors.invalidValue");
 			case "too_small": {
 				const count = Number(issue.minimum);
 				if (isNumericOrigin(issue.origin)) {

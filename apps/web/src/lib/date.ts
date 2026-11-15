@@ -20,6 +20,27 @@ const DAY_MS = 86_400_000;
 
 const pad2 = (value: number): string => String(value).padStart(2, "0");
 
+const dateFormatCache = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Cached `Intl.DateTimeFormat` for a locale/options pair. Building a formatter
+ * is the expensive part of formatting, and lists format many rows per render
+ * with the same locale and options.
+ */
+export function dateFormatter(
+	locale: string,
+	options?: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+	const key = `${locale}|${options ? JSON.stringify(options) : ""}`;
+	const cached = dateFormatCache.get(key);
+	if (cached) {
+		return cached;
+	}
+	const formatter = new Intl.DateTimeFormat(locale, options);
+	dateFormatCache.set(key, formatter);
+	return formatter;
+}
+
 /** Local calendar day of a date-only string; undefined for malformed input. */
 export function parseDateOnly(value: string): Date | undefined {
 	const match = DATE_ONLY_RE.exec(value);
@@ -161,7 +182,7 @@ export function formatDateOnly(
 	}
 	const date = parseDateOnly(value);
 	if (date) {
-		return date.toLocaleDateString(locale, options);
+		return dateFormatter(locale, options).format(date);
 	}
 	if (DATE_ONLY_RE.test(value)) {
 		return "";
@@ -170,7 +191,7 @@ export function formatDateOnly(
 	if (Number.isNaN(fallback.getTime())) {
 		return "";
 	}
-	return fallback.toLocaleDateString(locale, options);
+	return dateFormatter(locale, options).format(fallback);
 }
 
 /** Compact local date: the year is omitted for days in the current year. */
@@ -190,7 +211,7 @@ export function formatShortDateOnly(
 		date.getFullYear() === now.getFullYear()
 			? { month: "short", day: "numeric" }
 			: { year: "numeric", month: "short", day: "numeric" };
-	return date.toLocaleDateString(locale, options);
+	return dateFormatter(locale, options).format(date);
 }
 
 /**
@@ -214,5 +235,5 @@ export function formatUtcDateOnly(
 	if (Number.isNaN(date.getTime())) {
 		return "";
 	}
-	return date.toLocaleDateString(locale, { timeZone: "UTC" });
+	return dateFormatter(locale, { timeZone: "UTC" }).format(date);
 }

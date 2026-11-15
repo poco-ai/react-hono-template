@@ -1,38 +1,64 @@
 import {
 	ISSUE_QUERY_GROUP_BY,
 	ISSUE_QUERY_SORT_FIELDS,
+	type IssueQuerySort,
+	type IssueQuerySortField,
 	issueQuerySortSchema,
 } from "@workspace/shared";
 import { z } from "zod";
 import { ISSUE_LIST_DENSITIES } from "./list-preferences";
 
+const isSortField = (value: string): value is IssueQuerySortField =>
+	(ISSUE_QUERY_SORT_FIELDS as readonly string[]).includes(value);
+
+/** A usable `sort` param: one legacy sort field or an explicit sort list. */
+export type ParsedSortParam =
+	| { field: IssueQuerySortField }
+	| { sorts: IssueQuerySort[] };
+
 /**
- * `sort` carries either the legacy single key or the JSON array produced when
- * a saved view is detached from the URL. Invalid values fall back to `updated`.
+ * Parses the URL `sort` param, accepting both the legacy single key and the
+ * JSON array produced when a saved view is detached from the URL. `query.ts`
+ * reuses this so the schema transform and the request builder cannot drift;
+ * `undefined` means "not usable, fall back to the default sort".
+ */
+export const parseSortParamValue = (
+	value: string,
+): ParsedSortParam | undefined => {
+	const trimmed = value.trim();
+	if (isSortField(trimmed)) {
+		return { field: trimmed };
+	}
+	if (!trimmed.startsWith("[")) {
+		return undefined;
+	}
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(trimmed);
+	} catch {
+		return undefined;
+	}
+	if (!Array.isArray(parsed) || parsed.length === 0) {
+		return undefined;
+	}
+	const sorts: IssueQuerySort[] = [];
+	for (const entry of parsed) {
+		const result = issueQuerySortSchema.safeParse(entry);
+		if (!result.success) {
+			return undefined;
+		}
+		sorts.push(result.data);
+	}
+	return { sorts };
+};
+
+/**
+ * `sort` stays a string in the URL (legacy key or JSON array) so bookmarks and
+ * saved-view writes keep their shape; invalid values fall back to `updated`.
  */
 const sortParam = z
 	.string()
-	.transform((value) => {
-		const trimmed = value.trim();
-		if ((ISSUE_QUERY_SORT_FIELDS as readonly string[]).includes(trimmed)) {
-			return trimmed;
-		}
-		if (trimmed.startsWith("[")) {
-			try {
-				const parsed = JSON.parse(trimmed);
-				if (
-					Array.isArray(parsed) &&
-					parsed.length > 0 &&
-					parsed.every((entry) => issueQuerySortSchema.safeParse(entry).success)
-				) {
-					return trimmed;
-				}
-			} catch {
-				return "updated";
-			}
-		}
-		return "updated";
-	})
+	.transform((value) => (parseSortParamValue(value) ? value.trim() : "updated"))
 	.catch("updated");
 
 export const issueSearchSchema = z.object({

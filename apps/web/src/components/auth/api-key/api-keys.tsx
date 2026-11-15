@@ -15,6 +15,7 @@ import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { apiErrorMessage } from "@/lib/errors";
+import { pageCount } from "@/lib/pagination";
 import { ApiKey } from "./api-key";
 import { ApiKeySkeleton } from "./api-key-skeleton";
 import { CreateApiKeyDialog } from "./create-api-key-dialog";
@@ -35,9 +36,7 @@ export function ApiKeys({
 	const { canManage } = useOrgRole(organizationId);
 	const locked = frozen || !canManage;
 	const [createOpen, setCreateOpen] = useState(false);
-	const totalPages = keys.data
-		? Math.max(1, Math.ceil(keys.data.total / keys.data.pageSize))
-		: 1;
+	const totalPages = keys.data ? pageCount(keys.data) : 1;
 	useEffect(() => {
 		if (keys.isSuccess && page > totalPages) onPageChange(totalPages);
 	}, [keys.isSuccess, page, totalPages, onPageChange]);

@@ -70,14 +70,32 @@ export function dayKey(value: string | null | undefined): string {
 	return dateToDateOnly(date);
 }
 
-export function formatRelativeTime(value: string | null | undefined): string {
+const relativeTimeFormats = new Map<string, Intl.RelativeTimeFormat>();
+
+const relativeTimeFormat = (locale: string): Intl.RelativeTimeFormat => {
+	const cached = relativeTimeFormats.get(locale);
+	if (cached) {
+		return cached;
+	}
+	const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+	relativeTimeFormats.set(locale, formatter);
+	return formatter;
+};
+
+/**
+ * Relative time for timestamps ("3 hours ago"). Accepts a `Date` as well so
+ * session rows and other Date-typed values share this implementation.
+ */
+export function formatRelativeTime(
+	value: string | Date | null | undefined,
+): string {
 	if (!value) {
 		return "";
 	}
-	const diff = new Date(value).getTime() - Date.now();
-	const formatter = new Intl.RelativeTimeFormat(i18n.language, {
-		numeric: "auto",
-	});
+	const time =
+		value instanceof Date ? value.getTime() : new Date(value).getTime();
+	const diff = time - Date.now();
+	const formatter = relativeTimeFormat(i18n.language);
 	const minutes = Math.round(diff / 60000);
 	if (minutes === 0) {
 		return i18n.t("common.justNow");

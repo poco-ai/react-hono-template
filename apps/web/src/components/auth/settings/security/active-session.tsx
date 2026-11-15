@@ -17,29 +17,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useSignOut } from "@/features/auth/data";
 import { apiErrorMessage } from "@/lib/errors";
-
-function timeAgo(date: Date, language: string) {
-	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-	const rtf = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
-
-	const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
-		["year", 31536000],
-		["month", 2592000],
-		["week", 604800],
-		["day", 86400],
-		["hour", 3600],
-		["minute", 60],
-		["second", 1],
-	];
-
-	for (const [unit, threshold] of UNITS) {
-		if (seconds >= threshold) {
-			return rtf.format(-Math.floor(seconds / threshold), unit);
-		}
-	}
-
-	return rtf.format(0, "second");
-}
+import { formatRelativeTime } from "@/lib/format";
 
 export type ActiveSessionProps = {
 	activeSession: Session;
@@ -55,7 +33,7 @@ export type ActiveSessionProps = {
  * @returns A JSX element containing the active session row
  */
 export function ActiveSession({ activeSession }: ActiveSessionProps) {
-	const { t, i18n } = useTranslation();
+	const { t } = useTranslation();
 	const logout = useSignOut({
 		onError: (error) => toast.error(apiErrorMessage(t, error)),
 		onSuccess: () => navigate({ to: "/login", replace: true }),
@@ -95,7 +73,7 @@ export function ActiveSession({ activeSession }: ActiveSessionProps) {
 				) : (
 					activeSession.createdAt && (
 						<ItemDescription className="capitalize">
-							{timeAgo(activeSession.createdAt, i18n.language)}
+							{formatRelativeTime(activeSession.createdAt)}
 						</ItemDescription>
 					)
 				)}

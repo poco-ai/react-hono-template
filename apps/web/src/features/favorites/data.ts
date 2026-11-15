@@ -1,22 +1,16 @@
 import type { FavoriteItemDto } from "@api/dto/favorite.dto";
-import {
-	type QueryClient,
-	queryOptions,
-	useMutation,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	CreateFavoriteInput,
 	FavoriteEntityType,
 } from "@workspace/shared";
 import { favoritesRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
-import type { MutationCallbacks } from "@/lib/mutation-callbacks";
+import { optimisticPatch } from "@/lib/optimistic";
 import {
-	type OptimisticContext,
-	optimisticUpdate,
-	rollbackOptimistic,
-} from "@/lib/optimistic";
+	type OptimisticMutationCallbacks,
+	useOptimisticMutation,
+} from "@/lib/optimistic-mutation";
 
 export function favoritesQuery(orgId: string) {
 	return queryOptions({
@@ -82,14 +76,13 @@ const optimisticFavorite = (
 
 export function useRemoveFavorite(
 	orgId: string,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		Awaited<ReturnType<typeof removeFavorite>>,
 		{ entityType: FavoriteEntityType; entityId: string }
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	const queryKey = favoritesRootKey(orgId);
+	return useOptimisticMutation({
 		mutationFn: ({
 			entityType,
 			entityId,
@@ -97,28 +90,15 @@ export function useRemoveFavorite(
 			entityType: FavoriteEntityType;
 			entityId: string;
 		}) => removeFavorite(orgId, entityType, entityId),
-		onMutate: ({ entityType, entityId }) =>
-			optimisticUpdate<FavoriteItemDto[]>(
-				queryClient,
-				favoritesRootKey(orgId),
-				(old) =>
-					old?.filter(
-						(item) =>
-							!(item.entityType === entityType && item.entityId === entityId),
-					),
+		optimistic: ({ entityType, entityId }) =>
+			optimisticPatch<FavoriteItemDto[]>(queryKey, (old) =>
+				old?.filter(
+					(item) =>
+						!(item.entityType === entityType && item.entityId === entityId),
+				),
 			),
-		onError: (...args) => {
-			rollbackOptimistic(
-				queryClient,
-				favoritesRootKey(orgId),
-				args[2] as OptimisticContext<FavoriteItemDto[]> | undefined,
-			);
-			return callbacks?.onError?.(...args);
-		},
-		onSettled: (...args) => {
-			void invalidateFavoriteQueries(queryClient, orgId);
-			return callbacks?.onSettled?.(...args);
-		},
+		invalidate: (client) => invalidateFavoriteQueries(client, orgId),
+		callbacks,
 	});
 }
 
@@ -132,14 +112,13 @@ export interface ToggleFavoriteVariables {
 /** Star toggle: pins the entity when absent, unpins it when already present. */
 export function useToggleFavorite(
 	orgId: string,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		{ favorited: boolean },
 		ToggleFavoriteVariables
 	>,
 ) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		...callbacks,
+	const queryKey = favoritesRootKey(orgId);
+	return useOptimisticMutation({
 		mutationFn: async ({
 			entityType,
 			entityId,
@@ -152,39 +131,25 @@ export function useToggleFavorite(
 			await addFavorite(orgId, { entityType, entityId });
 			return { favorited: true };
 		},
-		onMutate: ({ entityType, entityId, favorited }) =>
-			optimisticUpdate<FavoriteItemDto[]>(
-				queryClient,
-				favoritesRootKey(orgId),
-				(old) => {
-					if (!old) {
-						return old;
-					}
-					if (favorited) {
-						return old.filter(
-							(item) =>
-								!(item.entityType === entityType && item.entityId === entityId),
-						);
-					}
-					return old.some(
+		optimistic: ({ entityType, entityId, favorited }) =>
+			optimisticPatch<FavoriteItemDto[]>(queryKey, (old) => {
+				if (!old) {
+					return old;
+				}
+				if (favorited) {
+					return old.filter(
 						(item) =>
-							item.entityType === entityType && item.entityId === entityId,
-					)
-						? old
-						: [...old, optimisticFavorite(orgId, entityType, entityId)];
-				},
-			),
-		onError: (...args) => {
-			rollbackOptimistic(
-				queryClient,
-				favoritesRootKey(orgId),
-				args[2] as OptimisticContext<FavoriteItemDto[]> | undefined,
-			);
-			return callbacks?.onError?.(...args);
-		},
-		onSettled: (...args) => {
-			void invalidateFavoriteQueries(queryClient, orgId);
-			return callbacks?.onSettled?.(...args);
-		},
+							!(item.entityType === entityType && item.entityId === entityId),
+					);
+				}
+				return old.some(
+					(item) =>
+						item.entityType === entityType && item.entityId === entityId,
+				)
+					? old
+					: [...old, optimisticFavorite(orgId, entityType, entityId)];
+			}),
+		invalidate: (client) => invalidateFavoriteQueries(client, orgId),
+		callbacks,
 	});
 }

@@ -47,6 +47,7 @@ import {
 	useBulkTriageIssues,
 	useTriageIssue,
 } from "@/features/triage/data";
+import { dateFormatter } from "@/lib/date";
 import { apiErrorMessage } from "@/lib/errors";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
@@ -95,9 +96,7 @@ export function TriagePage({
 	const memberNames = new Map(
 		(members.data ?? []).map((member) => [member.userId, member.user.name]),
 	);
-	const dateFormat = new Intl.DateTimeFormat(i18n.language, {
-		dateStyle: "medium",
-	});
+	const dateFormat = dateFormatter(i18n.language, { dateStyle: "medium" });
 	const currentUserId = session?.user.id;
 
 	const single = useTriageIssue(orgId, {

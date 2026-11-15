@@ -8,6 +8,7 @@ import {
 	issueQueryKey,
 	legacyFilterFromSearch,
 	parseIssueFilter,
+	parseSortParam,
 	primarySortField,
 	resolveIssueQuery,
 	serializeIssueFilter,
@@ -403,4 +404,30 @@ test("URL schema keeps legacy links and falls back on invalid values", () => {
 		resolveIssueQuery({ sort: multiSort }).sorts,
 		JSON.parse(multiSort),
 	);
+});
+
+test("URL sort parsing is shared by the schema and the request builder", () => {
+	// Legacy single keys tolerate surrounding whitespace in both paths.
+	assert.equal(issueSearchSchema.parse({ sort: " dueDate " }).sort, "dueDate");
+	assert.deepEqual(parseSortParam(" dueDate "), [
+		{ field: "dueDate", direction: "asc" },
+	]);
+
+	// A partially invalid sort array is rejected wholesale, never half-applied.
+	const mixedSort = JSON.stringify([
+		{ field: "priority", direction: "asc" },
+		{ field: "bogus", direction: "asc" },
+	]);
+	assert.equal(issueSearchSchema.parse({ sort: mixedSort }).sort, "updated");
+	assert.deepEqual(parseSortParam(mixedSort), [
+		{ field: "updated", direction: "desc" },
+	]);
+
+	// Non-array JSON and unparsable values fall back in both paths.
+	for (const invalid of ['["priority"]', "[", "bogus"]) {
+		assert.equal(issueSearchSchema.parse({ sort: invalid }).sort, "updated");
+		assert.deepEqual(parseSortParam(invalid), [
+			{ field: "updated", direction: "desc" },
+		]);
+	}
 });

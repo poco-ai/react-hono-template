@@ -48,6 +48,7 @@ import {
 
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
+import { pageCount } from "@/lib/pagination";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AdminOrgsPage() {
@@ -95,9 +96,7 @@ export function AdminOrgsPage() {
 		navigate({ search: (prev) => ({ ...prev, page: next }) });
 
 	const result: ListAdminOrgsDto | undefined = orgsQuery.data;
-	const totalPages = result
-		? Math.max(1, Math.ceil(result.total / result.pageSize))
-		: 1;
+	const totalPages = result ? pageCount(result) : 1;
 	const listEmpty = !orgsQuery.isPending && result?.items.length === 0;
 
 	useEffect(() => {

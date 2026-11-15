@@ -32,6 +32,8 @@ import {
 } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { type CodedError, codedError, errorCode } from "@/lib/errors";
+import { optimisticPatch } from "@/lib/optimistic";
+import { useOptimisticMutation } from "@/lib/optimistic-mutation";
 import {
 	buildIssueListParams,
 	DEFAULT_ISSUE_SORT,
@@ -409,61 +411,28 @@ export function useUpdateIssue(
 ) {
 	const queryClient = useQueryClient();
 	const detailKey = issueQuery(orgId, projectId, issueNumber).queryKey;
-	return useMutation({
+	return useOptimisticMutation({
 		mutationFn: (input: UpdateIssueInput) =>
 			updateIssue(orgId, projectId, issueNumber, input),
-		onMutate: async (input) => {
-			await queryClient.cancelQueries({ queryKey: detailKey });
-			const previous = queryClient.getQueryData(detailKey);
-			queryClient.setQueryData(detailKey, (old) => {
-				if (!old) {
-					return old;
-				}
-				const next = { ...old };
-				if (input.title !== undefined) {
-					next.title = input.title;
-				}
-				if (input.description !== undefined) {
-					next.description = input.description;
-				}
-				if (input.statusId !== undefined) {
-					next.statusId = input.statusId;
-				}
-				if (input.priority !== undefined) {
-					next.priority = input.priority ?? 0;
-				}
-				if (input.assigneeId !== undefined) {
-					next.assigneeId = input.assigneeId;
-				}
-				if (input.dueDate !== undefined) {
-					next.dueDate = input.dueDate;
-				}
-				if (input.estimate !== undefined) {
-					next.estimate = input.estimate;
-				}
-				if (input.labelIds !== undefined) {
-					next.labelIds = input.labelIds;
-				}
-				if (input.cycleId !== undefined) {
-					next.cycleId = input.cycleId;
-				}
-				return next;
-			});
-			return { previous };
-		},
-		onError: (_error, _input, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(detailKey, context.previous);
-			}
-		},
-		onSettled: () => {
-			void invalidateIssueQueries(queryClient, orgId);
-			// Detail/activity keys are not under the list prefixes; a child's
-			// status change must also refresh its parent's sub-issue progress.
-			void queryClient.invalidateQueries({
-				queryKey: issueDetailRootKey(orgId, projectId),
-			});
-		},
+		optimistic: (input) =>
+			optimisticPatch<IssueDetailDto>(detailKey, (issue) =>
+				issue
+					? applyIssueUpdate(
+							issue,
+							input,
+							cachedStatus(queryClient, orgId, input.statusId),
+						)
+					: issue,
+			),
+		invalidate: (client) =>
+			Promise.all([
+				invalidateIssueQueries(client, orgId),
+				// Detail/activity keys are not under the list prefixes; a child's
+				// status change must also refresh its parent's sub-issue progress.
+				client.invalidateQueries({
+					queryKey: issueDetailRootKey(orgId, projectId),
+				}),
+			]),
 	});
 }
 
@@ -553,43 +522,35 @@ export function useSetIssueArchived(
 	projectId: string,
 	issueNumber: number,
 ) {
-	const queryClient = useQueryClient();
 	const detailKey = issueQuery(orgId, projectId, issueNumber).queryKey;
-	return useMutation({
+	return useOptimisticMutation({
 		mutationFn: (archived: boolean) =>
 			archived
 				? archiveIssue(orgId, projectId, issueNumber)
 				: restoreIssue(orgId, projectId, issueNumber),
-		onMutate: async (archived) => {
-			await queryClient.cancelQueries({ queryKey: detailKey });
-			const previous = queryClient.getQueryData(detailKey);
-			queryClient.setQueryData(detailKey, (old) =>
-				old
+		optimistic: (archived) =>
+			optimisticPatch<IssueDetailDto>(detailKey, (issue) =>
+				issue
 					? {
-							...old,
+							...issue,
 							archivedAt: archived ? new Date().toISOString() : null,
 						}
-					: old,
-			);
-			return { previous };
-		},
-		onError: (_error, _archived, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(detailKey, context.previous);
-			}
-		},
-		onSettled: () => {
-			void invalidateIssueQueries(queryClient, orgId);
-			void queryClient.invalidateQueries({
-				queryKey: issueDetailRootKey(orgId, projectId),
-			});
-		},
+					: issue,
+			),
+		invalidate: (client) =>
+			Promise.all([
+				invalidateIssueQueries(client, orgId),
+				client.invalidateQueries({
+					queryKey: issueDetailRootKey(orgId, projectId),
+				}),
+			]),
 	});
 }
 
 /**
  * Applies a partial update to a cached issue row (list rows and detail share
- * the same shape). The resolved status object is patched as well when known.
+ * the same shape). Title/description are merged like every other field, and the
+ * resolved status object is patched as well when the caller knows it.
  */
 export function applyIssueUpdate<T extends IssueDetailDto>(
 	issue: T,
@@ -597,6 +558,12 @@ export function applyIssueUpdate<T extends IssueDetailDto>(
 	status?: StatusDto,
 ): T {
 	const next = { ...issue };
+	if (input.title !== undefined) {
+		next.title = input.title;
+	}
+	if (input.description !== undefined) {
+		next.description = input.description;
+	}
 	if (input.statusId !== undefined) {
 		next.statusId = input.statusId;
 		if (status) {
@@ -624,6 +591,22 @@ export function applyIssueUpdate<T extends IssueDetailDto>(
 	return next;
 }
 
+/**
+ * Status row for an optimistic `statusId`. Statuses are owned by
+ * `features/statuses/data`; the shared key lives in `features/keys` so the two
+ * data modules stay acyclic.
+ */
+const cachedStatus = (
+	queryClient: QueryClient,
+	orgId: string,
+	statusId: string | undefined,
+) =>
+	statusId
+		? queryClient
+				.getQueryData<StatusDto[]>(statusesKey(orgId))
+				?.find((entry) => entry.id === statusId)
+		: undefined;
+
 export interface IssueFieldUpdate {
 	/** Row identity in the active list cache. */
 	id: string;
@@ -643,46 +626,34 @@ export function useIssueFieldUpdate(
 ) {
 	const queryClient = useQueryClient();
 	const listKey = projectIssuesQuery(orgId, projectId, filters).queryKey;
-	return useMutation({
+	return useOptimisticMutation({
 		mutationFn: ({ number, input }: IssueFieldUpdate) =>
 			updateIssue(orgId, projectId, number, input),
-		onMutate: async ({ id, input }) => {
-			await queryClient.cancelQueries({ queryKey: listKey });
-			const previous = queryClient.getQueryData<ListIssuesDto>(listKey);
-			// The statuses cache is owned by features/statuses/data; its shared
-			// key lives in features/keys so the two data modules stay acyclic.
-			const statuses = queryClient.getQueryData<StatusDto[]>(
-				statusesKey(orgId),
-			);
-			const status = input.statusId
-				? statuses?.find((entry) => entry.id === input.statusId)
-				: undefined;
-			queryClient.setQueryData<ListIssuesDto>(listKey, (old) =>
+		optimistic: ({ id, input }) =>
+			optimisticPatch<ListIssuesDto>(listKey, (old) =>
 				old
 					? {
 							...old,
 							items: old.items.map((issue) =>
 								issue.id === id
-									? applyIssueUpdate(issue, input, status)
+									? applyIssueUpdate(
+											issue,
+											input,
+											cachedStatus(queryClient, orgId, input.statusId),
+										)
 									: issue,
 							),
 						}
 					: old,
-			);
-			return { previous };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(listKey, context.previous);
-			}
-		},
-		onSettled: () => {
-			void invalidateIssueQueries(queryClient, orgId);
-			// Detail/activity keys are not under the list prefixes.
-			void queryClient.invalidateQueries({
-				queryKey: issueDetailRootKey(orgId, projectId),
-			});
-		},
+			),
+		invalidate: (client) =>
+			Promise.all([
+				invalidateIssueQueries(client, orgId),
+				// Detail/activity keys are not under the list prefixes.
+				client.invalidateQueries({
+					queryKey: issueDetailRootKey(orgId, projectId),
+				}),
+			]),
 	});
 }
 
@@ -693,47 +664,31 @@ export function useMoveIssue(
 ) {
 	const queryClient = useQueryClient();
 	const boardKey = projectIssuesQuery(orgId, projectId, filters).queryKey;
-	return useMutation({
+	return useOptimisticMutation({
 		mutationFn: (input: { id: string; number: number; statusId: string }) =>
 			updateIssue(orgId, projectId, input.number, {
 				statusId: input.statusId,
 			}),
-		onMutate: async (input) => {
-			await queryClient.cancelQueries({ queryKey: boardKey });
-			const previous = queryClient.getQueryData(boardKey);
-			// The statuses cache is owned by features/statuses/data; its shared
-			// key lives in features/keys so the two data modules stay acyclic.
-			const statuses = queryClient.getQueryData<StatusDto[]>(
-				statusesKey(orgId),
+		optimistic: (input) => {
+			const status = cachedStatus(queryClient, orgId, input.statusId);
+			return optimisticPatch<ListIssuesDto>(boardKey, (old) =>
+				old
+					? {
+							...old,
+							items: old.items.map((issue) =>
+								issue.id === input.id
+									? {
+											...issue,
+											statusId: input.statusId,
+											status: status ?? issue.status,
+										}
+									: issue,
+							),
+						}
+					: old,
 			);
-			const status = statuses?.find((entry) => entry.id === input.statusId);
-			queryClient.setQueryData(boardKey, (old) => {
-				if (!old) {
-					return old;
-				}
-				return {
-					...old,
-					items: old.items.map((issue) =>
-						issue.id === input.id
-							? {
-									...issue,
-									statusId: input.statusId,
-									status: status ?? issue.status,
-								}
-							: issue,
-					),
-				};
-			});
-			return { previous };
 		},
-		onError: (_error, _input, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(boardKey, context.previous);
-			}
-		},
-		onSettled: () => {
-			void invalidateIssueQueries(queryClient, orgId);
-		},
+		invalidate: (client) => invalidateIssueQueries(client, orgId),
 	});
 }
 

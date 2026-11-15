@@ -29,6 +29,7 @@ import {
 } from "@/features/webhooks/data";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/format";
+import { pageCount } from "@/lib/pagination";
 import { DeliveryStatusBadge, EventBadge } from "./delivery-badges";
 import { DeliveryDetailDialog } from "./delivery-detail-dialog";
 
@@ -70,9 +71,7 @@ export function DeliveriesDialog({
 		onSettled: () => setRedelivering(null),
 	});
 
-	const totalPages = deliveries.data
-		? Math.max(1, Math.ceil(deliveries.data.total / deliveries.data.pageSize))
-		: 1;
+	const totalPages = deliveries.data ? pageCount(deliveries.data) : 1;
 
 	return (
 		<Dialog open={webhook !== null} onOpenChange={onOpenChange}>

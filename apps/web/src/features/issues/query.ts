@@ -22,7 +22,7 @@ import {
 	parseCsv,
 	priorityName,
 } from "@workspace/shared";
-import type { IssuesSearch } from "./search";
+import { type IssuesSearch, parseSortParamValue } from "./search";
 
 /**
  * Normalizes URL search params and saved-view queries into the request shape
@@ -95,9 +95,6 @@ export const primarySortField = (
 		: "updated";
 };
 
-const isSortField = (value: string): value is IssueQuerySortField =>
-	(ISSUE_QUERY_SORT_FIELDS as readonly string[]).includes(value);
-
 const normalizeSorts = (value: unknown): IssueQuerySort[] => {
 	if (!Array.isArray(value)) {
 		return [DEFAULT_ISSUE_SORT];
@@ -112,20 +109,19 @@ const normalizeSorts = (value: unknown): IssueQuerySort[] => {
 	return sorts.length > 0 ? sorts.slice(0, 3) : [DEFAULT_ISSUE_SORT];
 };
 
-/** Parses the URL sort param (legacy scalar or JSON array). Never throws. */
+/**
+ * Parses the URL sort param (legacy scalar or JSON array). Never throws.
+ * Value parsing lives in the search schema so the URL and the request builder
+ * cannot disagree; this only maps the parsed value onto the default sort list.
+ */
 export const parseSortParam = (value: string | undefined): IssueQuerySort[] => {
-	if (!value) {
+	const parsed = value ? parseSortParamValue(value) : undefined;
+	if (!parsed) {
 		return [DEFAULT_ISSUE_SORT];
 	}
-	const trimmed = value.trim();
-	if (trimmed.startsWith("[")) {
-		try {
-			return normalizeSorts(JSON.parse(trimmed));
-		} catch {
-			return [DEFAULT_ISSUE_SORT];
-		}
-	}
-	return isSortField(trimmed) ? sortsForField(trimmed) : [DEFAULT_ISSUE_SORT];
+	return "field" in parsed
+		? sortsForField(parsed.field)
+		: normalizeSorts(parsed.sorts);
 };
 
 /** Rebuilds nodes in a fixed key order so equal filters hash identically. */

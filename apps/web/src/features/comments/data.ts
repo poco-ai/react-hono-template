@@ -28,6 +28,12 @@ import {
 import { client, unwrap } from "@/lib/api";
 import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
+import { optimisticPatch } from "@/lib/optimistic";
+import {
+	type OptimisticMutationCallbacks,
+	useOptimisticMutation,
+} from "@/lib/optimistic-mutation";
+import { nextPageParam } from "@/lib/pagination";
 import { isAbortError } from "@/lib/upload";
 
 export const COMMENTS_PAGE_SIZE = 20;
@@ -407,76 +413,61 @@ export type ToggleCommentReactionInput = {
 	emoji: CommentReactionEmoji;
 };
 
+type CommentThreadData = InfiniteData<ListCommentsDto, number>;
+
+const patchCommentReactions = (
+	previous: CommentThreadData | undefined,
+	commentId: string,
+	next: (reactions: CommentReactionSummaryDto[]) => CommentReactionSummaryDto[],
+): CommentThreadData | undefined =>
+	previous
+		? {
+				...previous,
+				pages: previous.pages.map((page) => ({
+					...page,
+					items: page.items.map((item) =>
+						item.id === commentId
+							? { ...item, reactions: next(item.reactions) }
+							: item,
+					),
+				})),
+			}
+		: previous;
+
 export function useToggleCommentReaction(
 	orgId: string,
 	projectId: string,
 	issueNumber: number,
-	callbacks?: MutationCallbacks<
+	callbacks?: OptimisticMutationCallbacks<
 		Awaited<ReturnType<typeof toggleCommentReaction>>,
 		ToggleCommentReactionInput
 	>,
 ) {
-	const queryClient = useQueryClient();
 	const queryKey = commentsQueryKey(orgId, projectId, issueNumber);
-	type CommentsData = InfiniteData<ListCommentsDto, number>;
 
-	const patchReactions = (
-		previous: CommentsData | undefined,
-		commentId: string,
-		next: (
-			reactions: CommentReactionSummaryDto[],
-		) => CommentReactionSummaryDto[],
-	): CommentsData | undefined =>
-		previous
-			? {
-					...previous,
-					pages: previous.pages.map((page) => ({
-						...page,
-						items: page.items.map((item) =>
-							item.id === commentId
-								? { ...item, reactions: next(item.reactions) }
-								: item,
-						),
-					})),
-				}
-			: previous;
-
-	return useMutation({
-		...callbacks,
+	return useOptimisticMutation({
 		mutationFn: (input: ToggleCommentReactionInput) =>
 			toggleCommentReaction(orgId, projectId, issueNumber, input),
-		onMutate: async (input) => {
-			await queryClient.cancelQueries({ queryKey });
-			const previous = queryClient.getQueryData<CommentsData>(queryKey);
-			if (previous) {
-				queryClient.setQueryData<CommentsData>(
-					queryKey,
-					patchReactions(previous, input.commentId, (reactions) =>
-						applyReactionToggle(reactions, input.emoji),
-					),
-				);
+		optimistic: (input) =>
+			optimisticPatch<CommentThreadData>(queryKey, (previous) =>
+				patchCommentReactions(previous, input.commentId, (reactions) =>
+					applyReactionToggle(reactions, input.emoji),
+				),
+			),
+		// Reactions never write activity, so only the thread is refreshed: first
+		// reconcile with the server aggregate, then refetch the list. A failed
+		// toggle is already rolled back, so it stays without a refetch (the
+		// pre-helper behavior).
+		invalidate: (client, _input, data) => {
+			if (!data) {
+				return;
 			}
-			return { previous };
-		},
-		onError: (error, input, result, context) => {
-			if (result?.previous) {
-				queryClient.setQueryData(queryKey, result.previous);
-			}
-			return callbacks?.onError?.(error, input, result, context);
-		},
-		onSuccess: (data, input, result, context) => {
-			// Reconcile with the server aggregate, then refresh only the list.
-			queryClient.setQueryData<CommentsData>(queryKey, (previous) =>
-				patchReactions(previous, data.commentId, () => data.reactions),
+			client.setQueryData<CommentThreadData>(queryKey, (previous) =>
+				patchCommentReactions(previous, data.commentId, () => data.reactions),
 			);
-			void invalidateCommentReactions(
-				queryClient,
-				orgId,
-				projectId,
-				issueNumber,
-			);
-			return callbacks?.onSuccess?.(data, input, result, context);
+			return invalidateCommentReactions(client, orgId, projectId, issueNumber);
 		},
+		callbacks,
 	});
 }
 
@@ -515,9 +506,6 @@ export function commentsQuery(
 		queryFn: ({ pageParam }) =>
 			fetchCommentsPage(orgId, projectId, issueNumber, pageParam),
 		initialPageParam: 1,
-		getNextPageParam: (lastPage) =>
-			lastPage.page < Math.max(1, Math.ceil(lastPage.total / lastPage.pageSize))
-				? lastPage.page + 1
-				: undefined,
+		getNextPageParam: nextPageParam,
 	});
 }
