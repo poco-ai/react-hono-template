@@ -69,12 +69,12 @@ import {
 	useIssueListPreferences,
 } from "@/features/issues/list-preferences";
 import {
-	detachedFilterSearch,
 	filterConditionCount,
 	primarySortField,
 	resolveIssueQuery,
 } from "@/features/issues/query";
 import type { IssuesSearch } from "@/features/issues/search";
+import { useViewDetach } from "@/features/issues/use-view-detach";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
@@ -89,6 +89,7 @@ import { ViewSwitcher } from "@/features/views/components/view-switcher";
 import { type ViewDto, viewsQuery } from "@/features/views/data";
 import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";
+import { useBulkSelection } from "@/lib/use-bulk-selection";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useMediaQuery } from "@/lib/use-media-query";
 
@@ -121,7 +122,6 @@ export function ProjectIssuesPage({
 		undefined,
 	);
 	const [searchInput, setSearchInput] = useState(search.search ?? "");
-	const [selected, setSelected] = useState<Set<string>>(new Set());
 
 	useEffect(() => {
 		setSearchInput(search.search ?? "");
@@ -175,27 +175,6 @@ export function ProjectIssuesPage({
 				}
 			: null,
 	);
-	const [dirtyView, setDirtyView] = useState<ViewDto | null>(null);
-
-	useEffect(() => {
-		if (search.viewId) {
-			setDirtyView(null);
-		}
-	}, [search.viewId]);
-
-	// A view id that no longer resolves to a visible view is a ghost filter:
-	// drop it once the list has settled so URL state matches what is applied.
-	useEffect(() => {
-		if (
-			!search.viewId ||
-			!views.isSuccess ||
-			views.isFetching ||
-			views.data.some((entry) => entry.id === search.viewId)
-		) {
-			return;
-		}
-		setSearch({ viewId: undefined });
-	}, [search.viewId, views.data, views.isSuccess, views.isFetching, setSearch]);
 
 	const issues = useQuery(
 		projectIssuesQuery(orgId, projectId, {
@@ -243,52 +222,26 @@ export function ProjectIssuesPage({
 	const activeFilterCount =
 		filterCount + (resolved.search !== "" ? 1 : 0) + (cycleFilterId ? 1 : 0);
 
-	/**
-	 * Leaves the applied view (when there is one) while keeping its resolved
-	 * sort/grouping, so changing the filter does not silently reset either.
-	 */
-	const detachView = (
-		nextFilter: IssueFilterGroup | undefined,
-		options: {
-			search?: string;
-			overrides?: Partial<Pick<IssuesSearch, "sort" | "groupBy" | "page">>;
-		} = {},
-	) => {
-		setSelected(new Set());
-		if (currentView) {
-			setDirtyView(currentView);
-		}
-		setSearch(
-			detachedFilterSearch({
-				view: currentView?.query,
-				resolved,
-				filter: nextFilter,
-				search: options.search,
-				overrides: options.overrides,
-			}),
-		);
-	};
+	// Page selection survives paging; filter/view changes clear it explicitly
+	// through `clear` (see `useViewDetach`).
+	const { selected, toggleOne, toggleAll, clear } = useBulkSelection({
+		ids: result?.items.map((issue) => issue.id) ?? [],
+	});
 
-	const updateSearch = (next: Partial<IssuesSearch>) => {
-		setSelected(new Set());
-		if (currentView && ("sort" in next || "groupBy" in next)) {
-			const overrides: Partial<
-				Pick<IssuesSearch, "sort" | "groupBy" | "page">
-			> = {};
-			if ("sort" in next) {
-				overrides.sort = next.sort;
-			}
-			if ("groupBy" in next) {
-				overrides.groupBy = next.groupBy;
-			}
-			if (next.page !== undefined) {
-				overrides.page = next.page;
-			}
-			detachView(effectiveFilter, { overrides });
-			return;
-		}
-		setSearch(next);
-	};
+	const { dirtyView, clearDirtyView, detachView, updateSearch } = useViewDetach(
+		{
+			viewId: search.viewId,
+			currentView,
+			resolved,
+			views: {
+				data: views.data,
+				isSuccess: views.isSuccess,
+				isFetching: views.isFetching,
+			},
+			setSearch,
+			onSelectionReset: clear,
+		},
+	);
 
 	const setGroupBy = (next: IssuesSearch["groupBy"]) => {
 		updateSearch({ groupBy: next });
@@ -304,8 +257,8 @@ export function ProjectIssuesPage({
 	};
 
 	const applyView = (next: ViewDto) => {
-		setDirtyView(null);
-		setSelected(new Set());
+		clearDirtyView();
+		clear();
 		setSearch({
 			viewId: next.id,
 			filter: "",
@@ -323,8 +276,8 @@ export function ProjectIssuesPage({
 	};
 
 	const clearView = () => {
-		setDirtyView(null);
-		setSelected(new Set());
+		clearDirtyView();
+		clear();
 		setSearch({
 			viewId: undefined,
 			filter: "",
@@ -344,19 +297,7 @@ export function ProjectIssuesPage({
 	// ones) intact; it is not the same as resetting to defaults. The flat cycle
 	// filter is cleared here too, in the same navigation.
 	const clearFilters = () => {
-		setSelected(new Set());
-		if (currentView) {
-			setDirtyView(currentView);
-		}
-		setSearch({
-			...detachedFilterSearch({
-				view: currentView?.query,
-				resolved,
-				filter: undefined,
-				search: "",
-			}),
-			cycleId: "",
-		});
+		detachView(undefined, { search: "", extra: { cycleId: "" } });
 	};
 
 	const savedQuery: IssueQuery = {
@@ -375,7 +316,7 @@ export function ProjectIssuesPage({
 
 	const onSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setSelected(new Set());
+		clear();
 		setSearch({ search: searchInput.trim(), page: 1 });
 	};
 
@@ -399,7 +340,7 @@ export function ProjectIssuesPage({
 	// selection so stale checks never leak into the bulk bar.
 	const toggleSelectionMode = () => {
 		setSelectionMode((previous) => !previous);
-		setSelected(new Set());
+		clear();
 	};
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -444,32 +385,6 @@ export function ProjectIssuesPage({
 			},
 		},
 	]);
-
-	const toggleAllOnPage = (checked: boolean) => {
-		setSelected((prev) => {
-			const next = new Set(prev);
-			for (const issue of result?.items ?? []) {
-				if (checked) {
-					next.add(issue.id);
-				} else {
-					next.delete(issue.id);
-				}
-			}
-			return next;
-		});
-	};
-
-	const toggleOne = (id: string, checked: boolean) => {
-		setSelected((prev) => {
-			const next = new Set(prev);
-			if (checked) {
-				next.add(id);
-			} else {
-				next.delete(id);
-			}
-			return next;
-		});
-	};
 
 	const selectedIssues = (result?.items ?? [])
 		.filter((issue) => selected.has(issue.id))
@@ -863,7 +778,7 @@ export function ProjectIssuesPage({
 					columns={columns}
 					density={density}
 					groupBy={resolved.groupBy}
-					toggleAllOnPage={toggleAllOnPage}
+					toggleAllOnPage={toggleAll}
 					toggleOne={toggleOne}
 					onPageChange={gotoPage}
 					onClearFilters={clearFilters}
@@ -880,7 +795,7 @@ export function ProjectIssuesPage({
 					members={members.data ?? []}
 					labels={labels.data ?? []}
 					frozen={frozen}
-					onDone={() => setSelected(new Set())}
+					onDone={() => clear()}
 				/>
 			)}
 

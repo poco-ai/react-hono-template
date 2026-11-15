@@ -1,6 +1,5 @@
 import type { StatusDto } from "@api/dto/status.dto";
 import {
-	ISSUE_FILTER_OPERATORS_BY_FIELD,
 	ISSUE_PRIORITIES,
 	ISSUE_QUERY_GROUP_BY,
 	ISSUE_QUERY_SORT_FIELDS,
@@ -8,7 +7,6 @@ import {
 	type IssueFilterField,
 	type IssueFilterGroup,
 	type IssueFilterNode,
-	type IssueFilterOperator,
 	type IssueFilterScalar,
 	type IssueQuery,
 	type IssueQueryGroupBy,
@@ -22,7 +20,19 @@ import {
 	parseCsv,
 	priorityName,
 } from "@workspace/shared";
+import { emptyFilter } from "./filter-tree";
 import { type IssuesSearch, parseSortParamValue } from "./search";
+
+// Tree/operator primitives live in `filter-tree.ts`; re-exported here so the
+// existing query-module consumers keep a single import site.
+export {
+	emptyFilter,
+	filterNodeKeys,
+	isListOperator,
+	isNullOperator,
+	isRangeOperator,
+	operatorsForField,
+} from "./filter-tree";
 
 /**
  * Normalizes URL search params and saved-view queries into the request shape
@@ -189,12 +199,6 @@ export const serializeIssueFilter = (
 	return JSON.stringify(normalizeFilterTree(filter));
 };
 
-export const emptyFilter = (): IssueFilterGroup => ({
-	type: "group",
-	op: "and",
-	children: [],
-});
-
 const statusIdFromName = (
 	statuses: Pick<StatusDto, "id" | "name">[] | undefined,
 	name: string,
@@ -335,16 +339,6 @@ export const resolveIssueQuery = (
 };
 
 /**
- * Position-based React keys for filter nodes. Keys must not depend on node
- * content: deriving them from the value remounts the edited input and loses
- * focus. `parentPath` keeps equally-indexed nodes in nested groups distinct.
- */
-export const filterNodeKeys = (
-	nodes: readonly IssueFilterNode[],
-	parentPath: readonly number[] = [],
-): string[] => nodes.map((_, index) => [...parentPath, index].join("."));
-
-/**
  * URL patch for changing the filter. While a saved view is applied, its sort
  * and grouping are materialized so the new filter keeps them after `viewId`
  * is dropped; without a view the URL keeps the user's own sort/grouping
@@ -416,19 +410,6 @@ export const issueQueryKey = ({
 	cycleId: cycleId ?? null,
 	includeArchived: includeArchived ?? false,
 });
-
-export const isNullOperator = (operator: IssueFilterOperator): boolean =>
-	operator === "isNull" || operator === "isNotNull";
-
-export const isListOperator = (operator: IssueFilterOperator): boolean =>
-	operator === "in" || operator === "notIn";
-
-export const isRangeOperator = (operator: IssueFilterOperator): boolean =>
-	operator === "between";
-
-export const operatorsForField = (
-	field: IssueFilterField,
-): readonly IssueFilterOperator[] => ISSUE_FILTER_OPERATORS_BY_FIELD[field];
 
 export const filterConditionCount = (
 	node: IssueFilterNode | undefined,
@@ -526,57 +507,6 @@ export const setFieldFilter = (
 		return base;
 	}
 	return { ...base, children: [...base.children, ...conditions] };
-};
-
-/** Replaces a node addressed by a child-index path from the root group. */
-export const replaceFilterNode = (
-	root: IssueFilterGroup,
-	path: number[],
-	node: IssueFilterNode,
-): IssueFilterGroup => {
-	if (path.length === 0) {
-		return node.type === "group" ? node : { ...root, children: [node] };
-	}
-	const [index, ...rest] = path;
-	return {
-		...root,
-		children: root.children.map((child, position) => {
-			if (position !== index) {
-				return child;
-			}
-			if (rest.length === 0) {
-				return node;
-			}
-			return child.type === "group"
-				? replaceFilterNode(child, rest, node)
-				: child;
-		}),
-	};
-};
-
-/** Removes a node by path; empty groups are pruned. */
-export const removeFilterNode = (
-	root: IssueFilterGroup,
-	path: number[],
-): IssueFilterGroup => {
-	if (path.length === 0) {
-		return emptyFilter();
-	}
-	const [index, ...rest] = path;
-	const children = root.children.flatMap((child, position) => {
-		if (position !== index) {
-			return [child];
-		}
-		if (rest.length === 0) {
-			return [];
-		}
-		if (child.type !== "group") {
-			return [child];
-		}
-		const next = removeFilterNode(child, rest);
-		return next.children.length > 0 ? [next] : [];
-	});
-	return { ...root, children };
 };
 
 /** Human-friendly value scalars for labels/selects. */

@@ -1,14 +1,6 @@
 import type { IssueQuery } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@workspace/ui/components/dialog";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -24,14 +16,7 @@ import {
 	EmptyMedia,
 	EmptyTitle,
 } from "@workspace/ui/components/empty";
-import {
-	Field,
-	FieldDescription,
-	FieldLabel,
-} from "@workspace/ui/components/field";
-import { Input } from "@workspace/ui/components/input";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { Switch } from "@workspace/ui/components/switch";
 import {
 	Check,
 	ChevronDown,
@@ -45,9 +30,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MutationError } from "@/components/mutation-error";
-import { QuotaError } from "@/components/quota-error";
 import { apiErrorMessage } from "@/lib/errors";
 import {
 	useClearDefaultView,
@@ -57,6 +40,13 @@ import {
 	useUpdateView,
 	type ViewDto,
 } from "../data";
+import { ViewDeleteDialog } from "./view-delete-dialog";
+import { ViewRenameDialog } from "./view-rename-dialog";
+import {
+	EMPTY_SAVE_FORM,
+	type SaveForm,
+	ViewSaveDialog,
+} from "./view-save-dialog";
 
 interface ViewSwitcherProps {
 	orgId: string;
@@ -77,14 +67,6 @@ interface ViewSwitcherProps {
 	onUpdated: (view: ViewDto) => void;
 	onCleared: () => void;
 }
-
-type SaveForm = {
-	name: string;
-	shared: boolean;
-	isDefault: boolean;
-};
-
-const EMPTY_FORM: SaveForm = { name: "", shared: false, isDefault: false };
 
 export function ViewSwitcher({
 	orgId,
@@ -107,13 +89,13 @@ export function ViewSwitcher({
 	const [saveOpen, setSaveOpen] = useState(false);
 	const [renameOpen, setRenameOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const [form, setForm] = useState<SaveForm>(EMPTY_FORM);
+	const [form, setForm] = useState<SaveForm>(EMPTY_SAVE_FORM);
 	const [renameName, setRenameName] = useState("");
 
 	const create = useCreateView(orgId, {
 		onSuccess: (view) => {
 			setSaveOpen(false);
-			setForm(EMPTY_FORM);
+			setForm(EMPTY_SAVE_FORM);
 			onApply(view);
 			toast.success(t("issues.views.created"));
 		},
@@ -356,172 +338,45 @@ export function ViewSwitcher({
 
 			<MutationError error={actionError} className="mt-2 w-full" />
 
-			<Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{t("issues.views.saveTitle")}</DialogTitle>
-						<DialogDescription>
-							{t("issues.views.saveDescription")}
-						</DialogDescription>
-					</DialogHeader>
-					<form
-						className="flex flex-col gap-4"
-						onSubmit={(event) => {
-							event.preventDefault();
-							if (!form.name.trim()) {
-								return;
-							}
-							create.mutate({
-								name: form.name.trim(),
-								projectId,
-								shared: canManage ? form.shared : false,
-								isDefault: form.isDefault,
-								query,
-								layout,
-							});
-						}}
-					>
-						<Field>
-							<FieldLabel htmlFor="view-name">
-								{t("issues.views.name")}
-							</FieldLabel>
-							<Input
-								id="view-name"
-								value={form.name}
-								maxLength={100}
-								placeholder={t("issues.views.namePlaceholder")}
-								onChange={(event) =>
-									setForm((current) => ({
-										...current,
-										name: event.target.value,
-									}))
-								}
-							/>
-						</Field>
-						{canManage && (
-							<Field>
-								<div className="flex items-center justify-between gap-3">
-									<div>
-										<FieldLabel htmlFor="view-shared">
-											{t("issues.views.share")}
-										</FieldLabel>
-										<FieldDescription>
-											{t("issues.views.shareDescription")}
-										</FieldDescription>
-									</div>
-									<Switch
-										id="view-shared"
-										checked={form.shared}
-										onCheckedChange={(checked) =>
-											setForm((current) => ({
-												...current,
-												shared: checked,
-											}))
-										}
-									/>
-								</div>
-							</Field>
-						)}
-						<Field>
-							<div className="flex items-center justify-between gap-3">
-								<div>
-									<FieldLabel htmlFor="view-default">
-										{t("issues.views.makeDefault")}
-									</FieldLabel>
-									<FieldDescription>
-										{t("issues.views.makeDefaultDescription")}
-									</FieldDescription>
-								</div>
-								<Switch
-									id="view-default"
-									checked={form.isDefault}
-									onCheckedChange={(checked) =>
-										setForm((current) => ({
-											...current,
-											isDefault: checked,
-										}))
-									}
-								/>
-							</div>
-						</Field>
-						<QuotaError
-							error={create.error}
-							orgId={orgId}
-							canUpgrade={canManage}
-						/>
-						<DialogFooter>
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setSaveOpen(false)}
-							>
-								{t("common.cancel")}
-							</Button>
-							<Button
-								type="submit"
-								disabled={!form.name.trim() || create.isPending}
-							>
-								{t("issues.views.save")}
-							</Button>
-						</DialogFooter>
-					</form>
-				</DialogContent>
-			</Dialog>
+			<ViewSaveDialog
+				open={saveOpen}
+				onOpenChange={setSaveOpen}
+				form={form}
+				setForm={setForm}
+				canManage={canManage}
+				orgId={orgId}
+				pending={create.isPending}
+				error={create.error}
+				onSubmit={() =>
+					create.mutate({
+						name: form.name.trim(),
+						projectId,
+						shared: canManage ? form.shared : false,
+						isDefault: form.isDefault,
+						query,
+						layout,
+					})
+				}
+			/>
 
-			<Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{t("issues.views.renameTitle")}</DialogTitle>
-					</DialogHeader>
-					<form
-						className="flex flex-col gap-4"
-						onSubmit={(event) => {
-							event.preventDefault();
-							if (currentView && renameName.trim()) {
-								rename.mutate({ name: renameName.trim() });
-							}
-						}}
-					>
-						<Field>
-							<FieldLabel htmlFor="view-rename">
-								{t("issues.views.name")}
-							</FieldLabel>
-							<Input
-								id="view-rename"
-								value={renameName}
-								maxLength={100}
-								onChange={(event) => setRenameName(event.target.value)}
-							/>
-						</Field>
-						<MutationError error={rename.error} />
-						<DialogFooter>
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setRenameOpen(false)}
-							>
-								{t("common.cancel")}
-							</Button>
-							<Button
-								type="submit"
-								disabled={!renameName.trim() || rename.isPending}
-							>
-								{t("common.save")}
-							</Button>
-						</DialogFooter>
-					</form>
-				</DialogContent>
-			</Dialog>
+			<ViewRenameDialog
+				open={renameOpen}
+				onOpenChange={setRenameOpen}
+				name={renameName}
+				setName={setRenameName}
+				pending={rename.isPending}
+				error={rename.error}
+				onSubmit={() => {
+					if (currentView) {
+						rename.mutate({ name: renameName.trim() });
+					}
+				}}
+			/>
 
-			<ConfirmDialog
+			<ViewDeleteDialog
 				open={deleteOpen}
 				onOpenChange={setDeleteOpen}
-				title={t("issues.views.deleteTitle")}
-				description={t("issues.views.deleteDescription", {
-					name: currentView?.name ?? "",
-				})}
-				confirmLabel={t("issues.views.delete")}
-				variant="destructive"
+				viewName={currentView?.name ?? ""}
 				pending={remove.isPending || !currentView}
 				error={remove.error}
 				onConfirm={() => currentView && remove.mutate(currentView.id)}

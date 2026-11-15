@@ -26,7 +26,6 @@ import {
 } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { CircleAlert, Filter, Inbox, MoreHorizontal, X } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
@@ -49,6 +48,7 @@ import {
 } from "@/features/triage/data";
 import { dateFormatter } from "@/lib/date";
 import { apiErrorMessage } from "@/lib/errors";
+import { useBulkSelection } from "@/lib/use-bulk-selection";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 const ALL_PROJECTS = "__all__";
@@ -84,15 +84,15 @@ export function TriagePage({
 		? resolveTriageProjectFilter(search, activeProjects)
 		: search.projectId;
 	const triage = useQuery(triageQuery(orgId, projectId));
-	const [selected, setSelected] = useState<Set<string>>(new Set());
-
-	// The queue changed (filter or refetch): drop ids that may no longer exist.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset
-	useEffect(() => {
-		setSelected(new Set());
-	}, [projectId, triage.data]);
-
 	const items = triage.data?.items ?? [];
+	// The queue changed (filter or refetch): drop ids that may no longer exist.
+	// `data` identity changes with the project filter and with every refetch
+	// that returns different rows, matching the previous reset condition.
+	const { selected, toggleOne, toggleAll, clear } = useBulkSelection({
+		ids: items.map((issue) => issue.id),
+		resetKey: triage.data,
+	});
+
 	const memberNames = new Map(
 		(members.data ?? []).map((member) => [member.userId, member.user.name]),
 	);
@@ -166,7 +166,7 @@ export function TriagePage({
 			.filter((update): update is TriageUpdate => update !== null);
 		if (updates.length > 0) {
 			bulk.mutate(updates, {
-				onSuccess: () => setSelected(new Set()),
+				onSuccess: () => clear(),
 			});
 		}
 	};
@@ -181,21 +181,6 @@ export function TriagePage({
 			},
 		});
 	};
-
-	const toggleOne = (id: string, checked: boolean) => {
-		setSelected((prev) => {
-			const next = new Set(prev);
-			if (checked) {
-				next.add(id);
-			} else {
-				next.delete(id);
-			}
-			return next;
-		});
-	};
-
-	const toggleAll = (checked: boolean) =>
-		setSelected(checked ? new Set(items.map((issue) => issue.id)) : new Set());
 
 	const busy = single.isPending || bulk.isPending;
 	const availability = triageAvailability({

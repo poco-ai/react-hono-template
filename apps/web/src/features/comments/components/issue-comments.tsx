@@ -1,11 +1,7 @@
 import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
 import type { CommentDto } from "@api/dto/comment.dto";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useLocation } from "@tanstack/react-router";
-import {
-	ATTACHMENT_CONTENT_TYPES,
-	ATTACHMENT_MAX_SIZE,
-} from "@workspace/shared";
+import { ATTACHMENT_MAX_SIZE } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Empty,
@@ -16,20 +12,17 @@ import {
 } from "@workspace/ui/components/empty";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { MessageSquare, Paperclip, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { MessageSquare } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { MarkdownEditor } from "@/components/markdown-editor";
 import { MutationError } from "@/components/mutation-error";
-import {
-	attachmentUploadErrorKey,
-	resolveContentType,
-} from "@/features/attachments/data";
+import { attachmentUploadErrorKey } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
 import { billingQuery } from "@/features/billing/data";
 import { CommentCard } from "@/features/comments/components/comment-card";
+import { CommentComposer } from "@/features/comments/components/comment-composer";
 import {
 	commentsQuery,
 	groupCommentThreads,
@@ -40,30 +33,10 @@ import {
 	useToggleCommentReaction,
 	useUpdateComment,
 } from "@/features/comments/data";
+import { useAttachmentDraft } from "@/features/comments/use-attachment-draft";
+import { useCommentDeepLink } from "@/features/comments/use-comment-deep-link";
 import { membersQuery } from "@/features/members/data";
 import { useOrgRole } from "@/features/organizations/use-org-role";
-
-const ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
-
-interface SelectedFile {
-	id: string;
-	file: File;
-	error?: string;
-}
-
-const COMMENT_MAX_LENGTH = 10000;
-/** Stop expanding a deep link after this many pages to bound requests. */
-const DEEP_LINK_MAX_PAGES = 6;
-const COMMENT_HASH_PREFIX = "comment-";
-
-const commentIdFromHash = (hash: string) => {
-	const value = hash.replace(/^#/, "");
-	if (!value.startsWith(COMMENT_HASH_PREFIX)) {
-		return null;
-	}
-	const id = value.slice(COMMENT_HASH_PREFIX.length);
-	return id.length > 0 ? id : null;
-};
 
 export function IssueComments({
 	orgId,
@@ -77,7 +50,6 @@ export function IssueComments({
 	frozen: boolean;
 }) {
 	const { t } = useTranslation();
-	const location = useLocation();
 
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
@@ -94,15 +66,6 @@ export function IssueComments({
 		commentId: string;
 		attachment: AttachmentWithUrlDto;
 	} | null>(null);
-	const [scrollTarget, setScrollTarget] = useState<{
-		id: string;
-		deepLink: boolean;
-	} | null>(null);
-	const [highlightedId, setHighlightedId] = useState<string | null>(null);
-	const [deepLinkMissing, setDeepLinkMissing] = useState(false);
-	const [selected, setSelected] = useState<SelectedFile[]>([]);
-	const inputRef = useRef<HTMLInputElement>(null);
-	const abortRef = useRef<AbortController | null>(null);
 
 	const currentUserId = session?.user.id;
 	const { canManage: isAdmin } = useOrgRole(orgId);
@@ -116,6 +79,10 @@ export function IssueComments({
 	const threads = useMemo(() => groupCommentThreads(comments), [comments]);
 	const total = query.data?.pages[0]?.total ?? 0;
 
+	const { highlightedId, deepLinkMissing, scrollToComment } =
+		useCommentDeepLink({ query, comments });
+	const draft = useAttachmentDraft({ maxSize });
+
 	const mentionCandidates = useMemo(
 		() =>
 			(members.data ?? []).map((member) => ({
@@ -126,83 +93,6 @@ export function IssueComments({
 			})),
 		[members.data],
 	);
-
-	const {
-		fetchNextPage,
-		hasNextPage,
-		isFetching: commentsFetching,
-		isFetchNextPageError,
-		isFetchingNextPage,
-		isPending: commentsPending,
-	} = query;
-	const loadedPages = query.data?.pages.length ?? 0;
-
-	// Deep links from notifications (`#comment-<id>`) and freshly posted
-	// comments share this target. Both may live on a page that is not loaded yet.
-	useEffect(() => {
-		const id = commentIdFromHash(location.hash);
-		if (!id) {
-			setDeepLinkMissing(false);
-			return;
-		}
-		setDeepLinkMissing(false);
-		setScrollTarget({ id, deepLink: true });
-	}, [location.hash]);
-
-	useEffect(() => {
-		if (!scrollTarget) {
-			return;
-		}
-		const element = comments.some((comment) => comment.id === scrollTarget.id)
-			? document.getElementById(`comment-${scrollTarget.id}`)
-			: null;
-		if (element) {
-			element.scrollIntoView({ block: "center" });
-			setHighlightedId(scrollTarget.id);
-			setDeepLinkMissing(false);
-			setScrollTarget(null);
-			return;
-		}
-		const canLoadMore =
-			Boolean(hasNextPage) && loadedPages < DEEP_LINK_MAX_PAGES;
-		// A posted comment is only visible after the invalidation refetch; wait
-		// for it instead of racing the fetched pages.
-		if (
-			canLoadMore &&
-			!isFetchingNextPage &&
-			!isFetchNextPageError &&
-			(scrollTarget.deepLink || !commentsFetching)
-		) {
-			void fetchNextPage();
-			return;
-		}
-		if (!commentsPending && !isFetchingNextPage && !commentsFetching) {
-			if (scrollTarget.deepLink) {
-				setDeepLinkMissing(true);
-			} else {
-				setScrollTarget(null);
-			}
-		}
-	}, [
-		scrollTarget,
-		comments,
-		commentsFetching,
-		commentsPending,
-		fetchNextPage,
-		hasNextPage,
-		isFetchNextPageError,
-		isFetchingNextPage,
-		loadedPages,
-	]);
-
-	// Brief highlight so the jump target is easy to spot.
-	useEffect(() => {
-		if (!highlightedId) {
-			return;
-		}
-		const timer = window.setTimeout(() => setHighlightedId(null), 2200);
-		return () => window.clearTimeout(timer);
-	}, [highlightedId]);
 
 	const createMutation = usePostComment(orgId, projectId, issueNumber, {
 		onSuccess: (result) => {
@@ -215,19 +105,14 @@ export function IssueComments({
 				);
 			}
 			setBody("");
-			setSelected([]);
+			draft.clear();
 			setReplyTo(null);
 			setEditorResetKey((key) => key + 1);
 			// The refetched pages contain the new comment; the shared scroll
 			// target finds it (loading more pages if necessary) without a timer.
-			setDeepLinkMissing(false);
-			setScrollTarget({ id: result.comment.id, deepLink: false });
+			scrollToComment(result.comment.id, false);
 		},
 	});
-
-	useEffect(() => {
-		return () => abortRef.current?.abort();
-	}, []);
 
 	const updateMutation = useUpdateComment(orgId, projectId, issueNumber);
 	const resolveMutation = useResolveComment(orgId, projectId, issueNumber, {
@@ -264,28 +149,9 @@ export function IssueComments({
 		},
 	);
 
-	const canSubmit = body.trim().length > 0 && body.length <= COMMENT_MAX_LENGTH;
-
 	const startReply = (comment: CommentDto) => {
 		setReplyTo({ id: comment.id, name: comment.author.name });
 		setFocusRequest((value) => value + 1);
-	};
-
-	const addFiles = (list: FileList | File[]) => {
-		const next: SelectedFile[] = [];
-		for (const file of Array.from(list)) {
-			const contentType = resolveContentType(file);
-			let error: string | undefined;
-			if (
-				!(ATTACHMENT_CONTENT_TYPES as readonly string[]).includes(contentType)
-			) {
-				error = t("attachments.typeNotAllowed", { filename: file.name });
-			} else if (file.size < 1 || file.size > maxSize) {
-				error = t("attachments.tooLarge", { filename: file.name });
-			}
-			next.push({ id: crypto.randomUUID(), file, error });
-		}
-		setSelected((prev) => [...prev, ...next]);
 	};
 
 	const renderingComments = (
@@ -397,122 +263,24 @@ export function IssueComments({
 				<MutationError error={resolveMutation.error} />
 			)}
 
-			<MarkdownEditor
-				value={body}
-				onChange={setBody}
-				resetKey={editorResetKey}
-				placeholder={
-					replyTo
-						? t("comments.replyPlaceholder", { name: replyTo.name })
-						: t("comments.placeholder")
-				}
-				disabled={frozen}
-				rows={4}
-				maxLength={COMMENT_MAX_LENGTH}
+			<CommentComposer
+				body={body}
+				onBodyChange={setBody}
+				replyTo={replyTo}
+				onCancelReply={() => setReplyTo(null)}
 				mentions={mentionCandidates}
+				frozen={frozen}
+				submitting={createMutation.isPending}
+				resetKey={editorResetKey}
 				focusRequest={focusRequest}
-				footer={
-					<div className="flex flex-col gap-2 border-t px-3 py-2">
-						{replyTo && (
-							<div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
-								<span className="truncate">
-									{t("comments.replyingTo", { name: replyTo.name })}
-								</span>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon-xs"
-									aria-label={t("comments.cancelReply")}
-									onClick={() => setReplyTo(null)}
-								>
-									<X />
-								</Button>
-							</div>
-						)}
-						{selected.length > 0 && (
-							<ul className="flex flex-col gap-1">
-								{selected.map((item) => (
-									<li key={item.id} className="flex items-center gap-2 text-xs">
-										<span
-											className={
-												item.error
-													? "text-destructive min-w-0 flex-1 truncate"
-													: "min-w-0 flex-1 truncate"
-											}
-										>
-											{item.error ?? item.file.name}
-										</span>
-										<Button
-											variant="ghost"
-											size="icon-sm"
-											aria-label={t("comments.removeFile", {
-												filename: item.file.name,
-											})}
-											onClick={() =>
-												setSelected((prev) =>
-													prev.filter((file) => file.id !== item.id),
-												)
-											}
-										>
-											<X />
-										</Button>
-									</li>
-								))}
-							</ul>
-						)}
-						<div className="flex items-center justify-between gap-2">
-							<div className="flex items-center gap-2">
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon-sm"
-									aria-label={t("comments.attach")}
-									disabled={frozen || createMutation.isPending}
-									onClick={() => inputRef.current?.click()}
-								>
-									<Paperclip />
-								</Button>
-								<input
-									ref={inputRef}
-									type="file"
-									multiple
-									hidden
-									accept={ACCEPT}
-									onChange={(event) => {
-										if (event.target.files && event.target.files.length > 0) {
-											addFiles(event.target.files);
-										}
-										event.target.value = "";
-									}}
-								/>
-								<span className="text-muted-foreground text-xs">
-									{t("comments.charCount", {
-										count: body.length,
-										max: COMMENT_MAX_LENGTH,
-									})}
-								</span>
-							</div>
-							<Button
-								size="sm"
-								disabled={frozen || !canSubmit || createMutation.isPending}
-								onClick={() => {
-									const controller = new AbortController();
-									abortRef.current = controller;
-									createMutation.mutate({
-										body: body.trim(),
-										parentId: replyTo?.id ?? null,
-										files: selected
-											.filter((item) => !item.error)
-											.map((item) => item.file),
-										signal: controller.signal,
-									});
-								}}
-							>
-								{createMutation.isPending && <Spinner />}
-								{replyTo ? t("comments.reply") : t("comments.post")}
-							</Button>
-						</div>
-					</div>
+				draft={draft}
+				onSubmit={() =>
+					createMutation.mutate({
+						body: body.trim(),
+						parentId: replyTo?.id ?? null,
+						files: draft.files,
+						signal: draft.newSignal(),
+					})
 				}
 			/>
 			{createMutation.isError && <MutationError error={createMutation.error} />}
