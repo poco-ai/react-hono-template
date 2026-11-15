@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -6,7 +5,6 @@ import {
 	ApiErrorCode,
 	createFavoriteSchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
 	type CapabilityDeps,
 	createCapabilityRegistry,
@@ -14,11 +12,17 @@ import {
 import { createFavoriteDao } from "../src/dao/favorite.dao";
 import { createIssueDao } from "../src/dao/issue.dao";
 import { createProjectDao } from "../src/dao/project.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { createRoutes } from "../src/routes";
 import { createFavoriteService } from "../src/services/favorite.service";
+import {
+	seedIssue,
+	seedProject,
+	seedStatus,
+	seedUser,
+} from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Favorites: owner scoping, idempotent add/remove, visibility validation
@@ -33,95 +37,30 @@ const ARCHIVED_PROJECT = "p3";
 const USER = "user-1";
 const OTHER_USER = "user-2";
 
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE favorites (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	user_id text NOT NULL,
-	entity_type text NOT NULL,
-	entity_id text NOT NULL,
-	created_at integer NOT NULL DEFAULT 0
-);
-CREATE UNIQUE INDEX favorites_userId_entityType_entityId_uq
-	ON favorites (user_id, entity_type, entity_id);
-`;
-
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
+	seedUser(sqlite, { id: USER });
+	seedUser(sqlite, { id: OTHER_USER });
 	for (const [id, orgId, key, archived, health] of [
-		[PROJECT, ORG, "WEB", 0, "on_track"],
-		[OTHER_PROJECT, ORG, "API", 0, null],
-		[ARCHIVED_PROJECT, ORG, "OLD", 1, null],
-		["p-other-org", OTHER_ORG, "OTH", 0, null],
+		[PROJECT, ORG, "WEB", false, "on_track"],
+		[OTHER_PROJECT, ORG, "API", false, null],
+		[ARCHIVED_PROJECT, ORG, "OLD", true, null],
+		["p-other-org", OTHER_ORG, "OTH", false, null],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key, archived, health, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, 0)",
+		seedProject(sqlite, {
 			id,
 			orgId,
-			`Project ${id}`,
+			name: `Project ${id}`,
 			key,
 			archived,
 			health,
-		);
+		});
 	}
 	for (const [id, orgId, name, category] of [
 		["s-backlog", ORG, "Backlog", "backlog"],
 		["s-done", ORG, "Done", "completed"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category) VALUES (?, ?, ?, ?)",
-			id,
-			orgId,
-			name,
-			category,
-		);
+		seedStatus(sqlite, { id, orgId, name, category });
 	}
 	const addIssue = (
 		id: string,
@@ -134,17 +73,18 @@ const setup = () => {
 			archivedAt?: number | null;
 		} = {},
 	) =>
-		sqlite.run(
-			"INSERT INTO issues (id, org_id, project_id, number, title, status_id, deleted_at, archived_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)",
+		seedIssue(sqlite, {
 			id,
-			options.orgId ?? ORG,
+			orgId: options.orgId ?? ORG,
 			projectId,
 			number,
-			`Issue ${id}`,
-			options.statusId ?? "s-backlog",
-			options.deletedAt ?? null,
-			options.archivedAt ?? null,
-		);
+			title: `Issue ${id}`,
+			statusId: options.statusId ?? "s-backlog",
+			deletedAt: options.deletedAt ?? null,
+			archivedAt: options.archivedAt ?? null,
+			createdAt: 0,
+			updatedAt: 0,
+		});
 	addIssue("i1", PROJECT, 1);
 	addIssue("i-done", PROJECT, 2, { statusId: "s-done" });
 	addIssue("i-archived", PROJECT, 3, { archivedAt: 1_700_000_000_000 });
@@ -154,15 +94,6 @@ const setup = () => {
 		statusId: "s-backlog",
 	});
 
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	}) as unknown as AppDatabase;
 	const favoriteDao = createFavoriteDao(db);
 	const issueDao = createIssueDao(db);
 	const projectDao = createProjectDao(db);

@@ -1,82 +1,34 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createIssueDao } from "../src/dao/issue.dao";
 import { createRelationDao } from "../src/dao/relation.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import { isUniqueConstraintViolation } from "../src/lib/db-errors";
+import { seedIssue } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
- * DAO integration tests against an in-memory SQLite database. They exercise
- * the real SQL (soft-delete cascade, recursive blocks traversal, unique-index
- * mapping) instead of mocking it away.
- *
- * Only the tables/columns touched by these DAOs are created; the DDL mirrors
- * `src/db/schema.ts`.
+ * DAO integration tests against an in-memory SQLite database built from the
+ * real migrations. They exercise the real SQL (soft-delete cascade, recursive
+ * blocks traversal, unique-index mapping) instead of mocking it away.
  */
-const DDL = `
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	parent_id text,
-	deleted_at integer,
-	updated_at integer
-);
-CREATE TABLE issue_relations (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	issue_id text NOT NULL,
-	related_issue_id text NOT NULL,
-	type text NOT NULL,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
-);
-CREATE UNIQUE INDEX issueRelations_issueId_relatedIssueId_type_uq
-	ON issue_relations (issue_id, related_issue_id, type);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
-);
-`;
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
-	// Drizzle's bun-sqlite driver (1.0 RC) has no batch(); the DAO contracts are
-	// written for D1 batches, so run the statements sequentially (D1 semantics:
-	// same transaction).
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	});
-	return { sqlite, db: db as unknown as AppDatabase };
+	const { sqlite, db } = createTestDb();
+	return { sqlite, db };
 };
 
 const addIssue = (
 	sqlite: Database,
 	row: { id: string; parentId?: string | null },
 ) =>
-	sqlite.run(
-		"INSERT INTO issues (id, org_id, parent_id, deleted_at) VALUES (?, 'org', ?, NULL)",
-		row.id,
-		row.parentId ?? null,
-	);
+	seedIssue(sqlite, {
+		id: row.id,
+		orgId: "org",
+		projectId: "project-1",
+		statusId: "status-default",
+		parentId: row.parentId ?? null,
+	});
 
 const countRows = (sqlite: Database, table: string) =>
 	(
@@ -192,10 +144,29 @@ test("relation lists are stably ordered and unique clashes map to a 409", async 
 			createdById: null,
 		});
 	}
+	// Pin timestamps so the primary created_at ordering is deterministic.
+	sqlite.run("UPDATE issue_relations SET created_at = 2 WHERE id = 'r-z'");
+	sqlite.run("UPDATE issue_relations SET created_at = 1 WHERE id = 'r-a'");
 	const rows = await relationDao.listByIssue("org", "issue-1");
 	assert.deepEqual(
 		rows.map((row) => row.id),
 		["r-a", "r-z"],
+	);
+
+	// Equal timestamps fall back to the id tie-breaker.
+	await relationDao.create({
+		id: "r-b",
+		orgId: "org",
+		issueId: "issue-1",
+		relatedIssueId: "peer-r-b",
+		type: "related",
+		createdById: null,
+	});
+	sqlite.run("UPDATE issue_relations SET created_at = 1 WHERE id = 'r-b'");
+	const tiedRows = await relationDao.listByIssue("org", "issue-1");
+	assert.deepEqual(
+		tiedRows.map((row) => row.id),
+		["r-a", "r-b", "r-z"],
 	);
 
 	// The DAO propagates the raw unique-index violation; the service maps it

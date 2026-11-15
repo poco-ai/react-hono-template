@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -8,7 +8,6 @@ import {
 	MAX_COMMENT_MENTIONS,
 	parseMentionUserIds,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createCommentDao } from "../src/dao/comment.dao";
 import {
 	commentMentionInsertStatements,
@@ -26,129 +25,38 @@ import { createCommentService } from "../src/services/comment.service";
 import { createIssueService } from "../src/services/issue.service";
 import { createIssueSubscriptionService } from "../src/services/issue-subscription.service";
 import { createNotificationService } from "../src/services/notification.service";
-
-const DDL = `
-CREATE TABLE user (
-	id text PRIMARY KEY,
-	name text,
-	email text,
-	image text
-);
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	key text NOT NULL,
-	name text NOT NULL
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	assignee_id text,
-	status_id text,
-	deleted_at integer,
-	created_at integer,
-	updated_at integer
-);
-CREATE TABLE comments (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	issue_id text NOT NULL,
-	author_id text NOT NULL,
-	parent_id text,
-	body text NOT NULL,
-	resolved_at integer,
-	resolved_by_id text,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
-	updated_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
-);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
-);
-CREATE TABLE notifications (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	user_id text NOT NULL,
-	type text NOT NULL,
-	issue_id text NOT NULL,
-	comment_id text,
-	activity_id text,
-	actor_id text,
-	read_at integer,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
-);
-CREATE TABLE issue_subscriptions (
-	issue_id text NOT NULL,
-	user_id text NOT NULL,
-	org_id text NOT NULL,
-	reason text NOT NULL DEFAULT 'manual',
-	muted integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
-	PRIMARY KEY (issue_id, user_id)
-);
-CREATE TABLE comment_reactions (
-	comment_id text NOT NULL,
-	user_id text NOT NULL,
-	emoji text NOT NULL,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
-	PRIMARY KEY (comment_id, user_id, emoji)
-);
-CREATE TABLE comment_mentions (
-	comment_id text NOT NULL,
-	user_id text NOT NULL,
-	PRIMARY KEY (comment_id, user_id)
-);
-`;
+import { seedIssue, seedProject, seedUser } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
-	// Statements of the most recent batches, used to assert fan-out chunking.
-	const batches: unknown[][] = [];
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			batches.push(statements);
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	});
-	return { sqlite, batches, db: db as unknown as AppDatabase };
+	const { sqlite, db, batches } = createTestDb();
+	return { sqlite, batches, db };
 };
 
 const seed = (sqlite: Database) => {
 	for (const id of ["creator", "watcher", "assignee", "parent", "member-2"]) {
-		sqlite.run(
-			"INSERT INTO user (id, name, email) VALUES (?, ?, ?)",
-			id,
-			id,
-			`${id}@example.com`,
-		);
+		seedUser(sqlite, { id, email: `${id}@example.com` });
 	}
-	sqlite.run(
-		"INSERT INTO projects (id, org_id, key, name) VALUES ('project-1', 'org-1', 'WEB', 'Web')",
-	);
-	sqlite.run(
-		"INSERT INTO issues (id, org_id, project_id, number, title) VALUES ('issue-1', 'org-1', 'project-1', 7, 'Broken login')",
-	);
-	sqlite.run(
-		"INSERT INTO issues (id, org_id, project_id, number, title) VALUES ('issue-2', 'org-2', 'project-2', 1, 'Other org')",
-	);
+	seedProject(sqlite, {
+		id: "project-1",
+		orgId: "org-1",
+		key: "WEB",
+		name: "Web",
+	});
+	seedIssue(sqlite, {
+		id: "issue-1",
+		orgId: "org-1",
+		projectId: "project-1",
+		number: 7,
+		title: "Broken login",
+	});
+	seedIssue(sqlite, {
+		id: "issue-2",
+		orgId: "org-2",
+		projectId: "project-2",
+		number: 1,
+		title: "Other org",
+	});
 };
 
 const issue: IssueDto = {

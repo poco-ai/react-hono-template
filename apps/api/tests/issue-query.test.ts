@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -9,13 +8,13 @@ import {
 	issueFilterNodeSchema,
 	issueListQuerySchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createIssueDao } from "../src/dao/issue.dao";
 import type { LabelDao } from "../src/dao/label.dao";
 import type { MemberDao } from "../src/dao/member.dao";
 import type { ProjectDao } from "../src/dao/project.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import { createIssueService } from "../src/services/issue.service";
+import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Query-engine integration tests: the real filter compiler runs against an
@@ -24,57 +23,6 @@ import { createIssueService } from "../src/services/issue.service";
  */
 
 const ORG_ID = "org";
-
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL,
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL,
-	updated_at integer NOT NULL
-);
-CREATE UNIQUE INDEX issues_projectId_number_uq ON issues (project_id, number);
-CREATE TABLE issue_labels (
-	issue_id text NOT NULL,
-	label_id text NOT NULL,
-	PRIMARY KEY (issue_id, label_id)
-);
-`;
 
 type IssueSeed = {
 	id: string;
@@ -168,39 +116,39 @@ const SEEDS: IssueSeed[] = [
 ];
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
-	sqlite.run(
-		"INSERT INTO projects (id, org_id, name, key) VALUES ('p1', ?, 'Website', 'WEB')",
-		ORG_ID,
-	);
+	const { sqlite, db } = createTestDb();
+	seedProject(sqlite, {
+		id: "p1",
+		orgId: ORG_ID,
+		name: "Website",
+		key: "WEB",
+	});
 	for (const [index, status] of ["s1", "s2", "s3"].entries()) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category, color, position) VALUES (?, ?, ?, 'unstarted', '#000000', ?)",
-			status,
-			ORG_ID,
-			`Status ${status}`,
-			index,
-		);
+		seedStatus(sqlite, {
+			id: status,
+			orgId: ORG_ID,
+			name: `Status ${status}`,
+			category: "unstarted",
+			position: index,
+		});
 	}
 	for (const seed of SEEDS) {
-		sqlite.run(
-			`INSERT INTO issues (id, org_id, project_id, number, title, status_id, priority, assignee_id, created_by_id, due_date, estimate, deleted_at, created_at, updated_at)
-			 VALUES (?, ?, 'p1', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			seed.id,
-			ORG_ID,
-			seed.number,
-			seed.title,
-			seed.statusId,
-			seed.priority,
-			seed.assigneeId,
-			seed.createdById,
-			seed.dueDate,
-			seed.estimate,
-			seed.deletedAt ?? null,
-			seed.createdAt,
-			seed.updatedAt,
-		);
+		seedIssue(sqlite, {
+			id: seed.id,
+			orgId: ORG_ID,
+			projectId: "p1",
+			number: seed.number,
+			title: seed.title,
+			statusId: seed.statusId,
+			priority: seed.priority,
+			assigneeId: seed.assigneeId,
+			createdById: seed.createdById,
+			dueDate: seed.dueDate,
+			estimate: seed.estimate,
+			deletedAt: seed.deletedAt ?? null,
+			createdAt: seed.createdAt,
+			updatedAt: seed.updatedAt,
+		});
 		for (const labelId of seed.labelIds ?? []) {
 			sqlite.run(
 				"INSERT INTO issue_labels (issue_id, label_id) VALUES (?, ?)",
@@ -209,16 +157,7 @@ const setup = () => {
 			);
 		}
 	}
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	});
-	return { sqlite, db: db as unknown as AppDatabase };
+	return { sqlite, db };
 };
 
 const condition = (

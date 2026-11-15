@@ -1,65 +1,29 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
 	ACTIVITY_OFFSET_MAX,
 	activityListQuerySchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createActivityDao } from "../src/dao/activity.dao";
-import type { Database as AppDatabase } from "../src/db/types";
+import { seedIssue } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Organization activity pagination: `offset` validation bounds, DAO
  * offset+limit windows, empty final page and backward compatibility for
  * callers that only send `limit`.
  */
-const DDL = `
-CREATE TABLE user (
-	id text PRIMARY KEY,
-	name text NOT NULL,
-	email text NOT NULL,
-	image text
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL
-);
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	key text NOT NULL,
-	name text NOT NULL
-);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
-);
-`;
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	sqlite.run(
 		"INSERT INTO user (id, name, email, image) VALUES ('user-1', 'Ada', 'ada@example.com', NULL)",
 	);
 	sqlite.run(
 		"INSERT INTO projects (id, org_id, key, name) VALUES ('project-1', 'org', 'WEB', 'Web'), ('project-2', 'org', 'API', 'API')",
 	);
-	const db = drizzle({ client: sqlite });
-	return { sqlite, db: db as unknown as AppDatabase };
+	return { sqlite, db };
 };
 
 /** Inserts one activity per issue number; timestamps grow with the number. */
@@ -74,13 +38,14 @@ const addActivity = (
 	},
 ) => {
 	const issueId = `issue-${row.id}`;
-	sqlite.run(
-		"INSERT INTO issues (id, org_id, number, title) VALUES (?, ?, ?, ?)",
-		issueId,
-		row.orgId ?? "org",
-		row.issueNumber,
-		`Issue ${row.issueNumber}`,
-	);
+	seedIssue(sqlite, {
+		id: issueId,
+		orgId: row.orgId ?? "org",
+		projectId: row.projectId ?? "project-1",
+		number: row.issueNumber,
+		title: `Issue ${row.issueNumber}`,
+		statusId: "status-default",
+	});
 	sqlite.run(
 		`INSERT INTO activities (id, org_id, project_id, issue_id, actor_id, action, created_at)
 		 VALUES (?, ?, ?, ?, 'user-1', 'issue.updated', ?)`,

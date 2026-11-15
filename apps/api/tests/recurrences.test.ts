@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -7,7 +6,6 @@ import {
 	createRecurrenceSchema,
 	updateRecurrenceSchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -16,7 +14,6 @@ import {
 import { createIssueDao } from "../src/dao/issue.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createRecurrenceDao } from "../src/dao/recurrence.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { BackgroundFn } from "../src/lib/background";
 import type { NotificationService } from "../src/services/notification.service";
 import {
@@ -24,6 +21,8 @@ import {
 	createRecurrenceService,
 } from "../src/services/recurrence.service";
 import type { WebhookDispatcher } from "../src/services/webhook-delivery.service";
+import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Recurring issues: cadence advancement (including month-end clamping), the
@@ -40,94 +39,6 @@ const OTHER_PROJECT = "p2";
 const USER = "user-1";
 const NOW = new Date("2026-05-31T00:00:00.000Z");
 
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_labels (
-	issue_id text NOT NULL,
-	label_id text NOT NULL,
-	PRIMARY KEY (issue_id, label_id)
-);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_recurrences (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	title text NOT NULL,
-	description text,
-	status_id text,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	label_ids text NOT NULL DEFAULT '[]',
-	estimate integer,
-	cadence text NOT NULL,
-	next_run_at integer NOT NULL,
-	anchor_day integer NOT NULL DEFAULT 1,
-	last_run_at integer,
-	active integer NOT NULL DEFAULT 1,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const setup = (
 	options: {
 		archived?: boolean;
@@ -136,35 +47,27 @@ const setup = (
 		webhooks?: WebhookDispatcher;
 	} = {},
 ) => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, orgId, key, archived] of [
-		[PROJECT, ORG, "WEB", options.archived ? 1 : 0],
-		[OTHER_PROJECT, ORG, "API", 0],
-		["p3", OTHER_ORG, "OTH", 0],
+		[PROJECT, ORG, "WEB", options.archived ?? false],
+		[OTHER_PROJECT, ORG, "API", false],
+		["p3", OTHER_ORG, "OTH", false],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key, archived, next_number) VALUES (?, ?, ?, ?, ?, ?)",
+		seedProject(sqlite, {
 			id,
 			orgId,
-			`Project ${id}`,
+			name: `Project ${id}`,
 			key,
 			archived,
-			id === PROJECT ? 2 : 1,
-		);
+			nextNumber: id === PROJECT ? 2 : 1,
+		});
 	}
 	for (const [id, orgId, name, isDefault] of [
-		["s-todo", ORG, "Todo", 1],
-		["s-doing", ORG, "Doing", 0],
-		["s-other", OTHER_ORG, "Other", 1],
+		["s-todo", ORG, "Todo", true],
+		["s-doing", ORG, "Doing", false],
+		["s-other", OTHER_ORG, "Other", true],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category, is_default) VALUES (?, ?, ?, 'unstarted', ?)",
-			id,
-			orgId,
-			name,
-			isDefault,
-		);
+		seedStatus(sqlite, { id, orgId, name, isDefault });
 	}
 	const addIssue = (
 		id: string,
@@ -174,34 +77,25 @@ const setup = (
 		projectId = PROJECT,
 		orgId = ORG,
 	) => {
-		sqlite.run(
-			"INSERT INTO issues (id, org_id, project_id, number, title, description, status_id, priority, assignee_id, estimate, created_by_id) VALUES (?, ?, ?, ?, ?, ?, ?, 2, ?, 3, ?)",
+		seedIssue(sqlite, {
 			id,
 			orgId,
 			projectId,
 			number,
 			title,
-			`${title} description`,
+			description: `${title} description`,
 			statusId,
-			null,
-			USER,
-		);
+			priority: 2,
+			assigneeId: null,
+			estimate: 3,
+			createdById: USER,
+		});
 	};
 	addIssue("i1", 1, "Weekly report", "s-doing");
 
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	});
-	const appDb = db as unknown as AppDatabase;
-	const recurrenceDao = createRecurrenceDao(appDb);
-	const issueDao = createIssueDao(appDb);
-	const projectDao = createProjectDao(appDb);
+	const recurrenceDao = createRecurrenceDao(db);
+	const issueDao = createIssueDao(db);
+	const projectDao = createProjectDao(db);
 	const frozen = { value: options.frozen ?? false };
 	const labels = new Map([
 		["label-1", { id: "label-1" }],

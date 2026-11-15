@@ -1,8 +1,9 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Guards the FTS5 index defined in `drizzle/fts/search_fts.sql`.
@@ -19,6 +20,12 @@ const FTS_SQL = readFileSync(
 	"utf8",
 );
 
+/**
+ * Deliberately minimal stand-in for the two parent tables. The rebuild test
+ * drops the migrated tables and recreates this shape to prove that the
+ * recovery SQL works without the rest of the schema; the FTS triggers only
+ * read `title`/`description` and `body`.
+ */
 const PARENT_DDL = `
 CREATE TABLE issues (
 	id text PRIMARY KEY,
@@ -55,9 +62,7 @@ const EXPECTED_TRIGGERS = [
 const NOW = 1_700_000_000_000;
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(PARENT_DDL);
-	sqlite.exec(FTS_SQL);
+	const { sqlite } = createTestDb();
 	return sqlite;
 };
 
@@ -66,7 +71,9 @@ const triggerNames = (sqlite: Database) =>
 		sqlite
 			.query("SELECT name FROM sqlite_master WHERE type = 'trigger'")
 			.all() as { name: string }[]
-	).map((row) => row.name);
+	)
+		.map((row) => row.name)
+		.filter((name) => EXPECTED_TRIGGERS.includes(name));
 
 const ftsQuery = (quoted: string) => `"${quoted.replace(/"/g, '""')}"`;
 

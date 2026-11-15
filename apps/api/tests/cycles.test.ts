@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -10,7 +9,6 @@ import {
 	issueFilterNodeSchema,
 	updateCycleSchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -20,7 +18,6 @@ import {
 import { createCycleDao } from "../src/dao/cycle.dao";
 import { createIssueDao } from "../src/dao/issue.dao";
 import { createProjectDao } from "../src/dao/project.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { createRoutes } from "../src/routes";
@@ -29,6 +26,13 @@ import {
 	createCycleService,
 	cycleStatus,
 } from "../src/services/cycle.service";
+import {
+	seedCycle,
+	seedIssue,
+	seedProject,
+	seedStatus,
+} from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Cycles: time-range validation, per-project numbering, derived status and
@@ -43,117 +47,23 @@ const PROJECT = "p1";
 const OTHER_PROJECT = "p2";
 const NOW = new Date("2026-06-01T00:00:00.000Z");
 
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE cycles (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	name text NOT NULL,
-	number integer NOT NULL,
-	starts_at integer NOT NULL,
-	ends_at integer NOT NULL,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE UNIQUE INDEX cycles_projectId_number_uq ON cycles (project_id, number);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_labels (
-	issue_id text NOT NULL,
-	label_id text NOT NULL,
-	PRIMARY KEY (issue_id, label_id)
-);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const ms = (value: string) => Date.parse(value);
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, orgId, key] of [
 		[PROJECT, ORG, "WEB"],
 		[OTHER_PROJECT, ORG, "API"],
 		["p3", OTHER_ORG, "OTH"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key) VALUES (?, ?, ?, ?)",
-			id,
-			orgId,
-			`Project ${id}`,
-			key,
-		);
+		seedProject(sqlite, { id, orgId, name: `Project ${id}`, key });
 	}
 	for (const [id, category] of [
 		["s-todo", "unstarted"],
 		["s-done", "completed"],
 		["s-canceled", "canceled"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category) VALUES (?, ?, ?, ?)",
-			id,
-			ORG,
-			id,
-			category,
-		);
+		seedStatus(sqlite, { id, orgId: ORG, category });
 	}
 	const addCycle = (
 		id: string,
@@ -164,16 +74,15 @@ const setup = () => {
 		projectId = PROJECT,
 		orgId = ORG,
 	) => {
-		sqlite.run(
-			"INSERT INTO cycles (id, org_id, project_id, name, number, starts_at, ends_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		seedCycle(sqlite, {
 			id,
 			orgId,
 			projectId,
 			name,
 			number,
-			ms(startsAt),
-			ms(endsAt),
-		);
+			startsAt: ms(startsAt),
+			endsAt: ms(endsAt),
+		});
 	};
 	addCycle("c-past", "Past", 1, "2026-01-01T00:00:00Z", "2026-01-10T00:00:00Z");
 	addCycle(
@@ -206,46 +115,39 @@ const setup = () => {
 		projectId = PROJECT,
 		orgId = ORG,
 	) => {
-		sqlite.run(
-			"INSERT INTO issues (id, org_id, project_id, number, title, status_id, cycle_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		seedIssue(sqlite, {
 			id,
 			orgId,
 			projectId,
 			number,
-			`Issue ${id}`,
+			title: `Issue ${id}`,
 			statusId,
 			cycleId,
-			ms("2026-05-01T00:00:00Z"),
-			ms("2026-05-01T00:00:00Z"),
-		);
+			createdAt: ms("2026-05-01T00:00:00Z"),
+			updatedAt: ms("2026-05-01T00:00:00Z"),
+		});
 	};
 	addIssue("i1", 1, "s-todo", "c-current");
 	addIssue("i2", 2, "s-done", "c-current");
 	addIssue("i3", 3, "s-canceled", "c-current");
 	addIssue("i4", 4, "s-todo", null);
 	// Soft-deleted issues are ignored by progress, rollover and delete activity.
-	sqlite.run(
-		"INSERT INTO issues (id, org_id, project_id, number, title, status_id, cycle_id, deleted_at, created_at, updated_at) VALUES ('i5', ?, ?, 5, 'Issue i5', 's-todo', 'c-current', ?, ?, ?)",
-		ORG,
-		PROJECT,
-		ms("2026-05-20T00:00:00Z"),
-		ms("2026-05-01T00:00:00Z"),
-		ms("2026-05-01T00:00:00Z"),
-	);
-
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
+	seedIssue(sqlite, {
+		id: "i5",
+		orgId: ORG,
+		projectId: PROJECT,
+		number: 5,
+		title: "Issue i5",
+		statusId: "s-todo",
+		cycleId: "c-current",
+		deletedAt: ms("2026-05-20T00:00:00Z"),
+		createdAt: ms("2026-05-01T00:00:00Z"),
+		updatedAt: ms("2026-05-01T00:00:00Z"),
 	});
-	const appDb = db as unknown as AppDatabase;
-	const cycleDao = createCycleDao(appDb);
-	const issueDao = createIssueDao(appDb);
-	const projectDao = createProjectDao(appDb);
+
+	const cycleDao = createCycleDao(db);
+	const issueDao = createIssueDao(db);
+	const projectDao = createProjectDao(db);
 	const cycleService = createCycleService({
 		cycleDao,
 		projectDao,

@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -7,7 +6,6 @@ import {
 	createIssueTemplateSchema,
 	updateIssueTemplateSchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
 	type CapabilityDeps,
 	createCapabilityRegistry,
@@ -16,11 +14,12 @@ import { createIssueTemplateDao } from "../src/dao/issue-template.dao";
 import { createLabelDao } from "../src/dao/label.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createStatusDao } from "../src/dao/status.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { createRoutes } from "../src/routes";
 import { createIssueTemplateService } from "../src/services/issue-template.service";
+import { seedProject, seedStatus } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Issue templates: CRUD, name uniqueness per (organization, project) scope,
@@ -34,85 +33,21 @@ const PROJECT = "p1";
 const OTHER_PROJECT = "p2";
 const USER = "user-1";
 
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE labels (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	color text NOT NULL DEFAULT '#94a3b8',
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_templates (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text,
-	name text NOT NULL,
-	title text NOT NULL,
-	description text,
-	status_id text,
-	priority integer,
-	label_ids text DEFAULT '[]' NOT NULL,
-	estimate integer,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, orgId, key] of [
 		[PROJECT, ORG, "WEB"],
 		[OTHER_PROJECT, ORG, "API"],
 		["p-other-org", OTHER_ORG, "OTH"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key) VALUES (?, ?, ?, ?)",
-			id,
-			orgId,
-			`Project ${id}`,
-			key,
-		);
+		seedProject(sqlite, { id, orgId, key, name: `Project ${id}` });
 	}
 	for (const [id, orgId, name] of [
 		["s-backlog", ORG, "Backlog"],
 		["s-todo", ORG, "Todo"],
 		["s-other-org", OTHER_ORG, "Other"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category) VALUES (?, ?, ?, 'unstarted')",
-			id,
-			orgId,
-			name,
-		);
+		seedStatus(sqlite, { id, orgId, name });
 	}
 	for (const [id, orgId, name] of [
 		["l1", ORG, "bug"],
@@ -127,15 +62,6 @@ const setup = () => {
 		);
 	}
 
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	}) as unknown as AppDatabase;
 	const templateDao = createIssueTemplateDao(db);
 	const service = createIssueTemplateService({
 		templateDao,

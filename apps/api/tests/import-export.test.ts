@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -10,7 +9,6 @@ import {
 	serializeCsvText,
 	unescapeCsvCell,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createCycleDao } from "../src/dao/cycle.dao";
@@ -23,13 +21,21 @@ import { createLabelDao } from "../src/dao/label.dao";
 import { createMemberDao } from "../src/dao/member.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createStatusDao } from "../src/dao/status.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { SessionEnv } from "../src/middleware/auth";
 import type { OrgEnv } from "../src/middleware/org";
 import { requireOrgMember } from "../src/middleware/org";
 import { createIssuesRoutes } from "../src/routes/issues";
 import { createIssueService } from "../src/services/issue.service";
 import { createStatusService } from "../src/services/status.service";
+import {
+	seedCycle,
+	seedMember,
+	seedOrganization,
+	seedProject,
+	seedStatus,
+	seedUser,
+} from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Issue CSV import/export: RFC 4180 escaping, org/project isolation, archived
@@ -44,184 +50,60 @@ const OTHER_PROJECT = "p2";
 const USER = "user-1";
 const OTHER_USER = "user-2";
 
-const DDL = `
-CREATE TABLE organization (
-	id text PRIMARY KEY,
-	name text NOT NULL,
-	slug text NOT NULL,
-	frozen integer NOT NULL DEFAULT 0
-);
-CREATE TABLE user (
-	id text PRIMARY KEY,
-	name text NOT NULL,
-	email text NOT NULL,
-	image text
-);
-CREATE TABLE member (
-	id text PRIMARY KEY,
-	organization_id text NOT NULL,
-	user_id text NOT NULL,
-	role text NOT NULL,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE cycles (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	name text NOT NULL,
-	number integer NOT NULL,
-	starts_at integer NOT NULL,
-	ends_at integer NOT NULL,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE UNIQUE INDEX issues_projectId_number_uq ON issues (project_id, number);
-CREATE TABLE labels (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	color text NOT NULL DEFAULT '#94a3b8',
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_labels (
-	issue_id text NOT NULL,
-	label_id text NOT NULL
-);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, name, email] of [
 		[USER, "Alice", "alice@example.com"],
 		[OTHER_USER, "Bob", "bob@example.com"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO user (id, name, email) VALUES (?, ?, ?)",
-			id,
-			name,
-			email,
-		);
+		seedUser(sqlite, { id, name, email });
 	}
 	for (const [orgId, slug] of [
 		[ORG, "org"],
 		[OTHER_ORG, "org-2"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO organization (id, name, slug) VALUES (?, ?, ?)",
-			orgId,
-			orgId,
-			slug,
-		);
+		seedOrganization(sqlite, { id: orgId, name: orgId, slug });
 	}
-	for (const [id, orgId, userId] of [
-		["m1", ORG, USER],
-		["m3", ORG, OTHER_USER],
-		["m2", OTHER_ORG, USER],
+	for (const [orgId, userId, role] of [
+		[ORG, USER, "owner"],
+		[ORG, OTHER_USER, "owner"],
+		[OTHER_ORG, USER, "owner"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO member (id, organization_id, user_id, role) VALUES (?, ?, ?, 'owner')",
-			id,
-			orgId,
-			userId,
-		);
+		seedMember(sqlite, { orgId, userId, role });
 	}
 	for (const [id, orgId, key, nextNumber] of [
 		[PROJECT, ORG, "WEB", 10],
 		[OTHER_PROJECT, ORG, "API", 1],
 		["p-other", OTHER_ORG, "OTH", 1],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key, next_number) VALUES (?, ?, ?, ?, ?)",
+		seedProject(sqlite, {
 			id,
 			orgId,
-			`Project ${key}`,
+			name: `Project ${key}`,
 			key,
 			nextNumber,
-		);
+		});
 	}
 	for (const [id, name, category, position, isDefault] of [
-		["s-backlog", "Backlog", "backlog", 0, 1],
-		["s-progress", "In Progress", "started", 1, 0],
-		["s-done", "Done", "completed", 2, 0],
+		["s-backlog", "Backlog", "backlog", 0, true],
+		["s-progress", "In Progress", "started", 1, false],
+		["s-done", "Done", "completed", 2, false],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category, position, is_default) VALUES (?, ?, ?, ?, ?, ?)",
+		seedStatus(sqlite, {
 			id,
-			ORG,
+			orgId: ORG,
 			name,
 			category,
 			position,
 			isDefault,
-		);
+		});
 	}
-	sqlite.run(
-		"INSERT INTO issue_statuses (id, org_id, name, category) VALUES ('s-other', ?, 'Other', 'backlog')",
-		OTHER_ORG,
-	);
+	seedStatus(sqlite, {
+		id: "s-other",
+		orgId: OTHER_ORG,
+		name: "Other",
+		category: "backlog",
+	});
 	for (const [id, name] of [
 		["l-bug", "Bug"],
 		["l-frontend", "Frontend"],
@@ -233,11 +115,15 @@ const setup = () => {
 			name,
 		);
 	}
-	sqlite.run(
-		"INSERT INTO cycles (id, org_id, project_id, name, number, starts_at, ends_at) VALUES ('c1', ?, ?, 'Sprint 1', 1, 0, 100)",
-		ORG,
-		PROJECT,
-	);
+	seedCycle(sqlite, {
+		id: "c1",
+		orgId: ORG,
+		projectId: PROJECT,
+		name: "Sprint 1",
+		number: 1,
+		startsAt: 0,
+		endsAt: 100,
+	});
 
 	const addIssue = (
 		id: string,
@@ -287,15 +173,6 @@ const setup = () => {
 		"INSERT INTO issue_labels (issue_id, label_id) VALUES ('i1', 'l-bug')",
 	);
 
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	}) as unknown as AppDatabase;
 	const issueDao = createIssueDao(db);
 	const labelDao = createLabelDao(db);
 	const projectDao = createProjectDao(db);

@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -10,11 +9,9 @@ import {
 	updateProjectSchema,
 	updateProjectUpdateSchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import type { ProjectDao } from "../src/dao/project.dao";
 import type { ProjectUpdateDao } from "../src/dao/project-update.dao";
 import { createProjectUpdateDao } from "../src/dao/project-update.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
 import type { ProjectDto } from "../src/dto/project.dto";
 import type { ProjectUpdateDto } from "../src/dto/project-update.dto";
@@ -23,6 +20,8 @@ import { createRoutes } from "../src/routes";
 import type { PlanService } from "../src/services/plan.service";
 import { createProjectService } from "../src/services/project.service";
 import { createProjectUpdateService } from "../src/services/project-update.service";
+import { seedProject } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 const ORG = "org";
 const PROJECT = "project-1";
@@ -448,39 +447,9 @@ test("project update routes are org-scoped and respect the freeze guard", async 
 // DAO integration: author join, ordering and pagination totals
 // ---------------------------------------------------------------------------
 
-const UPDATE_DDL = `
-CREATE TABLE user (
-	id text PRIMARY KEY,
-	name text NOT NULL,
-	email text NOT NULL,
-	image text
-);
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	health text,
-	updated_at integer
-);
-CREATE TABLE project_updates (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	author_id text,
-	body text NOT NULL,
-	health text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const daoSetup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(UPDATE_DDL);
-	sqlite.run(
-		"INSERT INTO projects (id, org_id, health) VALUES (?, ?, NULL)",
-		PROJECT,
-		ORG,
-	);
+	const { sqlite, db } = createTestDb();
+	seedProject(sqlite, { id: PROJECT, orgId: ORG });
 	sqlite.run(
 		"INSERT INTO user (id, name, email, image) VALUES ('u1', 'Ada', 'ada@example.com', NULL)",
 	);
@@ -502,16 +471,7 @@ const daoSetup = () => {
 		ORG,
 		PROJECT,
 	);
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	});
-	return { dao: createProjectUpdateDao(db as unknown as AppDatabase), sqlite };
+	return { dao: createProjectUpdateDao(db), sqlite };
 };
 
 test("project update dao lists newest first with author projections", async () => {

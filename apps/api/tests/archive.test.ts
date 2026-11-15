@@ -1,20 +1,23 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
 import { ApiError } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createCycleDao } from "../src/dao/cycle.dao";
 import { createIssueDao } from "../src/dao/issue.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createSearchDao } from "../src/dao/search.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { buildSearchTerms } from "../src/lib/search";
 import { createRoutes } from "../src/routes";
 import { createIssueService } from "../src/services/issue.service";
+import {
+	seedCycle,
+	seedIssue,
+	seedProject,
+	seedStatus,
+	seedUser,
+} from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Issue archival: archived issues disappear from lists, FTS search (including
@@ -32,144 +35,33 @@ const OTHER_PROJECT = "p-other-org";
 const USER = "user-1";
 const NOW = 1_700_000_000_000;
 
-const PARENT_DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE cycles (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	name text NOT NULL,
-	number integer NOT NULL,
-	starts_at integer NOT NULL,
-	ends_at integer NOT NULL,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_labels (
-	issue_id text NOT NULL,
-	label_id text NOT NULL,
-	PRIMARY KEY (issue_id, label_id)
-);
-CREATE TABLE activities (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	issue_id text NOT NULL,
-	actor_id text NOT NULL,
-	action text NOT NULL,
-	field text,
-	old_value text,
-	new_value text,
-	source text,
-	source_id text,
-	created_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE comments (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	issue_id text NOT NULL,
-	author_id text NOT NULL,
-	body text NOT NULL,
-	created_at integer NOT NULL
-);
-CREATE TABLE user (
-	id text PRIMARY KEY,
-	name text NOT NULL,
-	email text NOT NULL DEFAULT '',
-	image text
-);
-`;
-
-const FTS_SQL = readFileSync(
-	fileURLToPath(new URL("../drizzle/fts/search_fts.sql", import.meta.url).href),
-	"utf8",
-);
-
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(PARENT_DDL);
-	sqlite.exec(FTS_SQL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, orgId, name, key, archived] of [
-		[PROJECT, ORG, "Web", "WEB", 0],
-		[API_PROJECT, ORG, "Api", "API", 0],
-		[OLD_PROJECT, ORG, "Old", "OLD", 1],
-		[OTHER_PROJECT, OTHER_ORG, "Other", "OTH", 0],
+		[PROJECT, ORG, "Web", "WEB", false],
+		[API_PROJECT, ORG, "Api", "API", false],
+		[OLD_PROJECT, ORG, "Old", "OLD", true],
+		[OTHER_PROJECT, OTHER_ORG, "Other", "OTH", false],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key, archived) VALUES (?, ?, ?, ?, ?)",
-			id,
-			orgId,
-			name,
-			key,
-			archived,
-		);
+		seedProject(sqlite, { id, orgId, name, key, archived });
 	}
 	for (const [id, category] of [
 		["s-backlog", "backlog"],
 		["s-todo", "unstarted"],
 		["s-done", "completed"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category) VALUES (?, ?, ?, ?)",
-			id,
-			ORG,
-			id,
-			category,
-		);
+		seedStatus(sqlite, { id, orgId: ORG, category });
 	}
-	sqlite.run(
-		"INSERT INTO cycles (id, org_id, project_id, name, number, starts_at, ends_at) VALUES ('c1', ?, ?, 'Current', 1, 0, ?)",
-		ORG,
-		PROJECT,
-		NOW * 2,
-	);
-	sqlite.run("INSERT INTO user (id, name) VALUES (?, 'User One')", USER);
+	seedCycle(sqlite, {
+		id: "c1",
+		orgId: ORG,
+		projectId: PROJECT,
+		name: "Current",
+		number: 1,
+		startsAt: 0,
+		endsAt: NOW * 2,
+	});
+	seedUser(sqlite, { id: USER, name: "User One" });
 
 	const addIssue = (
 		id: string,
@@ -187,22 +79,21 @@ const setup = () => {
 			createdAt?: number;
 		} = {},
 	) =>
-		sqlite.run(
-			"INSERT INTO issues (id, org_id, project_id, number, title, status_id, parent_id, cycle_id, assignee_id, deleted_at, archived_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		seedIssue(sqlite, {
 			id,
-			options.orgId ?? ORG,
+			orgId: options.orgId ?? ORG,
 			projectId,
 			number,
 			title,
-			options.statusId ?? "s-backlog",
-			options.parentId ?? null,
-			options.cycleId ?? null,
-			options.assigneeId ?? null,
-			options.deletedAt ?? null,
-			options.archivedAt ?? null,
-			options.createdAt ?? 1000,
-			options.createdAt ?? 1000,
-		);
+			statusId: options.statusId ?? "s-backlog",
+			parentId: options.parentId ?? null,
+			cycleId: options.cycleId ?? null,
+			assigneeId: options.assigneeId ?? null,
+			deletedAt: options.deletedAt ?? null,
+			archivedAt: options.archivedAt ?? null,
+			createdAt: options.createdAt ?? 1000,
+			updatedAt: options.createdAt ?? 1000,
+		});
 	addIssue("i1", PROJECT, 1, "Login timeout", {
 		cycleId: "c1",
 		createdAt: 1000,
@@ -259,15 +150,6 @@ const setup = () => {
 		USER,
 	);
 
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	}) as unknown as AppDatabase;
 	const issueDao = createIssueDao(db);
 	const projectDao = createProjectDao(db);
 	const cycleDao = createCycleDao(db);

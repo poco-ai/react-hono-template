@@ -1,9 +1,8 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createIssueDao } from "../src/dao/issue.dao";
-import type { Database as AppDatabase } from "../src/db/types";
+import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Triage queue SQL: backlog + unassigned issues from active projects, newest
@@ -15,68 +14,27 @@ const PROJECT = "p1";
 const OTHER_PROJECT = "p2";
 const ARCHIVED_PROJECT = "p3";
 
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	archived integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000'
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, key, archived] of [
-		[PROJECT, "WEB", 0],
-		[OTHER_PROJECT, "API", 0],
-		[ARCHIVED_PROJECT, "OLD", 1],
+		[PROJECT, "WEB", false],
+		[OTHER_PROJECT, "API", false],
+		[ARCHIVED_PROJECT, "OLD", true],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key, archived) VALUES (?, ?, ?, ?, ?)",
+		seedProject(sqlite, {
 			id,
-			ORG,
-			`Project ${id}`,
+			orgId: ORG,
+			name: `Project ${id}`,
 			key,
 			archived,
-		);
+		});
 	}
 	for (const [id, category] of [
 		["s-backlog", "backlog"],
 		["s-todo", "unstarted"],
 		["s-done", "completed"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category) VALUES (?, ?, ?, ?)",
-			id,
-			ORG,
-			id,
-			category,
-		);
+		seedStatus(sqlite, { id, orgId: ORG, category });
 	}
 	const addIssue = (
 		id: string,
@@ -91,21 +49,20 @@ const setup = () => {
 			createdById?: string;
 		} = {},
 	) => {
-		sqlite.run(
-			"INSERT INTO issues (id, org_id, project_id, number, title, status_id, assignee_id, created_by_id, deleted_at, archived_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		seedIssue(sqlite, {
 			id,
-			ORG,
+			orgId: ORG,
 			projectId,
 			number,
-			`Issue ${id}`,
+			title: `Issue ${id}`,
 			statusId,
-			options.assigneeId ?? null,
-			options.createdById ?? null,
-			options.deletedAt ? Date.parse(options.deletedAt) : null,
-			options.archivedAt ? Date.parse(options.archivedAt) : null,
-			Date.parse(createdAt),
-			Date.parse(createdAt),
-		);
+			assigneeId: options.assigneeId ?? null,
+			createdById: options.createdById ?? null,
+			deletedAt: options.deletedAt ? Date.parse(options.deletedAt) : null,
+			archivedAt: options.archivedAt ? Date.parse(options.archivedAt) : null,
+			createdAt: Date.parse(createdAt),
+			updatedAt: Date.parse(createdAt),
+		});
 	};
 	addIssue("old", 1, "s-backlog", PROJECT, "2026-05-01T00:00:00Z", {
 		createdById: "user-1",
@@ -131,8 +88,7 @@ const setup = () => {
 		"2026-05-09T00:00:00Z",
 	);
 
-	const db = drizzle({ client: sqlite });
-	const issueDao = createIssueDao(db as unknown as AppDatabase);
+	const issueDao = createIssueDao(db);
 	return { issueDao };
 };
 

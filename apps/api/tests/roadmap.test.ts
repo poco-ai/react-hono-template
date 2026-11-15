@@ -1,14 +1,18 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode, roadmapQuerySchema } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createRoadmapDao } from "../src/dao/roadmap.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import {
 	createRoadmapService,
 	resolveRoadmapWindow,
 } from "../src/services/roadmap.service";
+import {
+	seedCycle,
+	seedIssue,
+	seedProject,
+	seedStatus,
+} from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Roadmap aggregate: project/cycle/issue-stat SQL runs against in-memory
@@ -23,101 +27,32 @@ const ARCHIVED_PROJECT = "p2";
 const OTHER_PROJECT = "p3";
 const NOW = new Date("2026-06-15T12:00:00.000Z");
 
-const DDL = `
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	health text,
-	target_date integer,
-	lead_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE cycles (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	name text NOT NULL,
-	number integer NOT NULL,
-	starts_at integer NOT NULL,
-	ends_at integer NOT NULL,
-	created_by_id text,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL DEFAULT '#000000',
-	position integer NOT NULL DEFAULT 0,
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	parent_id text,
-	cycle_id text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	created_by_id text,
-	due_date integer,
-	estimate integer,
-	deleted_at integer,
-	archived_at integer,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-`;
-
 const ms = (value: string) => Date.parse(value);
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
+	const { sqlite, db } = createTestDb();
 	for (const [id, orgId, key, archived] of [
-		[PROJECT, ORG, "WEB", 0],
-		[ARCHIVED_PROJECT, ORG, "OLD", 1],
-		[OTHER_PROJECT, OTHER_ORG, "OTH", 0],
+		[PROJECT, ORG, "WEB", false],
+		[ARCHIVED_PROJECT, ORG, "OLD", true],
+		[OTHER_PROJECT, OTHER_ORG, "OTH", false],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO projects (id, org_id, name, key, archived, color, health, target_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		seedProject(sqlite, {
 			id,
 			orgId,
-			`Project ${id}`,
+			name: `Project ${id}`,
 			key,
 			archived,
-			"#123456",
-			"on_track",
-			ms("2026-08-01T00:00:00Z"),
-		);
+			color: "#123456",
+			health: "on_track",
+			targetDate: ms("2026-08-01T00:00:00Z"),
+		});
 	}
 	for (const [id, category] of [
 		["s-todo", "unstarted"],
 		["s-done", "completed"],
 		["s-canceled", "canceled"],
 	] as const) {
-		sqlite.run(
-			"INSERT INTO issue_statuses (id, org_id, name, category) VALUES (?, ?, ?, ?)",
-			id,
-			ORG,
-			id,
-			category,
-		);
+		seedStatus(sqlite, { id, orgId: ORG, category });
 	}
 	const addCycle = (
 		id: string,
@@ -128,16 +63,15 @@ const setup = () => {
 		projectId = PROJECT,
 		orgId = ORG,
 	) => {
-		sqlite.run(
-			"INSERT INTO cycles (id, org_id, project_id, name, number, starts_at, ends_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		seedCycle(sqlite, {
 			id,
 			orgId,
 			projectId,
 			name,
 			number,
-			ms(startsAt),
-			ms(endsAt),
-		);
+			startsAt: ms(startsAt),
+			endsAt: ms(endsAt),
+		});
 	};
 	addCycle(
 		"c-may",
@@ -189,19 +123,18 @@ const setup = () => {
 		orgId = ORG,
 		archived = false,
 	) => {
-		sqlite.run(
-			"INSERT INTO issues (id, org_id, project_id, number, title, status_id, cycle_id, archived_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		seedIssue(sqlite, {
 			id,
 			orgId,
 			projectId,
 			number,
-			`Issue ${id}`,
+			title: `Issue ${id}`,
 			statusId,
 			cycleId,
-			archived ? ms("2026-06-02T00:00:00Z") : null,
-			ms("2026-06-01T00:00:00Z"),
-			ms("2026-06-01T00:00:00Z"),
-		);
+			archivedAt: archived ? ms("2026-06-02T00:00:00Z") : null,
+			createdAt: ms("2026-06-01T00:00:00Z"),
+			updatedAt: ms("2026-06-01T00:00:00Z"),
+		});
 	};
 	addIssue("i1", 1, "s-todo", "c-june");
 	addIssue("i2", 2, "s-done", "c-june");
@@ -211,16 +144,7 @@ const setup = () => {
 	addIssue("i5", 5, "s-done", "c-june", PROJECT, ORG, true);
 	addIssue("i6", 1, "s-todo", "c-archived", ARCHIVED_PROJECT);
 
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	});
-	const roadmapDao = createRoadmapDao(db as unknown as AppDatabase);
+	const roadmapDao = createRoadmapDao(db);
 	const roadmapService = createRoadmapService({
 		roadmapDao,
 		now: () => NOW,

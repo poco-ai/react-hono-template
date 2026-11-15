@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -8,7 +7,6 @@ import {
 	PLANS,
 	type PlanLimits,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -16,12 +14,13 @@ import {
 	createCapabilityRegistry,
 } from "../src/capabilities";
 import { createViewDao } from "../src/dao/view.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { PlanService } from "../src/services/plan.service";
 import {
 	createViewService,
 	type ViewService,
 } from "../src/services/view.service";
+import { seedOrganization, seedProject, seedUser } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Saved-view tests: real DAO/service against in-memory SQLite (default-view
@@ -36,41 +35,6 @@ const ADMIN_ID = "user-3";
 const PROJECT_ID = "project-1";
 const FOREIGN_PROJECT_ID = "project-other";
 const NOW = "2026-01-01T00:00:00.000Z";
-
-const DDL = `
-CREATE TABLE organization (id text PRIMARY KEY, name text NOT NULL, slug text NOT NULL);
-CREATE TABLE user (id text PRIMARY KEY, name text NOT NULL, email text NOT NULL);
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	next_number integer NOT NULL DEFAULT 1,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE TABLE views (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text,
-	name text NOT NULL,
-	description text,
-	owner_id text NOT NULL,
-	shared integer NOT NULL DEFAULT 0,
-	query text NOT NULL,
-	layout text NOT NULL DEFAULT 'list',
-	is_default integer NOT NULL DEFAULT 0,
-	created_at integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL DEFAULT 0
-);
-CREATE INDEX views_orgId_projectId_idx ON views (org_id, project_id);
-CREATE INDEX views_orgId_ownerId_idx ON views (org_id, owner_id);
-CREATE UNIQUE INDEX views_orgId_ownerId_default_uq
-	ON views (org_id, owner_id) WHERE is_default = 1;
-`;
 
 const QUERY = {
 	filter: {
@@ -93,34 +57,21 @@ const createInput = (
 });
 
 const setup = (options: { savedViews?: number } = {}) => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
-	sqlite.run(
-		"INSERT INTO organization (id, name, slug) VALUES (?, 'Acme', 'acme')",
-		ORG_ID,
-	);
+	const { sqlite, db } = createTestDb();
+	seedOrganization(sqlite, { id: ORG_ID, name: "Acme", slug: "acme" });
 	for (const userId of [USER_ID, OTHER_ID, ADMIN_ID]) {
-		sqlite.run(
-			"INSERT INTO user (id, name, email) VALUES (?, ?, ?)",
-			userId,
-			userId,
-			`${userId}@example.com`,
-		);
+		seedUser(sqlite, {
+			id: userId,
+			name: userId,
+			email: `${userId}@example.com`,
+		});
 	}
-	sqlite.run(
-		"INSERT INTO projects (id, org_id, name, key) VALUES (?, ?, 'Website', 'WEB')",
-		PROJECT_ID,
-		ORG_ID,
-	);
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	}) as unknown as AppDatabase;
+	seedProject(sqlite, {
+		id: PROJECT_ID,
+		orgId: ORG_ID,
+		name: "Website",
+		key: "WEB",
+	});
 	const viewDao = createViewDao(db);
 	const limits = {
 		savedViews: options.savedViews ?? PLANS.free.savedViews,

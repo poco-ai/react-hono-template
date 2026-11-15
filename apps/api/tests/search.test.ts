@@ -1,14 +1,11 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
 import {
 	ApiErrorCode,
 	DEFAULT_RUNTIME_CONFIG,
 	searchQuerySchema,
 } from "@workspace/shared";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
@@ -16,12 +13,12 @@ import {
 } from "../src/capabilities";
 import { searchResultsSchema as capabilitySearchResultsSchema } from "../src/capabilities/projections";
 import { createSearchDao } from "../src/dao/search.dao";
-import type { Database as AppDatabase } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { buildSearchTerms } from "../src/lib/search";
 import { createRoutes } from "../src/routes";
 import { createSearchService } from "../src/services/search.service";
+import { createTestDb } from "./helpers/test-db";
 
 /**
  * Integration tests against in-memory SQLite with the real `search_fts`
@@ -29,88 +26,10 @@ import { createSearchService } from "../src/services/search.service";
  * exercise the actual SQL rather than mocking it, including CJK substring
  * matching, soft-delete filtering, cross-org isolation and FTS syntax escaping.
  */
-const DDL = `
-CREATE TABLE issues (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	project_id text NOT NULL,
-	number integer NOT NULL,
-	title text NOT NULL,
-	description text,
-	status_id text NOT NULL,
-	priority integer NOT NULL DEFAULT 0,
-	assignee_id text,
-	deleted_at integer,
-	archived_at integer,
-	updated_at integer NOT NULL
-);
-CREATE TABLE projects (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	key text NOT NULL,
-	description text,
-	color text,
-	archived integer NOT NULL DEFAULT 0,
-	updated_at integer NOT NULL
-);
-CREATE TABLE issue_statuses (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	name text NOT NULL,
-	category text NOT NULL,
-	color text NOT NULL
-);
-CREATE TABLE comments (
-	id text PRIMARY KEY,
-	org_id text NOT NULL,
-	issue_id text NOT NULL,
-	author_id text NOT NULL,
-	body text NOT NULL,
-	created_at integer NOT NULL
-);
-CREATE TABLE member (
-	id text PRIMARY KEY,
-	organization_id text NOT NULL,
-	user_id text NOT NULL,
-	role text NOT NULL
-);
-CREATE TABLE user (
-	id text PRIMARY KEY,
-	name text NOT NULL,
-	email text NOT NULL,
-	image text
-);
-`;
-
 const NOW = 1_700_000_000_000;
 
 const setup = () => {
-	const sqlite = new Database(":memory:");
-	sqlite.exec(DDL);
-	// The real migration validates the hand-written FTS DDL and its triggers.
-	sqlite.exec(
-		readFileSync(
-			fileURLToPath(
-				new URL(
-					"../drizzle/20261104143000_search_fts/migration.sql",
-					import.meta.url,
-				).href,
-			),
-			"utf8",
-		),
-	);
-	// Drizzle's bun-sqlite driver has no batch(); the search DAO does not use it
-	// but the shared test harness keeps the same shape as other DAO tests.
-	const db = Object.assign(drizzle({ client: sqlite }), {
-		batch: async (statements: unknown[]) => {
-			const results: unknown[] = [];
-			for (const statement of statements) {
-				results.push(await statement);
-			}
-			return results;
-		},
-	}) as unknown as AppDatabase;
+	const { sqlite, db } = createTestDb();
 	return { sqlite, service: createSearchService(createSearchDao(db)) };
 };
 
