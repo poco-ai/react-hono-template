@@ -22,9 +22,10 @@ import type {
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
 import { isIssueNumberConflict } from "../lib/db-errors";
-import { compileIssueFilter, issueSortOrderBy } from "../lib/issue-filter";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
+import { compileIssueFilter, issueSortOrderBy } from "./issue-filter";
 import { deleteRelationsForIssueStatement } from "./relation.dao";
+import { instrMatch } from "./search-sql";
 import { toStatusDto } from "./status.dao";
 
 type IssueRow = typeof issues.$inferSelect;
@@ -560,10 +561,12 @@ export const createIssueDao = (db: Database) => {
 				);
 			}
 			if (query.search) {
-				// `instr` avoids D1's 50-byte LIKE-pattern limit (long CJK terms)
-				// and treats `%`/`_` literally, so no escaping is needed.
 				conditions.push(
-					sql`(instr(lower(${issues.title}), lower(${query.search})) > 0 or instr(lower(coalesce(${issues.description}, '')), lower(${query.search})) > 0)`,
+					instrMatch(
+						query.search,
+						issues.title,
+						sql`coalesce(${issues.description}, '')`,
+					),
 				);
 			}
 			// Structured filters AND-combine with the legacy flat parameters.

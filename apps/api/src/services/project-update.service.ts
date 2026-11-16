@@ -11,6 +11,7 @@ import type {
 	ListProjectUpdatesDto,
 	ProjectUpdateDto,
 } from "../dto/project-update.dto";
+import { assertProjectWritable } from "./project-access";
 
 /** Roles that may edit/delete any project update, not just their own. */
 const MODERATOR_ROLES = new Set(["owner", "admin"]);
@@ -40,16 +41,8 @@ export const createProjectUpdateService = ({
 	};
 
 	/** Archived projects are read-only: updates cannot be posted or changed. */
-	const requireWritableProject = async (orgId: string, projectId: string) => {
-		const project = await requireProject(orgId, projectId);
-		if (project.archived) {
-			throw new ApiError(
-				ApiErrorCode.PROJECT_ARCHIVED,
-				"Project is archived and read-only",
-			);
-		}
-		return project;
-	};
+	const requireWritableProject = async (orgId: string, projectId: string) =>
+		assertProjectWritable(await requireProject(orgId, projectId));
 
 	const requireUpdate = async (
 		orgId: string,

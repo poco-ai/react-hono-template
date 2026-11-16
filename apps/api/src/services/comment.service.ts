@@ -8,7 +8,7 @@ import {
 	parseMentionUserIds,
 	type UpdateCommentInput,
 } from "@workspace/shared";
-import type { ActivityInsert } from "../dao/activity.dao";
+import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
 import type { CommentDao } from "../dao/comment.dao";
 import type { CommentMentionDao } from "../dao/comment-mention.dao";
 import type { CommentReactionDao } from "../dao/comment-reaction.dao";
@@ -29,6 +29,7 @@ import {
 	bestEffortNotification,
 	type NotificationService,
 } from "./notification.service";
+import { assertProjectWritable } from "./project-access";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const assertIssueCommentable = async (
@@ -45,13 +46,7 @@ const assertIssueCommentable = async (
 			`Issue #${number} not found`,
 		);
 	}
-	const project = await projectDao.findById(orgId, issue.projectId);
-	if (project?.archived) {
-		throw new ApiError(
-			ApiErrorCode.PROJECT_ARCHIVED,
-			"Project is archived and read-only",
-		);
-	}
+	assertProjectWritable(await projectDao.findById(orgId, issue.projectId));
 	return issue;
 };
 
@@ -120,17 +115,8 @@ export const createCommentService = ({
 		issueId: string,
 		actorId: string,
 		action: string,
-	): ActivityInsert => ({
-		id: crypto.randomUUID(),
-		orgId,
-		projectId,
-		issueId,
-		actorId,
-		action,
-		field: null,
-		oldValue: null,
-		newValue: null,
-	});
+	): ActivityInsert =>
+		createActivityRow({ orgId, projectId, issueId, actorId, action });
 
 	const requireComment = async (
 		orgId: string,

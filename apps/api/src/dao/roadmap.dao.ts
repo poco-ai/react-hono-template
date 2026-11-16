@@ -1,17 +1,7 @@
-import { TERMINAL_STATUS_CATEGORIES } from "@workspace/shared";
-import {
-	and,
-	asc,
-	count,
-	eq,
-	gte,
-	inArray,
-	isNull,
-	lt,
-	sql,
-} from "drizzle-orm";
+import { and, asc, count, eq, gte, isNull, lt } from "drizzle-orm";
 import { cycles, issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
+import { openIssueCountSql, terminalIssueCountSql } from "./progress-sql";
 
 export type RoadmapCycleRow = {
 	id: string;
@@ -44,11 +34,9 @@ export type RoadmapAggregate = {
 	stats: RoadmapStatsRow[];
 };
 
-const terminalCount = sql<number>`sum(case when ${inArray(issueStatuses.category, [...TERMINAL_STATUS_CATEGORIES])} then 1 else 0 end)`;
+const terminalCount = terminalIssueCountSql();
 
-const openCount = sql<number>`sum(case when ${inArray(issueStatuses.category, [
-	...TERMINAL_STATUS_CATEGORIES,
-])} then 0 else 1 end)`;
+const openCount = openIssueCountSql();
 
 /**
  * Roadmap read model: one D1 batch (single roundtrip) with the project list,

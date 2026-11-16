@@ -1,6 +1,8 @@
 import {
 	ISSUE_CSV_COLUMNS,
 	ISSUE_CSV_MAX_IMPORT_ROWS,
+	ISSUE_PRIORITIES,
+	ISSUE_PRIORITY,
 	type IssueImportRow,
 	parseCsvText,
 } from "@workspace/shared";
@@ -44,7 +46,9 @@ export type IssueCsvPreview = {
 	/** Header errors are also mirrored in `errors` with row 0. */
 };
 
-const PRIORITY_NAMES = new Set(["none", "urgent", "high", "medium", "low"]);
+const PRIORITY_NAMES = new Set<string>(
+	ISSUE_PRIORITIES.map((priority) => priority.name),
+);
 
 const isDateValue = (value: string) =>
 	/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isNaN(Date.parse(value));
@@ -118,7 +122,7 @@ export function buildIssueCsvPreview(text: string): IssueCsvPreview {
 		if (
 			priority &&
 			!PRIORITY_NAMES.has(priority) &&
-			!(/^\d+$/.test(priority) && Number(priority) <= 4)
+			!(/^\d+$/.test(priority) && Number(priority) <= ISSUE_PRIORITY.low)
 		) {
 			errors.push({
 				row: rowNumber,

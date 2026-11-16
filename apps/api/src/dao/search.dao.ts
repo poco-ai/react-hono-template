@@ -7,6 +7,7 @@ import type {
 	SearchProjectHitDto,
 } from "../dto/search.dto";
 import { type SearchTerms, searchExcerpt } from "../lib/search";
+import { instrMatch } from "./search-sql";
 
 /**
  * Cross-entity search reads.
@@ -91,16 +92,15 @@ const joinAnd = (conditions: SQL[]) =>
 // --- conditions ------------------------------------------------------------
 
 const issueInstr = (token: string) =>
-	sql`(instr(lower(i.title), lower(${token})) > 0 or instr(lower(coalesce(i.description, '')), lower(${token})) > 0)`;
+	instrMatch(token, sql`i.title`, sql`coalesce(i.description, '')`);
 
-const commentInstr = (token: string) =>
-	sql`instr(lower(c.body), lower(${token})) > 0`;
+const commentInstr = (token: string) => instrMatch(token, sql`c.body`);
 
 const projectInstr = (token: string) =>
-	sql`(instr(lower(p.name), lower(${token})) > 0 or instr(lower(coalesce(p.description, '')), lower(${token})) > 0)`;
+	instrMatch(token, sql`p.name`, sql`coalesce(p.description, '')`);
 
 const memberInstr = (token: string) =>
-	sql`(instr(lower(u.name), lower(${token})) > 0 or instr(lower(u.email), lower(${token})) > 0)`;
+	instrMatch(token, sql`u.name`, sql`u.email`);
 
 // --- projections -----------------------------------------------------------
 

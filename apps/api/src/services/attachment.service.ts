@@ -5,7 +5,7 @@ import {
 	type AttachmentPresignInput,
 	type RegisterAttachmentInput,
 } from "@workspace/shared";
-import type { ActivityInsert } from "../dao/activity.dao";
+import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
 import type { AttachmentDao } from "../dao/attachment.dao";
 import type { CommentDao } from "../dao/comment.dao";
 import type { IssueDao } from "../dao/issue.dao";
@@ -26,6 +26,7 @@ import {
 	reserveUpload,
 } from "../lib/storage/upload-flow";
 import type { PlanService } from "./plan.service";
+import { assertProjectWritable } from "./project-access";
 import type { StorageUsageService } from "./storage-usage.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
@@ -113,13 +114,7 @@ export const createAttachmentService = ({
 		number: number,
 	): Promise<IssueDto> => {
 		const issue = await requireIssue(orgId, projectId, number);
-		const project = await projectDao.findById(orgId, issue.projectId);
-		if (project?.archived) {
-			throw new ApiError(
-				ApiErrorCode.PROJECT_ARCHIVED,
-				"Project is archived and read-only",
-			);
-		}
+		assertProjectWritable(await projectDao.findById(orgId, issue.projectId));
 		return issue;
 	};
 
@@ -131,17 +126,16 @@ export const createAttachmentService = ({
 		action: string,
 		newValue: string,
 		field: string | null = null,
-	): ActivityInsert => ({
-		id: crypto.randomUUID(),
-		orgId,
-		projectId,
-		issueId,
-		actorId,
-		action,
-		field,
-		oldValue: null,
-		newValue,
-	});
+	): ActivityInsert =>
+		createActivityRow({
+			orgId,
+			projectId,
+			issueId,
+			actorId,
+			action,
+			field,
+			newValue,
+		});
 
 	const withUrls = async (
 		rows: AttachmentDto[],

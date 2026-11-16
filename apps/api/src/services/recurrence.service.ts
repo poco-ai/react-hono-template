@@ -5,7 +5,7 @@ import {
 	type RecurrenceCadence,
 	type UpdateRecurrenceInput,
 } from "@workspace/shared";
-import type { ActivityInsert } from "../dao/activity.dao";
+import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
 import type { IssueDao } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
@@ -17,6 +17,7 @@ import {
 	bestEffortNotification,
 	type NotificationService,
 } from "./notification.service";
+import { assertProjectWritable } from "./project-access";
 import type { StatusService } from "./status.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
@@ -118,15 +119,6 @@ export const createRecurrenceService = ({
 		return project;
 	};
 
-	const assertProjectWritable = (archived: boolean) => {
-		if (archived) {
-			throw new ApiError(
-				ApiErrorCode.PROJECT_ARCHIVED,
-				"Project is archived and read-only",
-			);
-		}
-	};
-
 	const validateSnapshot = async (
 		orgId: string,
 		input: {
@@ -173,19 +165,15 @@ export const createRecurrenceService = ({
 		const issueId = crypto.randomUUID();
 		const activities: ActivityInsert[] = recurrence.createdById
 			? [
-					{
-						id: crypto.randomUUID(),
+					createActivityRow({
 						orgId: recurrence.orgId,
 						projectId: recurrence.projectId,
 						issueId,
 						actorId: recurrence.createdById,
 						action: "created",
-						field: null,
-						oldValue: null,
-						newValue: null,
 						source: "recurrence",
 						sourceId: recurrence.id,
-					},
+					}),
 				]
 			: [];
 		return issueDao.createWithNumber(
@@ -225,7 +213,7 @@ export const createRecurrenceService = ({
 			input: CreateRecurrenceInput,
 		): Promise<RecurrenceDto> => {
 			const project = await assertProject(orgId, projectId);
-			assertProjectWritable(project.archived);
+			assertProjectWritable(project);
 			const current = now();
 			if (!isFuture(input.nextRunAt, current)) {
 				throw new ApiError(
@@ -325,7 +313,7 @@ export const createRecurrenceService = ({
 				);
 			}
 			const project = await assertProject(orgId, projectId);
-			assertProjectWritable(project.archived);
+			assertProjectWritable(project);
 			if (input.nextRunAt && !isFuture(input.nextRunAt, now())) {
 				throw new ApiError(
 					ApiErrorCode.VALIDATION,

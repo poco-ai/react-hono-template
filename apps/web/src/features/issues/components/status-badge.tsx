@@ -1,5 +1,10 @@
 import type { StatusDto } from "@api/dto/status.dto";
-import type { IssueStatus, StatusCategory } from "@workspace/shared";
+import {
+	DEFAULT_ISSUE_STATUSES,
+	type IssueStatus,
+	normalizeStatusNameKey,
+	type StatusCategory,
+} from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -13,23 +18,14 @@ export type StatusLike =
 	| Pick<StatusDto, "name" | "color" | "category">
 	| IssueStatus;
 
-const LEGACY_CATEGORY: Record<IssueStatus, StatusCategory> = {
-	backlog: "backlog",
-	todo: "unstarted",
-	in_progress: "started",
-	in_review: "started",
-	done: "completed",
-	canceled: "canceled",
-};
+const LEGACY_STATUS_META = Object.fromEntries(
+	DEFAULT_ISSUE_STATUSES.map((status) => [
+		normalizeStatusNameKey(status.name),
+		{ category: status.category, color: status.color },
+	]),
+) as Record<IssueStatus, { category: StatusCategory; color: string }>;
 
-const LEGACY_COLOR: Record<IssueStatus, string> = {
-	backlog: "#64748b",
-	todo: "#3b82f6",
-	in_progress: "#f59e0b",
-	in_review: "#a855f7",
-	done: "#22c55e",
-	canceled: "#94a3b8",
-};
+export { LEGACY_STATUS_META };
 
 const isLegacyStatus = (status: StatusLike): status is IssueStatus =>
 	typeof status === "string";
@@ -44,8 +40,10 @@ export function StatusBadge({
 	const { t } = useTranslation();
 	const legacy = isLegacyStatus(status);
 	const name = legacy ? t(`issues.statuses.${status}`) : status.name;
-	const color = legacy ? LEGACY_COLOR[status] : status.color;
-	const category = legacy ? LEGACY_CATEGORY[status] : status.category;
+	const color = legacy ? LEGACY_STATUS_META[status].color : status.color;
+	const category = legacy
+		? LEGACY_STATUS_META[status].category
+		: status.category;
 
 	return (
 		<Badge

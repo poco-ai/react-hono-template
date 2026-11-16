@@ -25,6 +25,7 @@ import {
 	cycleDetachActivityStatement,
 	cycleRolloverActivityStatement,
 } from "./activity.dao";
+import { terminalIssueCountSql } from "./progress-sql";
 
 type CycleRow = typeof cycles.$inferSelect;
 
@@ -192,10 +193,7 @@ export const createCycleDao = (db: Database) => {
 				.select({
 					cycleId: issues.cycleId,
 					total: count(),
-					terminal:
-						sql<number>`sum(case when ${inArray(issueStatuses.category, [...TERMINAL_STATUS_CATEGORIES])} then 1 else 0 end)`.as(
-							"terminal_count",
-						),
+					terminal: terminalIssueCountSql().as("terminal_count"),
 				})
 				.from(issues)
 				.innerJoin(issueStatuses, eq(issueStatuses.id, issues.statusId))

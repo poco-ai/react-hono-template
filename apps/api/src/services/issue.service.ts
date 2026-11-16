@@ -18,7 +18,7 @@ import {
 	type UpdateIssueInput,
 	unescapeCsvCell,
 } from "@workspace/shared";
-import type { ActivityInsert } from "../dao/activity.dao";
+import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
 import type { CycleDao } from "../dao/cycle.dao";
 import type { IssueDao, IssueInsertData } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
@@ -41,6 +41,7 @@ import {
 	bestEffortNotification,
 	type NotificationService,
 } from "./notification.service";
+import { assertProjectWritable } from "./project-access";
 import type { StatusService } from "./status.service";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
@@ -48,15 +49,6 @@ const toDueDate = (
 	value: string | null | undefined,
 ): Date | null | undefined =>
 	value === undefined ? undefined : value === null ? null : new Date(value);
-
-const assertProjectWritable = (archived: boolean) => {
-	if (archived) {
-		throw new ApiError(
-			ApiErrorCode.PROJECT_ARCHIVED,
-			"Project is archived and read-only",
-		);
-	}
-};
 
 const toLinkSummary = (issue: IssueDto): IssueLinkSummaryDto => ({
 	id: issue.id,
@@ -170,17 +162,17 @@ const buildActivity = (
 	actorId: string,
 	action: string,
 	diff?: IssueFieldDiff,
-): ActivityInsert => ({
-	id: crypto.randomUUID(),
-	orgId,
-	projectId,
-	issueId,
-	actorId,
-	action,
-	field: diff?.field ?? null,
-	oldValue: diff?.oldValue ?? null,
-	newValue: diff?.newValue ?? null,
-});
+): ActivityInsert =>
+	createActivityRow({
+		orgId,
+		projectId,
+		issueId,
+		actorId,
+		action,
+		field: diff?.field,
+		oldValue: diff?.oldValue,
+		newValue: diff?.newValue,
+	});
 
 /**
  * Validates the two-level parent rule: the parent must exist in the same
@@ -411,7 +403,7 @@ export const createIssueService = ({
 				return { ...issue, labelIds: await issueDao.findLabelIds(issue.id) };
 			}
 			const project = await projectDao.findById(orgId, issue.projectId);
-			assertProjectWritable(project?.archived ?? true);
+			assertProjectWritable(project);
 			const updated = await issueDao.setArchived(
 				orgId,
 				issue.id,
@@ -468,7 +460,7 @@ export const createIssueService = ({
 				return { ...issue, labelIds: await issueDao.findLabelIds(issue.id) };
 			}
 			const project = await projectDao.findById(orgId, issue.projectId);
-			assertProjectWritable(project?.archived ?? true);
+			assertProjectWritable(project);
 			const updated = await issueDao.setArchived(
 				orgId,
 				issue.id,
@@ -531,7 +523,7 @@ export const createIssueService = ({
 					`Project ${projectId} not found`,
 				);
 			}
-			assertProjectWritable(project.archived);
+			assertProjectWritable(project);
 			const labelIds = input.labelIds ?? [];
 			if (labelIds.length > 0) {
 				const found = await labelDao.findByIds(orgId, labelIds);
@@ -703,7 +695,7 @@ export const createIssueService = ({
 					`Project ${projectId} not found`,
 				);
 			}
-			assertProjectWritable(project.archived);
+			assertProjectWritable(project);
 			if (input.rows.length > ISSUE_CSV_MAX_IMPORT_ROWS) {
 				throw new ApiError(
 					ApiErrorCode.VALIDATION,
@@ -902,7 +894,7 @@ export const createIssueService = ({
 				);
 			}
 			const project = await projectDao.findById(orgId, issue.projectId);
-			assertProjectWritable(project?.archived ?? true);
+			assertProjectWritable(project);
 			if (input.labelIds) {
 				const found = await labelDao.findByIds(orgId, input.labelIds);
 				if (found.length !== input.labelIds.length) {
@@ -1082,7 +1074,7 @@ export const createIssueService = ({
 				);
 			}
 			const project = await projectDao.findById(orgId, issue.projectId);
-			assertProjectWritable(project?.archived ?? true);
+			assertProjectWritable(project);
 			await issueDao.softDelete(
 				orgId,
 				issue.id,

@@ -124,6 +124,25 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
 	cycleId: z.string().min(1).nullish(),
 });
 
+/**
+ * Filter fields shared by the HTTP query schema and the AI/MCP capability
+ * input. The query schema adds string preprocessors; the capability schema
+ * consumes JSON values directly.
+ */
+export const issueFilterShape = {
+	projectId: z.string().min(1).optional(),
+	statusId: z.array(z.string().min(1)).optional(),
+	priority: z
+		.array(z.number().int().min(ISSUE_PRIORITY.none).max(ISSUE_PRIORITY.low))
+		.optional(),
+	assigneeId: z.string().min(1).optional(),
+	labelId: z.string().min(1).optional(),
+	search: z.string().trim().max(100).optional(),
+	cycleId: z.string().min(1).optional(),
+	filter: issueFilterNodeSchema.optional(),
+	includeArchived: z.boolean().optional(),
+};
+
 export const issueListQuerySchema = z.object({
 	...paginationQueryShape(20),
 	/**
@@ -135,23 +154,12 @@ export const issueListQuerySchema = z.object({
 		.describe("Deprecated legacy status names (comma separated)."),
 	/** Organization status ids. Preferred over `status`. */
 	statusId: z
-		.preprocess(toArray, z.array(z.string().min(1)).optional())
+		.preprocess(toArray, issueFilterShape.statusId)
 		.describe("Organization workflow status ids (comma separated)."),
-	priority: z.preprocess(
-		toNumberArray,
-		z
-			.array(
-				z.coerce
-					.number()
-					.int()
-					.min(ISSUE_PRIORITY.none)
-					.max(ISSUE_PRIORITY.low),
-			)
-			.optional(),
-	),
-	assigneeId: z.string().min(1).optional(),
-	labelId: z.string().min(1).optional(),
-	search: z.string().trim().max(100).optional(),
+	priority: z.preprocess(toNumberArray, issueFilterShape.priority),
+	assigneeId: issueFilterShape.assigneeId,
+	labelId: issueFilterShape.labelId,
+	search: issueFilterShape.search,
 	/**
 	 * Legacy single sort, or a JSON array of `{ field, direction }` entries
 	 * (see `issueQuerySortSchema`). The service normalizes both forms.
@@ -169,12 +177,12 @@ export const issueListQuerySchema = z.object({
 		.describe(
 			"updated|created|priority, or a JSON array of {field,direction} sort keys.",
 		),
-	projectId: z.string().min(1).optional(),
+	projectId: issueFilterShape.projectId,
 	/** Planning cycle id; the web client resolves `current` to a cycle id. */
-	cycleId: z.string().min(1).optional(),
+	cycleId: issueFilterShape.cycleId,
 	/** Structured filter tree (JSON string). Combines with the flat params via AND. */
 	filter: z
-		.preprocess(parseFilterQuery, issueFilterNodeSchema.optional())
+		.preprocess(parseFilterQuery, issueFilterShape.filter)
 		.describe("Structured filter tree as JSON."),
 	/**
 	 * Presentation-only grouping hint. It is accepted for parity with saved
@@ -187,7 +195,7 @@ export const issueListQuerySchema = z.object({
 	 * reachable and `restore` brings them back.
 	 */
 	includeArchived: z
-		.preprocess(toBoolean, z.boolean().optional())
+		.preprocess(toBoolean, issueFilterShape.includeArchived)
 		.describe("Include archived issues (hidden by default)."),
 });
 

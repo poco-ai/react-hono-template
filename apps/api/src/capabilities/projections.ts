@@ -1,11 +1,10 @@
 import {
 	ApiError,
 	ApiErrorCode,
-	ISSUE_PRIORITY,
 	ISSUE_QUERY_GROUP_BY,
 	ISSUE_QUERY_MAX_SORTS,
 	ISSUE_STATUSES,
-	issueFilterNodeSchema,
+	issueFilterShape,
 	issueQuerySchema,
 	issueQuerySortSchema,
 } from "@workspace/shared";
@@ -582,21 +581,9 @@ export const issueRefWithPaginationSchema = z
 	});
 
 export const listIssuesInputSchema = z.object({
-	projectId: z.string().min(1).optional(),
-	/** Preferred filter: organization status ids. */
-	statusId: z.array(z.string().min(1)).optional(),
+	...issueFilterShape,
 	/** @deprecated Legacy status names; the service maps them to ids. */
 	status: z.array(z.enum(ISSUE_STATUSES)).optional(),
-	priority: z
-		.array(z.number().int().min(ISSUE_PRIORITY.none).max(ISSUE_PRIORITY.low))
-		.optional(),
-	assigneeId: z.string().min(1).optional(),
-	labelId: z.string().min(1).optional(),
-	search: z.string().trim().max(100).optional(),
-	/** Planning cycle id (assign issues of one cycle to the list). */
-	cycleId: z.string().min(1).optional(),
-	/** Structured filter tree; AND-combined with the flat filters above. */
-	filter: issueFilterNodeSchema.optional(),
 	...paginationInputShape,
 	/** Legacy scalar sort or a prioritized list of sort keys. */
 	sort: z

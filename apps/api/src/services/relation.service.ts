@@ -4,7 +4,7 @@ import {
 	type CreateIssueRelationInput,
 	type IssueRelationType,
 } from "@workspace/shared";
-import type { ActivityInsert } from "../dao/activity.dao";
+import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
 import type { IssueDao } from "../dao/issue.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { RelationDao } from "../dao/relation.dao";
@@ -17,6 +17,7 @@ import type {
 import type { BackgroundFn } from "../lib/background";
 import { isUniqueConstraintViolation } from "../lib/db-errors";
 import { issueKey } from "./issue.service";
+import { assertProjectWritable } from "./project-access";
 import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const toLink = (
@@ -75,17 +76,6 @@ export const createRelationService = ({
 			);
 		}
 		return issue;
-	};
-
-	const assertProjectWritable = async (orgId: string, projectId: string) => {
-		const project = await projectDao.findById(orgId, projectId);
-		if (!project || project.archived) {
-			throw new ApiError(
-				ApiErrorCode.PROJECT_ARCHIVED,
-				"Project is archived and read-only",
-			);
-		}
-		return project;
 	};
 
 	/** Issue payload dispatched with `issue.updated` after relation writes. */
@@ -148,7 +138,9 @@ export const createRelationService = ({
 			background?: BackgroundFn,
 		): Promise<IssueRelationDto> => {
 			const issue = await requireIssue(orgId, projectId, number);
-			const project = await assertProjectWritable(orgId, issue.projectId);
+			const project = assertProjectWritable(
+				await projectDao.findById(orgId, issue.projectId),
+			);
 			const other = await issueDao.findById(orgId, input.relatedIssueId);
 			if (!other) {
 				throw new ApiError(
@@ -232,17 +224,15 @@ export const createRelationService = ({
 			}
 
 			const activity: ActivityInsert | undefined = userId
-				? {
-						id: crypto.randomUUID(),
+				? createActivityRow({
 						orgId,
 						projectId: issue.projectId,
 						issueId: issue.id,
 						actorId: userId,
 						action: "issue.updated",
 						field: `relation:${input.type}`,
-						oldValue: null,
 						newValue: issueKey(project.key, other.number),
-					}
+					})
 				: undefined;
 
 			const relation = await relationDao
@@ -286,7 +276,9 @@ export const createRelationService = ({
 			background?: BackgroundFn,
 		): Promise<void> => {
 			const issue = await requireIssue(orgId, projectId, number);
-			const project = await assertProjectWritable(orgId, issue.projectId);
+			const project = assertProjectWritable(
+				await projectDao.findById(orgId, issue.projectId),
+			);
 			const relation = await relationDao.findById(orgId, relationId);
 			if (
 				!relation ||
@@ -307,8 +299,7 @@ export const createRelationService = ({
 					? "blocked_by"
 					: relation.type;
 			const activity: ActivityInsert | undefined = userId
-				? {
-						id: crypto.randomUUID(),
+				? createActivityRow({
 						orgId,
 						projectId: issue.projectId,
 						issueId: issue.id,
@@ -316,8 +307,7 @@ export const createRelationService = ({
 						action: "issue.updated",
 						field: `relation:${perspectiveType}`,
 						oldValue: other ? issueKey(project.key, other.number) : null,
-						newValue: null,
-					}
+					})
 				: undefined;
 			const deleted = await relationDao.delete(orgId, relationId, activity);
 			if (!deleted) {

@@ -22,6 +22,32 @@ export type ActivityInsert = {
 	sourceId?: string | null;
 };
 
+/** Single row factory so every write path builds the same shape. */
+export const createActivityRow = (input: {
+	orgId: string;
+	projectId: string;
+	issueId: string;
+	actorId: string;
+	action: string;
+	field?: string | null;
+	oldValue?: string | null;
+	newValue?: string | null;
+	source?: string | null;
+	sourceId?: string | null;
+}): ActivityInsert => ({
+	id: crypto.randomUUID(),
+	orgId: input.orgId,
+	projectId: input.projectId,
+	issueId: input.issueId,
+	actorId: input.actorId,
+	action: input.action,
+	field: input.field ?? null,
+	oldValue: input.oldValue ?? null,
+	newValue: input.newValue ?? null,
+	source: input.source ?? null,
+	sourceId: input.sourceId ?? null,
+});
+
 /**
  * Composable insert statement for callers that must keep the activity rows in
  * the same `db.batch` as their primary write (D1 batches are transactions).

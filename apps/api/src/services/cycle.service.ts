@@ -16,6 +16,7 @@ import type {
 	ListCyclesDto,
 } from "../dto/cycle.dto";
 import { isUniqueConstraintViolation } from "../lib/db-errors";
+import { assertProjectWritable } from "./project-access";
 
 const cycleNotFound = (id: string) =>
 	new ApiError(ApiErrorCode.CYCLE_NOT_FOUND, `Cycle ${id} not found`);
@@ -98,16 +99,8 @@ export const createCycleService = ({
 	};
 
 	/** Archived projects are read-only: cycles cannot be created or changed. */
-	const requireWritableProject = async (orgId: string, projectId: string) => {
-		const project = await requireProject(orgId, projectId);
-		if (project.archived) {
-			throw new ApiError(
-				ApiErrorCode.PROJECT_ARCHIVED,
-				"Project is archived and read-only",
-			);
-		}
-		return project;
-	};
+	const requireWritableProject = async (orgId: string, projectId: string) =>
+		assertProjectWritable(await requireProject(orgId, projectId));
 
 	const toCycleWithProgress = (
 		cycle: CycleDto,

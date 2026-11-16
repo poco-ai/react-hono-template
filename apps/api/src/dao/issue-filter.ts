@@ -29,6 +29,7 @@ import {
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { issueLabels, issueStatuses, issues } from "../db/schema";
 import type { Database } from "../db/types";
+import { instrMatch } from "./search-sql";
 
 /**
  * Whitelisted compiler: converts a validated `IssueFilterNode` into drizzle SQL.
@@ -61,14 +62,9 @@ const FIELD_SPEC: Record<IssueFilterField, FieldSpec> = {
 	estimate: { kind: "number", column: issues.estimate },
 };
 
-/**
- * `contains` is compiled as `instr(lower(col), lower(?)) > 0` instead of a
- * `LIKE '%term%'` pattern: D1 rejects LIKE patterns longer than 50 bytes, which
- * long CJK search terms exceed. `instr` needs no escaping either, so `%` and
- * `_` match literally. The 200-character cap from the schema still applies.
- */
+/** Substring match compiled by `instrMatch` (see search-sql.ts). */
 const contains = (column: AnySQLiteColumn, value: unknown): SQL =>
-	sql`instr(lower(${column}), lower(${String(value)})) > 0`;
+	instrMatch(String(value), column);
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
