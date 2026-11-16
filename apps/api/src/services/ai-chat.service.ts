@@ -186,12 +186,6 @@ export const createAiChatService = ({
 					: undefined;
 		const context = await resolveAiContext(orgId, requestContext, contextDaos);
 
-		await verifyApprovalResponses(
-			clientMessages,
-			toolCallDao,
-			orgId,
-			conversationId,
-		);
 		const messages = await dropUnverifiedToolParts(
 			clientMessages,
 			toolCallDao,
@@ -207,6 +201,14 @@ export const createAiChatService = ({
 			orgId,
 			plan,
 			estimatedInputTokens + maxOutputTokens,
+		);
+
+		// Claim approvals only after the request is known to be serviceable.
+		await verifyApprovalResponses(
+			clientMessages,
+			toolCallDao,
+			orgId,
+			conversationId,
 		);
 
 		const now = new Date();

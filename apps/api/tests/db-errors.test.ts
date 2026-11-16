@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sql } from "drizzle-orm";
 import { labels } from "../src/db/schema";
-import { isUniqueConstraintViolation } from "../src/lib/db-errors";
+import {
+	isIssueNumberConflict,
+	isUniqueConstraintViolation,
+} from "../src/lib/db-errors";
+import { seedOrganization, seedProject, seedStatus } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -71,4 +75,53 @@ test("walks the cause chain without overflowing on cycles", () => {
 	const selfReferencing = new Error("self");
 	(selfReferencing as { cause?: unknown }).cause = selfReferencing;
 	assert.equal(isUniqueConstraintViolation(selfReferencing), false);
+});
+
+test("matches a real issue-number unique violation from SQLite", () => {
+	const { sqlite } = createTestDb();
+	seedOrganization(sqlite, { id: "org-1" });
+	seedProject(sqlite, { id: "project-1", orgId: "org-1" });
+	seedStatus(sqlite, { id: "status-1", orgId: "org-1" });
+	const insert = (id: string) =>
+		sqlite.run(
+			`INSERT INTO issues (id, org_id, project_id, number, title, status_id)
+			 VALUES (?, 'org-1', 'project-1', 1, 'Issue', 'status-1')`,
+			id,
+		);
+	insert("issue-1");
+
+	let thrown: unknown;
+	try {
+		insert("issue-2");
+	} catch (err) {
+		thrown = err;
+	}
+	assert.ok(thrown instanceof Error);
+	assert.equal(isIssueNumberConflict(thrown), true);
+});
+
+test("only the issue number index is treated as a retryable collision", () => {
+	const wrapped = (message: string) =>
+		new Error("failed query", { cause: new Error(message) });
+
+	assert.equal(
+		isIssueNumberConflict(
+			wrapped("UNIQUE constraint failed: issues.project_id, issues.number"),
+		),
+		true,
+	);
+	assert.equal(
+		isIssueNumberConflict(
+			wrapped(
+				"UNIQUE constraint failed: issue_labels.issue_id, issue_labels.label_id",
+			),
+		),
+		false,
+	);
+	assert.equal(
+		isIssueNumberConflict(
+			wrapped("UNIQUE constraint failed: projects.org_id, projects.key"),
+		),
+		false,
+	);
 });

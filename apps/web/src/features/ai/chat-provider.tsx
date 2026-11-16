@@ -39,7 +39,9 @@ import {
 	aiTimezone,
 	aiUsageQuery,
 	createAiChatTransport,
+	hasAiWriteTool,
 	invalidateAiConversationQueries,
+	invalidateAiWriteCaches,
 	toUIMessage,
 	useCreateAiConversation,
 } from "@/features/ai/data";
@@ -175,7 +177,7 @@ function ChatRuntime({
 		conversationId: string | null,
 		state: ChatRuntimeState,
 	) => void;
-	onSettled: () => void;
+	onSettled: (messages: UIMessage[], forceWriteInvalidation: boolean) => void;
 }) {
 	const chat = useChat<UIMessage>({
 		id: conversationId ?? "new",
@@ -184,8 +186,10 @@ function ChatRuntime({
 		// Batch streaming token updates; the list re-renders at most every 50ms.
 		throttle: 50,
 		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
-		onFinish: () => onSettled(),
-		onError: () => onSettled(),
+		onFinish: ({ messages }) => onSettled(messages, false),
+		// A stream error can happen after a write tool already ran, so refresh
+		// business caches defensively.
+		onError: () => onSettled(chat.messages, true),
 	});
 
 	useImperativeHandle(
@@ -370,13 +374,19 @@ export function AiChatProvider({
 		[orgId, activeConversationId, ambientContext],
 	);
 
-	const onSettled = useCallback(() => {
-		void invalidateAiConversationQueries(
-			queryClient,
-			orgId,
-			activeConversationId ?? undefined,
-		);
-	}, [queryClient, orgId, activeConversationId]);
+	const onSettled = useCallback(
+		(messages: UIMessage[], forceWriteInvalidation: boolean) => {
+			void invalidateAiConversationQueries(
+				queryClient,
+				orgId,
+				activeConversationId ?? undefined,
+			);
+			if (forceWriteInvalidation || hasAiWriteTool(messages)) {
+				void invalidateAiWriteCaches(queryClient, orgId);
+			}
+		},
+		[queryClient, orgId, activeConversationId],
+	);
 
 	const onRuntimeState = useCallback(
 		(_conversationId: string | null, state: ChatRuntimeState) => {

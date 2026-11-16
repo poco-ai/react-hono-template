@@ -6,6 +6,7 @@ import {
 	AI_TOOL_TITLE_KEYS,
 	aiToolEffect,
 	aiToolTitleKey,
+	hasAiWriteTool,
 } from "../src/features/ai/data";
 import en from "../src/i18n/locales/en";
 import zh from "../src/i18n/locales/zh";
@@ -71,7 +72,82 @@ test("every API capability has a translated AI tool title", () => {
 
 test("tool effect classifies capability names for approval badges", () => {
 	assert.equal(aiToolEffect("list_issues"), "read");
+	assert.equal(aiToolEffect("get_issue"), "read");
+	assert.equal(aiToolEffect("search_issues"), "read");
 	assert.equal(aiToolEffect("create_issue"), "write");
 	assert.equal(aiToolEffect("update_issue"), "write");
+	assert.equal(aiToolEffect("link_issues"), "write");
+	assert.equal(aiToolEffect("resolve_comment"), "write");
 	assert.equal(aiToolEffect("delete_issue"), "destructive");
+	assert.equal(aiToolEffect("unlink_issue"), "destructive");
+});
+
+test("finished write tool parts trigger business cache invalidation", () => {
+	const messages = [
+		{
+			id: "assistant",
+			role: "assistant",
+			parts: [
+				{
+					type: "tool-update_issue",
+					toolCallId: "call-1",
+					state: "output-available",
+					input: { issueId: "issue-1" },
+					output: { ok: true },
+				},
+			],
+		},
+	] as never;
+	assert.equal(hasAiWriteTool(messages), true);
+	assert.equal(
+		hasAiWriteTool([
+			{
+				id: "assistant-2",
+				role: "assistant",
+				parts: [
+					{
+						type: "tool-list_issues",
+						toolCallId: "call-2",
+						state: "output-available",
+						input: {},
+						output: { items: [] },
+					},
+				],
+			},
+		] as never),
+		false,
+	);
+	// A write from an earlier turn must not keep invalidating later read turns.
+	assert.equal(
+		hasAiWriteTool([
+			{
+				id: "assistant-3",
+				role: "assistant",
+				parts: [
+					{
+						type: "tool-update_issue",
+						toolCallId: "call-3",
+						state: "output-available",
+						input: { issueId: "issue-1" },
+						output: { ok: true },
+					},
+				],
+			},
+			{ id: "user-2", role: "user", parts: [{ type: "text", text: "list" }] },
+			{
+				id: "assistant-4",
+				role: "assistant",
+				parts: [
+					{
+						type: "tool-list_issues",
+						toolCallId: "call-4",
+						state: "output-available",
+						input: {},
+						output: { items: [] },
+					},
+				],
+			},
+		] as never),
+		false,
+	);
 });

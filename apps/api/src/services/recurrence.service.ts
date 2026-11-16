@@ -457,6 +457,8 @@ export const createRecurrenceService = ({
 							recurrence.createdById ?? "",
 						),
 					);
+					// dispatch is best-effort; keep the tick isolated from an
+					// injected dispatcher that still throws.
 					try {
 						await webhooks?.dispatch(
 							recurrence.orgId,

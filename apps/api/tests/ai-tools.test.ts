@@ -11,6 +11,7 @@ import type {
 	CapabilityEntry,
 	CapabilityResult,
 } from "../src/capabilities/types";
+import { sha256Hex } from "../src/lib/crypto";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";
@@ -195,13 +196,17 @@ test("role-restricted tools are hidden from members", () => {
 	assert.deepEqual(names, ["list_issues", "delete_issue"]);
 });
 
-const approvalMessage = (toolCallId: string, approved: boolean): UIMessage =>
+const approvalMessage = (
+	toolCallId: string,
+	approved: boolean,
+	toolName = "delete_issue",
+): UIMessage =>
 	({
 		id: "assistant-1",
 		role: "assistant",
 		parts: [
 			{
-				type: "tool-delete_issue",
+				type: `tool-${toolName}`,
 				toolCallId,
 				state: "approval-responded",
 				input: { issueId: "issue-1" },
@@ -213,7 +218,7 @@ const approvalMessage = (toolCallId: string, approved: boolean): UIMessage =>
 test("approvals must match a stored proposed tool call", async () => {
 	const lookup = {
 		findForConversation: async () => null,
-		markStatus: async () => undefined,
+		claimProposedStatus: async () => true,
 	};
 	await assert.rejects(
 		verifyApprovalResponses(
@@ -228,20 +233,154 @@ test("approvals must match a stored proposed tool call", async () => {
 	);
 });
 
+test("a tampered tool name cannot upgrade the approved action", async () => {
+	const lookup = {
+		findForConversation: async () => ({
+			id: "call-tampered",
+			toolName: "update_issue",
+			status: "proposed",
+		}),
+		claimProposedStatus: async () => true,
+	};
+	await assert.rejects(
+		verifyApprovalResponses(
+			[approvalMessage("call-tampered", true, "delete_issue")],
+			lookup as never,
+			ORG_ID,
+			CONVERSATION_ID,
+		),
+		(err: unknown) =>
+			err instanceof ApiError &&
+			err.code === ApiErrorCode.AI_APPROVAL_NOT_FOUND,
+	);
+});
+
+test("an approved input that differs from the hash is rejected", async () => {
+	const message = approvalMessage("call-hash", true);
+	const wrongHash = await sha256Hex(JSON.stringify({ issueId: "other" }));
+	const lookup = {
+		findForConversation: async () => ({
+			id: "call-hash",
+			toolName: "delete_issue",
+			status: "proposed",
+			inputHash: wrongHash,
+		}),
+		claimProposedStatus: async () => true,
+	};
+	await assert.rejects(
+		verifyApprovalResponses(
+			[message],
+			lookup as never,
+			ORG_ID,
+			CONVERSATION_ID,
+		),
+		(err: unknown) =>
+			err instanceof ApiError &&
+			err.code === ApiErrorCode.AI_APPROVAL_NOT_FOUND,
+	);
+});
+
+test("an approved input matching the hash is claimed", async () => {
+	const message = approvalMessage("call-hash-ok", true);
+	const inputHash = await sha256Hex(JSON.stringify({ issueId: "issue-1" }));
+	const claimed: string[] = [];
+	const lookup = {
+		findForConversation: async () => ({
+			id: "call-hash-ok",
+			toolName: "delete_issue",
+			status: "proposed",
+			inputHash,
+		}),
+		claimProposedStatus: async (
+			_orgId: string,
+			_conversationId: string,
+			id: string,
+		) => {
+			claimed.push(id);
+			return true;
+		},
+	};
+	await verifyApprovalResponses(
+		[message],
+		lookup as never,
+		ORG_ID,
+		CONVERSATION_ID,
+	);
+	assert.deepEqual(claimed, ["call-hash-ok"]);
+	const part = message.parts[0] as { approval?: { approved?: boolean } };
+	assert.equal(part.approval?.approved, true);
+});
+
+test("a later invalid part prevents earlier proposals from being claimed", async () => {
+	const message = {
+		id: "assistant-1",
+		role: "assistant",
+		parts: [
+			{
+				type: "tool-delete_issue",
+				toolCallId: "call-ok",
+				state: "approval-responded",
+				input: { issueId: "issue-1" },
+				approval: { id: "approval-ok", approved: true },
+			},
+			{
+				type: "tool-update_issue",
+				toolCallId: "call-bad",
+				state: "approval-responded",
+				input: { issueId: "issue-1" },
+				approval: { id: "approval-bad", approved: true },
+			},
+		],
+	} as unknown as UIMessage;
+	const claimed: string[] = [];
+	const lookup = {
+		findForConversation: async (
+			_orgId: string,
+			_conversationId: string,
+			id: string,
+		) => ({
+			id,
+			toolName: "delete_issue",
+			status: "proposed",
+		}),
+		claimProposedStatus: async (
+			_orgId: string,
+			_conversationId: string,
+			id: string,
+		) => {
+			claimed.push(id);
+			return true;
+		},
+	};
+	await assert.rejects(
+		verifyApprovalResponses(
+			[message],
+			lookup as never,
+			ORG_ID,
+			CONVERSATION_ID,
+		),
+		(err: unknown) =>
+			err instanceof ApiError &&
+			err.code === ApiErrorCode.AI_APPROVAL_NOT_FOUND,
+	);
+	assert.deepEqual(claimed, []);
+});
+
 test("replayed approvals are forced to deny instead of executing again", async () => {
 	const message = approvalMessage("call-replayed", true);
-	let marked = false;
+	let claimed = false;
 	const lookup = {
 		findForConversation: async () => ({
 			id: "call-replayed",
 			toolName: "delete_issue",
 			status: "approved",
 		}),
-		markStatus: async () => {
-			marked = true;
+		claimProposedStatus: async () => {
+			claimed = true;
+			return true;
 		},
 	};
-	const decisions = await verifyApprovalResponses(
+	await verifyApprovalResponses(
 		[message],
 		lookup as never,
 		ORG_ID,
@@ -251,12 +390,32 @@ test("replayed approvals are forced to deny instead of executing again", async (
 		approval?: { approved?: boolean };
 	};
 	assert.equal(part.approval?.approved, false);
-	assert.deepEqual(decisions, []);
-	assert.equal(marked, false);
+	assert.equal(claimed, false);
 });
 
-test("rejected approvals are recorded but never executed", async () => {
-	const calls: { name: string; input: unknown }[] = [];
+test("a lost approval claim is forced to deny", async () => {
+	const message = approvalMessage("call-race", true);
+	const lookup = {
+		findForConversation: async () => ({
+			id: "call-race",
+			toolName: "delete_issue",
+			status: "proposed",
+		}),
+		claimProposedStatus: async () => false,
+	};
+	await verifyApprovalResponses(
+		[message],
+		lookup as never,
+		ORG_ID,
+		CONVERSATION_ID,
+	);
+	const part = message.parts[0] as {
+		approval?: { approved?: boolean };
+	};
+	assert.equal(part.approval?.approved, false);
+});
+
+test("rejected approvals are recorded and keep the denial", async () => {
 	const marked: { id: string; status: string }[] = [];
 	const lookup = {
 		findForConversation: async () => ({
@@ -264,24 +423,22 @@ test("rejected approvals are recorded but never executed", async () => {
 			toolName: "delete_issue",
 			status: "proposed",
 		}),
-		markStatus: async (
+		claimProposedStatus: async (
 			_orgId: string,
 			_conversationId: string,
 			id: string,
 			status: string,
 		) => {
 			marked.push({ id, status });
+			return true;
 		},
 	};
-	const decisions = await verifyApprovalResponses(
-		[approvalMessage("call-1", false)],
+	const message = approvalMessage("call-1", false);
+	await verifyApprovalResponses(
+		[message],
 		lookup as never,
 		ORG_ID,
 		CONVERSATION_ID,
 	);
-	assert.deepEqual(decisions, [
-		{ toolCallId: "call-1", approved: false, toolName: "delete_issue" },
-	]);
 	assert.deepEqual(marked, [{ id: "call-1", status: "rejected" }]);
-	assert.equal(calls.length, 0);
 });

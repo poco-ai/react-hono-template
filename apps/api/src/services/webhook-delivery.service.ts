@@ -215,15 +215,34 @@ export const createWebhookDeliveryService = ({
 			);
 		},
 
+		/**
+		 * Best-effort fan-out: the business write is already committed, so a
+		 * delivery-record or queue failure must never turn it into a 500 (which
+		 * would make clients retry and duplicate the write).
+		 */
 		dispatch: async (
 			orgId: string,
 			event: string,
 			data: unknown,
 			background?: BackgroundFn,
 		) => {
-			const hooks = await webhookDao.listByOrgAndEvent(orgId, event, true);
-			for (const hook of hooks) {
-				await enqueue(hook, orgId, event, data, background);
+			try {
+				const hooks = await webhookDao.listByOrgAndEvent(orgId, event, true);
+				for (const hook of hooks) {
+					try {
+						await enqueue(hook, orgId, event, data, background);
+					} catch (err) {
+						console.error(
+							`[webhook] enqueue failed org=${orgId} event=${event} hook=${hook.id}:`,
+							err,
+						);
+					}
+				}
+			} catch (err) {
+				console.error(
+					`[webhook] subscriber lookup failed org=${orgId} event=${event}:`,
+					err,
+				);
 			}
 		},
 

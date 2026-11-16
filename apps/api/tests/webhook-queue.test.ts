@@ -473,3 +473,26 @@ test("consumer delivers a re-delivered message only once", async () => {
 		fetchMock.restore();
 	}
 });
+
+test("dispatch is best-effort and isolates failing subscribers", async () => {
+	const created: string[] = [];
+	const deliveryDao = {
+		create: async (data: WebhookDeliveryInsert) => {
+			if (data.webhookId === "hook-bad") throw new Error("d1 down");
+			created.push(data.webhookId);
+			return deliveryDto({ id: data.id, webhookId: data.webhookId });
+		},
+	} as unknown as WebhookDeliveryDao;
+	const webhookDao = {
+		listByOrgAndEvent: async () => [hook, { ...hook, id: "hook-bad" }],
+	} as unknown as WebhookDao;
+	const service = createWebhookDeliveryService({ webhookDao, deliveryDao });
+	const originalError = console.error;
+	console.error = () => {};
+	try {
+		await service.dispatch("org-1", "issue.created", {});
+	} finally {
+		console.error = originalError;
+	}
+	assert.deepEqual(created, ["hook-1"]);
+});

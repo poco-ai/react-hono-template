@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { CapabilityEffect } from "../capabilities/types";
 import { aiToolCalls } from "../db/schema";
 import type { Database } from "../db/types";
@@ -81,10 +81,13 @@ export const createAiToolCallDao = (db: Database) => ({
 					durationMs: data.durationMs ?? null,
 				},
 				// Tool call ids are provider-generated; never update a row that
-				// belongs to another organization or conversation.
+				// belongs to another organization or conversation. Terminal
+				// outcomes also win over a concurrent loser's late write.
 				where: and(
 					eq(aiToolCalls.orgId, data.orgId),
 					eq(aiToolCalls.conversationId, data.conversationId),
+					sql`not (${aiToolCalls.status} in ('approved', 'succeeded') and ${data.status} = 'rejected')`,
+					sql`not (${aiToolCalls.status} = 'succeeded' and ${data.status} != 'succeeded')`,
 				),
 			});
 	},
@@ -150,14 +153,19 @@ export const createAiToolCallDao = (db: Database) => ({
 		return rows.map(toDto);
 	},
 
-	markStatus: async (
+	/**
+	 * Compare-and-set the proposal status. Returns false when another request
+	 * already claimed it, which is how concurrent approval replays are kept to
+	 * a single execution.
+	 */
+	claimProposedStatus: async (
 		orgId: string,
 		conversationId: string,
 		id: string,
 		status: AiToolCallStatus,
 		errorCode?: string | null,
-	): Promise<void> => {
-		await db
+	): Promise<boolean> => {
+		const rows = await db
 			.update(aiToolCalls)
 			.set({ status, errorCode: errorCode ?? null })
 			.where(
@@ -165,8 +173,11 @@ export const createAiToolCallDao = (db: Database) => ({
 					eq(aiToolCalls.orgId, orgId),
 					eq(aiToolCalls.conversationId, conversationId),
 					eq(aiToolCalls.id, id),
+					eq(aiToolCalls.status, "proposed"),
 				),
-			);
+			)
+			.returning({ id: aiToolCalls.id });
+		return rows.length > 0;
 	},
 });
 

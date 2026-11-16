@@ -14,13 +14,22 @@ import type {
 	UpdateAiConversationInput,
 	UpdateOrgAiSettingsInput,
 } from "@workspace/shared";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import {
+	DefaultChatTransport,
+	getToolName,
+	isDynamicToolUIPart,
+	isToolUIPart,
+	type UIMessage,
+} from "ai";
+import { invalidateIssueQueries } from "@/features/issues/data";
 import {
 	aiConversationDetailKey,
 	aiConversationListKey,
 	aiConversationsRootKey,
 	aiSettingsKey,
 	aiUsageKey,
+	labelsKey,
+	viewsRootKey,
 } from "@/features/keys";
 import { i18n } from "@/i18n";
 import { client, unwrap } from "@/lib/api";
@@ -338,14 +347,50 @@ export function aiErrorCode(error: unknown): string | undefined {
 
 export type AiToolEffect = "read" | "write" | "destructive";
 
+/** Every read capability starts with one of these prefixes. */
+const READ_TOOL_PREFIXES = ["get_", "list_", "search_"] as const;
+
 export function aiToolEffect(toolName: string): AiToolEffect {
-	if (toolName.startsWith("delete_")) {
+	if (toolName.startsWith("delete_") || toolName.startsWith("unlink_")) {
 		return "destructive";
 	}
-	if (toolName.startsWith("create_") || toolName.startsWith("update_")) {
-		return "write";
+	if (READ_TOOL_PREFIXES.some((prefix) => toolName.startsWith(prefix))) {
+		return "read";
 	}
-	return "read";
+	return "write";
+}
+
+/** True when the latest assistant turn executed a write/destructive tool. */
+export function hasAiWriteTool(messages: UIMessage[]): boolean {
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		const message = messages[index];
+		if (message.role !== "assistant") continue;
+		for (const part of message.parts) {
+			if (!isToolUIPart(part) && !isDynamicToolUIPart(part)) continue;
+			const executed =
+				part.state === "output-available" ||
+				part.state === "output-error" ||
+				(part.state === "approval-responded" &&
+					"approval" in part &&
+					part.approval?.approved === true);
+			if (!executed) continue;
+			if (aiToolEffect(getToolName(part)) !== "read") return true;
+		}
+		return false;
+	}
+	return false;
+}
+
+/** Business caches an executed AI write can affect. */
+export function invalidateAiWriteCaches(
+	queryClient: QueryClient,
+	orgId: string,
+): Promise<unknown[]> {
+	return Promise.all([
+		invalidateIssueQueries(queryClient, orgId),
+		queryClient.invalidateQueries({ queryKey: labelsKey(orgId) }),
+		queryClient.invalidateQueries({ queryKey: viewsRootKey(orgId) }),
+	]);
 }
 
 export const AI_TOOL_TITLE_KEYS: Record<string, TranslationKey> = {

@@ -76,7 +76,7 @@ const setup = ({ enabled = true }: { enabled?: boolean } = {}) => {
 		} as unknown as AiMessageDao,
 		toolCallDao: {
 			findForConversation: async () => null,
-			markStatus: async () => undefined,
+			claimProposedStatus: async () => false,
 			upsert: async () => undefined,
 			listProposed: async () => [],
 		} as unknown as AiToolCallDao,

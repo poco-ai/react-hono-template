@@ -21,7 +21,7 @@ import type {
 	TriageIssueDto,
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
-import { isUniqueConstraintViolation } from "../lib/db-errors";
+import { isIssueNumberConflict } from "../lib/db-errors";
 import { compileIssueFilter, issueSortOrderBy } from "../lib/issue-filter";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 import { deleteRelationsForIssueStatement } from "./relation.dao";
@@ -167,6 +167,7 @@ export const createIssueDao = (db: Database) => {
 			labelIds: string[],
 			activityRows: ActivityInsert[] = [],
 		): Promise<IssueDto> => {
+			const uniqueLabelIds = [...new Set(labelIds)];
 			let lastError: unknown;
 			for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
 				try {
@@ -192,10 +193,10 @@ export const createIssueDao = (db: Database) => {
 								)`,
 							})
 							.returning(),
-						...(labelIds.length
+						...(uniqueLabelIds.length
 							? [
 									db.insert(issueLabels).values(
-										labelIds.map((labelId) => ({
+										uniqueLabelIds.map((labelId) => ({
 											issueId: data.id,
 											labelId,
 										})),
@@ -217,7 +218,7 @@ export const createIssueDao = (db: Database) => {
 					return toIssueDto(inserted[0], toStatusDto(status));
 				} catch (err) {
 					lastError = err;
-					if (!isUniqueConstraintViolation(err)) {
+					if (!isIssueNumberConflict(err)) {
 						throw err;
 					}
 				}
@@ -284,7 +285,7 @@ export const createIssueDao = (db: Database) => {
 					return;
 				} catch (err) {
 					lastError = err;
-					if (!isUniqueConstraintViolation(err)) {
+					if (!isIssueNumberConflict(err)) {
 						throw err;
 					}
 				}
@@ -654,6 +655,7 @@ export const createIssueDao = (db: Database) => {
 				isNull(issues.deletedAt),
 			);
 			const needsBatch = labelIds !== undefined || activityRows.length > 0;
+			const uniqueLabelIds = labelIds ? [...new Set(labelIds)] : labelIds;
 			if (!needsBatch) {
 				if (Object.keys(patchEntries).length === 0) {
 					const current = await db.select().from(issues).where(scope).get();
@@ -676,11 +678,13 @@ export const createIssueDao = (db: Database) => {
 					? [db.delete(issueLabels).where(eq(issueLabels.issueId, id))]
 					: []),
 			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-			if (labelIds !== undefined && labelIds.length > 0) {
+			if (uniqueLabelIds !== undefined && uniqueLabelIds.length > 0) {
 				statements.push(
 					db
 						.insert(issueLabels)
-						.values(labelIds.map((labelId) => ({ issueId: id, labelId }))),
+						.values(
+							uniqueLabelIds.map((labelId) => ({ issueId: id, labelId })),
+						),
 				);
 			}
 			if (activityRows.length > 0) {
