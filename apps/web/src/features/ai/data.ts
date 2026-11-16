@@ -311,8 +311,6 @@ export function toUIMessage(message: AiMessageDto): UIMessage {
 // AI error helpers (HTTP failures arrive as APICallError with a JSON body)
 // ---------------------------------------------------------------------------
 
-export const AI_UNAVAILABLE_CODES = ["AI_DISABLED", "AI_NOT_CONFIGURED"];
-
 const responseEnvelopeCode = (error: unknown): string | undefined => {
 	if (typeof error !== "object" || error === null) {
 		return undefined;

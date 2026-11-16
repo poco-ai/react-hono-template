@@ -23,6 +23,7 @@ export function ConfirmDialog({
 	variant = "destructive",
 	pending = false,
 	error,
+	children,
 	onConfirm,
 }: {
 	open: boolean;
@@ -35,6 +36,7 @@ export function ConfirmDialog({
 	pending?: boolean;
 	/** Mutation error rendered inside the dialog (kept open on failure). */
 	error?: Error | null | undefined;
+	children?: ReactNode;
 	onConfirm: () => void;
 }) {
 	const { t } = useTranslation();
@@ -49,6 +51,7 @@ export function ConfirmDialog({
 					)}
 				</AlertDialogHeader>
 				<MutationError error={error} />
+				{children}
 				<AlertDialogFooter>
 					<AlertDialogCancel>
 						{cancelLabel ?? t("common.cancel")}

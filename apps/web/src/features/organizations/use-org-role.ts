@@ -1,13 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { useSession } from "@/features/auth/data";
-import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
+import type { OrganizationAuthClient } from "@better-auth-ui/core/plugins/organization";
+import { useAuth } from "@better-auth-ui/react";
+import { useActiveMemberRole } from "@better-auth-ui/react/plugins/organization";
+import { MANAGE_ROLES } from "@/features/members/data";
 
 export function useOrgRole(orgId: string) {
-	const { data: session } = useSession();
-	const members = useQuery(membersQuery(orgId));
-	const role = members.data?.find(
-		(member) => member.userId === session?.user.id,
-	)?.role;
+	const { authClient } = useAuth<OrganizationAuthClient>();
+	// The library invalidates this query after member role mutations.
+	const memberRole = useActiveMemberRole(authClient, {
+		query: { organizationId: orgId },
+	});
+	const role = memberRole.data?.role;
 	const canManage =
 		role !== undefined && (MANAGE_ROLES as readonly string[]).includes(role);
 	return { role, canManage };

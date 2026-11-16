@@ -1,25 +1,16 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { apiKeysSearchSchema } from "@/features/api-keys/search";
-import { MANAGE_ROLES, membersQuery } from "@/features/members/data";
+import { requireManageRole } from "@/features/members/guards";
 import { ApiKeysSettingsPage } from "@/pages/org-settings/api-keys";
 
 export const Route = createFileRoute("/_auth/orgs/$orgId/settings/api-keys")({
 	validateSearch: apiKeysSearchSchema,
-	beforeLoad: async ({ context, params }) => {
-		const members = await context.queryClient.ensureQueryData(
-			membersQuery(params.orgId),
-		);
-		const role = members.find(
-			(member) => member.userId === context.session.user.id,
-		)?.role;
-		if (!role || !(MANAGE_ROLES as string[]).includes(role)) {
-			throw redirect({
-				to: "/orgs/$orgId/settings",
-				params: { orgId: params.orgId },
-				search: { denied: true },
-			});
-		}
-	},
+	beforeLoad: ({ context, params }) =>
+		requireManageRole({
+			queryClient: context.queryClient,
+			orgId: params.orgId,
+			userId: context.session.user.id,
+		}),
 	component: () => {
 		const { orgId } = Route.useParams();
 		return <ApiKeysSettingsPage orgId={orgId} />;

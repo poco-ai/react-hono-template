@@ -89,7 +89,8 @@ export function useCreateView(
 ) {
 	return useInvalidatingMutation({
 		mutationFn: (input: CreateViewInput) => createView(orgId, input),
-		invalidate: (queryClient) => invalidateViewQueries(queryClient, orgId),
+		invalidate: (queryClient) =>
+			invalidateViewQueries(queryClient, orgId, { issues: false }),
 		callbacks,
 	});
 }
@@ -101,7 +102,8 @@ export function useUpdateView(
 ) {
 	return useInvalidatingMutation({
 		mutationFn: (input: UpdateViewInput) => updateView(orgId, viewId, input),
-		invalidate: (queryClient) => invalidateViewQueries(queryClient, orgId),
+		invalidate: (queryClient) =>
+			invalidateViewQueries(queryClient, orgId, { issues: false }),
 		callbacks,
 	});
 }
@@ -112,7 +114,8 @@ export function useDeleteView(
 ) {
 	return useInvalidatingMutation({
 		mutationFn: (viewId: string) => deleteView(orgId, viewId),
-		invalidate: (queryClient) => invalidateViewQueries(queryClient, orgId),
+		invalidate: (queryClient) =>
+			invalidateViewQueries(queryClient, orgId, { issues: false }),
 		callbacks,
 	});
 }

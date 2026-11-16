@@ -1,16 +1,6 @@
 import type { AdminOrgDto, ListAdminOrgsDto } from "@api/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -37,6 +27,7 @@ import {
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
 import { TablePagination } from "@/components/table-pagination";
@@ -265,36 +256,20 @@ export function AdminOrgsPage() {
 				</div>
 			</CardContent>
 
-			<AlertDialog
+			<ConfirmDialog
 				open={freezeTarget !== null}
 				onOpenChange={(open) => !open && setFreezeTarget(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("adminOrgs.freezeTitle")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("adminOrgs.freezeDescription", {
-								name: freezeTarget?.name ?? "",
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={freezeMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								if (freezeTarget) {
-									freezeMutation.mutate(freezeTarget.id);
-								}
-							}}
-						>
-							{t("adminOrgs.freeze")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={t("adminOrgs.freezeTitle")}
+				description={t("adminOrgs.freezeDescription", {
+					name: freezeTarget?.name ?? "",
+				})}
+				confirmLabel={t("adminOrgs.freeze")}
+				pending={freezeMutation.isPending}
+				error={freezeMutation.error}
+				onConfirm={() => {
+					if (freezeTarget) freezeMutation.mutate(freezeTarget.id);
+				}}
+			/>
 		</Card>
 	);
 }

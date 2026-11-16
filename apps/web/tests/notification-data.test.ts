@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { QueryClient } from "@tanstack/react-query";
 import {
 	issueSubscriptionKey,
 	notificationsRootKey,
@@ -8,7 +7,6 @@ import {
 } from "../src/features/keys";
 import {
 	archiveNotification,
-	invalidateNotificationQueries,
 	markAllNotificationsRead,
 	markNotificationRead,
 	notificationHash,
@@ -86,37 +84,6 @@ test("notification keys stay nested under the organization", () => {
 		"list",
 		"all",
 	]);
-});
-
-test("notification writes invalidate list pages and the unread counter only for their organization", async () => {
-	const client = new QueryClient();
-	const affected = [
-		notificationsListKey("org", "all"),
-		notificationsListKey("org", "unread"),
-		notificationsUnreadCountKey("org"),
-	];
-	const unaffected = [
-		notificationsListKey("other", "all"),
-		notificationsUnreadCountKey("other"),
-		["orgs", "org", "activities"],
-	];
-	try {
-		for (const key of [...affected, ...unaffected])
-			client.setQueryData(key, {});
-		await invalidateNotificationQueries(client, "org");
-		for (const key of affected) {
-			assert.equal(client.getQueryState(key)?.isInvalidated, true, String(key));
-		}
-		for (const key of unaffected) {
-			assert.equal(
-				client.getQueryState(key)?.isInvalidated,
-				false,
-				String(key),
-			);
-		}
-	} finally {
-		client.clear();
-	}
 });
 
 test("read, read-all and archive requests target the notification id", () =>

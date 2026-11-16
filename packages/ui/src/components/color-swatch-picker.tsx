@@ -1,5 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "./radio-group";
 
 const SWATCHES: readonly string[] = [
 	"#6366f1",
@@ -26,36 +27,35 @@ function ColorSwatchPicker({
 	className?: string;
 }) {
 	return (
-		<div
+		<RadioGroup
 			data-slot="color-swatch-picker"
-			role="radiogroup"
 			aria-label={ariaLabel}
+			value={value}
+			onValueChange={(next) => {
+				if (typeof next === "string") onChange(next);
+			}}
 			className={cn("flex flex-wrap items-center gap-2", className)}
 		>
 			{SWATCHES.map((swatch) => {
 				const selected = swatch === value;
 				return (
-					// biome-ignore lint/a11y/useSemanticElements: swatch buttons implement the radio pattern; a native radio input cannot render the color swatch
-					<button
+					<RadioGroupItem
 						key={swatch}
-						type="button"
-						role="radio"
-						aria-checked={selected}
+						value={swatch}
 						aria-label={swatch}
-						onClick={() => onChange(swatch)}
 						className={cn(
-							"flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+							"flex size-7 shrink-0 items-center justify-center border-0 outline-none after:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_[data-slot=radio-group-indicator]]:hidden",
 							selected &&
 								"ring-2 ring-ring ring-offset-2 ring-offset-background",
 						)}
 						style={{ backgroundColor: swatch }}
 					>
 						{selected && <CheckIcon className="size-4 text-white" />}
-					</button>
+					</RadioGroupItem>
 				);
 			})}
-		</div>
+		</RadioGroup>
 	);
 }
 
-export { ColorSwatchPicker, SWATCHES };
+export { ColorSwatchPicker };

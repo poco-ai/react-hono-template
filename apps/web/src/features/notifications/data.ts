@@ -109,17 +109,6 @@ export const archiveNotification = (orgId: string, notificationId: string) =>
 		}),
 	);
 
-/**
- * Coarse reset for cases where the whole inbox is unknown. Read/archive
- * mutations deliberately patch the cached pages in place instead: invalidating
- * an offset-paginated list while the unread filter is active removes rows and
- * shifts every following page.
- */
-export const invalidateNotificationQueries = (
-	queryClient: QueryClient,
-	orgId: string,
-) => queryClient.invalidateQueries({ queryKey: notificationsRootKey(orgId) });
-
 type NotificationListData = InfiniteData<NotificationListDto, number>;
 
 const notificationListPrefix = (orgId: string) =>

@@ -19,7 +19,6 @@ import type {
 } from "@workspace/shared";
 import { invalidateFavoriteQueries } from "@/features/favorites/data";
 import {
-	issueDetailRootKey,
 	issueKey,
 	issueRelationsKey,
 	orgActivitiesRootKey,
@@ -377,12 +376,6 @@ export function useCreateIssue(orgId: string, projectId: string) {
 			createIssue(orgId, projectId, input),
 		onSuccess: () => {
 			void invalidateIssueQueries(queryClient, orgId);
-			// Detail keys live under ["orgs", orgId, "projects", ...], which the
-			// list/project prefixes above do not cover. Creating a sub-issue
-			// changes the parent's child list and progress.
-			void queryClient.invalidateQueries({
-				queryKey: issueDetailRootKey(orgId, projectId),
-			});
 		},
 	});
 }
@@ -397,9 +390,6 @@ export function useImportIssues(orgId: string, projectId: string) {
 		mutationFn: (input) => importProjectIssues(orgId, projectId, input),
 		onSettled: () => {
 			void invalidateIssueQueries(queryClient, orgId);
-			void queryClient.invalidateQueries({
-				queryKey: issueDetailRootKey(orgId, projectId),
-			});
 		},
 	});
 }
@@ -424,15 +414,7 @@ export function useUpdateIssue(
 						)
 					: issue,
 			),
-		invalidate: (client) =>
-			Promise.all([
-				invalidateIssueQueries(client, orgId),
-				// Detail/activity keys are not under the list prefixes; a child's
-				// status change must also refresh its parent's sub-issue progress.
-				client.invalidateQueries({
-					queryKey: issueDetailRootKey(orgId, projectId),
-				}),
-			]),
+		invalidate: (client) => invalidateIssueQueries(client, orgId),
 	});
 }
 
@@ -537,13 +519,7 @@ export function useSetIssueArchived(
 						}
 					: issue,
 			),
-		invalidate: (client) =>
-			Promise.all([
-				invalidateIssueQueries(client, orgId),
-				client.invalidateQueries({
-					queryKey: issueDetailRootKey(orgId, projectId),
-				}),
-			]),
+		invalidate: (client) => invalidateIssueQueries(client, orgId),
 	});
 }
 
@@ -646,14 +622,7 @@ export function useIssueFieldUpdate(
 						}
 					: old,
 			),
-		invalidate: (client) =>
-			Promise.all([
-				invalidateIssueQueries(client, orgId),
-				// Detail/activity keys are not under the list prefixes.
-				client.invalidateQueries({
-					queryKey: issueDetailRootKey(orgId, projectId),
-				}),
-			]),
+		invalidate: (client) => invalidateIssueQueries(client, orgId),
 	});
 }
 
@@ -708,20 +677,13 @@ export function bulkPartialFailure(
 }
 
 /**
- * Bulk writes refresh list, detail and activity caches. The detail root is not
- * covered by `invalidateIssueQueries`, so bulk edits invalidate it explicitly.
+ * Bulk writes refresh the org-wide issue surfaces; project detail keys are
+ * already under the `projects` prefix invalidated by `invalidateIssueQueries`.
  */
 export const invalidateBulkIssueQueries = (
 	queryClient: QueryClient,
 	orgId: string,
-	projectId: string,
-) =>
-	Promise.all([
-		invalidateIssueQueries(queryClient, orgId),
-		queryClient.invalidateQueries({
-			queryKey: issueDetailRootKey(orgId, projectId),
-		}),
-	]);
+) => invalidateIssueQueries(queryClient, orgId);
 
 export function useBulkUpdateIssues(orgId: string, projectId: string) {
 	const queryClient = useQueryClient();
@@ -745,7 +707,7 @@ export function useBulkUpdateIssues(orgId: string, projectId: string) {
 			}
 		},
 		onSettled: () => {
-			void invalidateBulkIssueQueries(queryClient, orgId, projectId);
+			void invalidateBulkIssueQueries(queryClient, orgId);
 		},
 	});
 }

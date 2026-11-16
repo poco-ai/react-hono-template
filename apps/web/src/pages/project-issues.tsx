@@ -39,7 +39,13 @@ import {
 	Star,
 	Upload,
 } from "lucide-react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import {
+	type ComponentProps,
+	type FormEvent,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -425,6 +431,28 @@ export function ProjectIssuesPage({
 		</Toggle>
 	);
 
+	const filterControlsProps: Omit<
+		ComponentProps<typeof IssueFilterControls>,
+		"variant"
+	> = {
+		filter: effectiveFilter,
+		statuses: statuses.data ?? [],
+		members: members.data ?? [],
+		labels: labels.data ?? [],
+		projects: projects.data ?? [],
+		cycles: cycles.data?.items ?? [],
+		showSort: view === "list",
+		sort: sortField,
+		searchInput,
+		searchInputRef,
+		hasFilters,
+		onSearchInput: setSearchInput,
+		onSearchSubmit: onSearch,
+		onUpdateSearch: updateSearch,
+		onFilterChange: applyFilter,
+		onClearFilters: clearFilters,
+	};
+
 	return (
 		<div className="flex min-h-svh flex-col">
 			<header className="border-b px-4 py-6 lg:px-6">
@@ -649,25 +677,7 @@ export function ProjectIssuesPage({
 							onClear={() => setSearch({ cycleId: "", page: 1 })}
 						/>
 					)}
-					<IssueFilterControls
-						variant="inline"
-						filter={effectiveFilter}
-						statuses={statuses.data ?? []}
-						members={members.data ?? []}
-						labels={labels.data ?? []}
-						projects={projects.data ?? []}
-						cycles={cycles.data?.items ?? []}
-						showSort={view === "list"}
-						sort={sortField}
-						searchInput={searchInput}
-						searchInputRef={searchInputRef}
-						hasFilters={hasFilters}
-						onSearchInput={setSearchInput}
-						onSearchSubmit={onSearch}
-						onUpdateSearch={updateSearch}
-						onFilterChange={applyFilter}
-						onClearFilters={clearFilters}
-					/>
+					<IssueFilterControls {...filterControlsProps} variant="inline" />
 					{archivedToggle}
 				</div>
 			) : (
@@ -715,25 +725,7 @@ export function ProjectIssuesPage({
 								<SheetTitle>{t("issues.filterButton")}</SheetTitle>
 							</SheetHeader>
 							<div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
-								<IssueFilterControls
-									variant="sheet"
-									filter={effectiveFilter}
-									statuses={statuses.data ?? []}
-									members={members.data ?? []}
-									labels={labels.data ?? []}
-									projects={projects.data ?? []}
-									cycles={cycles.data?.items ?? []}
-									showSort={view === "list"}
-									sort={sortField}
-									searchInput={searchInput}
-									searchInputRef={searchInputRef}
-									hasFilters={hasFilters}
-									onSearchInput={setSearchInput}
-									onSearchSubmit={onSearch}
-									onUpdateSearch={updateSearch}
-									onFilterChange={applyFilter}
-									onClearFilters={clearFilters}
-								/>
+								<IssueFilterControls {...filterControlsProps} variant="sheet" />
 							</div>
 						</SheetContent>
 					</Sheet>

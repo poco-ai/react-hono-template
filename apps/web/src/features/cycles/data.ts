@@ -11,7 +11,7 @@ import type {
 	UpdateCycleInput,
 } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";
-import { cycleKey, cyclesRootKey, issueDetailRootKey } from "@/features/keys";
+import { cyclesRootKey, issueDetailRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { useInvalidatingMutation } from "@/lib/feature-mutation";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
@@ -45,18 +45,6 @@ export function cyclesQuery(
 /** Cycles still running; at most one because ranges cannot overlap. */
 export function currentCycleQuery(orgId: string, projectId: string) {
 	return cyclesQuery(orgId, projectId, "current");
-}
-
-export function cycleQuery(orgId: string, projectId: string, cycleId: string) {
-	return queryOptions({
-		queryKey: cycleKey(orgId, projectId, cycleId),
-		queryFn: (): Promise<CycleWithProgressDto> =>
-			unwrap(
-				client.api.orgs[":orgId"].projects[":projectId"].cycles[
-					":cycleId"
-				].$get({ param: { orgId, projectId, cycleId } }),
-			),
-	});
 }
 
 export const createCycle = (

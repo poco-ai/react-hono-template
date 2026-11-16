@@ -2,16 +2,6 @@ import type { ProjectDto } from "@api/dto/project.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@workspace/ui/components/alert-dialog";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -47,6 +37,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import {
 	favoritesQuery,
@@ -420,45 +411,34 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 				onOpenChange={(open) => !open && setEditTarget(null)}
 			/>
 
-			<AlertDialog
+			<ConfirmDialog
 				open={archiveTarget !== null}
 				onOpenChange={(open) => !open && setArchiveTarget(null)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							{archiveTarget?.archived
-								? t("projects.unarchiveConfirmTitle")
-								: t("projects.archiveConfirmTitle")}
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{archiveTarget?.archived
-								? t("projects.unarchiveConfirmDescription", {
-										name: archiveTarget?.name ?? "",
-									})
-								: t("projects.archiveConfirmDescription", {
-										name: archiveTarget?.name ?? "",
-									})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							disabled={archiveMutation.isPending}
-							onClick={(e) => {
-								e.preventDefault();
-								if (archiveTarget) {
-									archiveMutation.mutate(archiveTarget);
-								}
-							}}
-						>
-							{archiveTarget?.archived
-								? t("projects.unarchive")
-								: t("projects.archive")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={
+					archiveTarget?.archived
+						? t("projects.unarchiveConfirmTitle")
+						: t("projects.archiveConfirmTitle")
+				}
+				description={
+					archiveTarget?.archived
+						? t("projects.unarchiveConfirmDescription", {
+								name: archiveTarget?.name ?? "",
+							})
+						: t("projects.archiveConfirmDescription", {
+								name: archiveTarget?.name ?? "",
+							})
+				}
+				confirmLabel={
+					archiveTarget?.archived
+						? t("projects.unarchive")
+						: t("projects.archive")
+				}
+				pending={archiveMutation.isPending}
+				error={archiveMutation.error}
+				onConfirm={() => {
+					if (archiveTarget) archiveMutation.mutate(archiveTarget);
+				}}
+			/>
 		</div>
 	);
 }

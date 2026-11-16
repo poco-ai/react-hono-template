@@ -1,10 +1,6 @@
 import type { StatusDto } from "@api/dto/status.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import {
-	type CreateStatusInput,
-	normalizeStatusNameKey,
-	type UpdateStatusInput,
-} from "@workspace/shared";
+import type { CreateStatusInput, UpdateStatusInput } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";
 import { statusesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
@@ -26,31 +22,6 @@ export function defaultStatusOf(
 	statuses: StatusDto[] | undefined,
 ): StatusDto | undefined {
 	return statuses?.find((status) => status.isDefault) ?? statuses?.[0];
-}
-
-/** Legacy compatibility: map a status name (e.g. `in_progress`) to its id. */
-export function statusIdFromName(
-	statuses: StatusDto[] | undefined,
-	name: string,
-): string | undefined {
-	const key = normalizeStatusNameKey(name);
-	return statuses?.find((status) => normalizeStatusNameKey(status.name) === key)
-		?.id;
-}
-
-export function resolveStatusIds(
-	statuses: StatusDto[] | undefined,
-	ids: string[],
-	legacyNames: string[],
-) {
-	const resolved = [...ids];
-	for (const name of legacyNames) {
-		const id = statusIdFromName(statuses, name);
-		if (id) {
-			resolved.push(id);
-		}
-	}
-	return [...new Set(resolved)];
 }
 
 export const saveStatus = (
