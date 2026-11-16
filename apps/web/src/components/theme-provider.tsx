@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { useHotkey } from "@tanstack/react-hotkeys";
 import * as React from "react";
 import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";

@@ -196,5 +196,3 @@ export const registerMcpResources = (
 		async (uri, variables) => readProject(runtime, uri, variables),
 	);
 };
-
-export const mcpResourceTemplates = [ISSUE_URI, PROJECT_URI] as const;

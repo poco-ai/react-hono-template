@@ -157,6 +157,3 @@ export const createMcpRoutes = ({ config }: { config: McpConfig }) => {
 		}),
 	);
 };
-
-export const mcpInfoPath = (orgId: string) =>
-	`/api/orgs/${encodeURIComponent(orgId)}/mcp/info`;

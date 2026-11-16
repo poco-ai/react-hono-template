@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { IssueFilterGroup } from "@workspace/shared";
+import type { IssueFilterCondition, IssueFilterGroup } from "@workspace/shared";
 import {
 	buildIssueListParams,
 	detachedFilterSearch,
@@ -25,12 +25,13 @@ const condition = (
 	field: string,
 	operator: string,
 	value?: unknown,
-): Record<string, unknown> => ({
-	type: "condition",
-	field,
-	operator,
-	...(value === undefined ? {} : { value }),
-});
+): IssueFilterCondition =>
+	({
+		type: "condition",
+		field,
+		operator,
+		...(value === undefined ? {} : { value }),
+	}) as IssueFilterCondition;
 
 test("legacy URL params convert into an equivalent filter tree", () => {
 	const filter = legacyFilterFromSearch(
@@ -321,7 +322,7 @@ test("request params carry the filter JSON, sort array and grouping", () => {
 		{ field: "priority", direction: "asc" },
 		{ field: "created", direction: "desc" },
 	]);
-	assert.equal(JSON.parse(params.filter).children[0].field, "statusId");
+	assert.equal(JSON.parse(String(params.filter)).children[0].field, "statusId");
 });
 
 test("cache keys differ per filter/sort/grouping and ignore node key order", () => {

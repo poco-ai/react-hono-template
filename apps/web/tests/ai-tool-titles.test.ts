@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
 	AI_TOOL_TITLE_KEYS,
 	aiToolEffect,
@@ -12,7 +13,7 @@ import en from "../src/i18n/locales/en";
 import zh from "../src/i18n/locales/zh";
 
 const capabilitiesRoot = path.resolve(
-	import.meta.dir,
+	path.dirname(fileURLToPath(import.meta.url)),
 	"../../api/src/capabilities",
 );
 

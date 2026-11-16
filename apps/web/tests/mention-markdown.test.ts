@@ -69,7 +69,10 @@ test("a mention link becomes a span node with the user id and plain label", () =
 	assert.equal(mention.data.hName, "span");
 	assert.equal(mention.data.hProperties["data-mention-id"], "u1");
 	assert.deepEqual(
-		mention.children.map((child) => [child.type, child.value]),
+		mention.children.map((child) => [
+			child.type,
+			child.type === "text" ? child.value : undefined,
+		]),
 		[["text", "Alice Chen"]],
 	);
 });
@@ -112,7 +115,10 @@ test("mention labels are flattened to text instead of parsed inline markdown", (
 	const mention = paragraph.children.find((child) => child.type === "mention");
 	assert.ok(mention?.type === "mention");
 	assert.deepEqual(
-		mention.children.map((child) => [child.type, child.value]),
+		mention.children.map((child) => [
+			child.type,
+			child.type === "text" ? child.value : undefined,
+		]),
 		[["text", "Alice"]],
 	);
 });
@@ -125,7 +131,10 @@ test("ordinary links and unsafe destinations keep their normal rendering path", 
 	assert.ok(anchor.type === "link");
 	assert.equal(anchor.url, "https://example.com");
 	assert.deepEqual(
-		anchor.children.map((child) => [child.type, child.value]),
+		anchor.children.map((child) => [
+			child.type,
+			child.type === "text" ? child.value : undefined,
+		]),
 		[["text", "docs"]],
 	);
 	assert.equal(mentions("[docs](https://example.com)").length, 0);

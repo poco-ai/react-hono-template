@@ -3,9 +3,17 @@ name: Configure AI
 on:
   workflow_dispatch:
 
+concurrency:
+  group: configure-ai-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+
   configure:
     name: Migrate D1, set AI secret and deploy
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

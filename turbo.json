@@ -6,6 +6,7 @@
 		"build": {
 			"dependsOn": ["^build"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"env": ["VITE_API_URL"],
 			"outputs": ["dist/**"]
 		},
 		"typecheck": {

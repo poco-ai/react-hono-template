@@ -117,10 +117,3 @@ export const registerMcpPrompts = (
 			),
 	);
 };
-
-export const mcpPromptNames = [
-	"summarize_issue",
-	"triage_backlog",
-	"draft_comment",
-	"weekly_digest",
-] as const;

@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-const sourceRoot = path.resolve(import.meta.dir, "../src");
+const sourceRoot = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	"../src",
+);
 function files(directory: string): string[] {
 	return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
 		const file = path.join(directory, entry.name);

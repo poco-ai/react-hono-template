@@ -666,7 +666,3 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 			},
 		}),
 	] as const;
-
-export type WriteCapability = ReturnType<
-	typeof createWriteCapabilities
->[number];

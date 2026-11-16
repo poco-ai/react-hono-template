@@ -861,5 +861,3 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 			},
 		}),
 	] as const;
-
-export type ReadCapability = ReturnType<typeof createReadCapabilities>[number];

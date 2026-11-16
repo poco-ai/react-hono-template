@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { StatusDto } from "@api/dto/status.dto";
 import {
 	BULK_PARTIAL_FAILURE,
 	bulkPartialFailure,
@@ -18,13 +19,65 @@ import {
 } from "../src/features/triage/data";
 import { errorCode } from "../src/lib/errors";
 
-const statuses = [
-	{ id: "s-done", name: "Done", category: "completed", position: 3 },
-	{ id: "s-backlog", name: "Backlog", category: "backlog", position: 0 },
-	{ id: "s-todo-b", name: "Todo B", category: "unstarted", position: 2 },
-	{ id: "s-todo-a", name: "Todo A", category: "unstarted", position: 1 },
-	{ id: "s-canceled", name: "Canceled", category: "canceled", position: 4 },
-] as never;
+const NOW = "2026-01-01T00:00:00.000Z";
+
+const statuses: StatusDto[] = [
+	{
+		id: "s-done",
+		orgId: "org",
+		name: "Done",
+		category: "completed",
+		color: "#22c55e",
+		position: 3,
+		isDefault: false,
+		createdAt: NOW,
+		updatedAt: NOW,
+	},
+	{
+		id: "s-backlog",
+		orgId: "org",
+		name: "Backlog",
+		category: "backlog",
+		color: "#64748b",
+		position: 0,
+		isDefault: false,
+		createdAt: NOW,
+		updatedAt: NOW,
+	},
+	{
+		id: "s-todo-b",
+		orgId: "org",
+		name: "Todo B",
+		category: "unstarted",
+		color: "#3b82f6",
+		position: 2,
+		isDefault: false,
+		createdAt: NOW,
+		updatedAt: NOW,
+	},
+	{
+		id: "s-todo-a",
+		orgId: "org",
+		name: "Todo A",
+		category: "unstarted",
+		color: "#3b82f6",
+		position: 1,
+		isDefault: false,
+		createdAt: NOW,
+		updatedAt: NOW,
+	},
+	{
+		id: "s-canceled",
+		orgId: "org",
+		name: "Canceled",
+		category: "canceled",
+		color: "#94a3b8",
+		position: 4,
+		isDefault: false,
+		createdAt: NOW,
+		updatedAt: NOW,
+	},
+];
 
 const issue = {
 	id: "i1",
@@ -89,9 +142,7 @@ test("missing target status yields no variables", () => {
 	assert.equal(
 		triageActionInput("accept", {
 			assigneeId: "user-9",
-			statuses: statuses.filter(
-				(status: { category: string }) => status.category !== "unstarted",
-			),
+			statuses: statuses.filter((status) => status.category !== "unstarted"),
 		}),
 		null,
 	);

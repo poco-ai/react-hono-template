@@ -4,7 +4,6 @@ import type {
 	SearchMemberHit,
 	SearchProjectHit,
 	SearchResults,
-	SearchResultUser,
 } from "@workspace/shared";
 
 /**
@@ -20,8 +19,6 @@ import type {
  * excerpt-style fields are `null` when empty, and an unknown `statusCategory`
  * falls back to `unstarted`.
  */
-export type SearchResultUserDto = SearchResultUser;
-
 export type SearchIssueHitDto = SearchIssueHit;
 
 export type SearchCommentHitDto = SearchCommentHit;

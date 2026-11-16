@@ -1,8 +1,8 @@
 {
 	"version": "7",
 	"dialect": "sqlite",
-	"id": "9e4b2626-f9ec-4cd7-bd48-b35bd42b4f0c",
-	"prevIds": ["cb6ed971-9255-4a11-9520-2188775c1730"],
+	"id": "c3a1f5e2-7b4d-4e8a-9f1c-2d6b8a0e5f73",
+	"prevIds": ["9e4b2626-f9ec-4cd7-bd48-b35bd42b4f0c"],
 	"ddl": [
 		{
 			"name": "activities",

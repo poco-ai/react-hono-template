@@ -137,7 +137,7 @@ test("bulk writes invalidate lists, details and activity feeds", async () => {
 		["orgs", "org", "members"],
 	];
 	for (const key of [...affected, ...unaffected]) client.setQueryData(key, {});
-	await invalidateBulkIssueQueries(client, "org", "project");
+	await invalidateBulkIssueQueries(client, "org");
 	for (const key of affected)
 		assert.equal(client.getQueryState(key)?.isInvalidated, true, String(key));
 	for (const key of unaffected)

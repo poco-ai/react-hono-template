@@ -107,7 +107,7 @@ test("hotkey defaults skip single keys in inputs but keep Mod chords", async () 
 		return null;
 	}
 
-	const root = createRoot(dom.window.document.body);
+	const root = createRoot(dom.window.document.body as unknown as Element);
 	cleanup = async () => {
 		await React.act(async () => root.unmount());
 		await restoreDom(dom);
@@ -115,7 +115,10 @@ test("hotkey defaults skip single keys in inputs but keep Mod chords", async () 
 	await React.act(async () => {
 		root.render(
 			React.createElement(
-				HotkeysProvider,
+				HotkeysProvider as unknown as React.ComponentType<{
+					defaultOptions: unknown;
+					children?: React.ReactNode;
+				}>,
 				// Pin the platform so `Mod` resolves to Meta in every CI OS.
 				{ defaultOptions: { ...HOTKEY_DEFAULTS, platform: "mac" } },
 				React.createElement(Probe),
@@ -131,11 +134,11 @@ test("hotkey defaults skip single keys in inputs but keep Mod chords", async () 
 			bubbles: true,
 			cancelable: true,
 			...init,
-		});
+		} as never);
 		await React.act(async () => {
-			target.dispatchEvent(event);
+			target.dispatchEvent(event as unknown as Event);
 		});
-		return event;
+		return event as unknown as KeyboardEvent;
 	};
 
 	const input = dom.window.document.createElement("input");
@@ -145,30 +148,38 @@ test("hotkey defaults skip single keys in inputs but keep Mod chords", async () 
 	dom.window.document.body.append(input, textarea, dialog);
 
 	// Single keys are left to focused text fields.
-	assert.equal((await press(input, { key: "c" })).defaultPrevented, false);
+	assert.equal(
+		(await press(input as unknown as EventTarget, { key: "c" }))
+			.defaultPrevented,
+		false,
+	);
 	assert.equal(fired.length, 0, "C must not fire from an input");
 
 	// Mod+K keeps working inside inputs (new behavior of ignoreInputs: "auto").
 	assert.equal(
-		(await press(input, { key: "k", metaKey: true })).defaultPrevented,
+		(await press(input as unknown as EventTarget, { key: "k", metaKey: true }))
+			.defaultPrevented,
 		true,
 	);
 	assert.deepEqual(fired, [APP_HOTKEYS.toggleCommandPalette.id]);
 	fired.length = 0;
 
 	// Vim-style `g p` sequences fire from the page body.
-	await press(dom.window.document.body, { key: "g" });
-	await press(dom.window.document.body, { key: "p" });
+	await press(dom.window.document.body as unknown as EventTarget, { key: "g" });
+	await press(dom.window.document.body as unknown as EventTarget, { key: "p" });
 	assert.deepEqual(fired, [APP_HOTKEYS.navigateProjects.id]);
 	fired.length = 0;
 
 	// Sequences stay out of text fields too.
-	await press(textarea, { key: "g" });
-	await press(textarea, { key: "p" });
+	await press(textarea as unknown as EventTarget, { key: "g" });
+	await press(textarea as unknown as EventTarget, { key: "p" });
 	assert.equal(fired.length, 0, "G P must not fire from a textarea");
 
 	// Chords still fire from the body and prevent the browser default.
-	const bodyChord = await press(dom.window.document.body, { key: "c" });
+	const bodyChord = await press(
+		dom.window.document.body as unknown as EventTarget,
+		{ key: "c" },
+	);
 	assert.deepEqual(fired, [APP_HOTKEYS.newIssue.id]);
 	assert.equal(bodyChord.defaultPrevented, true);
 

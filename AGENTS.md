@@ -12,7 +12,7 @@ Package manager is **bun** (`packageManager: bun@1.4.2`, `bun.lock`). Do not use
 - `bun run check` — `biome ci .` (format + lint + assist, read-only; the CI gate)
 - `bun run lint` — `biome lint .` (Biome, not ESLint)
 - `bun run format` — `biome format --write .`
-- `bun run typecheck` — turbo typecheck across all packages (web uses `tsc -b` project references; others `tsc --noEmit`)
+- `bun run typecheck` — turbo typecheck across all packages (web uses `tsc -b` project references and includes `tests` via `tsconfig.test.json`; others `tsc --noEmit`)
 - `bun run build` — turbo build (builds `web` only; api deploys from source, wrangler bundles it)
 
 Single workspace: run the script from inside the app/package dir, or `bunx turbo dev --filter=api`.
@@ -116,8 +116,9 @@ Pre-commit (husky + lint-staged) runs `biome check --write` on staged files.
 
 Push to `main` auto-deploys via GitHub Actions (needs repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`):
 
-- `ci.yml` — runs on every pull request and on pushes to `main`; also exposes `workflow_call`. Its `quality` job (`bun install --frozen-lockfile` → `bun run check` → `bun run typecheck` → `bun run test`) is reused by both deployment workflows, whose deploy jobs require `needs: quality`. All workflows read Bun from `package.json` via `bun-version-file`.
-- `deploy-api.yml` — triggers on `apps/api/**`, `packages/shared/**`, `bun.lock`, root `package.json`, or workflow changes; deploys source directly (wrangler bundles Hono, no build step).
-- `deploy-web.yml` — triggers on `apps/web/**`, `packages/ui/**`, `packages/shared/**`, `apps/api/**` (web's `tsc -b` type-checks api source via the `@api/*` alias), `bun.lock`, root `package.json`, or workflow changes; builds with `VITE_API_URL=https://react-hono-api.poco-ai.workers.dev`, then deploys.
+- `ci.yml` — runs on every pull request and on pushes to `main`; also exposes `workflow_call`. Its `quality` job (`bun install --frozen-lockfile` → `bun run check` → `bun run typecheck` → `bun run build` → `bun run test`) is reused by every deployment workflow, whose deploy jobs require `needs: quality`. All workflows read Bun from `package.json` via `bun-version-file`.
+- `deploy-api.yml` — triggers on `apps/api/**`, `packages/shared/**`, `bun.lock`, root `package.json`, `tsconfig.base.json`, or workflow changes; deploys source directly (wrangler bundles Hono, no build step). Workflow-level `concurrency` queues overlapping deploys instead of cancelling them.
+- `deploy-web.yml` — triggers on `apps/web/**`, `packages/ui/**`, `packages/shared/**`, `apps/api/**` (web's `tsc -b` type-checks api source via the `@api/*` alias), `bun.lock`, root `package.json`, `tsconfig.base.json`, or workflow changes; builds with `VITE_API_URL=https://react-hono-api.poco-ai.workers.dev`, then deploys.
+- `configure-ai.yml` — manual workflow that applies remote D1 migrations, sets the AI provider secret and deploys the API. It calls the CI `quality` job first, so migrations never run on unchecked code.
 
 Manual: `bun run deploy` inside the app dir. Dev URLs (`react-hono-api.poco-ai.workers.dev`, `react-hono-web.poco-ai.workers.dev`) appear in `trustedOrigins`, the web workflow's `VITE_API_URL`, and app READMEs — update all of them together if a Worker is renamed.
