@@ -8,13 +8,14 @@ import { MANAGE_ROLES } from "./data";
 export const requireManageRole = async ({
 	queryClient,
 	orgId,
+	userId,
 }: {
 	queryClient: QueryClient;
 	orgId: string;
 	userId: string;
 }) => {
 	const data = await queryClient.ensureQueryData(
-		activeMemberRoleOptions(authClient, orgId, {
+		activeMemberRoleOptions(authClient, userId, {
 			query: { organizationId: orgId },
 		}),
 	);
