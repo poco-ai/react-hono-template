@@ -14,11 +14,17 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=
 
-# Email OTP sign-in through Resend. Set both or neither; without them the code
-# is written to the Worker console (fine for local development, not production).
+# Email OTP sign-in through Resend. Set both or neither. Without them,
+# reset links and OTP codes are only logged when
+# AUTH_ALLOW_INSECURE_LOGGING=true (local development only).
 # EMAIL_FROM must be a verified sender, e.g. "Acme <noreply@example.com>".
 # RESEND_API_KEY=
 # EMAIL_FROM=
+AUTH_ALLOW_INSECURE_LOGGING=true
+
+# Local-only: the first registered user becomes the platform admin.
+# Leave unset in production and provision the admin explicitly.
+ALLOW_FIRST_USER_ADMIN=true
 
 BILLING_MOCK_MODE=true
 

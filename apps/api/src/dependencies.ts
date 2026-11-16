@@ -100,6 +100,7 @@ export const createDependencies = ({
 	apiRateLimiters,
 	appWebUrl = "http://localhost:5173",
 	resolvePublicApiUrl = (requestUrl: string) => new URL(requestUrl).origin,
+	allowFirstUserAdmin = false,
 }: {
 	db: Database;
 	storage: StorageAdapter | null;
@@ -115,6 +116,7 @@ export const createDependencies = ({
 	};
 	appWebUrl?: string;
 	resolvePublicApiUrl?: (requestUrl: string) => string;
+	allowFirstUserAdmin?: boolean;
 }) => {
 	const adminUserDao = createAdminUserDao(db);
 	const adminUserService = createAdminUserService(adminUserDao);
@@ -348,7 +350,9 @@ export const createDependencies = ({
 	const authPolicyService = createAuthPolicyService({
 		adminUserDao,
 		memberDao,
+		organizationDao,
 		plans: planService,
+		allowFirstUserAdmin,
 	});
 	return {
 		apiRateLimiters,

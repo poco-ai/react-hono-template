@@ -250,6 +250,7 @@ function RootComponent() {
 	return (
 		<AuthProvider
 			authClient={authClient}
+			baseURL={window.location.origin}
 			queryClient={queryClient}
 			navigate={(options) => {
 				const location = parseAuthHref(resolveSafeRedirect(options.to));
@@ -286,6 +287,7 @@ function RootComponent() {
 					resetPassword: "reset-password",
 					resetLinkSent: "reset-link-sent",
 					emailOtp: "email-otp",
+					verifyEmail: "verify-email",
 				},
 			}}
 			plugins={plugins}

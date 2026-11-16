@@ -599,6 +599,9 @@ const zh: typeof en = {
 	onboarding: {
 		title: "创建你的组织",
 		description: "这将是你和团队的工作空间。",
+		verifyEmailTitle: "验证你的邮箱",
+		verifyEmailDescription: "验证后才能查看待处理邀请并使用账号恢复。",
+		verifyEmailAction: "发送验证邮件",
 		orgName: "组织名称",
 		orgNamePlaceholder: "例如：Acme 公司",
 		slug: "Slug",

@@ -9,6 +9,12 @@ interface AppEnv {
 	GOOGLE_CLIENT_SECRET?: string;
 	RESEND_API_KEY?: string;
 	EMAIL_FROM?: string;
+	/** Local-only: log reset links and OTP codes instead of sending email. */
+	AUTH_ALLOW_INSECURE_LOGGING?: string;
+	/** Opt-in self-serve bootstrap: the first registered user becomes admin. */
+	ALLOW_FIRST_USER_ADMIN?: string;
+	/** Local-only billing mock; never enable in production. */
+	BILLING_MOCK_MODE?: string;
 	S3_PUBLIC_BASE_URL?: string;
 	PUBLIC_API_URL?: string;
 	STRIPE_SECRET_KEY?: string;

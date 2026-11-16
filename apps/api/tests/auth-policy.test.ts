@@ -10,26 +10,53 @@ import { createAuthPolicyService } from "../src/services/auth-policy.service";
 import { type QuotaAssert, quotaAssertFor } from "../src/services/plan.service";
 
 const policyFor = ({
-	users = 1,
 	orgPlans = [] as string[],
 	members = 0,
 	pending = 0,
 	plan = "free" as PlanName,
 	invitationOrg = "org" as string | null,
+	frozen = false,
+	allowFirstUserAdmin = false,
+	promoted = [] as string[],
+	adminRole = null as string | null,
 } = {}) =>
 	createAuthPolicyService({
-		adminUserDao: { countUsers: async () => users, findById: async () => null },
+		adminUserDao: {
+			findById: async (id: string) =>
+				adminRole && id === "admin"
+					? ({ role: adminRole } as Awaited<
+							ReturnType<
+								import("../src/dao/admin-user.dao").AdminUserDao["findById"]
+							>
+						>)
+					: null,
+			promoteFirstAdmin: async (id: string) => {
+				promoted.push(id);
+			},
+		},
 		memberDao: {
 			listOrgPlansByUser: async () => orgPlans,
 			findInvitationOrgId: async () => invitationOrg,
 			countByOrg: async () => members,
 			countPendingInvitationsByOrg: async () => pending,
 		},
+		organizationDao: {
+			findById: async (orgId: string) =>
+				({
+					id: orgId,
+					frozen,
+				}) as Awaited<
+					ReturnType<
+						import("../src/dao/organization.dao").OrganizationDao["findById"]
+					>
+				>,
+		},
 		plans: {
 			getPlanForOrg: async () => plan,
 			assertQuota: async (_orgId: string, ...args: Parameters<QuotaAssert>) =>
 				quotaAssertFor(plan)(...args),
 		},
+		allowFirstUserAdmin,
 	});
 
 const isQuotaError = (error: unknown) =>
@@ -37,9 +64,36 @@ const isQuotaError = (error: unknown) =>
 	error.status === 403 &&
 	error.code === ApiErrorCode.PLAN_LIMIT_EXCEEDED;
 
-test("only the first registered user receives the admin role", async () => {
-	assert.equal(await policyFor({ users: 0 }).initialUserRole(), "admin");
-	assert.equal(await policyFor({ users: 1 }).initialUserRole(), "user");
+const isFrozenError = (error: unknown) =>
+	error instanceof ApiError && error.code === ApiErrorCode.ORG_FROZEN;
+
+test("first-user admin promotion is opt-in and only the first user is promoted", async () => {
+	const promoted: string[] = [];
+	await policyFor({ allowFirstUserAdmin: true, promoted }).promoteFirstAdmin(
+		"user-1",
+	);
+	assert.deepEqual(promoted, ["user-1"]);
+
+	const disabledPromotions: string[] = [];
+	await policyFor({ promoted: disabledPromotions }).promoteFirstAdmin("user-2");
+	assert.deepEqual(disabledPromotions, []);
+});
+
+test("frozen organizations reject writes and invitation acceptance", async () => {
+	await assert.rejects(
+		policyFor({ frozen: true }).assertOrgNotFrozen("org"),
+		isFrozenError,
+	);
+	await policyFor({ frozen: false }).assertOrgNotFrozen("org");
+
+	await assert.rejects(
+		policyFor({ frozen: true }).assertInvitationNotFrozen("invitation"),
+		isFrozenError,
+	);
+	await policyFor({
+		frozen: true,
+		invitationOrg: null,
+	}).assertInvitationNotFrozen("missing");
 });
 
 test("organization quota uses the user's existing plans", async () => {
@@ -98,30 +152,54 @@ test("auth admin endpoints preserve self-role and administrator-ban restrictions
 		{ code: ApiErrorCode.FORBIDDEN },
 	);
 	await policy.assertAdminUserMutation("actor", "other", "set-role");
-	const adminPolicy = createAuthPolicyService({
-		adminUserDao: {
-			countUsers: async () => 2,
-			findById: async () =>
-				({ role: "admin" }) as Awaited<
-					ReturnType<
-						import("../src/dao/admin-user.dao").AdminUserDao["findById"]
-					>
-				>,
-		},
-		memberDao: {
-			listOrgPlansByUser: async () => [],
-			findInvitationOrgId: async () => null,
-			countByOrg: async () => 0,
-			countPendingInvitationsByOrg: async () => 0,
-		},
-		plans: {
-			getPlanForOrg: async () => "free",
-			assertQuota: async (_orgId: string, ...args: Parameters<QuotaAssert>) =>
-				quotaAssertFor("free")(...args),
-		},
-	});
 	await assert.rejects(
-		adminPolicy.assertAdminUserMutation("actor", "admin", "ban-user"),
+		policyFor({ adminRole: "admin" }).assertAdminUserMutation(
+			"actor",
+			"admin",
+			"ban-user",
+		),
 		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await assert.rejects(
+		policyFor({ adminRole: "user,admin" }).assertAdminUserMutation(
+			"actor",
+			"admin",
+			"ban-user",
+		),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await assert.rejects(
+		policyFor({ adminRole: "admin" }).assertAdminUserMutation(
+			"actor",
+			"admin",
+			"remove-user",
+		),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await assert.rejects(
+		policyFor({ adminRole: "admin" }).assertAdminUserMutation(
+			"actor",
+			"admin",
+			"set-password",
+		),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await assert.rejects(
+		policyFor({ adminRole: "admin" }).assertAdminUserMutation(
+			"actor",
+			"admin",
+			"impersonate",
+		),
+		{ code: ApiErrorCode.FORBIDDEN },
+	);
+	await policyFor({ adminRole: "admin" }).assertAdminUserMutation(
+		"self",
+		"self",
+		"set-password",
+	);
+	await policyFor({ adminRole: "admin" }).assertAdminUserMutation(
+		"actor",
+		"member",
+		"set-password",
 	);
 });

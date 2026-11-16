@@ -1,7 +1,8 @@
 import type { OrganizationAuthClient } from "@better-auth-ui/core/plugins/organization";
 import { useAuth, useSession } from "@better-auth-ui/react";
 import { useListUserInvitations } from "@better-auth-ui/react/plugins/organization";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { buttonVariants } from "@workspace/ui/components/button";
 import {
 	Card,
 	CardContent,
@@ -69,6 +70,23 @@ export function OnboardingPage() {
 								<span className="bg-border h-px flex-1" />
 							</div>
 						</>
+					)}
+					{!emailVerified && session && (
+						<div className="flex flex-col items-start gap-2 rounded-md border border-dashed p-3">
+							<p className="text-sm font-medium">
+								{t("onboarding.verifyEmailTitle")}
+							</p>
+							<p className="text-muted-foreground text-xs">
+								{t("onboarding.verifyEmailDescription")}
+							</p>
+							<Link
+								to="/verify-email"
+								search={{ email: session.user.email }}
+								className={buttonVariants({ variant: "outline", size: "sm" })}
+							>
+								{t("onboarding.verifyEmailAction")}
+							</Link>
+						</div>
 					)}
 					<CreateOrganizationForm
 						onCreated={(organization) => openOrganization(organization.id)}

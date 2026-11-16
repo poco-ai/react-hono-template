@@ -13,32 +13,100 @@ import * as authSchema from "../db/auth-schema";
 import type { Database } from "../db/types";
 import type { AuthPolicyService } from "../services/auth-policy.service";
 import { ac, roles } from "./access";
-import { type EmailDeliveryConfig, sendOtpEmail } from "./email";
+import {
+	type EmailDeliveryConfig,
+	sendOtpEmail,
+	sendPasswordResetEmail,
+	sendVerificationEmail,
+} from "./email";
 import {
 	enabledSocialProviders,
 	type SocialProvidersConfig,
 } from "./social-providers";
 
 /**
- * Password-reset delivery for this template: no email provider is configured,
- * so the reset link (which points at the API and redirects to the web reset
- * page) is written to the Worker console instead. A real deployment should
- * send `url` to `user.email` here and remove this development fallback.
+ * Password-reset delivery: Resend when configured, otherwise the explicit
+ * local insecure-logging fallback. Production fails closed so reset tokens
+ * never reach logs.
  */
-export const sendResetPasswordToConsole = async ({
-	user,
-	url,
+export const createResetPasswordSender = ({
+	email,
+	allowInsecureLogging,
 }: {
-	user: { email?: string | null };
-	url: string;
+	email?: EmailDeliveryConfig;
+	allowInsecureLogging: boolean;
 }) => {
-	console.log(
-		`[auth] Password reset link for ${user.email ?? "unknown"}: ${url}`,
-	);
-	console.log(
-		"[auth] No email provider is configured - deliver this URL to the user by email in production.",
-	);
+	return async ({
+		user,
+		url,
+	}: {
+		user: { email?: string | null };
+		url: string;
+	}) => {
+		if (!user.email) {
+			throw new ApiError(
+				ApiErrorCode.SERVICE_UNAVAILABLE,
+				"Password reset requires an email address.",
+			);
+		}
+		await sendPasswordResetEmail(
+			{ to: user.email, url },
+			{ ...(email ?? {}), allowInsecureLogging },
+		);
+	};
 };
+
+const rethrowAsAuthError = (error: unknown): never => {
+	if (error instanceof ApiError)
+		throw new APIError("FORBIDDEN", {
+			message: error.message,
+			code: error.code,
+		});
+	throw error;
+};
+
+/** Organization mutations that must respect the billing freeze. */
+const FROZEN_ORG_MUTATIONS = new Set([
+	"/organization/update",
+	"/organization/delete",
+	"/organization/invite-member",
+	"/organization/cancel-invitation",
+	"/organization/accept-invitation",
+	"/organization/reject-invitation",
+	"/organization/remove-member",
+	"/organization/update-member-role",
+	"/organization/update-team",
+	"/organization/create-team",
+	"/organization/remove-team",
+	"/organization/add-team-member",
+	"/organization/remove-team-member",
+	"/organization/create-role",
+	"/organization/update-role",
+	"/organization/delete-role",
+	"/organization/leave",
+]);
+
+/** Admin mutations that must go through the shared self/admin guards. */
+const ADMIN_MUTATIONS = {
+	"/admin/set-role": "set-role",
+	"/admin/ban-user": "ban-user",
+	"/admin/remove-user": "remove-user",
+	"/admin/set-user-password": "set-password",
+	"/admin/impersonate-user": "impersonate",
+	"/admin/revoke-user-sessions": "revoke-sessions",
+	// `/admin/revoke-user-session` takes a session token, not a user id, so it
+	// cannot be target-guarded without an extra session lookup.
+} as const;
+
+/** Endpoints that cannot work without a configured email transport. */
+const EMAIL_DEPENDENT_PATHS = new Set([
+	"/email-otp/send-verification-otp",
+	"/email-otp/request-password-reset",
+	"/forget-password/email-otp",
+	"/email-otp/request-email-change",
+	"/request-password-reset",
+	"/send-verification-email",
+]);
 
 export type McpAuthConfig = {
 	enabled: boolean;
@@ -64,6 +132,7 @@ export const createAuth = ({
 	social,
 	email,
 	mcp,
+	allowInsecureLogging = false,
 	onOrganizationCreated,
 }: {
 	db: Database;
@@ -74,6 +143,8 @@ export const createAuth = ({
 	social?: SocialProvidersConfig;
 	email?: EmailDeliveryConfig;
 	mcp?: McpAuthConfig;
+	/** Local-only: log password-reset links and OTP codes to the Worker console. */
+	allowInsecureLogging?: boolean;
 	/**
 	 * Seeds organization-owned defaults (workflow statuses). Runs inside the
 	 * better-auth organization creation hook, after the org row exists.
@@ -117,8 +188,8 @@ export const createAuth = ({
 					}
 				: {}),
 		};
-		// Password signups are marked verified without an email provider, so
-		// implicit linking would attach a later OAuth login to that account.
+		// Emails are not verified without an email provider, so implicit
+		// linking would attach a later OAuth login to an unverified account.
 		oauth.account = {
 			accountLinking: {
 				enabled: true,
@@ -126,6 +197,11 @@ export const createAuth = ({
 			},
 		};
 	}
+
+	const emailDeliveryReady =
+		Boolean(email?.resendApiKey?.trim() && email?.from?.trim()) ||
+		allowInsecureLogging;
+	const emailConfig = { ...(email ?? {}), allowInsecureLogging };
 
 	return betterAuth({
 		database: drizzleAdapter(db, {
@@ -137,7 +213,15 @@ export const createAuth = ({
 		...oauth,
 		emailAndPassword: {
 			enabled: true,
-			sendResetPassword: sendResetPasswordToConsole,
+			sendResetPassword: createResetPasswordSender({
+				email,
+				allowInsecureLogging,
+			}),
+		},
+		emailVerification: {
+			sendVerificationEmail: async ({ user, url }) => {
+				await sendVerificationEmail({ to: user.email, url }, emailConfig);
+			},
 		},
 		plugins: [
 			// jwt() backs OAuth access tokens / the JWKS used by MCP clients.
@@ -175,12 +259,17 @@ export const createAuth = ({
 				// users or create accounts without a name.
 				disableSignUp: true,
 				sendVerificationOTP: async ({ email: recipient, otp, type }) => {
-					await sendOtpEmail({ to: recipient, otp, type }, email ?? {}, {
+					await sendOtpEmail({ to: recipient, otp, type }, emailConfig, {
 						expiresInSeconds: 300,
 					});
 				},
 			}),
 			organization({
+				// Invitation ids are opaque UUIDs delivered out of band (the web
+				// invite link), so acceptance is possession-based. Email-based
+				// enumeration stays blocked because better-auth requires a
+				// verified email for `list-user-invitations`.
+				requireEmailVerificationOnInvitation: false,
 				schema: {
 					organization: {
 						additionalFields: {
@@ -204,39 +293,94 @@ export const createAuth = ({
 		databaseHooks: {
 			user: {
 				create: {
-					before: async (userData) => {
-						return {
-							data: {
-								...userData,
-								role: await policy.initialUserRole(),
-								// This template has no email provider, so addresses are
-								// never verified. better-auth gates client-side
-								// `organization.listUserInvitations()` on a verified
-								// session email, which would otherwise stay unusable.
-								emailVerified: true,
-							},
-						};
+					// Promoting in a single conditional UPDATE keeps concurrent
+					// first registrations from producing more than one admin.
+					after: async (created) => {
+						await policy.promoteFirstAdmin(created.id);
 					},
 				},
 			},
 		},
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
-				if (ctx.path === "/admin/set-role" || ctx.path === "/admin/ban-user") {
+				if (EMAIL_DEPENDENT_PATHS.has(ctx.path) && !emailDeliveryReady) {
+					throw new APIError("SERVICE_UNAVAILABLE", {
+						message: "Email delivery is not configured.",
+					});
+				}
+
+				const adminAction =
+					ADMIN_MUTATIONS[ctx.path as keyof typeof ADMIN_MUTATIONS];
+				if (adminAction || ctx.path === "/admin/update-user") {
 					const session = await getSessionFromCtx(ctx);
-					const body = ctx.body as { userId?: unknown } | undefined;
+					const body = ctx.body as
+						| {
+								userId?: unknown;
+								data?: { role?: unknown; banned?: unknown };
+						  }
+						| undefined;
 					if (session && typeof body?.userId === "string") {
 						try {
-							await policy.assertAdminUserMutation(
-								session.user.id,
-								body.userId,
-								ctx.path === "/admin/set-role" ? "set-role" : "ban-user",
-							);
+							if (ctx.path === "/admin/update-user") {
+								if (body.data?.role !== undefined) {
+									await policy.assertAdminUserMutation(
+										session.user.id,
+										body.userId,
+										"set-role",
+									);
+								}
+								if (body.data?.banned === true) {
+									await policy.assertAdminUserMutation(
+										session.user.id,
+										body.userId,
+										"ban-user",
+									);
+								}
+							} else if (adminAction) {
+								await policy.assertAdminUserMutation(
+									session.user.id,
+									body.userId,
+									adminAction,
+								);
+							}
 						} catch (error) {
-							if (error instanceof ApiError)
-								throw new APIError("FORBIDDEN", { message: error.message });
-							throw error;
+							rethrowAsAuthError(error);
 						}
+					}
+				}
+
+				if (FROZEN_ORG_MUTATIONS.has(ctx.path)) {
+					const session = await getSessionFromCtx(ctx).catch(() => null);
+					if (!session) return { context: ctx };
+					const body =
+						typeof ctx.body === "object" && ctx.body !== null
+							? (ctx.body as {
+									organizationId?: string;
+									invitationId?: string;
+									data?: { organizationId?: string };
+								})
+							: {};
+					try {
+						if (
+							ctx.path === "/organization/accept-invitation" ||
+							ctx.path === "/organization/reject-invitation" ||
+							ctx.path === "/organization/cancel-invitation"
+						) {
+							// better-auth authorizes these by the invitation's own
+							// organization, not by the client-supplied org id.
+							await policy.assertInvitationNotFrozen(body.invitationId);
+						} else {
+							// update-team reads the target org from body.data.
+							const orgId =
+								(ctx.path === "/organization/update-team"
+									? body.data?.organizationId
+									: undefined) ??
+								body.organizationId ??
+								session.session.activeOrganizationId;
+							if (orgId) await policy.assertOrgNotFrozen(orgId);
+						}
+					} catch (error) {
+						rethrowAsAuthError(error);
 					}
 				}
 

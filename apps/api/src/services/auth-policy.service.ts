@@ -1,14 +1,17 @@
 import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import type { AdminUserDao } from "../dao/admin-user.dao";
 import type { MemberDao } from "../dao/member.dao";
+import type { OrganizationDao } from "../dao/organization.dao";
 import type { PlanService } from "./plan.service";
 
 export const createAuthPolicyService = ({
 	adminUserDao,
 	memberDao,
+	organizationDao,
 	plans,
+	allowFirstUserAdmin = false,
 }: {
-	adminUserDao: Pick<AdminUserDao, "countUsers" | "findById">;
+	adminUserDao: Pick<AdminUserDao, "findById" | "promoteFirstAdmin">;
 	memberDao: Pick<
 		MemberDao,
 		| "listOrgPlansByUser"
@@ -16,27 +19,70 @@ export const createAuthPolicyService = ({
 		| "countByOrg"
 		| "countPendingInvitationsByOrg"
 	>;
+	organizationDao: Pick<OrganizationDao, "findById">;
 	plans: Pick<PlanService, "getPlanForOrg" | "assertQuota">;
+	/** Explicit opt-in for self-serve deployments; off by default. */
+	allowFirstUserAdmin?: boolean;
 }) => ({
 	assertAdminUserMutation: async (
 		actorId: string,
 		targetId: string,
-		action: "set-role" | "ban-user",
+		action:
+			| "set-role"
+			| "ban-user"
+			| "remove-user"
+			| "set-password"
+			| "impersonate"
+			| "revoke-sessions",
 	) => {
-		if (actorId === targetId)
+		const blocksSelf =
+			action === "set-role" ||
+			action === "ban-user" ||
+			action === "remove-user";
+		if (blocksSelf && actorId === targetId) {
 			throw new ApiError(
 				ApiErrorCode.FORBIDDEN,
-				"You cannot change your own role or ban yourself",
+				action === "remove-user"
+					? "You cannot remove yourself"
+					: "You cannot change your own role or ban yourself",
 			);
-		if (action === "ban-user") {
-			const target = await adminUserDao.findById(targetId);
-			if (target?.role?.split(",").includes("admin"))
-				throw new ApiError(ApiErrorCode.FORBIDDEN, "You cannot ban an admin");
 		}
+		if (action === "set-role" || actorId === targetId) return;
+
+		const target = await adminUserDao.findById(targetId);
+		if (!target?.role?.split(",").includes("admin")) return;
+
+		const messages: Record<Exclude<typeof action, "set-role">, string> = {
+			"ban-user": "You cannot ban an admin",
+			"remove-user": "You cannot remove an admin",
+			"set-password": "You cannot reset another admin's password",
+			impersonate: "You cannot impersonate an admin",
+			"revoke-sessions": "You cannot revoke another admin's sessions",
+		};
+		throw new ApiError(ApiErrorCode.FORBIDDEN, messages[action]);
 	},
 
-	initialUserRole: async () =>
-		(await adminUserDao.countUsers()) === 0 ? "admin" : "user",
+	/** Promotes the request user only when no admin exists yet, atomically. */
+	promoteFirstAdmin: async (userId: string) => {
+		if (!allowFirstUserAdmin) return;
+		await adminUserDao.promoteFirstAdmin(userId);
+	},
+
+	assertOrgNotFrozen: async (orgId: string) => {
+		const org = await organizationDao.findById(orgId);
+		if (org?.frozen)
+			throw new ApiError(ApiErrorCode.ORG_FROZEN, "Organization is frozen");
+	},
+
+	assertInvitationNotFrozen: async (invitationId?: string) => {
+		if (!invitationId) return;
+		const orgId = await memberDao.findInvitationOrgId(invitationId);
+		if (orgId) {
+			const org = await organizationDao.findById(orgId);
+			if (org?.frozen)
+				throw new ApiError(ApiErrorCode.ORG_FROZEN, "Organization is frozen");
+		}
+	},
 
 	assertCanCreateOrganization: async (userId: string) => {
 		const orgPlans = await memberDao.listOrgPlansByUser(userId);

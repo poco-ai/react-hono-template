@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Database } from "../src/db/types";
-import { createAuth, sendResetPasswordToConsole } from "../src/lib/auth";
+import { createAuth, createResetPasswordSender } from "../src/lib/auth";
 import {
 	enabledSocialProviders,
 	type SocialProvidersConfig,
@@ -17,19 +17,19 @@ const authFor = (extra?: {
 		secret: "test-secret",
 		trustedOrigins: ["http://localhost:5173"],
 		policy: {
-			initialUserRole: async () => "user",
+			promoteFirstAdmin: async () => {},
 		} as unknown as AuthPolicyService,
 		...extra,
 	});
 
-test("password reset links are written to the console instead of being emailed", async () => {
+test("password reset links are only logged when insecure logging is enabled", async () => {
 	const logged: string[] = [];
 	const original = console.log;
 	console.log = (...args: unknown[]) => {
 		logged.push(args.join(" "));
 	};
 	try {
-		await sendResetPasswordToConsole({
+		await createResetPasswordSender({ allowInsecureLogging: true })({
 			user: { email: "person@example.com" },
 			url: "http://localhost:8787/api/auth/reset-password/token?callbackURL=http%3A%2F%2Flocalhost%3A5173%2Freset-password",
 		});
@@ -39,30 +39,48 @@ test("password reset links are written to the console instead of being emailed",
 	assert.equal(logged.length, 2);
 	assert.match(logged[0], /person@example\.com/);
 	assert.match(logged[0], /reset-password\/token/);
-	assert.match(logged[1], /email provider/i);
+	assert.match(logged[1], /never enable it in production/i);
+
+	await assert.rejects(
+		createResetPasswordSender({ allowInsecureLogging: false })({
+			user: { email: "person@example.com" },
+			url: "http://localhost:8787/api/auth/reset-password/token",
+		}),
+		/not configured/i,
+	);
 });
 
-test("users are created as email-verified because the template cannot send verification mail", async () => {
-	const auth = authFor();
-	const before = auth.options.databaseHooks?.user?.create?.before;
-	assert.ok(before);
-	const result = await before({
-		id: "user",
-		createdAt: new Date(0),
-		updatedAt: new Date(0),
-		email: "person@example.com",
-		emailVerified: false,
-		name: "Person",
+test("user creation keeps email unverified and delegates first-admin promotion", async () => {
+	const promoted: string[] = [];
+	const auth = createAuth({
+		db: {} as Database,
+		secret: "test-secret",
+		trustedOrigins: [],
+		policy: {
+			promoteFirstAdmin: async (id: string) => {
+				promoted.push(id);
+			},
+		} as unknown as AuthPolicyService,
 	});
-	assert.equal(result?.data?.emailVerified, true);
-	assert.equal(result?.data?.role, "user");
+	assert.equal(
+		(
+			auth.options.databaseHooks?.user?.create as
+				| { before?: unknown }
+				| undefined
+		)?.before,
+		undefined,
+	);
+	const after = auth.options.databaseHooks?.user?.create?.after;
+	assert.ok(after);
+	await after({ id: "user" } as unknown as Parameters<typeof after>[0]);
+	assert.deepEqual(promoted, ["user"]);
 });
 
 test("password reset sending stays wired into the auth options", () => {
 	const auth = authFor();
 	assert.equal(
-		auth.options.emailAndPassword?.sendResetPassword,
-		sendResetPasswordToConsole,
+		typeof auth.options.emailAndPassword?.sendResetPassword,
+		"function",
 	);
 });
 
@@ -159,8 +177,152 @@ test("admin endpoint hooks invoke policy before role and ban writes", async () =
 			context: { session: { user: { id: "actor" } } },
 		} as unknown as Parameters<typeof hook>[0]);
 	}
+	await hook({
+		path: "/admin/update-user",
+		body: { userId: "target", data: { role: "admin" } },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/admin/update-user",
+		body: { userId: "target", data: { banned: true } },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/admin/update-user",
+		body: { userId: "target", data: { banned: false } },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/admin/remove-user",
+		body: { userId: "target" },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/admin/set-user-password",
+		body: { userId: "target" },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/admin/impersonate-user",
+		body: { userId: "target" },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/admin/revoke-user-sessions",
+		body: { userId: "target" },
+		context: { session: { user: { id: "actor" } } },
+	} as unknown as Parameters<typeof hook>[0]);
 	assert.deepEqual(calls, [
 		["actor", "target", "set-role"],
 		["actor", "target", "ban-user"],
+		["actor", "target", "set-role"],
+		["actor", "target", "ban-user"],
+		["actor", "target", "remove-user"],
+		["actor", "target", "set-password"],
+		["actor", "target", "impersonate"],
+		["actor", "target", "revoke-sessions"],
 	]);
+});
+
+test("organization mutation hooks enforce the billing freeze", async () => {
+	const calls: unknown[][] = [];
+	const auth = createAuth({
+		db: {} as Database,
+		secret: "test-secret",
+		trustedOrigins: [],
+		policy: {
+			assertOrgNotFrozen: async (orgId: string) => {
+				calls.push(["org", orgId]);
+			},
+			assertInvitationNotFrozen: async (invitationId?: string) => {
+				calls.push(["invitation", invitationId]);
+			},
+			assertCanAcceptInvitation: async () => {},
+		} as unknown as AuthPolicyService,
+	});
+	const hook = auth.options.hooks?.before;
+	assert.ok(hook);
+	const session = {
+		user: { id: "actor" },
+		session: { activeOrganizationId: "org-active" },
+	};
+	await hook({
+		path: "/organization/update",
+		body: { organizationId: "org-body" },
+		context: { session },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/organization/update-team",
+		body: { teamId: "team", data: { organizationId: "org-team" } },
+		context: { session },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/organization/remove-member",
+		body: { memberIdOrEmail: "member" },
+		context: { session },
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/organization/accept-invitation",
+		body: { invitationId: "invitation-1" },
+		context: {
+			session: { ...session, session: { activeOrganizationId: null } },
+		},
+	} as unknown as Parameters<typeof hook>[0]);
+	await hook({
+		path: "/organization/cancel-invitation",
+		body: { invitationId: "invitation-2" },
+		context: {
+			session: { ...session, session: { activeOrganizationId: null } },
+		},
+	} as unknown as Parameters<typeof hook>[0]);
+	assert.deepEqual(calls, [
+		["org", "org-body"],
+		["org", "org-team"],
+		["org", "org-active"],
+		["invitation", "invitation-1"],
+		["invitation", "invitation-2"],
+	]);
+});
+
+test("email-dependent endpoints fail closed without a transport", async () => {
+	const auth = createAuth({
+		db: {} as Database,
+		secret: "test-secret",
+		trustedOrigins: [],
+		policy: {} as unknown as AuthPolicyService,
+	});
+	const hook = auth.options.hooks?.before;
+	assert.ok(hook);
+	for (const path of [
+		"/email-otp/send-verification-otp",
+		"/email-otp/request-password-reset",
+		"/forget-password/email-otp",
+		"/email-otp/request-email-change",
+		"/request-password-reset",
+		"/send-verification-email",
+	]) {
+		await assert.rejects(
+			hook({
+				path,
+				body: {},
+				context: {},
+			} as unknown as Parameters<typeof hook>[0]),
+			{ status: "SERVICE_UNAVAILABLE" },
+		);
+	}
+
+	const localAuth = createAuth({
+		db: {} as Database,
+		secret: "test-secret",
+		trustedOrigins: [],
+		policy: {} as unknown as AuthPolicyService,
+		allowInsecureLogging: true,
+	});
+	const localHook = localAuth.options.hooks?.before;
+	assert.ok(localHook);
+	await localHook({
+		path: "/email-otp/send-verification-otp",
+		body: {},
+		context: {},
+	} as unknown as Parameters<typeof localHook>[0]);
 });

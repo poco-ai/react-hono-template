@@ -122,6 +122,7 @@ const dependencies = createDependencies({
 		if (configured) return configured.replace(/\/+$/, "");
 		return new URL(requestUrl).origin;
 	},
+	allowFirstUserAdmin: env.ALLOW_FIRST_USER_ADMIN === "true",
 });
 
 const social: SocialProvidersConfig = {
@@ -145,6 +146,8 @@ const mcpConfig = resolveMcpConfig({
 	BETTER_AUTH_URL: env.BETTER_AUTH_URL,
 });
 
+const allowInsecureLogging = env.AUTH_ALLOW_INSECURE_LOGGING === "true";
+
 const buildAuth = () =>
 	createAuth({
 		db,
@@ -156,6 +159,7 @@ const buildAuth = () =>
 		email: {
 			resendApiKey: env.RESEND_API_KEY,
 			from: env.EMAIL_FROM,
+			allowInsecureLogging,
 		},
 		mcp: {
 			enabled: mcpConfig.enabled,
@@ -167,6 +171,7 @@ const buildAuth = () =>
 		},
 		onOrganizationCreated: (orgId) =>
 			dependencies.services.statusService.ensureDefaultStatuses(orgId),
+		allowInsecureLogging,
 	});
 
 /**

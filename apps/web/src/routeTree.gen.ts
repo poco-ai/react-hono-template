@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetLinkSentRouteImport } from './routes/reset-link-sent'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AuthAccountRouteImport } from './routes/_auth/account'
 import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
 import { Route as AuthApiDocsRouteImport } from './routes/_auth/api-docs'
@@ -99,6 +100,11 @@ const ResetLinkSentRoute = ResetLinkSentRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthAccountRoute = AuthAccountRouteImport.update({
@@ -287,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-link-sent': typeof ResetLinkSentRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/account': typeof AuthAccountRoute
   '/admin': typeof AuthAdminRouteWithChildren
   '/api-docs': typeof AuthApiDocsRoute
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-link-sent': typeof ResetLinkSentRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/account': typeof AuthAccountRoute
   '/api-docs': typeof AuthApiDocsRoute
   '/onboarding': typeof AuthOnboardingRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-link-sent': typeof ResetLinkSentRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/_auth/account': typeof AuthAccountRoute
   '/_auth/admin': typeof AuthAdminRouteWithChildren
   '/_auth/api-docs': typeof AuthApiDocsRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-link-sent'
     | '/reset-password'
+    | '/verify-email'
     | '/account'
     | '/admin'
     | '/api-docs'
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-link-sent'
     | '/reset-password'
+    | '/verify-email'
     | '/account'
     | '/api-docs'
     | '/onboarding'
@@ -501,6 +512,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-link-sent'
     | '/reset-password'
+    | '/verify-email'
     | '/_auth/account'
     | '/_auth/admin'
     | '/_auth/api-docs'
@@ -546,6 +558,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetLinkSentRoute: typeof ResetLinkSentRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -618,6 +631,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/account': {
@@ -965,6 +985,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetLinkSentRoute: ResetLinkSentRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

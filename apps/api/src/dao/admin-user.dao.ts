@@ -1,4 +1,4 @@
-import { count, desc, eq, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { session as sessionTable, user as userTable } from "../db/auth-schema";
 import type { Database } from "../db/types";
 import type {
@@ -24,9 +24,24 @@ const toDto = (row: UserRow): AdminUserDto => ({
 });
 
 export const createAdminUserDao = (db: Database) => ({
-	countUsers: async (): Promise<number> => {
-		const [{ value }] = await db.select({ value: count() }).from(userTable);
-		return value;
+	/**
+	 * Single conditional UPDATE: the first caller wins, concurrent callers
+	 * become no-ops, so bootstrap cannot create two platform admins.
+	 */
+	promoteFirstAdmin: async (id: string): Promise<void> => {
+		await db
+			.update(userTable)
+			.set({ role: "admin" })
+			.where(
+				and(
+					eq(userTable.id, id),
+					sql`not exists (
+						select 1 from ${userTable} as other
+						where (',' || coalesce(other.role, '') || ',') like '%,admin,%'
+							and other.id <> ${id}
+					)`,
+				),
+			);
 	},
 
 	list: async ({
