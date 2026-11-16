@@ -22,7 +22,6 @@ import type {
 	OrgRole,
 } from "../capabilities/types";
 import type { MemberDao, MemberOrgSummary } from "../dao/member.dao";
-import type { OrgAiSettingsService } from "../services/org-ai-settings.service";
 import type { McpAudit } from "./audit";
 import type { McpPrincipal } from "./auth";
 
@@ -42,8 +41,6 @@ export type McpToolRuntime = {
 	locale: "en" | "zh";
 	background: McpBackground;
 	audit?: McpAudit;
-	/** Optional strict-write policy lookup (organization AI settings). */
-	orgAiSettings?: Pick<OrgAiSettingsService, "get">;
 };
 
 /**
@@ -325,17 +322,6 @@ export const executeCapabilityTool = async (
 			memberDao: runtime.memberDao,
 		});
 		orgId = resolved.orgId;
-		if (capability.effect !== "read" && orgId && runtime.orgAiSettings) {
-			const settings = await runtime.orgAiSettings.get(orgId);
-			if (settings.strictMcpWrites) {
-				return toToolError(
-					new ApiError(
-						ApiErrorCode.FORBIDDEN,
-						"MCP writes are disabled by this organization's policy. Use the in-app AI assistant for writes.",
-					),
-				);
-			}
-		}
 		const ctx = buildCapabilityContext({
 			runtime,
 			orgId,

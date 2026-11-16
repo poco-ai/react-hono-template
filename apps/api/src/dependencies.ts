@@ -294,29 +294,35 @@ export const createDependencies = ({
 		toolCallDao: aiToolCallDao,
 		contextDaos,
 	});
-	const capabilityLayer = createCapabilityLayer({
-		services: {
-			projectService,
-			issueService,
-			commentService,
-			labelService,
-			statusService,
-			activityService,
-			relationService,
-			viewService,
-			cycleService,
-			projectUpdateService,
-			searchService,
-			favoriteService,
-			issueTemplateService,
-			recurrenceService,
+	const capabilityLayer = createCapabilityLayer(
+		{
+			services: {
+				projectService,
+				issueService,
+				commentService,
+				labelService,
+				statusService,
+				activityService,
+				relationService,
+				viewService,
+				cycleService,
+				projectUpdateService,
+				searchService,
+				favoriteService,
+				issueTemplateService,
+				recurrenceService,
+			},
+			daos: {
+				memberDao,
+				organizationDao,
+				projectDao,
+			},
 		},
-		daos: {
-			memberDao,
-			organizationDao,
-			projectDao,
+		{
+			isStrictMcpWrites: async (orgId) =>
+				(await orgAiSettingsService.get(orgId)).strictMcpWrites,
 		},
-	});
+	);
 	const aiProviderInfo = getAiProviderInfo(aiConfig);
 	const aiChatService = createAiChatService({
 		conversationService: aiConversationService,

@@ -21,8 +21,14 @@ export const createCapabilityRegistry = (
  * Convenience wiring used by the chat, panel and MCP surfaces: build the full
  * registry and wrap it in the enforcing executor.
  */
-export const createCapabilityLayer = (deps: CapabilityDeps) =>
+export const createCapabilityLayer = (
+	deps: CapabilityDeps,
+	options: {
+		isStrictMcpWrites?: (orgId: string) => Promise<boolean>;
+	} = {},
+) =>
 	createCapabilityExecutor({
 		capabilities: createCapabilityRegistry(deps),
 		memberDao: deps.daos.memberDao,
+		...options,
 	});

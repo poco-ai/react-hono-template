@@ -66,7 +66,15 @@ export const createMcpEndpoint = ({
 		const principal = resolved.principal;
 		const plan = principal.orgId
 			? await dependencies.services.planService.getPlanForOrg(principal.orgId)
-			: "free";
+			: principal.userId
+				? (
+						await dependencies.daos.memberDao.listOrgPlansByUser(
+							principal.userId,
+						)
+					).includes("pro")
+					? "pro"
+					: "free"
+				: "free";
 		const limit = PLANS[plan].apiRateLimit;
 		const limiter =
 			plan === "pro"
@@ -105,7 +113,6 @@ export const createMcpEndpoint = ({
 				dao: dependencies.daos.aiToolCallDao,
 				background,
 			}),
-			orgAiSettings: dependencies.services.orgAiSettingsService,
 		};
 
 		const handler = createMcpHandler(createMcpServerFactory(runtime), {

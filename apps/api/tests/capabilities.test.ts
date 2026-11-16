@@ -321,6 +321,34 @@ test("a write capability is denied when the actor only has the read scope", asyn
 	);
 });
 
+test("MCP writes are blocked when the organization enables strict write policy", async () => {
+	const { deps } = setup();
+	const layer = createCapabilityLayer(deps, {
+		isStrictMcpWrites: async () => true,
+	});
+	await assert.rejects(
+		layer.execute(
+			"create_issue",
+			context({
+				actor: {
+					userId: USER_ID,
+					surface: "mcp",
+					scopes: ["read", "write", "admin"],
+					role: "owner",
+				},
+			}),
+			{ projectId: "project-1", title: "New issue" },
+		),
+		isApiError(ApiErrorCode.FORBIDDEN, 403),
+	);
+	// The in-app chat surface is not affected by the MCP policy.
+	const result = await layer.execute("create_issue", context(), {
+		projectId: "project-1",
+		title: "New issue",
+	});
+	assert.ok(result.data);
+});
+
 test("admin-only capabilities are denied for a member role", async () => {
 	const { deps } = setup({ role: "member" });
 	const layer = createCapabilityLayer(deps);

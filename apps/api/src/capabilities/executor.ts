@@ -42,9 +42,12 @@ const invalidInput = (name: string, message: string): never => {
 export const createCapabilityExecutor = ({
 	capabilities,
 	memberDao,
+	isStrictMcpWrites,
 }: {
 	capabilities: readonly CapabilityEntry[];
 	memberDao: CapabilityMemberDao;
+	/** MCP-only org policy: block writes when the organization opts out. */
+	isStrictMcpWrites?: (orgId: string) => Promise<boolean>;
 }) => {
 	const registry = new Map<string, CapabilityEntry>();
 	for (const capability of capabilities) {
@@ -125,6 +128,16 @@ export const createCapabilityExecutor = ({
 					throw new ApiError(
 						ApiErrorCode.ORG_FROZEN,
 						"Organization is frozen and cannot be modified.",
+					);
+				}
+				if (
+					ctx.actor.surface === "mcp" &&
+					isStrictMcpWrites &&
+					(await isStrictMcpWrites(orgId))
+				) {
+					throw new ApiError(
+						ApiErrorCode.FORBIDDEN,
+						"MCP writes are disabled by this organization's policy. Use the in-app AI assistant for writes.",
 					);
 				}
 			}
