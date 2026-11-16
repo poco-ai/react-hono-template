@@ -253,6 +253,8 @@ export const createCycleService = ({
 		 * Deletes the cycle. Its issues are detached (cycleId = null) instead of
 		 * being deleted, by the FK (`set null`) and explicitly in the dao batch,
 		 * which also records one cycle activity row per detached issue.
+		 * Bulk cycle changes intentionally do not fan out per-issue webhooks;
+		 * subscribers should reconcile through the issue list endpoints.
 		 */
 		deleteCycle: async (
 			orgId: string,
@@ -277,6 +279,7 @@ export const createCycleService = ({
 		/**
 		 * Moves every non-terminal issue from this cycle to the target cycle
 		 * (same project, not yet ended) and returns how many issues moved.
+		 * Like deleteCycle, this bulk move does not emit per-issue webhooks.
 		 */
 		rolloverCycle: async (
 			orgId: string,

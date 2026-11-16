@@ -191,12 +191,13 @@ export function useBulkTriageIssues(
 		...callbacks,
 		mutationFn: (updates: TriageUpdate[]) =>
 			runBulkTriage(updates, (update) => triageAction(orgId, update)),
-		onSettled: (_data, _error, variables) => {
+		onSettled: (data, error, variables, onMutateResult, context) => {
 			void invalidateTriage(
 				queryClient,
 				orgId,
 				(variables ?? []).map((update) => update.issue.projectId),
 			);
+			callbacks?.onSettled?.(data, error, variables, onMutateResult, context);
 		},
 	});
 }

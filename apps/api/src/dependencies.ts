@@ -68,6 +68,7 @@ import { createLabelService } from "./services/label.service";
 import { createMediaService } from "./services/media.service";
 import { createNotificationService } from "./services/notification.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
+import { createOrganizationService } from "./services/organization.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
 import { createProjectUpdateService } from "./services/project-update.service";
@@ -125,6 +126,10 @@ export const createDependencies = ({
 	const adminOrgService = createAdminOrgService(organizationDao);
 
 	const memberDao = createMemberDao(db);
+	const organizationService = createOrganizationService({
+		organizationDao,
+		memberDao,
+	});
 	const projectDao = createProjectDao(db);
 	const projectUpdateDao = createProjectUpdateDao(db);
 	const cycleDao = createCycleDao(db);
@@ -297,6 +302,7 @@ export const createDependencies = ({
 	const capabilityLayer = createCapabilityLayer(
 		{
 			services: {
+				organizationService,
 				projectService,
 				issueService,
 				commentService,
@@ -395,6 +401,7 @@ export const createDependencies = ({
 		services: {
 			adminUserService,
 			adminOrgService,
+			organizationService,
 			projectService,
 			projectUpdateService,
 			cycleService,

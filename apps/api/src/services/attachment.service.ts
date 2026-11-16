@@ -335,7 +335,7 @@ export const createAttachmentService = ({
 			attachmentId: string,
 			actor: { userId: string; role: string },
 		) => {
-			const issue = await requireIssue(orgId, projectId, number);
+			const issue = await requireWritableIssue(orgId, projectId, number);
 			const attachment = await attachmentDao.findById(orgId, attachmentId);
 			if (
 				!attachment ||

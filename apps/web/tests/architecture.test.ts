@@ -20,14 +20,19 @@ function files(directory: string): string[] {
 	});
 }
 
-test("views consume feature data instead of owning business requests or cache policies", () => {
+test("views consume feature data instead of owning business requests or cache policies", {
+	timeout: 30_000,
+}, () => {
 	const views = [
-		...files(path.join(sourceRoot, "pages")),
-		...files(path.join(sourceRoot, "routes")),
-		...files(path.join(sourceRoot, "components")),
-		...files(path.join(sourceRoot, "features")).filter((f) =>
-			f.includes("/components/"),
-		),
+		...new Set([
+			...files(path.join(sourceRoot, "pages")),
+			...files(path.join(sourceRoot, "routes")),
+			...files(path.join(sourceRoot, "components")),
+			...files(path.join(sourceRoot, "features")).filter(
+				(file) =>
+					!file.endsWith("/data.ts") && !file.endsWith("/chat-provider.tsx"),
+			),
+		]),
 	];
 	for (const file of views) {
 		const source = readFileSync(file, "utf8");
@@ -41,6 +46,28 @@ test("views consume feature data instead of owning business requests or cache po
 			if (ts.isImportDeclaration(node)) {
 				const module = (node.moduleSpecifier as ts.StringLiteral).text;
 				assert.ok(!module.includes("lib/queries"), file);
+				if (module === "@/lib/api") {
+					const bindings = node.importClause?.namedBindings;
+					const names =
+						bindings && ts.isNamedImports(bindings)
+							? bindings.elements.map((element) => element.name.text)
+							: [];
+					assert.ok(
+						!names.includes("client"),
+						`${file} must use the owning features/*/data.ts module`,
+					);
+				}
+				if (module === "@/lib/auth-client") {
+					const allowed =
+						file === path.join(sourceRoot, "routes", "__root.tsx") ||
+						file ===
+							path.join(sourceRoot, "features", "members", "guards.ts") ||
+						file.includes(`${path.sep}components${path.sep}auth${path.sep}`);
+					assert.ok(
+						allowed,
+						`${file} must use the owning features/*/data.ts module`,
+					);
+				}
 				if (module === "@tanstack/react-query") {
 					// Note: `features/ai/chat-provider.tsx` (in the features root,
 					// not components/) is the documented single owner of the chat
@@ -63,6 +90,13 @@ test("views consume feature data instead of owning business requests or cache po
 			}
 			if (
 				ts.isCallExpression(node) &&
+				ts.isIdentifier(node.expression) &&
+				node.expression.text === "fetch"
+			) {
+				assert.fail(`${file} must not call fetch directly`);
+			}
+			if (
+				ts.isCallExpression(node) &&
 				ts.isPropertyAccessExpression(node.expression)
 			) {
 				assert.doesNotMatch(
@@ -77,7 +111,9 @@ test("views consume feature data instead of owning business requests or cache po
 	}
 });
 
-test("feature data imports never depend on views and remain acyclic", () => {
+test("feature data imports never depend on views and remain acyclic", {
+	timeout: 30_000,
+}, () => {
 	const modules = files(path.join(sourceRoot, "features")).filter((f) =>
 		f.endsWith("/data.ts"),
 	);

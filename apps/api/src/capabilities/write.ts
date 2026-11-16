@@ -174,10 +174,12 @@ export const createWriteCapabilities = (deps: CapabilityDeps) =>
 			execute: async (ctx, input) => {
 				const orgId = ctx.orgId as string;
 				const issue = await resolveIssueRef(deps, orgId, input);
-				const { issueId, projectKey, number, ...patch } = input;
-				void issueId;
-				void projectKey;
-				void number;
+				const {
+					issueId: _issueId,
+					projectKey: _projectKey,
+					number: _number,
+					...patch
+				} = input;
 				const updated = await deps.services.issueService.updateIssue(
 					orgId,
 					issue.projectId,

@@ -310,8 +310,8 @@ export const executeCapabilityTool = async (
 		typeof args.orgId === "string" && args.orgId.trim()
 			? args.orgId.trim()
 			: undefined;
-	const { orgId: _orgId, ...input } = args;
-	void _orgId;
+	const input = { ...args };
+	delete input.orgId;
 
 	let orgId: string | undefined;
 	try {

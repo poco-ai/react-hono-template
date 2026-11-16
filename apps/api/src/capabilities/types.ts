@@ -10,6 +10,7 @@ import type { FavoriteService } from "../services/favorite.service";
 import type { IssueService } from "../services/issue.service";
 import type { IssueTemplateService } from "../services/issue-template.service";
 import type { LabelService } from "../services/label.service";
+import type { OrganizationService } from "../services/organization.service";
 import type { ProjectService } from "../services/project.service";
 import type { ProjectUpdateService } from "../services/project-update.service";
 import type { RecurrenceService } from "../services/recurrence.service";
@@ -105,6 +106,7 @@ export const defineCapability = <TInput, TOutput>(
 });
 
 export type CapabilityServices = {
+	organizationService: Pick<OrganizationService, "listVisibleOrgs">;
 	projectService: Pick<
 		ProjectService,
 		"listProjects" | "getProject" | "createProject"

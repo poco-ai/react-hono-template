@@ -23,7 +23,11 @@
             window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.add(dark ? "dark" : "light");
         document.documentElement.lang =
-          localStorage.getItem("lang") === "zh" ? "zh" : "en";
+          localStorage.getItem("lang") === "zh" ||
+          (localStorage.getItem("lang") !== "en" &&
+            navigator.language.toLowerCase().indexOf("zh") === 0)
+            ? "zh"
+            : "en";
       })();
     </script>
   </head>

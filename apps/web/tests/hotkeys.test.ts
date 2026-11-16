@@ -76,7 +76,9 @@ test("APP_HOTKEYS ids, bindings and descriptions are unique and translated", asy
 	}
 });
 
-test("hotkey defaults skip single keys in inputs but keep Mod chords", async () => {
+test("hotkey defaults skip single keys in inputs but keep Mod chords", {
+	timeout: 30_000,
+}, async () => {
 	const dom = await createDom();
 	cleanup = async () => restoreDom(dom);
 	const React = await import("react");

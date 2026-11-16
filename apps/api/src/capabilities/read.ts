@@ -23,7 +23,6 @@ import {
 	listIssuesInputSchema,
 	type MemberSummary,
 	memberSummarySchema,
-	type OrgSummary,
 	orgLink,
 	orgSummarySchema,
 	pageMetaSchema,
@@ -102,46 +101,14 @@ export const createReadCapabilities = (deps: CapabilityDeps) =>
 			scopes: ["read"],
 			orgScoped: false,
 			execute: async (ctx) => {
-				let orgs: OrgSummary[];
-				// API keys are pinned to their organization. Even when the key
-				// records its creator, it must not enumerate their other orgs.
-				if (ctx.actor.keyId) {
-					if (!ctx.orgId) {
-						throw new ApiError(
-							ApiErrorCode.MCP_ORG_REQUIRED,
-							"An organization is required for API key access.",
-						);
-					}
-					const org = await deps.daos.organizationDao.findById(ctx.orgId);
-					if (!org) {
-						throw new ApiError(
-							ApiErrorCode.NOT_FOUND,
-							"Organization not found",
-						);
-					}
-					orgs = [toOrgSummary(org)];
-				} else if (ctx.actor.userId) {
-					const memberships = await deps.daos.memberDao.listMembershipsByUser(
-						ctx.actor.userId,
-					);
-					orgs = memberships.map((membership) =>
-						toOrgSummary(membership, membership.role),
-					);
-				} else if (ctx.orgId) {
-					const org = await deps.daos.organizationDao.findById(ctx.orgId);
-					if (!org) {
-						throw new ApiError(
-							ApiErrorCode.NOT_FOUND,
-							"Organization not found",
-						);
-					}
-					orgs = [toOrgSummary(org)];
-				} else {
-					throw new ApiError(
-						ApiErrorCode.MCP_ORG_REQUIRED,
-						"An organization is required for API key access.",
-					);
-				}
+				const visible = await deps.services.organizationService.listVisibleOrgs(
+					{
+						userId: ctx.actor.userId,
+						keyId: ctx.actor.keyId,
+						orgId: ctx.orgId,
+					},
+				);
+				const orgs = visible.map((org) => toOrgSummary(org, org.role));
 				return {
 					data: { orgs },
 					summary: `Found ${orgs.length} organization(s).`,

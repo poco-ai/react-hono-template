@@ -94,6 +94,61 @@ const setup = (options: SetupOptions = {}) => {
 
 	const deps = {
 		services: {
+			organizationService: {
+				listVisibleOrgs: async ({
+					userId,
+					keyId,
+					orgId,
+				}: {
+					userId?: string;
+					keyId?: string;
+					orgId?: string;
+				}) => {
+					if (keyId) {
+						if (!orgId) {
+							throw new ApiError(
+								ApiErrorCode.MCP_ORG_REQUIRED,
+								"An organization is required for API key access.",
+							);
+						}
+						return [
+							{
+								id: orgId,
+								name: "Acme",
+								slug: "acme",
+								frozen: options.frozen ?? false,
+								plan: "free",
+							},
+						];
+					}
+					if (userId) {
+						return [
+							{
+								id: ORG_ID,
+								name: "Acme",
+								slug: "acme",
+								frozen: options.frozen ?? false,
+								role: options.role ?? "owner",
+							},
+						];
+					}
+					if (orgId) {
+						return [
+							{
+								id: orgId,
+								name: "Acme",
+								slug: "acme",
+								frozen: options.frozen ?? false,
+								plan: "free",
+							},
+						];
+					}
+					throw new ApiError(
+						ApiErrorCode.MCP_ORG_REQUIRED,
+						"An organization is required for API key access.",
+					);
+				},
+			},
 			issueService: {
 				listIssues: async (
 					orgId: string,

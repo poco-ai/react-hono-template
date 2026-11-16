@@ -15,7 +15,6 @@ export const Route = createFileRoute("/_auth/orgs/$orgId/activity")({
 
 		return (
 			<OrgActivityPage
-				key={search.projectId ?? ""}
 				orgId={orgId}
 				projectId={search.projectId || undefined}
 				onProjectChange={setProjectId}

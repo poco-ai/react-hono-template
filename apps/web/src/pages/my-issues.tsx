@@ -14,7 +14,7 @@ import {
 	TableRow,
 } from "@workspace/ui/components/table";
 import { CircleAlert } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
 import { UserAvatar } from "@/components/user-avatar";
@@ -59,12 +59,19 @@ function MyIssuesTableHeader() {
 const NO_SELECTION = new Set<string>();
 const ignoreToggle = () => {};
 
-export function MyIssuesPage({ orgId }: { orgId: string }) {
+export function MyIssuesPage({
+	orgId,
+	page,
+	onPageChange,
+}: {
+	orgId: string;
+	page: number;
+	onPageChange: (page: number) => void;
+}) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	useDocumentTitle(t("issues.myIssuesTitle"));
 	const isMobile = useMediaQuery("(max-width: 767px)");
-	const [page, setPage] = useState(1);
 	const { data: session } = useSession();
 	const userId = session?.user.id;
 	const projects = useQuery(projectsQuery(orgId));
@@ -138,7 +145,7 @@ export function MyIssuesPage({ orgId }: { orgId: string }) {
 						hasFilters={false}
 						groupBy="status"
 						toggleOne={ignoreToggle}
-						onPageChange={setPage}
+						onPageChange={onPageChange}
 						onClearFilters={ignoreToggle}
 						onNewIssue={ignoreToggle}
 						identifierPrefixOf={(issue) =>
