@@ -2,6 +2,9 @@ import type { RedisLike } from "./client";
 
 const LOCK_KEY = "cron:scheduled";
 
+/** Matches the Worker cron that runs every 15 minutes. */
+export const SCHEDULED_INTERVAL_MS = 15 * 60 * 1000;
+
 /**
  * Holds the lock until `ttlMs` expires so another replica cannot run the same
  * 15-minute pass. The lock is not released early.
@@ -20,7 +23,7 @@ export const withRedisLock = async (
 export const startScheduledLoop = (
 	redis: RedisLike,
 	run: () => Promise<void>,
-	intervalMs = 15 * 60 * 1000,
+	intervalMs = SCHEDULED_INTERVAL_MS,
 ) => {
 	const tick = () => {
 		withRedisLock(redis, Math.max(intervalMs - 1000, 1000), run).catch(

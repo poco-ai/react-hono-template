@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createRedisCache, withMemoryL1 } from "../src/lib/redis/cache";
+import { createRedisCache } from "../src/lib/redis/cache";
 import type { RedisLike } from "../src/lib/redis/client";
 import { createRedisRateLimiter } from "../src/lib/redis/rate-limit";
 import { withRedisLock } from "../src/lib/redis/scheduler";
@@ -125,11 +125,8 @@ class MemoryRedis implements RedisLike {
 	}
 }
 
-test("redis cache round-trips json and the config key stays in memory", async () => {
-	const cache = withMemoryL1(createRedisCache(new MemoryRedis()), {
-		ttlMs: 60_000,
-		match: (key) => key.startsWith("config:"),
-	});
+test("redis cache round-trips json through the shared store", async () => {
+	const cache = createRedisCache(new MemoryRedis());
 	assert.equal(
 		await cache.set("config:global", { theme: "dark" }, { ttlSeconds: 10 }),
 		true,

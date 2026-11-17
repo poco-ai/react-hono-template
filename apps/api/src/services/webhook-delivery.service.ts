@@ -12,6 +12,8 @@ const WEBHOOK_TIMEOUT_MS = 5_000;
 // at 1 and includes the current delivery). Retries are owned by Queues; the
 // in-process fallback makes a single attempt.
 export const WEBHOOK_MAX_ATTEMPTS = 3;
+/** Matches the Queues `retry_delay` of 5 seconds. */
+export const WEBHOOK_RETRY_DELAY_MS = 5_000;
 
 export type WebhookJobQueue = {
 	send(message: { deliveryId: string }): Promise<void>;

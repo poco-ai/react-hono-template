@@ -1,6 +1,7 @@
 import { handleWebhookQueue } from "../../queue";
 import {
 	WEBHOOK_MAX_ATTEMPTS,
+	WEBHOOK_RETRY_DELAY_MS,
 	type WebhookDeliveryService,
 	type WebhookJobQueue,
 } from "../../services/webhook-delivery.service";
@@ -9,7 +10,6 @@ import type { RedisLike } from "./client";
 const READY_KEY = "webhook:ready";
 const DELAYED_KEY = "webhook:delayed";
 const PROCESSING_KEY = "webhook:processing";
-const RETRY_DELAY_MS = 500;
 const VISIBILITY_MS = 30_000;
 
 type QueuedWebhook = {
@@ -91,7 +91,7 @@ const handleOne = async (
 								if (job.attempts >= WEBHOOK_MAX_ATTEMPTS) return;
 								await redis.zadd(
 									DELAYED_KEY,
-									Date.now() + RETRY_DELAY_MS,
+									Date.now() + WEBHOOK_RETRY_DELAY_MS,
 									encode({
 										deliveryId: job.deliveryId,
 										attempts: job.attempts + 1,

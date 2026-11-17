@@ -1,16 +1,18 @@
 import { PLANS } from "@workspace/shared";
 import type { AiRateLimiters } from "../../services/ai-usage.service";
-import type { PlanRateLimiters, RateLimiter } from "../rate-limit";
+import {
+	type PlanRateLimiters,
+	RATE_LIMIT_WINDOW_MS,
+	type RateLimiter,
+} from "../rate-limit";
 import type { RedisLike } from "./client";
-
-const WINDOW_MS = 60_000;
 
 /** Fixed window counter. The limit lives in `PLANS`, not in a binding. */
 export const createRedisRateLimiter = (
 	redis: RedisLike,
 	limit: number,
 	namespace: string,
-	windowMs = WINDOW_MS,
+	windowMs = RATE_LIMIT_WINDOW_MS,
 ): RateLimiter => ({
 	limit: async ({ key }) => {
 		const bucket = `rl:${namespace}:${Math.floor(Date.now() / windowMs)}:${key}`;
