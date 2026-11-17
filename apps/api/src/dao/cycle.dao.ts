@@ -17,6 +17,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { runBatch } from "../db/run-batch";
 import { cycles, issueStatuses, issues } from "../db/schema";
 import type { Database } from "../db/types";
 import type { CycleDto, CycleProgressDto } from "../dto/cycle.dto";
@@ -97,15 +98,15 @@ export const createCycleDao = (db: Database) => {
 			const where = status
 				? and(projectScope(orgId, projectId), status)
 				: projectScope(orgId, projectId);
-			const [rows, totals] = await db.batch([
-				db
+			const [rows, totals] = await runBatch(db, (tx) => [
+				tx
 					.select()
 					.from(cycles)
 					.where(where)
 					.orderBy(asc(cycles.startsAt), asc(cycles.number), asc(cycles.id))
 					.limit(options.pageSize)
 					.offset((options.page - 1) * options.pageSize),
-				db.select({ value: count() }).from(cycles).where(where),
+				tx.select({ value: count() }).from(cycles).where(where),
 			]);
 			return {
 				items: rows.map(toCycleDto),
@@ -295,18 +296,18 @@ export const createCycleDao = (db: Database) => {
 			id: string,
 			params: { actorId: string; sourceName: string },
 		): Promise<boolean> => {
-			const [, , deleted] = await db.batch([
-				cycleDetachActivityStatement(db, {
+			const [, , deleted] = await runBatch(db, (tx) => [
+				cycleDetachActivityStatement(tx, {
 					orgId,
 					sourceCycleId: id,
 					actorId: params.actorId,
 					sourceName: params.sourceName,
 				}),
-				db
+				tx
 					.update(issues)
 					.set({ cycleId: null })
 					.where(and(eq(issues.orgId, orgId), eq(issues.cycleId, id))),
-				db
+				tx
 					.delete(cycles)
 					.where(and(eq(cycles.orgId, orgId), eq(cycles.id, id)))
 					.returning({ id: cycles.id }),
@@ -329,35 +330,37 @@ export const createCycleDao = (db: Database) => {
 			sourceName: string;
 			targetName: string;
 		}): Promise<number> => {
-			const statements = [
-				cycleRolloverActivityStatement(db, params),
-				db
-					.update(issues)
-					.set({ cycleId: params.targetCycleId })
-					.where(
-						and(
-							eq(issues.orgId, params.orgId),
-							eq(issues.projectId, params.projectId),
-							eq(issues.cycleId, params.sourceCycleId),
-							isNull(issues.deletedAt),
-							// Archived issues stay parked in their cycle.
-							isNull(issues.archivedAt),
-							notInArray(
-								issues.statusId,
-								db
-									.select({ id: issueStatuses.id })
-									.from(issueStatuses)
-									.where(
-										inArray(issueStatuses.category, [
-											...TERMINAL_STATUS_CATEGORIES,
-										]),
-									),
+			const [, updated] = await runBatch(db, (tx) => {
+				const statements = [
+					cycleRolloverActivityStatement(tx, params),
+					tx
+						.update(issues)
+						.set({ cycleId: params.targetCycleId })
+						.where(
+							and(
+								eq(issues.orgId, params.orgId),
+								eq(issues.projectId, params.projectId),
+								eq(issues.cycleId, params.sourceCycleId),
+								isNull(issues.deletedAt),
+								// Archived issues stay parked in their cycle.
+								isNull(issues.archivedAt),
+								notInArray(
+									issues.statusId,
+									tx
+										.select({ id: issueStatuses.id })
+										.from(issueStatuses)
+										.where(
+											inArray(issueStatuses.category, [
+												...TERMINAL_STATUS_CATEGORIES,
+											]),
+										),
+								),
 							),
-						),
-					)
-					.returning({ id: issues.id }),
-			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-			const [, updated] = await db.batch(statements);
+						)
+						.returning({ id: issues.id }),
+				] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+				return statements;
+			});
 			return updated.length;
 		},
 	};

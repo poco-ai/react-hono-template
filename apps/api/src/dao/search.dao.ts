@@ -1,4 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
+import { sqlProfile } from "../db/sql-profile";
 import type { Database } from "../db/types";
 import type {
 	SearchCommentHitDto,
@@ -7,16 +8,18 @@ import type {
 	SearchProjectHitDto,
 } from "../dto/search.dto";
 import { type SearchTerms, searchExcerpt } from "../lib/search";
-import { instrMatch } from "./search-sql";
+import { archivedIsFalse, queryRows } from "../lib/sql-dialect";
+import { instrMatch, trigramMatch } from "./search-sql";
 
 /**
  * Cross-entity search reads.
  *
- * Issues and comments use the FTS5 trigram indexes (`issue_search`,
+ * On SQLite, issues and comments use the FTS5 trigram indexes (`issue_search`,
  * `comment_search`); the FTS rows are external content kept in sync by
  * triggers in the `search_fts` migration and the re-runnable
  * `drizzle/fts/search_fts.sql` (re-run it after any migration that rebuilds the
- * `issues`/`comments` tables).
+ * `issues`/`comments` tables). PostgreSQL uses `pg_trgm` (`drizzle-pg/fts/search_trgm.sql`)
+ * and orders by update time instead of bm25.
  * Queries join back to the origin tables so organization scoping, soft deletes
  * and project archival always apply — an FTS row for a soft-deleted issue is
  * filtered out here and becomes visible again if the issue is restored. Issues
@@ -94,13 +97,20 @@ const joinAnd = (conditions: SQL[]) =>
 const issueInstr = (token: string) =>
 	instrMatch(token, sql`i.title`, sql`coalesce(i.description, '')`);
 
+const issueTrigram = (token: string) =>
+	trigramMatch(token, sql`i.title`, sql`coalesce(i.description, '')`);
+
 const commentInstr = (token: string) => instrMatch(token, sql`c.body`);
+
+const commentTrigram = (token: string) => trigramMatch(token, sql`c.body`);
 
 const projectInstr = (token: string) =>
 	instrMatch(token, sql`p.name`, sql`coalesce(p.description, '')`);
 
 const memberInstr = (token: string) =>
 	instrMatch(token, sql`u.name`, sql`u.email`);
+
+const projectNotArchived = archivedIsFalse("p");
 
 // --- projections -----------------------------------------------------------
 
@@ -217,45 +227,94 @@ const toMemberHit = (row: MemberHitRow): SearchMemberHitDto => ({
 	image: row.image,
 });
 
+const ISSUE_TABLE_FROM = sql`
+	issues i
+	join projects p on p.id = i.project_id
+	join issue_statuses s on s.id = i.status_id
+	left join user u on u.id = i.assignee_id
+`;
+
+const COMMENT_TABLE_FROM = sql`
+	comments c
+	join issues i on i.id = c.issue_id
+	join projects p on p.id = i.project_id
+	join user u on u.id = c.author_id
+`;
+
+/**
+ * One SELECT shape for both engines. SQLite with a trigram expression reads the
+ * FTS table and ranks with bm25. Every other case reads the source table and
+ * ranks by recency. PostgreSQL long tokens use pg_trgm; short tokens use strpos.
+ */
+const rankedRows = async <T>(
+	db: Database,
+	query: {
+		projection: SQL;
+		ftsFrom: SQL;
+		tableFrom: SQL;
+		scope: SQL;
+		ftsQuery: string | null;
+		ftsMatch: SQL;
+		ftsOrder: SQL;
+		tableMatch: SQL | null;
+		shortMatch: SQL | null;
+		tableOrder: SQL;
+		limit: number;
+	},
+): Promise<T[]> => {
+	const useFts = sqlProfile().dialect === "sqlite" && query.ftsQuery !== null;
+	return queryRows<T>(
+		db,
+		sql`
+			select ${query.projection}
+			from ${useFts ? query.ftsFrom : query.tableFrom}
+			where ${query.scope}
+				${
+					useFts
+						? sql`and ${query.ftsMatch}${query.shortMatch ? sql` and ${query.shortMatch}` : sql``}`
+						: sql`and ${query.tableMatch ?? sql`1 = 0`}`
+				}
+			order by ${useFts ? query.ftsOrder : query.tableOrder}
+			limit ${query.limit}
+		`,
+	);
+};
+
+const textMatch = (
+	terms: SearchTerms,
+	long: (token: string) => SQL,
+	short: (token: string) => SQL,
+) =>
+	sqlProfile().dialect === "postgres"
+		? joinAnd([...terms.ftsTokens.map(long), ...terms.shortTokens.map(short)])
+		: joinAnd(terms.tokens.map(short));
+
 export const createSearchDao = (db: Database) => ({
-	/** Issues ranked by FTS bm25 when the trigram index applies. */
+	/** Issues ranked by FTS bm25 on SQLite, and by updated time on PostgreSQL. */
 	searchIssues: async (
 		orgId: string,
 		terms: SearchTerms,
 		limit: number,
 	): Promise<SearchIssueHitDto[]> => {
-		if (terms.tokens.length === 0) {
-			return [];
-		}
-		const shortFilter = joinAnd(terms.shortTokens.map(issueInstr));
-		const rows = terms.ftsQuery
-			? await db.all<IssueHitRow>(sql`
-					select ${ISSUE_PROJECTION}
-					from issue_search
-					${ISSUE_JOINS}
-					where issue_search match ${terms.ftsQuery}
-						and i.org_id = ${orgId}
-						and i.deleted_at is null
-						and i.archived_at is null
-						and p.archived = 0
-						${shortFilter ? sql`and ${shortFilter}` : sql``}
-					order by bm25(issue_search), i.updated_at desc, i.id
-					limit ${limit}
-				`)
-			: await db.all<IssueHitRow>(sql`
-					select ${ISSUE_PROJECTION}
-					from issues i
-					join projects p on p.id = i.project_id
-					join issue_statuses s on s.id = i.status_id
-					left join user u on u.id = i.assignee_id
-					where i.org_id = ${orgId}
-						and i.deleted_at is null
-						and i.archived_at is null
-						and p.archived = 0
-						and ${joinAnd(terms.tokens.map(issueInstr))}
-					order by i.updated_at desc, i.id
-					limit ${limit}
-				`);
+		if (terms.tokens.length === 0) return [];
+		const rows = await rankedRows<IssueHitRow>(db, {
+			projection: ISSUE_PROJECTION,
+			ftsFrom: sql`issue_search ${ISSUE_JOINS}`,
+			tableFrom: ISSUE_TABLE_FROM,
+			scope: sql`
+				i.org_id = ${orgId}
+				and i.deleted_at is null
+				and i.archived_at is null
+				and ${projectNotArchived}
+			`,
+			ftsQuery: terms.ftsQuery,
+			ftsMatch: sql`issue_search match ${terms.ftsQuery}`,
+			ftsOrder: sql`bm25(issue_search), i.updated_at desc, i.id`,
+			tableMatch: textMatch(terms, issueTrigram, issueInstr),
+			shortMatch: joinAnd(terms.shortTokens.map(issueInstr)),
+			tableOrder: sql`i.updated_at desc, i.id`,
+			limit,
+		});
 		return rows.map((row) => toIssueHit(row, terms));
 	},
 
@@ -268,40 +327,26 @@ export const createSearchDao = (db: Database) => ({
 		terms: SearchTerms,
 		limit: number,
 	): Promise<SearchCommentHitDto[]> => {
-		if (terms.tokens.length === 0) {
-			return [];
-		}
-		const shortFilter = joinAnd(terms.shortTokens.map(commentInstr));
-		const rows = terms.ftsQuery
-			? await db.all<CommentHitRow>(sql`
-					select ${COMMENT_PROJECTION}
-					from comment_search
-					${COMMENT_JOINS}
-					where comment_search match ${terms.ftsQuery}
-						and c.org_id = ${orgId}
-						and i.org_id = ${orgId}
-						and i.deleted_at is null
-						and i.archived_at is null
-						and p.archived = 0
-						${shortFilter ? sql`and ${shortFilter}` : sql``}
-					order by bm25(comment_search), c.created_at desc, c.id
-					limit ${limit}
-				`)
-			: await db.all<CommentHitRow>(sql`
-					select ${COMMENT_PROJECTION}
-					from comments c
-					join issues i on i.id = c.issue_id
-					join projects p on p.id = i.project_id
-					join user u on u.id = c.author_id
-					where c.org_id = ${orgId}
-						and i.org_id = ${orgId}
-						and i.deleted_at is null
-						and i.archived_at is null
-						and p.archived = 0
-						and ${joinAnd(terms.tokens.map(commentInstr))}
-					order by c.created_at desc, c.id
-					limit ${limit}
-				`);
+		if (terms.tokens.length === 0) return [];
+		const rows = await rankedRows<CommentHitRow>(db, {
+			projection: COMMENT_PROJECTION,
+			ftsFrom: sql`comment_search ${COMMENT_JOINS}`,
+			tableFrom: COMMENT_TABLE_FROM,
+			scope: sql`
+				c.org_id = ${orgId}
+				and i.org_id = ${orgId}
+				and i.deleted_at is null
+				and i.archived_at is null
+				and ${projectNotArchived}
+			`,
+			ftsQuery: terms.ftsQuery,
+			ftsMatch: sql`comment_search match ${terms.ftsQuery}`,
+			ftsOrder: sql`bm25(comment_search), c.created_at desc, c.id`,
+			tableMatch: textMatch(terms, commentTrigram, commentInstr),
+			shortMatch: joinAnd(terms.shortTokens.map(commentInstr)),
+			tableOrder: sql`c.created_at desc, c.id`,
+			limit,
+		});
 		return rows.map((row) => toCommentHit(row, terms));
 	},
 
@@ -314,7 +359,9 @@ export const createSearchDao = (db: Database) => ({
 		if (terms.tokens.length === 0) {
 			return [];
 		}
-		const rows = await db.all<ProjectHitRow>(sql`
+		const rows = await queryRows<ProjectHitRow>(
+			db,
+			sql`
 			select
 				p.id as id,
 				p.name as name,
@@ -325,11 +372,12 @@ export const createSearchDao = (db: Database) => ({
 				p.updated_at as updated_at
 			from projects p
 			where p.org_id = ${orgId}
-				and p.archived = 0
+				and ${projectNotArchived}
 				and ${joinAnd(terms.tokens.map(projectInstr))}
 			order by p.updated_at desc, p.id
 			limit ${limit}
-		`);
+		`,
+		);
 		return rows.map((row) => toProjectHit(row, terms));
 	},
 
@@ -345,7 +393,9 @@ export const createSearchDao = (db: Database) => ({
 		if (terms.tokens.length === 0) {
 			return [];
 		}
-		const rows = await db.all<MemberHitRow>(sql`
+		const rows = await queryRows<MemberHitRow>(
+			db,
+			sql`
 			select
 				m.user_id as user_id,
 				u.name as name,
@@ -356,7 +406,8 @@ export const createSearchDao = (db: Database) => ({
 				and ${joinAnd(terms.tokens.map(memberInstr))}
 			order by u.name, m.user_id
 			limit ${limit}
-		`);
+		`,
+		);
 		return rows.map(toMemberHit);
 	},
 });

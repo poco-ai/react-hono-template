@@ -6,7 +6,10 @@
 		"cf-typegen": "wrangler types",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
+		"dev:server": "bun src/server.ts",
 		"db:generate": "drizzle-kit generate",
+		"db:generate:pg": "drizzle-kit generate --config drizzle.config.pg.ts",
+		"db:migrate:pg": "bun src/db/migrate-pg.ts",
 		"db:migrate:local": "wrangler d1 migrations apply react-hono-db --local",
 		"db:migrate:remote": "wrangler d1 migrations apply react-hono-db --remote",
 		"db:push": "drizzle-kit push"
@@ -23,6 +26,8 @@
 		"better-auth": "^1.7.15",
 		"drizzle-orm": "^1.0.0-rc.4",
 		"hono": "^4.13.9",
+		"ioredis": "^6.0.0",
+		"postgres": "^4.1.1",
 		"stripe": "^22.6.2",
 		"zod": "^4.6.5"
 	},

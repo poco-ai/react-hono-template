@@ -1,9 +1,11 @@
 import type { IssueRelationType } from "@workspace/shared";
 import { and, asc, eq, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { runBatch } from "../db/run-batch";
 import { issueRelations } from "../db/schema";
 import type { Database } from "../db/types";
 import type { IssueRelationDto } from "../dto/relation.dto";
+import { queryRows } from "../lib/sql-dialect";
 import {
 	type ActivityInsert,
 	activityInsertStatement,
@@ -47,13 +49,15 @@ export const createRelationDao = (db: Database) => ({
 		},
 		activity?: ActivityInsert,
 	): Promise<IssueRelationDto> => {
-		const statements = [
-			db.insert(issueRelations).values(data).returning(),
-			...(activity ? [activityInsertStatement(db, [activity])] : []),
-		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		// A unique-index violation here (a concurrent create won the pre-check
-		// race) propagates raw; the service maps it to the 409.
-		const [rows] = await db.batch(statements);
+		const [rows] = await runBatch(db, (tx) => {
+			const statements = [
+				tx.insert(issueRelations).values(data).returning(),
+				...(activity ? [activityInsertStatement(tx, [activity])] : []),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			// A unique-index violation here (a concurrent create won the pre-check
+			// race) propagates raw; the service maps it to the 409.
+			return statements;
+		});
 		const row = (rows as RelationRow[])[0];
 		if (!row) {
 			throw new Error("Failed to insert issue relation");
@@ -111,7 +115,9 @@ export const createRelationDao = (db: Database) => ({
 		if (fromIssueId === toIssueId) {
 			return true;
 		}
-		const row = await db.get<{ found: number }>(sql`
+		const rows = await queryRows<{ found: number }>(
+			db,
+			sql`
 			WITH RECURSIVE reachable(issue_id) AS (
 				SELECT issue_relations.related_issue_id
 				FROM issue_relations
@@ -126,8 +132,9 @@ export const createRelationDao = (db: Database) => ({
 					AND issue_relations.type = 'blocks'
 			)
 			SELECT 1 AS found FROM reachable WHERE issue_id = ${toIssueId} LIMIT 1
-		`);
-		return row != null;
+		`,
+		);
+		return rows.length > 0;
 	},
 
 	/**
@@ -165,25 +172,27 @@ export const createRelationDao = (db: Database) => ({
 		id: string,
 		activity?: ActivityInsert,
 	): Promise<IssueRelationDto | null> => {
-		const deleteStatement = db
-			.delete(issueRelations)
-			.where(and(eq(issueRelations.orgId, orgId), eq(issueRelations.id, id)))
-			.returning();
-		const statements = (
-			activity
-				? [
-						activityInsertWhenStatement(
-							db,
-							activity,
-							sql`EXISTS (SELECT 1 FROM ${issueRelations}
+		const results = await runBatch(db, (tx) => {
+			const deleteStatement = tx
+				.delete(issueRelations)
+				.where(and(eq(issueRelations.orgId, orgId), eq(issueRelations.id, id)))
+				.returning();
+			const statements = (
+				activity
+					? [
+							activityInsertWhenStatement(
+								tx,
+								activity,
+								sql`EXISTS (SELECT 1 FROM ${issueRelations}
 								WHERE ${issueRelations.orgId} = ${orgId}
 									AND ${issueRelations.id} = ${id})`,
-						),
-						deleteStatement,
-					]
-				: [deleteStatement]
-		) as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		const results = await db.batch(statements);
+							),
+							deleteStatement,
+						]
+					: [deleteStatement]
+			) as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			return statements;
+		});
 		const rows = results[results.length - 1] as RelationRow[];
 		return rows.length > 0 ? toRelationDto(rows[0]) : null;
 	},

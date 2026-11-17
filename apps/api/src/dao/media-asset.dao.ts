@@ -9,6 +9,7 @@ import {
 	notInArray,
 	sql,
 } from "drizzle-orm";
+import { runBatch } from "../db/run-batch";
 import { mediaAssets, pendingUploads } from "../db/schema";
 import type { Database } from "../db/types";
 import { type MediaKind, NON_QUOTA_MEDIA_KINDS } from "../lib/storage/uploads";
@@ -82,9 +83,9 @@ export const createMediaAssetDao = (db: Database) => ({
 				: eq(mediaAssets.orgId, supersede.orgId);
 		// Insert, supersede the previous asset and drop the reservation in one
 		// atomic batch so cleanup can never race a half-applied register.
-		await db.batch([
-			db.insert(mediaAssets).values(asset),
-			db
+		await runBatch(db, (tx) => [
+			tx.insert(mediaAssets).values(asset),
+			tx
 				.update(mediaAssets)
 				.set({ supersededAt: now })
 				.where(
@@ -95,7 +96,7 @@ export const createMediaAssetDao = (db: Database) => ({
 						ne(mediaAssets.id, asset.id),
 					),
 				),
-			db.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
+			tx.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
 		]);
 		const row = await db
 			.select()

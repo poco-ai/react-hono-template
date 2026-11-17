@@ -12,6 +12,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { runBatch } from "../db/run-batch";
 import { issueLabels, issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -172,8 +173,8 @@ export const createIssueDao = (db: Database) => {
 			let lastError: unknown;
 			for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
 				try {
-					const [, inserted] = await db.batch([
-						db
+					const [, inserted] = await runBatch(db, (tx) => [
+						tx
 							.update(projects)
 							.set({ nextNumber: sql`${projects.nextNumber} + 1` })
 							.where(
@@ -182,7 +183,7 @@ export const createIssueDao = (db: Database) => {
 									eq(projects.id, data.projectId),
 								),
 							),
-						db
+						tx
 							.insert(issues)
 							.values({
 								...data,
@@ -196,7 +197,7 @@ export const createIssueDao = (db: Database) => {
 							.returning(),
 						...(uniqueLabelIds.length
 							? [
-									db.insert(issueLabels).values(
+									tx.insert(issueLabels).values(
 										uniqueLabelIds.map((labelId) => ({
 											issueId: data.id,
 											labelId,
@@ -205,7 +206,7 @@ export const createIssueDao = (db: Database) => {
 								]
 							: []),
 						...(activityRows.length
-							? [activityInsertStatement(db, activityRows)]
+							? [activityInsertStatement(tx, activityRows)]
 							: []),
 					]);
 					const status = await db
@@ -272,17 +273,21 @@ export const createIssueDao = (db: Database) => {
 			let lastError: unknown;
 			for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
 				try {
-					await db.batch([
-						db
-							.update(projects)
-							.set({ nextNumber: sql`${projects.nextNumber} + ${total}` })
-							.where(
-								and(eq(projects.orgId, orgId), eq(projects.id, projectId)),
-							),
-						...issueStatements,
-						...labelStatements,
-						...activityStatements,
-					] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+					await runBatch(
+						db,
+						(tx) =>
+							[
+								tx
+									.update(projects)
+									.set({ nextNumber: sql`${projects.nextNumber} + ${total}` })
+									.where(
+										and(eq(projects.orgId, orgId), eq(projects.id, projectId)),
+									),
+								...issueStatements,
+								...labelStatements,
+								...activityStatements,
+							] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
+					);
 					return;
 				} catch (err) {
 					lastError = err;
@@ -585,15 +590,15 @@ export const createIssueDao = (db: Database) => {
 						? [asc(issues.priority), desc(issues.createdAt), asc(issues.id)]
 						: [desc(issues.updatedAt), asc(issues.id)];
 
-			const [rows, totals] = await db.batch([
-				db
+			const [rows, totals] = await runBatch(db, (tx) => [
+				tx
 					.select()
 					.from(issues)
 					.where(where)
 					.orderBy(...orderBy)
 					.limit(query.pageSize)
 					.offset((query.page - 1) * query.pageSize),
-				db.select({ value: count() }).from(issues).where(where),
+				tx.select({ value: count() }).from(issues).where(where),
 			]);
 
 			const issueIds = rows.map((row) => row.id);
@@ -673,27 +678,29 @@ export const createIssueDao = (db: Database) => {
 				return row ? describeIssue(row) : null;
 			}
 			const hasPatch = Object.keys(patchEntries).length > 0;
-			const statements = [
-				hasPatch
-					? db.update(issues).set(patchEntries).where(scope).returning()
-					: db.select().from(issues).where(scope),
-				...(labelIds !== undefined
-					? [db.delete(issueLabels).where(eq(issueLabels.issueId, id))]
-					: []),
-			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-			if (uniqueLabelIds !== undefined && uniqueLabelIds.length > 0) {
-				statements.push(
-					db
-						.insert(issueLabels)
-						.values(
-							uniqueLabelIds.map((labelId) => ({ issueId: id, labelId })),
-						),
-				);
-			}
-			if (activityRows.length > 0) {
-				statements.push(activityInsertStatement(db, activityRows));
-			}
-			const [baseRows] = await db.batch(statements);
+			const [baseRows] = await runBatch(db, (tx) => {
+				const statements = [
+					hasPatch
+						? tx.update(issues).set(patchEntries).where(scope).returning()
+						: tx.select().from(issues).where(scope),
+					...(labelIds !== undefined
+						? [tx.delete(issueLabels).where(eq(issueLabels.issueId, id))]
+						: []),
+				] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+				if (uniqueLabelIds !== undefined && uniqueLabelIds.length > 0) {
+					statements.push(
+						tx
+							.insert(issueLabels)
+							.values(
+								uniqueLabelIds.map((labelId) => ({ issueId: id, labelId })),
+							),
+					);
+				}
+				if (activityRows.length > 0) {
+					statements.push(activityInsertStatement(tx, activityRows));
+				}
+				return statements;
+			});
 			const row = baseRows[0] as IssueRow | undefined;
 			return row ? describeIssue(row) : null;
 		},
@@ -710,34 +717,36 @@ export const createIssueDao = (db: Database) => {
 			id: string,
 			activity?: ActivityInsert,
 		): Promise<boolean> => {
-			const statements = [
-				db
-					.update(issues)
-					.set({ deletedAt: new Date() })
-					.where(
-						and(
-							eq(issues.orgId, orgId),
-							eq(issues.id, id),
-							isNull(issues.deletedAt),
+			const [rows] = await runBatch(db, (tx) => {
+				const statements = [
+					tx
+						.update(issues)
+						.set({ deletedAt: new Date() })
+						.where(
+							and(
+								eq(issues.orgId, orgId),
+								eq(issues.id, id),
+								isNull(issues.deletedAt),
+							),
+						)
+						.returning({ id: issues.id }),
+					tx
+						.update(issues)
+						.set({ parentId: null })
+						.where(
+							and(
+								eq(issues.orgId, orgId),
+								eq(issues.parentId, id),
+								isNull(issues.deletedAt),
+							),
 						),
-					)
-					.returning({ id: issues.id }),
-				db
-					.update(issues)
-					.set({ parentId: null })
-					.where(
-						and(
-							eq(issues.orgId, orgId),
-							eq(issues.parentId, id),
-							isNull(issues.deletedAt),
-						),
-					),
-				deleteRelationsForIssueStatement(db, orgId, id),
-			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-			if (activity) {
-				statements.push(activityInsertStatement(db, [activity]));
-			}
-			const [rows] = await db.batch(statements);
+					deleteRelationsForIssueStatement(tx, orgId, id),
+				] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+				if (activity) {
+					statements.push(activityInsertStatement(tx, [activity]));
+				}
+				return statements;
+			});
 			return rows.length > 0;
 		},
 
@@ -751,21 +760,23 @@ export const createIssueDao = (db: Database) => {
 			archivedAt: Date | null,
 			activity?: ActivityInsert,
 		): Promise<IssueDto | null> => {
-			const statements = [
-				db
-					.update(issues)
-					.set({ archivedAt })
-					.where(
-						and(
-							eq(issues.orgId, orgId),
-							eq(issues.id, id),
-							isNull(issues.deletedAt),
-						),
-					)
-					.returning(),
-				...(activity ? [activityInsertStatement(db, [activity])] : []),
-			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-			const [baseRows] = await db.batch(statements);
+			const [baseRows] = await runBatch(db, (tx) => {
+				const statements = [
+					tx
+						.update(issues)
+						.set({ archivedAt })
+						.where(
+							and(
+								eq(issues.orgId, orgId),
+								eq(issues.id, id),
+								isNull(issues.deletedAt),
+							),
+						)
+						.returning(),
+					...(activity ? [activityInsertStatement(tx, [activity])] : []),
+				] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+				return statements;
+			});
 			const row = baseRows[0] as IssueRow | undefined;
 			return row ? describeIssue(row) : null;
 		},
@@ -853,17 +864,19 @@ export const createIssueDao = (db: Database) => {
 			issueId: string,
 			labelIds: string[],
 		): Promise<void> => {
-			const statements = [
-				db.delete(issueLabels).where(eq(issueLabels.issueId, issueId)),
-			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-			if (labelIds.length > 0) {
-				statements.push(
-					db
-						.insert(issueLabels)
-						.values(labelIds.map((labelId) => ({ issueId, labelId }))),
-				);
-			}
-			await db.batch(statements);
+			await runBatch(db, (tx) => {
+				const statements = [
+					tx.delete(issueLabels).where(eq(issueLabels.issueId, issueId)),
+				] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+				if (labelIds.length > 0) {
+					statements.push(
+						tx
+							.insert(issueLabels)
+							.values(labelIds.map((labelId) => ({ issueId, labelId }))),
+					);
+				}
+				return statements;
+			});
 		},
 	};
 };

@@ -29,6 +29,7 @@ import {
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { issueLabels, issueStatuses, issues } from "../db/schema";
 import type { Database } from "../db/types";
+import { sqlMatchAll, sqlMatchNone } from "../lib/sql-dialect";
 import { instrMatch } from "./search-sql";
 
 /**
@@ -146,12 +147,14 @@ const compileLabelCondition = (
 			return notInArray(issues.id, ids(eq(issueLabels.labelId, String(value))));
 		case "in": {
 			const list = normalizeFilterList(value as IssueFilterScalar[]);
-			return list.length === 0 ? sql`0` : inArray(issues.id, ids(inList(list)));
+			return list.length === 0
+				? sqlMatchNone()
+				: inArray(issues.id, ids(inList(list)));
 		}
 		case "notIn": {
 			const list = normalizeFilterList(value as IssueFilterScalar[]);
 			return list.length === 0
-				? sql`1`
+				? sqlMatchAll()
 				: notInArray(issues.id, ids(inList(list)));
 		}
 		case "contains":
@@ -174,7 +177,7 @@ const compileTextCondition = (
 		case "in": {
 			const list = normalizeFilterList(value as IssueFilterScalar[]);
 			return list.length === 0
-				? sql`0`
+				? sqlMatchNone()
 				: inArray(
 						column,
 						list.map((item) => String(item)),
@@ -183,7 +186,7 @@ const compileTextCondition = (
 		case "notIn": {
 			const list = normalizeFilterList(value as IssueFilterScalar[]);
 			return list.length === 0
-				? sql`1`
+				? sqlMatchAll()
 				: notInArray(
 						column,
 						list.map((item) => String(item)),
@@ -214,7 +217,7 @@ const compileNumberCondition = (
 		case "in": {
 			const normalized = normalizeFilterList(list);
 			return normalized.length === 0
-				? sql`0`
+				? sqlMatchNone()
 				: inArray(
 						column,
 						normalized.map((item) => Number(item)),
@@ -223,7 +226,7 @@ const compileNumberCondition = (
 		case "notIn": {
 			const normalized = normalizeFilterList(list);
 			return normalized.length === 0
-				? sql`1`
+				? sqlMatchAll()
 				: notInArray(
 						column,
 						normalized.map((item) => Number(item)),

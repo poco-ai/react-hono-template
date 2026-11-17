@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
+import { runBatch } from "../db/run-batch";
 import { attachments, comments, pendingUploads } from "../db/schema";
 import type { Database } from "../db/types";
 import type { AttachmentDto } from "../dto/attachment.dto";
@@ -96,23 +97,25 @@ export const createAttachmentDao = (db: Database) => ({
 		activity?: ActivityInsert,
 		pendingKey?: string,
 	): Promise<AttachmentDto> => {
-		const statements = [
-			db.insert(attachments).values({
-				...data,
-				commentId: data.commentId ?? null,
-			}),
-		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		if (pendingKey) {
-			// Same batch as the insert: a successful register cannot leave the
-			// reservation behind for cleanup to delete the live object.
-			statements.push(
-				db.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
-			);
-		}
-		if (activity) {
-			statements.push(activityInsertStatement(db, [activity]));
-		}
-		await db.batch(statements);
+		await runBatch(db, (tx) => {
+			const statements = [
+				tx.insert(attachments).values({
+					...data,
+					commentId: data.commentId ?? null,
+				}),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			if (pendingKey) {
+				// Same batch as the insert: a successful register cannot leave the
+				// reservation behind for cleanup to delete the live object.
+				statements.push(
+					tx.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
+				);
+			}
+			if (activity) {
+				statements.push(activityInsertStatement(tx, [activity]));
+			}
+			return statements;
+		});
 		const row = await db
 			.select()
 			.from(attachments)
@@ -156,16 +159,18 @@ export const createAttachmentDao = (db: Database) => ({
 		id: string,
 		activity?: ActivityInsert,
 	): Promise<boolean> => {
-		const statements = [
-			db
-				.delete(attachments)
-				.where(and(eq(attachments.orgId, orgId), eq(attachments.id, id)))
-				.returning({ id: attachments.id }),
-		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		if (activity) {
-			statements.push(activityInsertStatement(db, [activity]));
-		}
-		const [rows] = await db.batch(statements);
+		const [rows] = await runBatch(db, (tx) => {
+			const statements = [
+				tx
+					.delete(attachments)
+					.where(and(eq(attachments.orgId, orgId), eq(attachments.id, id)))
+					.returning({ id: attachments.id }),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			if (activity) {
+				statements.push(activityInsertStatement(tx, [activity]));
+			}
+			return statements;
+		});
 		return rows.length > 0;
 	},
 

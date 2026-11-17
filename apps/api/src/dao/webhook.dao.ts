@@ -1,4 +1,5 @@
 import { and, count, eq } from "drizzle-orm";
+import { runBatch } from "../db/run-batch";
 import { webhookDeliveries, webhooks } from "../db/schema";
 import type { Database } from "../db/types";
 import type { WebhookWithSecretDto } from "../dto/webhook.dto";
@@ -90,8 +91,8 @@ export const createWebhookDao = (db: Database) => ({
 	 * keys, so the deliveries are removed explicitly — no orphan rows.
 	 */
 	delete: async (orgId: string, id: string): Promise<boolean> => {
-		const [, rows] = await db.batch([
-			db
+		const [, rows] = await runBatch(db, (tx) => [
+			tx
 				.delete(webhookDeliveries)
 				.where(
 					and(
@@ -99,7 +100,7 @@ export const createWebhookDao = (db: Database) => ({
 						eq(webhookDeliveries.webhookId, id),
 					),
 				),
-			db
+			tx
 				.delete(webhooks)
 				.where(and(eq(webhooks.orgId, orgId), eq(webhooks.id, id)))
 				.returning({ id: webhooks.id }),

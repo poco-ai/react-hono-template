@@ -1,0 +1,16 @@
+:80 {
+	handle /.well-known/* {
+		reverse_proxy api:8787
+	}
+	handle /api/* {
+		reverse_proxy api:8787
+	}
+	handle /mcp {
+		reverse_proxy api:8787
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

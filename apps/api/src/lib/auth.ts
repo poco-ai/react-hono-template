@@ -10,6 +10,7 @@ import {
 } from "better-auth/api";
 import { admin, emailOTP, jwt, organization } from "better-auth/plugins";
 import * as authSchema from "../db/auth-schema";
+import { getSqlDialect, type SqlDialect } from "../db/dialect";
 import type { Database } from "../db/types";
 import type { AuthPolicyService } from "../services/auth-policy.service";
 import { ac, roles } from "./access";
@@ -134,6 +135,7 @@ export const createAuth = ({
 	mcp,
 	allowInsecureLogging = false,
 	onOrganizationCreated,
+	dialect = getSqlDialect(),
 }: {
 	db: Database;
 	secret: string;
@@ -143,6 +145,7 @@ export const createAuth = ({
 	social?: SocialProvidersConfig;
 	email?: EmailDeliveryConfig;
 	mcp?: McpAuthConfig;
+	dialect?: SqlDialect;
 	/** Local-only: log password-reset links and OTP codes to the Worker console. */
 	allowInsecureLogging?: boolean;
 	/**
@@ -198,6 +201,11 @@ export const createAuth = ({
 		};
 	}
 
+	if (dialect === "mysql") {
+		throw new Error(
+			"MySQL dialect is not implemented. Use sqlite or postgres.",
+		);
+	}
 	const emailDeliveryReady =
 		Boolean(email?.resendApiKey?.trim() && email?.from?.trim()) ||
 		allowInsecureLogging;
@@ -205,7 +213,7 @@ export const createAuth = ({
 
 	return betterAuth({
 		database: drizzleAdapter(db, {
-			provider: "sqlite",
+			provider: dialect === "postgres" ? "pg" : "sqlite",
 			schema: authSchema,
 		}),
 		secret,

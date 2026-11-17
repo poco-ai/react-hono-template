@@ -1,5 +1,6 @@
 import { and, asc, count, eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { runBatch } from "../db/run-batch";
 import { issueStatuses, issues } from "../db/schema";
 import type { Database } from "../db/types";
 import type { StatusDto } from "../dto/status.dto";
@@ -120,35 +121,37 @@ export const createStatusDao = (db: Database) => ({
 				.get();
 			return current ? toStatusDto(current) : null;
 		}
-		const statements: BatchItem<"sqlite">[] = [];
 		let returningIndex = 0;
-		if (hasPatch) {
-			const where = and(
-				eq(issueStatuses.orgId, orgId),
-				eq(issueStatuses.id, id),
-			);
-			const update = db.update(issueStatuses).set(patchEntries).where(where);
-			statements.push(promoteDefault ? update : update.returning());
-		}
-		if (promoteDefault) {
-			statements.push(
-				db
-					.update(issueStatuses)
-					.set({ isDefault: false })
-					.where(eq(issueStatuses.orgId, orgId)),
-			);
-			returningIndex = statements.length;
-			statements.push(
-				db
-					.update(issueStatuses)
-					.set({ isDefault: true })
-					.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
-					.returning(),
-			);
-		}
-		const results = await db.batch(
-			statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-		);
+		const results = await runBatch(db, (tx) => {
+			const statements: BatchItem<"sqlite">[] = [];
+			if (hasPatch) {
+				const where = and(
+					eq(issueStatuses.orgId, orgId),
+					eq(issueStatuses.id, id),
+				);
+				const update = tx.update(issueStatuses).set(patchEntries).where(where);
+				statements.push(promoteDefault ? update : update.returning());
+			}
+			if (promoteDefault) {
+				statements.push(
+					tx
+						.update(issueStatuses)
+						.set({ isDefault: false })
+						.where(eq(issueStatuses.orgId, orgId)),
+				);
+				returningIndex = statements.length;
+				statements.push(
+					tx
+						.update(issueStatuses)
+						.set({ isDefault: true })
+						.where(
+							and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)),
+						)
+						.returning(),
+				);
+			}
+			return statements;
+		});
 		const rows = results[returningIndex] as StatusRow[];
 		return rows.length > 0 ? toStatusDto(rows[0]) : null;
 	},
@@ -160,17 +163,17 @@ export const createStatusDao = (db: Database) => ({
 		if (ordered.length === 0) {
 			return;
 		}
-		const statements = ordered.map((entry) =>
-			db
-				.update(issueStatuses)
-				.set({ position: entry.position })
-				.where(
-					and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, entry.id)),
-				),
-		);
-		await db.batch(
-			statements as unknown as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-		);
+		await runBatch(db, (tx) => {
+			const statements = ordered.map((entry) =>
+				tx
+					.update(issueStatuses)
+					.set({ position: entry.position })
+					.where(
+						and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, entry.id)),
+					),
+			);
+			return statements;
+		});
 	},
 
 	/**
@@ -195,55 +198,55 @@ export const createStatusDao = (db: Database) => ({
 		actorId: string;
 		promoteDefaultId?: string;
 	}): Promise<boolean> => {
-		const statements: BatchItem<"sqlite">[] = [];
 		let migrateStatementCount = 0;
-		if (migrateToId && migrateToName) {
-			migrateStatementCount = 2;
-			// Written before the update so the SELECT still sees the old status.
+		const results = await runBatch(db, (tx) => {
+			const statements: BatchItem<"sqlite">[] = [];
+			if (migrateToId && migrateToName) {
+				migrateStatementCount = 2;
+				// Written before the update so the SELECT still sees the old status.
+				statements.push(
+					statusMigrationActivityStatement(tx, {
+						orgId,
+						statusId: id,
+						actorId,
+						oldStatusName,
+						newStatusName: migrateToName,
+					}),
+				);
+				statements.push(
+					tx
+						.update(issues)
+						.set({ statusId: migrateToId })
+						.where(and(eq(issues.orgId, orgId), eq(issues.statusId, id))),
+				);
+			}
 			statements.push(
-				statusMigrationActivityStatement(db, {
-					orgId,
-					statusId: id,
-					actorId,
-					oldStatusName,
-					newStatusName: migrateToName,
-				}),
+				tx
+					.delete(issueStatuses)
+					.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
+					.returning({ id: issueStatuses.id }),
 			);
-			statements.push(
-				db
-					.update(issues)
-					.set({ statusId: migrateToId })
-					.where(and(eq(issues.orgId, orgId), eq(issues.statusId, id))),
-			);
-		}
-		statements.push(
-			db
-				.delete(issueStatuses)
-				.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
-				.returning({ id: issueStatuses.id }),
-		);
-		if (promoteDefaultId) {
-			// Clear the previous default first: the partial unique index allows
-			// only one is_default row per organization.
-			statements.push(
-				db
-					.update(issueStatuses)
-					.set({ isDefault: false })
-					.where(eq(issueStatuses.orgId, orgId)),
-				db
-					.update(issueStatuses)
-					.set({ isDefault: true })
-					.where(
-						and(
-							eq(issueStatuses.orgId, orgId),
-							eq(issueStatuses.id, promoteDefaultId),
+			if (promoteDefaultId) {
+				// Clear the previous default first: the partial unique index allows
+				// only one is_default row per organization.
+				statements.push(
+					tx
+						.update(issueStatuses)
+						.set({ isDefault: false })
+						.where(eq(issueStatuses.orgId, orgId)),
+					tx
+						.update(issueStatuses)
+						.set({ isDefault: true })
+						.where(
+							and(
+								eq(issueStatuses.orgId, orgId),
+								eq(issueStatuses.id, promoteDefaultId),
+							),
 						),
-					),
-			);
-		}
-		const results = await db.batch(
-			statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-		);
+				);
+			}
+			return statements;
+		});
 		const deleted = results[migrateStatementCount] as
 			| { id: string }[]
 			| undefined;

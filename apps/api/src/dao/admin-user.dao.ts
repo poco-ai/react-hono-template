@@ -1,5 +1,6 @@
 import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { session as sessionTable, user as userTable } from "../db/auth-schema";
+import { runBatch } from "../db/run-batch";
 import type { Database } from "../db/types";
 import type {
 	AdminUserDto,
@@ -58,15 +59,15 @@ export const createAdminUserDao = (db: Database) => ({
 					sql`${userTable.email} like ${pattern} escape '\\'`,
 				)
 			: undefined;
-		const [rows, totals] = await db.batch([
-			db
+		const [rows, totals] = await runBatch(db, (tx) => [
+			tx
 				.select()
 				.from(userTable)
 				.where(where)
 				.orderBy(desc(userTable.createdAt))
 				.limit(pageSize)
 				.offset((page - 1) * pageSize),
-			db.select({ value: count() }).from(userTable).where(where),
+			tx.select({ value: count() }).from(userTable).where(where),
 		]);
 		return {
 			items: rows.map(toDto),
@@ -109,8 +110,8 @@ export const createAdminUserDao = (db: Database) => ({
 		id: string,
 		data: { banReason: string | null; banExpires: Date | null },
 	): Promise<AdminUserDto> => {
-		const [rows] = await db.batch([
-			db
+		const [rows] = await runBatch(db, (tx) => [
+			tx
 				.update(userTable)
 				.set({
 					banned: true,
@@ -119,7 +120,7 @@ export const createAdminUserDao = (db: Database) => ({
 				})
 				.where(eq(userTable.id, id))
 				.returning(),
-			db.delete(sessionTable).where(eq(sessionTable.userId, id)),
+			tx.delete(sessionTable).where(eq(sessionTable.userId, id)),
 		]);
 		return toDto(rows[0]);
 	},

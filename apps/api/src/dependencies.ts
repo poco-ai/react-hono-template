@@ -40,6 +40,7 @@ import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
 import type { CacheStore } from "./lib/kv/types";
+import type { PlanRateLimiters } from "./lib/rate-limit";
 import type { StorageAdapter } from "./lib/storage/types";
 import type { StripeSetup } from "./lib/stripe";
 import { createActivityService } from "./services/activity.service";
@@ -85,9 +86,7 @@ import {
 	type WebhookJobQueue,
 } from "./services/webhook-delivery.service";
 
-export type RateLimiter = {
-	limit: (options: { key: string }) => Promise<{ success: boolean }>;
-};
+export type { PlanRateLimiters, RateLimiter } from "./lib/rate-limit";
 
 export const createDependencies = ({
 	db,
@@ -111,10 +110,7 @@ export const createDependencies = ({
 	webhookQueue?: WebhookJobQueue | null;
 	aiConfig?: AiProviderConfig;
 	aiRateLimiters?: AiRateLimiters;
-	apiRateLimiters?: {
-		free?: RateLimiter;
-		pro?: RateLimiter;
-	};
+	apiRateLimiters?: PlanRateLimiters;
 	appWebUrl?: string;
 	resolvePublicApiUrl?: (requestUrl: string) => string;
 	allowFirstUserAdmin?: boolean;

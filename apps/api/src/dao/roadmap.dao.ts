@@ -1,4 +1,5 @@
 import { and, asc, count, eq, gte, isNull, lt } from "drizzle-orm";
+import { runBatch } from "../db/run-batch";
 import { cycles, issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import { openIssueCountSql, terminalIssueCountSql } from "./progress-sql";
@@ -55,8 +56,8 @@ export const createRoadmapDao = (db: Database) => ({
 			isNull(issues.deletedAt),
 			isNull(issues.archivedAt),
 		);
-		const [projectRows, cycleRows, statRows] = await db.batch([
-			db
+		const [projectRows, cycleRows, statRows] = await runBatch(db, (tx) => [
+			tx
 				.select({
 					id: projects.id,
 					key: projects.key,
@@ -68,7 +69,7 @@ export const createRoadmapDao = (db: Database) => ({
 				.from(projects)
 				.where(and(eq(projects.orgId, orgId), eq(projects.archived, false)))
 				.orderBy(asc(projects.name), asc(projects.id)),
-			db
+			tx
 				.select({
 					id: cycles.id,
 					projectId: cycles.projectId.as("roadmap_cycle_project_id"),
@@ -100,7 +101,7 @@ export const createRoadmapDao = (db: Database) => ({
 				)
 				.groupBy(cycles.id)
 				.orderBy(asc(cycles.startsAt), asc(cycles.id)),
-			db
+			tx
 				.select({
 					projectId: issues.projectId.as("roadmap_stat_project_id"),
 					total: count().as("roadmap_stat_total"),

@@ -1,6 +1,7 @@
 import { and, count, desc, eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
+import { runBatch } from "../db/run-batch";
 import { projects, projectUpdates } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -72,8 +73,8 @@ export const createProjectUpdateDao = (db: Database) => {
 			options: { page: number; pageSize: number },
 		): Promise<ListProjectUpdatesDto> => {
 			const where = projectScope(orgId, projectId);
-			const [rows, totals] = await db.batch([
-				db
+			const [rows, totals] = await runBatch(db, (tx) => [
+				tx
 					.select(UPDATE_SELECT)
 					.from(projectUpdates)
 					.leftJoin(user, eq(user.id, projectUpdates.authorId))
@@ -81,7 +82,7 @@ export const createProjectUpdateDao = (db: Database) => {
 					.orderBy(desc(projectUpdates.createdAt), desc(projectUpdates.id))
 					.limit(options.pageSize)
 					.offset((options.page - 1) * options.pageSize),
-				db.select({ value: count() }).from(projectUpdates).where(where),
+				tx.select({ value: count() }).from(projectUpdates).where(where),
 			]);
 			return {
 				items: rows.map(toProjectUpdateDto),
@@ -113,15 +114,17 @@ export const createProjectUpdateDao = (db: Database) => {
 			body: string;
 			health: string | null;
 		}): Promise<ProjectUpdateDto> => {
-			const statements: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
-				db.insert(projectUpdates).values(data),
-			];
-			if (data.health !== null) {
-				statements.push(
-					syncProjectHealthStatement(data.orgId, data.projectId, data.health),
-				);
-			}
-			await db.batch(statements);
+			await runBatch(db, (tx) => {
+				const statements: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
+					tx.insert(projectUpdates).values(data),
+				];
+				if (data.health !== null) {
+					statements.push(
+						syncProjectHealthStatement(data.orgId, data.projectId, data.health),
+					);
+				}
+				return statements;
+			});
 			// Re-read so the author projection matches list responses.
 			const created = await db
 				.select(UPDATE_SELECT)
@@ -149,27 +152,25 @@ export const createProjectUpdateDao = (db: Database) => {
 			const patchEntries = Object.fromEntries(
 				Object.entries(patch).filter(([, value]) => value !== undefined),
 			);
-			const statements: BatchItem<"sqlite">[] = [];
-			if (Object.keys(patchEntries).length > 0) {
-				statements.push(
-					db
-						.update(projectUpdates)
-						.set(patchEntries)
-						.where(
-							and(projectScope(orgId, projectId), eq(projectUpdates.id, id)),
-						),
-				);
-			}
-			if (typeof patch.health === "string") {
-				statements.push(
-					syncProjectHealthStatement(orgId, projectId, patch.health),
-				);
-			}
-			if (statements.length > 0) {
-				await db.batch(
-					statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-				);
-			}
+			await runBatch(db, (tx) => {
+				const statements: BatchItem<"sqlite">[] = [];
+				if (Object.keys(patchEntries).length > 0) {
+					statements.push(
+						tx
+							.update(projectUpdates)
+							.set(patchEntries)
+							.where(
+								and(projectScope(orgId, projectId), eq(projectUpdates.id, id)),
+							),
+					);
+				}
+				if (typeof patch.health === "string") {
+					statements.push(
+						syncProjectHealthStatement(orgId, projectId, patch.health),
+					);
+				}
+				return statements;
+			});
 			const row = await db
 				.select(UPDATE_SELECT)
 				.from(projectUpdates)

@@ -2,6 +2,7 @@ import { and, asc, count, eq, inArray, or } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { user } from "../db/auth-schema";
+import { runBatch } from "../db/run-batch";
 import {
 	attachments,
 	commentMentions,
@@ -72,8 +73,8 @@ export const createCommentDao = (db: Database) => ({
 		pageSize: number,
 	): Promise<ListCommentsDto> => {
 		const where = and(eq(comments.orgId, orgId), eq(comments.issueId, issueId));
-		const [rows, totals] = await db.batch([
-			db
+		const [rows, totals] = await runBatch(db, (tx) => [
+			tx
 				.select(COMMENT_SELECT)
 				.from(comments)
 				.innerJoin(user, eq(user.id, comments.authorId))
@@ -81,7 +82,7 @@ export const createCommentDao = (db: Database) => ({
 				.orderBy(asc(comments.createdAt), asc(comments.id))
 				.limit(pageSize)
 				.offset((page - 1) * pageSize),
-			db.select({ value: count() }).from(comments).where(where),
+			tx.select({ value: count() }).from(comments).where(where),
 		]);
 		return {
 			items: rows.map(toCommentDto),
@@ -103,17 +104,19 @@ export const createCommentDao = (db: Database) => ({
 		activity?: ActivityInsert,
 		mentions?: { commentId: string; userId: string }[],
 	): Promise<CommentDto> => {
-		const statements = [db.insert(comments).values(data)] as [
-			BatchItem<"sqlite">,
-			...BatchItem<"sqlite">[],
-		];
-		if (activity) {
-			statements.push(activityInsertStatement(db, [activity]));
-		}
-		if (mentions && mentions.length > 0) {
-			statements.push(...commentMentionInsertStatements(db, mentions));
-		}
-		await db.batch(statements);
+		await runBatch(db, (tx) => {
+			const statements = [tx.insert(comments).values(data)] as [
+				BatchItem<"sqlite">,
+				...BatchItem<"sqlite">[],
+			];
+			if (activity) {
+				statements.push(activityInsertStatement(tx, [activity]));
+			}
+			if (mentions && mentions.length > 0) {
+				statements.push(...commentMentionInsertStatements(tx, mentions));
+			}
+			return statements;
+		});
 		const created = await db
 			.select(COMMENT_SELECT)
 			.from(comments)
@@ -146,18 +149,20 @@ export const createCommentDao = (db: Database) => ({
 		body: string,
 		mentions?: { commentId: string; userId: string }[],
 	): Promise<CommentDto | null> => {
-		const statements = [
-			db
-				.update(comments)
-				.set({ body })
-				.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-				.returning({ id: comments.id }),
-			commentMentionDeleteStatement(db, id),
-		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		if (mentions && mentions.length > 0) {
-			statements.push(...commentMentionInsertStatements(db, mentions));
-		}
-		const [rows] = (await db.batch(statements)) as [{ id: string }[]];
+		const [rows] = (await runBatch(db, (tx) => {
+			const statements = [
+				tx
+					.update(comments)
+					.set({ body })
+					.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
+					.returning({ id: comments.id }),
+				commentMentionDeleteStatement(tx, id),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			if (mentions && mentions.length > 0) {
+				statements.push(...commentMentionInsertStatements(tx, mentions));
+			}
+			return statements;
+		})) as [{ id: string }[]];
 		if (rows.length === 0) {
 			return null;
 		}
@@ -185,14 +190,14 @@ export const createCommentDao = (db: Database) => ({
 			.where(and(eq(comments.orgId, orgId), eq(comments.parentId, id)));
 		const threadComment = (column: AnySQLiteColumn) =>
 			or(eq(column, id), inArray(column, replyIds));
-		const results = await db.batch([
-			db
+		const results = await runBatch(db, (tx) => [
+			tx
 				.delete(commentReactions)
 				.where(threadComment(commentReactions.commentId)),
-			db
+			tx
 				.delete(commentMentions)
 				.where(threadComment(commentMentions.commentId)),
-			db
+			tx
 				.delete(attachments)
 				.where(
 					and(
@@ -200,11 +205,11 @@ export const createCommentDao = (db: Database) => ({
 						threadComment(attachments.commentId),
 					),
 				),
-			db
+			tx
 				.update(notifications)
 				.set({ commentId: null })
 				.where(threadComment(notifications.commentId)),
-			db
+			tx
 				.delete(comments)
 				.where(and(eq(comments.orgId, orgId), threadComment(comments.id)))
 				.returning({ id: comments.id }),
@@ -220,17 +225,19 @@ export const createCommentDao = (db: Database) => ({
 		resolvedById: string | null,
 		activity?: ActivityInsert,
 	): Promise<boolean> => {
-		const statements = [
-			db
-				.update(comments)
-				.set({ resolvedAt, resolvedById })
-				.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-				.returning({ id: comments.id }),
-		] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
-		if (activity) {
-			statements.push(activityInsertStatement(db, [activity]));
-		}
-		const [rows] = (await db.batch(statements)) as [{ id: string }[], unknown?];
+		const [rows] = (await runBatch(db, (tx) => {
+			const statements = [
+				tx
+					.update(comments)
+					.set({ resolvedAt, resolvedById })
+					.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
+					.returning({ id: comments.id }),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			if (activity) {
+				statements.push(activityInsertStatement(tx, [activity]));
+			}
+			return statements;
+		})) as [{ id: string }[], unknown?];
 		return (rows?.length ?? 0) > 0;
 	},
 });

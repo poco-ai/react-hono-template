@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import { AwsClient } from "aws4fetch";
 import type { StorageAdapter } from "./types";
 
@@ -108,7 +107,16 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 	};
 };
 
-export const s3ClientFromEnv = (): StorageAdapter | null => {
+export type S3EnvConfig = {
+	S3_ACCESS_KEY_ID?: string;
+	S3_SECRET_ACCESS_KEY?: string;
+	S3_ENDPOINT?: string;
+	S3_BUCKET?: string;
+	S3_REGION?: string;
+	S3_PUBLIC_BASE_URL?: string;
+};
+
+export const s3ClientFromConfig = (env: S3EnvConfig): StorageAdapter | null => {
 	if (
 		!env.S3_ACCESS_KEY_ID ||
 		!env.S3_SECRET_ACCESS_KEY ||

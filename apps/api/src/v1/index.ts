@@ -44,7 +44,7 @@ export const createV1App = (dependencies: Dependencies) => {
 				? undefined
 				: fail(c, ApiErrorCode.VALIDATION, formatZodError(result.error), 400),
 	});
-	const rateLimiter = rateLimit(planService);
+	const rateLimiter = rateLimit(planService, dependencies.apiRateLimiters);
 
 	for (const base of ["/projects", "/issues", "/labels"]) {
 		app.use(`${base}/*`, requireApiKey(apiKeyDao));

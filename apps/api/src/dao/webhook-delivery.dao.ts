@@ -1,4 +1,5 @@
 import { and, count, desc, eq, lt, ne } from "drizzle-orm";
+import { runBatch } from "../db/run-batch";
 import { webhookDeliveries } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -151,15 +152,15 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 			eq(webhookDeliveries.orgId, orgId),
 			eq(webhookDeliveries.webhookId, webhookId),
 		);
-		const [rows, totals] = await db.batch([
-			db
+		const [rows, totals] = await runBatch(db, (tx) => [
+			tx
 				.select()
 				.from(webhookDeliveries)
 				.where(where)
 				.orderBy(desc(webhookDeliveries.createdAt))
 				.limit(pageSize)
 				.offset((page - 1) * pageSize),
-			db.select({ value: count() }).from(webhookDeliveries).where(where),
+			tx.select({ value: count() }).from(webhookDeliveries).where(where),
 		]);
 		return {
 			items: rows.map(toDeliveryDto),
@@ -175,15 +176,15 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 		pageSize: number,
 	): Promise<ListWebhookDeliveriesDto> => {
 		const where = eq(webhookDeliveries.orgId, orgId);
-		const [rows, totals] = await db.batch([
-			db
+		const [rows, totals] = await runBatch(db, (tx) => [
+			tx
 				.select()
 				.from(webhookDeliveries)
 				.where(where)
 				.orderBy(desc(webhookDeliveries.createdAt))
 				.limit(pageSize)
 				.offset((page - 1) * pageSize),
-			db.select({ value: count() }).from(webhookDeliveries).where(where),
+			tx.select({ value: count() }).from(webhookDeliveries).where(where),
 		]);
 		return {
 			items: rows.map(toDeliveryDto),

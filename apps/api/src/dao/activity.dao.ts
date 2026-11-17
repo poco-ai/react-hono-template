@@ -5,6 +5,7 @@ import { user } from "../db/auth-schema";
 import { activities, issueStatuses, issues, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ActivityDto, OrgActivityDto } from "../dto/activity.dto";
+import { sqlNow, sqlRandomId } from "../lib/sql-dialect";
 
 export type ActivityInsert = {
 	id: string;
@@ -73,8 +74,8 @@ export const activityInsertWhenStatement = (
 	db.insert(activities).select(sql`
 		SELECT ${row.id}, ${row.orgId}, ${row.projectId}, ${row.issueId},
 			${row.actorId}, ${row.action}, ${row.field}, ${row.oldValue},
-			${row.newValue}, ${row.source ?? null}, ${row.sourceId ?? null},
-			cast(unixepoch('subsecond') * 1000 as integer)
+			${row.newValue}, 			${row.source ?? null}, ${row.sourceId ?? null},
+			${sqlNow()}
 		WHERE ${condition}
 	`);
 
@@ -96,7 +97,7 @@ export const statusMigrationActivityStatement = (
 ): BatchItem<"sqlite"> =>
 	db.insert(activities).select(sql`
 		SELECT
-			lower(hex(randomblob(16))),
+			${sqlRandomId()},
 			${issues.orgId},
 			${issues.projectId},
 			${issues.id},
@@ -107,7 +108,7 @@ export const statusMigrationActivityStatement = (
 			${params.newStatusName},
 			NULL,
 			NULL,
-			cast(unixepoch('subsecond') * 1000 as integer)
+			${sqlNow()}
 		FROM ${issues}
 		WHERE ${issues.orgId} = ${params.orgId}
 			AND ${issues.statusId} = ${params.statusId}
@@ -140,7 +141,7 @@ export const cycleRolloverActivityStatement = (
 ): BatchItem<"sqlite"> =>
 	db.insert(activities).select(sql`
 		SELECT
-			lower(hex(randomblob(16))),
+			${sqlRandomId()},
 			${issues.orgId},
 			${issues.projectId},
 			${issues.id},
@@ -151,7 +152,7 @@ export const cycleRolloverActivityStatement = (
 			${params.targetName},
 			NULL,
 			NULL,
-			cast(unixepoch('subsecond') * 1000 as integer)
+			${sqlNow()}
 		FROM ${issues}
 		INNER JOIN ${issueStatuses}
 			ON ${issueStatuses.id} = ${issues.statusId}
@@ -179,7 +180,7 @@ export const cycleDetachActivityStatement = (
 ): BatchItem<"sqlite"> =>
 	db.insert(activities).select(sql`
 		SELECT
-			lower(hex(randomblob(16))),
+			${sqlRandomId()},
 			${issues.orgId},
 			${issues.projectId},
 			${issues.id},
@@ -190,7 +191,7 @@ export const cycleDetachActivityStatement = (
 			NULL,
 			NULL,
 			NULL,
-			cast(unixepoch('subsecond') * 1000 as integer)
+			${sqlNow()}
 		FROM ${issues}
 		WHERE ${issues.orgId} = ${params.orgId}
 			AND ${issues.cycleId} = ${params.sourceCycleId}

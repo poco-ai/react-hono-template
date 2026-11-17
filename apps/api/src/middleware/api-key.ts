@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import {
 	ApiError,
 	ApiErrorCode,
@@ -12,6 +11,7 @@ import type { ApiKeyDao } from "../dao/api-key.dao";
 import type { MemberDao } from "../dao/member.dao";
 import { backgroundFromContext } from "../lib/background";
 import { sha256Hex } from "../lib/crypto";
+import type { PlanRateLimiters } from "../lib/rate-limit";
 import { fail } from "../lib/response";
 import type { PlanService } from "../services/plan.service";
 
@@ -84,7 +84,10 @@ export const requireApiKey = (apiKeyDao: ApiKeyDao) =>
 		await next();
 	});
 
-export const rateLimit = (plans: PlanService) =>
+export const rateLimit = (
+	plans: PlanService,
+	limiters: PlanRateLimiters | undefined,
+) =>
 	createMiddleware<ApiKeyEnv>(async (c, next) => {
 		const auth = c.get("apiKeyAuth");
 		if (!auth) {
@@ -93,8 +96,15 @@ export const rateLimit = (plans: PlanService) =>
 		}
 		const plan = await plans.getPlanForOrg(auth.orgId);
 		const limitPerMin = PLANS[plan].apiRateLimit;
-		const limiter =
-			plan === "pro" ? env.RATE_LIMITER_PRO : env.RATE_LIMITER_FREE;
+		const limiter = plan === "pro" ? limiters?.pro : limiters?.free;
+		if (!limiter) {
+			return fail(
+				c,
+				ApiErrorCode.SERVICE_UNAVAILABLE,
+				"Rate limiter is not configured",
+				503,
+			);
+		}
 		const { success } = await limiter.limit({ key: auth.keyHash });
 		c.header("X-RateLimit-Limit", String(limitPerMin));
 		if (!success) {

@@ -1,6 +1,7 @@
 import type { IssueSubscriptionReason } from "@workspace/shared";
 import { and, eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { runBatch } from "../db/run-batch";
 import { issueSubscriptions } from "../db/schema";
 import type { Database } from "../db/types";
 
@@ -81,12 +82,7 @@ export const createIssueSubscriptionDao = (db: Database) => ({
 			reason: IssueSubscriptionReason;
 		}[],
 	): Promise<void> => {
-		const statements = issueSubscriptionInsertStatements(db, rows);
-		if (statements.length > 0) {
-			await db.batch(
-				statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-			);
-		}
+		await runBatch(db, (tx) => issueSubscriptionInsertStatements(tx, rows));
 	},
 
 	/** Manual toggle: create or unmute, preserving the original reason. */

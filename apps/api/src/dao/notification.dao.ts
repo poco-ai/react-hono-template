@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { user } from "../db/auth-schema";
+import { runBatch } from "../db/run-batch";
 import { comments, issues, notifications, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type {
@@ -162,14 +163,14 @@ export const createNotificationDao = (db: Database) => ({
 			conditions.push(isNull(notifications.readAt));
 		}
 		const where = and(...conditions);
-		const [rows, totals, unread] = await db.batch([
-			baseQuery(db)
+		const [rows, totals, unread] = await runBatch(db, (tx) => [
+			baseQuery(tx)
 				.where(where)
 				.orderBy(desc(notifications.createdAt), desc(notifications.id))
 				.limit(query.pageSize)
 				.offset((query.page - 1) * query.pageSize),
-			db.select({ value: count() }).from(notifications).where(where),
-			db
+			tx.select({ value: count() }).from(notifications).where(where),
+			tx
 				.select({ value: count() })
 				.from(notifications)
 				.where(
@@ -179,7 +180,7 @@ export const createNotificationDao = (db: Database) => ({
 						isNull(notifications.readAt),
 						inArray(
 							notifications.issueId,
-							db
+							tx
 								.select({ id: issues.id })
 								.from(issues)
 								.where(isNull(issues.deletedAt)),
@@ -309,13 +310,13 @@ export const createNotificationDao = (db: Database) => ({
 		unreadBefore: Date;
 		limit: number;
 	}): Promise<number> => {
-		const [readRows, unreadRows] = await db.batch([
-			db
+		const [readRows, unreadRows] = await runBatch(db, (tx) => [
+			tx
 				.delete(notifications)
 				.where(
 					inArray(
 						notifications.id,
-						db
+						tx
 							.select({ id: notifications.id })
 							.from(notifications)
 							.where(
@@ -328,12 +329,12 @@ export const createNotificationDao = (db: Database) => ({
 					),
 				)
 				.returning({ id: notifications.id }),
-			db
+			tx
 				.delete(notifications)
 				.where(
 					inArray(
 						notifications.id,
-						db
+						tx
 							.select({ id: notifications.id })
 							.from(notifications)
 							.where(
@@ -365,15 +366,13 @@ export const createNotificationDao = (db: Database) => ({
 			reason: IssueSubscriptionReason;
 		}[] = [],
 	): Promise<void> => {
-		const statements: BatchItem<"sqlite">[] = [
-			...notificationInsertStatements(db, rows),
-			...issueSubscriptionInsertStatements(db, subscriptions),
-		];
-		if (statements.length > 0) {
-			await db.batch(
-				statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-			);
-		}
+		await runBatch(db, (tx) => {
+			const statements: BatchItem<"sqlite">[] = [
+				...notificationInsertStatements(tx, rows),
+				...issueSubscriptionInsertStatements(tx, subscriptions),
+			];
+			return statements;
+		});
 	},
 });
 

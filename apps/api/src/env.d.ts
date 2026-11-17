@@ -30,6 +30,7 @@ interface AppEnv {
 	AI_MAX_STEPS?: string;
 	AI_MAX_OUTPUT_TOKENS?: string;
 	APP_WEB_URL?: string;
+	TRUSTED_ORIGINS?: string;
 	MCP_RESOURCE?: string;
 	MCP_LOGIN_PAGE?: string;
 	MCP_CONSENT_PAGE?: string;

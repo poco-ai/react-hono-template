@@ -1,4 +1,5 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
+import { runBatch } from "../db/run-batch";
 import { apiKeys } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ApiKeyDto, ListApiKeysDto } from "../dto/api-key.dto";
@@ -90,15 +91,15 @@ export const createApiKeyDao = (db: Database) => ({
 		pageSize: number,
 	): Promise<ListApiKeysDto> => {
 		const where = eq(apiKeys.orgId, orgId);
-		const [rows, totals] = await db.batch([
-			db
+		const [rows, totals] = await runBatch(db, (tx) => [
+			tx
 				.select(LIST_COLUMNS)
 				.from(apiKeys)
 				.where(where)
 				.orderBy(desc(apiKeys.createdAt))
 				.limit(pageSize)
 				.offset((page - 1) * pageSize),
-			db.select({ value: count() }).from(apiKeys).where(where),
+			tx.select({ value: count() }).from(apiKeys).where(where),
 		]);
 		return {
 			items: rows.map(toApiKeyDto),

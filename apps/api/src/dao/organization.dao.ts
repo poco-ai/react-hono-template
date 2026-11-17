@@ -1,6 +1,7 @@
 import type { PlanName } from "@workspace/shared";
 import { count, desc, eq, or, type SQL, sql } from "drizzle-orm";
 import { organization, user as userTable } from "../db/auth-schema";
+import { runBatch } from "../db/run-batch";
 import { issues, subscriptions } from "../db/schema";
 import type { Database } from "../db/types";
 import type { AdminStatsDto, ListAdminOrgsDto } from "../dto/admin-org.dto";
@@ -63,8 +64,8 @@ export const createOrganizationDao = (db: Database) => ({
 					sql`${organization.slug} like ${`%${escapeLike(search)}%`} escape '\\'`,
 				)
 			: undefined;
-		const [rows, totals] = await db.batch([
-			db
+		const [rows, totals] = await runBatch(db, (tx) => [
+			tx
 				.select({
 					id: organization.id,
 					name: organization.name,
@@ -82,7 +83,7 @@ export const createOrganizationDao = (db: Database) => ({
 				.orderBy(desc(organization.createdAt))
 				.limit(pageSize)
 				.offset((page - 1) * pageSize),
-			db.select({ value: count() }).from(organization).where(where),
+			tx.select({ value: count() }).from(organization).where(where),
 		]);
 		return {
 			items: rows.map((row) => ({
@@ -113,11 +114,11 @@ export const createOrganizationDao = (db: Database) => ({
 	},
 
 	getStats: async (): Promise<AdminStatsDto> => {
-		const [users, orgs, issueRows, proOrgs] = await db.batch([
-			db.select({ value: count() }).from(userTable),
-			db.select({ value: count() }).from(organization),
-			db.select({ value: count() }).from(issues),
-			db
+		const [users, orgs, issueRows, proOrgs] = await runBatch(db, (tx) => [
+			tx.select({ value: count() }).from(userTable),
+			tx.select({ value: count() }).from(organization),
+			tx.select({ value: count() }).from(issues),
+			tx
 				.select({ value: count() })
 				.from(subscriptions)
 				.where(eq(subscriptions.plan, "pro")),

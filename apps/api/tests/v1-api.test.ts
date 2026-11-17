@@ -8,28 +8,15 @@ import {
 } from "@workspace/shared";
 import type { Dependencies } from "../src/dependencies";
 import type { ProjectDto } from "../src/dto/project.dto";
+import { sha256Hex } from "../src/lib/crypto";
+import type { PlanRateLimiters } from "../src/lib/rate-limit";
+import { createV1App } from "../src/v1/index";
 
-// The public API's middleware reads rate-limiter bindings from the Workers
-// runtime module, which only exists inside workerd. `src/v1/index` evaluates
-// `src/middleware/api-key`, so the module mock must be installed before the
-// app module is imported — hence the dynamic imports at the top of the file.
-// `bun:test` goes through a variable because this package's tsconfig only
-// loads @types/node, and the literal specifier would not resolve.
 let limiterAllows = true;
-const runtimeModule = "cloudflare:workers";
-const bunTestModule = "bun:test";
-const { mock } = (await import(bunTestModule)) as {
-	mock: { module: (specifier: string, factory: () => unknown) => void };
+const limiters: PlanRateLimiters = {
+	free: { limit: async () => ({ success: limiterAllows }) },
+	pro: { limit: async () => ({ success: limiterAllows }) },
 };
-mock.module(runtimeModule, () => ({
-	env: {
-		RATE_LIMITER_FREE: { limit: async () => ({ success: limiterAllows }) },
-		RATE_LIMITER_PRO: { limit: async () => ({ success: limiterAllows }) },
-	},
-}));
-
-const { createV1App } = await import("../src/v1/index");
-const { sha256Hex } = await import("../src/lib/crypto");
 
 const ORG_ID = "org-1";
 const KEY_ID = "key-1";
@@ -138,6 +125,7 @@ const setup = ({
 				},
 			},
 		},
+		apiRateLimiters: limiters,
 	} as unknown as Dependencies;
 	return { app: createV1App(dependencies), calls };
 };

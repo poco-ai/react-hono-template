@@ -1,6 +1,7 @@
 import { type IssueQuery, issueQuerySchema } from "@workspace/shared";
 import { and, count, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { runBatch } from "../db/run-batch";
 import { views } from "../db/schema";
 import type { Database } from "../db/types";
 import type { ViewDto } from "../dto/view.dto";
@@ -111,18 +112,17 @@ export const createViewDao = (db: Database) => ({
 	},
 
 	create: async (data: ViewInsert): Promise<ViewDto> => {
-		const insert = db.insert(views).values(data).returning();
 		if (!data.isDefault) {
-			const rows = await insert;
+			const rows = await db.insert(views).values(data).returning();
 			return toViewDto(rows[0]);
 		}
-		const [, inserted] = await db.batch([
+		const [, inserted] = await runBatch(db, (tx) => [
 			clearDefaultStatement(
-				db,
+				tx,
 				data.orgId,
 				data.ownerId,
 			) as BatchItem<"sqlite">,
-			insert as BatchItem<"sqlite">,
+			tx.insert(views).values(data).returning() as BatchItem<"sqlite">,
 		]);
 		const rows = inserted as ViewRow[];
 		return toViewDto(rows[0]);
@@ -159,9 +159,9 @@ export const createViewDao = (db: Database) => ({
 				.get();
 			return row ? toViewDto(row) : null;
 		}
-		const [, rows] = await db.batch([
-			clearDefaultStatement(db, orgId, ownerId) as BatchItem<"sqlite">,
-			db
+		const [, rows] = await runBatch(db, (tx) => [
+			clearDefaultStatement(tx, orgId, ownerId) as BatchItem<"sqlite">,
+			tx
 				.update(views)
 				.set(patchEntries)
 				.where(scope)
@@ -187,9 +187,9 @@ export const createViewDao = (db: Database) => ({
 				.get();
 			return row ? toViewDto(row) : null;
 		}
-		const [, rows] = await db.batch([
-			clearDefaultStatement(db, orgId, ownerId) as BatchItem<"sqlite">,
-			db
+		const [, rows] = await runBatch(db, (tx) => [
+			clearDefaultStatement(tx, orgId, ownerId) as BatchItem<"sqlite">,
+			tx
 				.update(views)
 				.set({ isDefault: true })
 				.where(scope)
