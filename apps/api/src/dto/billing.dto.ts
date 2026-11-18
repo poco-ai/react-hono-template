@@ -1,4 +1,9 @@
-import type { PlanLimits, PlanName } from "@workspace/shared";
+import type {
+	MeterId,
+	PlanLimits,
+	PlanName,
+	QuotaMode,
+} from "@workspace/shared";
 
 export type BillingUsageDto = {
 	members: number;
@@ -7,10 +12,32 @@ export type BillingUsageDto = {
 	storageBytes: number;
 };
 
+export type MeterUsageDto = {
+	meter: MeterId;
+	mode: QuotaMode;
+	unit: "tokens" | "bytes";
+	included: number;
+	used: number;
+	reserved: number;
+	creditRate: number;
+};
+
+export type CreditPoolDto = {
+	balance: number;
+	reserved: number;
+	available: number;
+};
+
+export type BillingLimits = {
+	[K in keyof PlanLimits]: number;
+};
+
 export type BillingDto = {
 	plan: PlanName;
-	limits: PlanLimits;
+	limits: BillingLimits;
 	usage: BillingUsageDto;
+	meters: MeterUsageDto[];
+	credits: CreditPoolDto;
 	stripeEnabled: boolean;
 	mockMode: boolean;
 	currentPeriodEnd: string | null;

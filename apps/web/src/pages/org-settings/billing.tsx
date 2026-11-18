@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BillingSettings } from "@/components/auth/billing/billing-settings";
 import { DowngradeDialog } from "@/features/billing/components/downgrade-dialog";
+import { QuotaSummary } from "@/features/billing/components/quota-summary";
 import { UpgradeDialog } from "@/features/billing/components/upgrade-dialog";
 import {
 	type BillingConfirmation,
@@ -65,6 +66,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 					</Button>
 				</div>
 			)}
+			<QuotaSummary orgId={orgId} />
 			<BillingSettings
 				key={orgId}
 				adapter={adapter}

@@ -6,6 +6,7 @@ import {
 import type { AiProviderInfo } from "../ai/provider";
 import type { OrgAiSettingsDao } from "../dao/org-ai-settings.dao";
 import type { OrgAiSettingsDto } from "../dto/ai.dto";
+import type { AuditService } from "./audit.service";
 
 export const DEFAULT_AI_SETTINGS = {
 	enabled: true,
@@ -26,8 +27,10 @@ const defaultsFor = (orgId: string): OrgAiSettingsDto => ({
 
 export const createOrgAiSettingsService = ({
 	settingsDao,
+	audit,
 }: {
 	settingsDao: OrgAiSettingsDao;
+	audit?: Pick<AuditService, "record">;
 }) => ({
 	get: async (orgId: string): Promise<OrgAiSettingsDto> =>
 		(await settingsDao.findByOrg(orgId)) ?? defaultsFor(orgId),
@@ -56,7 +59,7 @@ export const createOrgAiSettingsService = ({
 		}
 
 		const current = (await settingsDao.findByOrg(orgId)) ?? defaultsFor(orgId);
-		return settingsDao.upsert(orgId, {
+		const next = await settingsDao.upsert(orgId, {
 			enabled: input.enabled ?? current.enabled,
 			defaultModel:
 				input.defaultModel !== undefined
@@ -66,6 +69,27 @@ export const createOrgAiSettingsService = ({
 			strictMcpWrites: input.strictMcpWrites ?? current.strictMcpWrites,
 			updatedBy: userId,
 		});
+		await audit?.record({
+			orgId,
+			actorType: "user",
+			actorId: userId,
+			action: "ai.settings_changed",
+			targetType: "org_ai_settings",
+			targetId: orgId,
+			before: {
+				enabled: current.enabled,
+				defaultModel: current.defaultModel,
+				retentionDays: current.retentionDays,
+				strictMcpWrites: current.strictMcpWrites,
+			},
+			after: {
+				enabled: next.enabled,
+				defaultModel: next.defaultModel,
+				retentionDays: next.retentionDays,
+				strictMcpWrites: next.strictMcpWrites,
+			},
+		});
+		return next;
 	},
 });
 

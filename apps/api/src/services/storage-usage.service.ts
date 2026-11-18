@@ -3,6 +3,7 @@ import type { AttachmentDao } from "../dao/attachment.dao";
 import type { MediaAssetDao } from "../dao/media-asset.dao";
 import type { PendingUploadDao } from "../dao/pending-upload.dao";
 import type { PlanService } from "./plan.service";
+import type { QuotaService } from "./quota.service";
 
 export type UploadQuotaTarget =
 	| { kind: "issue_attachment"; issueId: string }
@@ -20,6 +21,7 @@ export const createStorageUsageService = ({
 	pendingUploadDao,
 	mediaAssetDao,
 	plans,
+	quota,
 }: {
 	attachmentDao: Pick<
 		AttachmentDao,
@@ -31,6 +33,10 @@ export const createStorageUsageService = ({
 	>;
 	mediaAssetDao: Pick<MediaAssetDao, "sumActiveSizeByOrg">;
 	plans: Pick<PlanService, "getLimitsForOrg">;
+	quota?: Pick<
+		QuotaService,
+		"authorizeStorage" | "settle" | "release" | "reconcileGauge"
+	>;
 }) => {
 	return {
 		getOrgUsage: async (
@@ -55,6 +61,7 @@ export const createStorageUsageService = ({
 			size: number,
 			target: UploadQuotaTarget,
 			now = new Date(),
+			hold?: { idempotencyKey: string; actorId?: string },
 		): Promise<void> => {
 			const limits = await plans.getLimitsForOrg(orgId);
 			if (
@@ -72,7 +79,16 @@ export const createStorageUsageService = ({
 				pendingUploadDao.sumDeclaredSizeByOrg(orgId, now),
 				mediaAssetDao.sumActiveSizeByOrg(orgId),
 			]);
-			if (attachments + pending + media + size > limits.storageBytes) {
+			if (quota) {
+				await quota.authorizeStorage({
+					orgId,
+					currentBytes: attachments + pending + media,
+					incomingBytes: size,
+					idempotencyKey:
+						hold?.idempotencyKey ?? `storage:${crypto.randomUUID()}`,
+					actor: { actorType: "user", actorId: hold?.actorId },
+				});
+			} else if (attachments + pending + media + size > limits.storageBytes) {
 				throw new ApiError(
 					ApiErrorCode.STORAGE_QUOTA_EXCEEDED,
 					"Organization storage quota exceeded",
@@ -111,6 +127,41 @@ export const createStorageUsageService = ({
 					"Comment attachment limit exceeded",
 				);
 			}
+		},
+
+		settleHold: async (
+			orgId: string,
+			idempotencyKey: string,
+		): Promise<void> => {
+			await quota?.settle({
+				orgId,
+				idempotencyKey,
+				actualQuantity: 0,
+				consumeAll: true,
+			});
+		},
+
+		releaseHold: async (
+			orgId: string,
+			idempotencyKey: string,
+		): Promise<void> => {
+			await quota?.release({ orgId, idempotencyKey });
+		},
+
+		refundGauge: async (
+			orgId: string,
+			previousBytes: number,
+			nextBytes: number,
+			sourceId: string,
+			actorId?: string,
+		): Promise<void> => {
+			await quota?.reconcileGauge({
+				orgId,
+				previousBytes,
+				nextBytes,
+				sourceId,
+				actor: { actorType: "user", actorId },
+			});
 		},
 	};
 };

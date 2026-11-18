@@ -12,6 +12,7 @@ import { createAdminRoutes } from "./routes/admin";
 import { createAiRoutes } from "./routes/ai";
 import { createApiKeysRoutes } from "./routes/api-keys";
 import { createAttachmentsRoutes } from "./routes/attachments";
+import { createAuditRoutes } from "./routes/audit";
 import { createBillingRoutes } from "./routes/billing";
 import { createBootstrapRoutes } from "./routes/bootstrap";
 import { createCommentsRoutes } from "./routes/comments";
@@ -66,6 +67,8 @@ export const createRoutes = ({
 					users: dependencies.services.adminUserService,
 					orgs: dependencies.services.adminOrgService,
 					config: dependencies.services.configService,
+					audit: dependencies.services.auditService,
+					quota: dependencies.services.quotaService,
 				}),
 			)
 			// The authenticated org wildcard prefix is mounted before the resource
@@ -125,6 +128,7 @@ export const createRoutes = ({
 			.route("/", createApiKeysRoutes(dependencies.services.apiKeyService))
 			.route("/", createWebhooksRoutes(dependencies.services.webhookService))
 			.route("/", createBillingRoutes(dependencies.services.billingService))
+			.route("/", createAuditRoutes(dependencies.services.auditService))
 			.route(
 				"/",
 				createAiRoutes({

@@ -192,24 +192,38 @@ export const createAttachmentService = ({
 			const s3 = requireStorage(storage);
 			const issue = await requireWritableIssue(orgId, projectId, number);
 			assertContentTypeAllowed(input.contentType);
-			await storageUsage.assertCanUpload(orgId, input.size, {
-				kind: "issue_attachment",
-				issueId: issue.id,
-			});
 			const key = `orgs/${orgId}/issues/${issue.id}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
-			return reserveUpload({
-				pendingUploadDao,
-				storage: s3,
-				logLabel: "attachment",
-				kind: "issue_attachment",
-				orgId,
-				userId,
-				key,
-				targetId: issue.id,
-				declaredSize: input.size,
-				contentType: input.contentType,
-				expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-			});
+			const holdKey = `storage:${key}`;
+			try {
+				await storageUsage.assertCanUpload(
+					orgId,
+					input.size,
+					{ kind: "issue_attachment", issueId: issue.id },
+					new Date(),
+					{ idempotencyKey: holdKey, actorId: userId },
+				);
+			} catch (error) {
+				await storageUsage.releaseHold(orgId, holdKey);
+				throw error;
+			}
+			try {
+				return await reserveUpload({
+					pendingUploadDao,
+					storage: s3,
+					logLabel: "attachment",
+					kind: "issue_attachment",
+					orgId,
+					userId,
+					key,
+					targetId: issue.id,
+					declaredSize: input.size,
+					contentType: input.contentType,
+					expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
+				});
+			} catch (error) {
+				await storageUsage.releaseHold(orgId, holdKey);
+				throw error;
+			}
 		},
 
 		register: async (
@@ -291,6 +305,7 @@ export const createAttachmentService = ({
 				),
 				input.key,
 			);
+			await storageUsage.settleHold(orgId, `storage:${input.key}`);
 			const url = storage
 				? await storage.presignGet(
 						attachment.key,
@@ -361,6 +376,7 @@ export const createAttachmentService = ({
 					console.error("[attachment] storage delete failed:", e);
 				}
 			}
+			const before = await storageUsage.getOrgUsage(orgId);
 			await attachmentDao.delete(
 				orgId,
 				attachmentId,
@@ -372,6 +388,14 @@ export const createAttachmentService = ({
 					"attachment.removed",
 					attachment.filename,
 				),
+			);
+			const after = await storageUsage.getOrgUsage(orgId);
+			await storageUsage.refundGauge(
+				orgId,
+				before.total,
+				after.total,
+				attachment.id,
+				actor.userId,
 			);
 			return { deleted: true };
 		},
@@ -389,24 +413,33 @@ export const createAttachmentService = ({
 			const comment = await requireCommentOnIssue(orgId, issue.id, commentId);
 			assertCommentAuthor(comment, userId);
 			assertContentTypeAllowed(input.contentType);
-			await storageUsage.assertCanUpload(orgId, input.size, {
-				kind: "comment_attachment",
-				commentId: comment.id,
-			});
 			const key = `orgs/${orgId}/issues/${issue.id}/comments/${comment.id}/${crypto.randomUUID()}.${extensionOf(input.filename)}`;
-			return reserveUpload({
-				pendingUploadDao,
-				storage: s3,
-				logLabel: "attachment",
-				kind: "comment_attachment",
-				orgId,
-				userId,
-				key,
-				targetId: comment.id,
-				declaredSize: input.size,
-				contentType: input.contentType,
-				expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
-			});
+			const holdKey = `storage:${key}`;
+			try {
+				await storageUsage.assertCanUpload(
+					orgId,
+					input.size,
+					{ kind: "comment_attachment", commentId: comment.id },
+					new Date(),
+					{ idempotencyKey: holdKey, actorId: userId },
+				);
+				return await reserveUpload({
+					pendingUploadDao,
+					storage: s3,
+					logLabel: "attachment",
+					kind: "comment_attachment",
+					orgId,
+					userId,
+					key,
+					targetId: comment.id,
+					declaredSize: input.size,
+					contentType: input.contentType,
+					expiresIn: ATTACHMENT_UPLOAD_URL_EXPIRES_IN,
+				});
+			} catch (error) {
+				await storageUsage.releaseHold(orgId, holdKey);
+				throw error;
+			}
 		},
 
 		registerComment: async (
@@ -493,6 +526,7 @@ export const createAttachmentService = ({
 				),
 				input.key,
 			);
+			await storageUsage.settleHold(orgId, `storage:${input.key}`);
 			const [result] = await withUrls([attachment]);
 			await webhooks?.dispatch(
 				orgId,
@@ -556,6 +590,7 @@ export const createAttachmentService = ({
 					console.error("[attachment] storage delete failed:", error);
 				}
 			}
+			const before = await storageUsage.getOrgUsage(orgId);
 			await attachmentDao.delete(
 				orgId,
 				attachmentId,
@@ -568,6 +603,14 @@ export const createAttachmentService = ({
 					attachment.filename,
 					comment.id,
 				),
+			);
+			const after = await storageUsage.getOrgUsage(orgId);
+			await storageUsage.refundGauge(
+				orgId,
+				before.total,
+				after.total,
+				attachment.id,
+				actor.userId,
 			);
 			return { deleted: true };
 		},

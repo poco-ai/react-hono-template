@@ -10,6 +10,7 @@ import {
 	PENDING_CLEANUP_LIMIT,
 	SUPERSEDED_MEDIA_TTL_MS,
 } from "../lib/storage/uploads";
+import type { QuotaService } from "./quota.service";
 
 export const ABANDONED_DELIVERY_AGE_MS = 15 * 60 * 1000;
 export const ABANDONED_DELIVERY_ERROR = "delivery timed out";
@@ -34,6 +35,7 @@ export const createCleanupService = ({
 	mediaAssetDao,
 	notificationDao,
 	storage,
+	quota,
 }: {
 	memberDao: MemberDao;
 	deliveryDao: WebhookDeliveryDao;
@@ -49,6 +51,7 @@ export const createCleanupService = ({
 	>;
 	notificationDao?: Pick<NotificationDao, "deleteOlderThan">;
 	storage?: StorageAdapter | null;
+	quota?: Pick<QuotaService, "release">;
 }) => {
 	return {
 		cleanup: async (now = new Date()) => {
@@ -89,6 +92,12 @@ export const createCleanupService = ({
 							(await mediaAssetDao?.existsByKey(row.key));
 						if (storage && !registered) {
 							await storage.remove(row.key);
+						}
+						if (row.orgId) {
+							await quota?.release({
+								orgId: row.orgId,
+								idempotencyKey: `storage:${row.key}`,
+							});
 						}
 						expiredPendingUploads += 1;
 					} catch (error) {

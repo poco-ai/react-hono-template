@@ -12,6 +12,7 @@ import { createAiToolCallDao } from "./dao/ai-tool-call.dao";
 import { createAiUsageDao } from "./dao/ai-usage.dao";
 import { createApiKeyDao } from "./dao/api-key.dao";
 import { createAttachmentDao } from "./dao/attachment.dao";
+import { createAuditDao } from "./dao/audit.dao";
 import { createBillingDao } from "./dao/billing.dao";
 import { createCommentDao } from "./dao/comment.dao";
 import { createCommentMentionDao } from "./dao/comment-mention.dao";
@@ -30,6 +31,7 @@ import { createOrganizationDao } from "./dao/organization.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
 import { createProjectDao } from "./dao/project.dao";
 import { createProjectUpdateDao } from "./dao/project-update.dao";
+import { createQuotaDao } from "./dao/quota.dao";
 import { createRecurrenceDao } from "./dao/recurrence.dao";
 import { createRelationDao } from "./dao/relation.dao";
 import { createRoadmapDao } from "./dao/roadmap.dao";
@@ -54,6 +56,7 @@ import {
 } from "./services/ai-usage.service";
 import { createApiKeyService } from "./services/api-key.service";
 import { createAttachmentService } from "./services/attachment.service";
+import { createAuditService } from "./services/audit.service";
 import { createAuthPolicyService } from "./services/auth-policy.service";
 import { createBillingService } from "./services/billing.service";
 import { createBootstrapService } from "./services/bootstrap.service";
@@ -73,6 +76,7 @@ import { createOrganizationService } from "./services/organization.service";
 import { createPlanService } from "./services/plan.service";
 import { createProjectService } from "./services/project.service";
 import { createProjectUpdateService } from "./services/project-update.service";
+import { createQuotaService } from "./services/quota.service";
 import { createRecurrenceService } from "./services/recurrence.service";
 import { createRelationService } from "./services/relation.service";
 import { createRoadmapService } from "./services/roadmap.service";
@@ -157,6 +161,13 @@ export const createDependencies = ({
 	const aiUsageDao = createAiUsageDao(db);
 	const orgAiSettingsDao = createOrgAiSettingsDao(db);
 	const planService = createPlanService(billingDao, cache);
+	const auditService = createAuditService(createAuditDao(db));
+	const quotaService = createQuotaService({
+		dao: createQuotaDao(db),
+		plans: planService,
+		audit: auditService,
+		usageDao: aiUsageDao,
+	});
 
 	const searchService = createSearchService(createSearchDao(db));
 
@@ -176,6 +187,7 @@ export const createDependencies = ({
 		pendingUploadDao,
 		mediaAssetDao,
 		plans: planService,
+		quota: quotaService,
 	});
 	const cleanupService = createCleanupService({
 		memberDao,
@@ -186,12 +198,14 @@ export const createDependencies = ({
 		mediaAssetDao,
 		notificationDao,
 		storage,
+		quota: quotaService,
 	});
 	const webhookService = createWebhookService({
 		webhookDao,
 		deliveryDao: webhookDeliveryDao,
 		plans: planService,
 		deliveries: webhookDeliveryService,
+		audit: auditService,
 	});
 
 	const projectService = createProjectService({
@@ -280,13 +294,14 @@ export const createDependencies = ({
 		subscriptionDao: issueSubscriptionDao,
 	});
 	const activityService = createActivityService({ activityDao, issueDao });
-	const apiKeyService = createApiKeyService(apiKeyDao);
+	const apiKeyService = createApiKeyService(apiKeyDao, auditService);
 	const aiUsageService = createAiUsageService({
 		usageDao: aiUsageDao,
 		rateLimiters: aiRateLimiters,
 	});
 	const orgAiSettingsService = createOrgAiSettingsService({
 		settingsDao: orgAiSettingsDao,
+		audit: auditService,
 	});
 	const contextDaos = { projectDao, issueDao };
 	const aiConversationService = createAiConversationService({
@@ -331,6 +346,7 @@ export const createDependencies = ({
 		messageDao: aiMessageDao,
 		toolCallDao: aiToolCallDao,
 		usageService: aiUsageService,
+		quota: quotaService,
 		settingsService: orgAiSettingsService,
 		capabilityLayer,
 		plans: planService,
@@ -351,6 +367,8 @@ export const createDependencies = ({
 		mockEnabled: billingMockEnabled,
 		plans: planService,
 		storageUsage: storageUsageService,
+		quota: quotaService,
+		audit: auditService,
 	});
 
 	const bootstrapService = createBootstrapService(adminUserDao);
@@ -423,6 +441,8 @@ export const createDependencies = ({
 			cleanupService,
 			billingService,
 			planService,
+			quotaService,
+			auditService,
 			bootstrapService,
 			configService,
 			authPolicyService,

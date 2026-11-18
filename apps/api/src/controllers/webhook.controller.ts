@@ -47,6 +47,7 @@ export const createWebhookController = (service: WebhookService) => ({
 			await service.deleteWebhook(
 				c.get("orgMember").orgId,
 				c.req.valid("param").webhookId,
+				c.get("session").user.id,
 			),
 		),
 

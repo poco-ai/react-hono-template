@@ -13,12 +13,18 @@ export const createBillingController = (service: BillingService) => ({
 	checkout: async (c: Context<Env>) => {
 		const orgId = c.get("orgMember").orgId;
 		const origin = c.req.header("origin") ?? new URL(c.req.url).origin;
-		return ok(c, await service.createCheckout(orgId, origin));
+		return ok(
+			c,
+			await service.createCheckout(orgId, origin, c.get("session").user.id),
+		);
 	},
 
 	portal: async (c: Context<Env>) => {
 		const orgId = c.get("orgMember").orgId;
 		const origin = c.req.header("origin") ?? new URL(c.req.url).origin;
-		return ok(c, await service.createPortal(orgId, origin));
+		return ok(
+			c,
+			await service.createPortal(orgId, origin, c.get("session").user.id),
+		);
 	},
 });

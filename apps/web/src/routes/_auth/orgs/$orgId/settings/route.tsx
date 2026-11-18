@@ -38,6 +38,10 @@ function SettingsLayout() {
 						to: "/orgs/$orgId/settings/webhooks",
 						label: t("settings.webhooks"),
 					},
+					{
+						to: "/orgs/$orgId/settings/audit",
+						label: t("settings.audit"),
+					},
 				]
 			: []),
 		// Billing reads stay open to every member; write controls are gated in the page.

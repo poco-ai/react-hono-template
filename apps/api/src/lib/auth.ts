@@ -135,6 +135,7 @@ export const createAuth = ({
 	mcp,
 	allowInsecureLogging = false,
 	onOrganizationCreated,
+	onMemberAudit,
 	dialect = getSqlDialect(),
 }: {
 	db: Database;
@@ -153,6 +154,15 @@ export const createAuth = ({
 	 * better-auth organization creation hook, after the org row exists.
 	 */
 	onOrganizationCreated?: (orgId: string) => Promise<unknown>;
+	onMemberAudit?: (event: {
+		orgId: string;
+		actorId: string | null;
+		action: "member.invited" | "member.removed" | "member.role_changed";
+		targetType: string;
+		targetId: string | null;
+		before?: Record<string, unknown> | null;
+		after?: Record<string, unknown> | null;
+	}) => Promise<unknown>;
 }) => {
 	const providers = enabledSocialProviders(social);
 	const trimmedBaseURL = baseURL?.trim();
@@ -294,6 +304,42 @@ export const createAuth = ({
 				organizationHooks: {
 					afterCreateOrganization: async ({ organization: created }) => {
 						await onOrganizationCreated?.(created.id);
+					},
+					afterCreateInvitation: async ({ invitation, inviter }) => {
+						await onMemberAudit?.({
+							orgId: invitation.organizationId,
+							actorId: inviter.id,
+							action: "member.invited",
+							targetType: "invitation",
+							targetId: invitation.id,
+							after: { email: invitation.email, role: invitation.role },
+						});
+					},
+					afterRemoveMember: async ({ member, user, organization }) => {
+						await onMemberAudit?.({
+							orgId: organization.id,
+							actorId: null,
+							action: "member.removed",
+							targetType: "member",
+							targetId: member.id,
+							before: { userId: user.id, role: member.role },
+						});
+					},
+					afterUpdateMemberRole: async ({
+						member,
+						previousRole,
+						user,
+						organization,
+					}) => {
+						await onMemberAudit?.({
+							orgId: organization.id,
+							actorId: null,
+							action: "member.role_changed",
+							targetType: "member",
+							targetId: member.id,
+							before: { userId: user.id, role: previousRole },
+							after: { userId: user.id, role: member.role },
+						});
 					},
 				},
 			}),

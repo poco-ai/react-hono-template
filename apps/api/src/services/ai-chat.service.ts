@@ -31,6 +31,7 @@ import type { AiConversationService } from "./ai-conversation.service";
 import { type AiUsageService, estimateTokens } from "./ai-usage.service";
 import type { OrgAiSettingsService } from "./org-ai-settings.service";
 import type { PlanService } from "./plan.service";
+import type { QuotaService } from "./quota.service";
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 1024;
 const INPUT_SUMMARY_LENGTH = 300;
@@ -120,6 +121,7 @@ export const createAiChatService = ({
 	messageDao,
 	toolCallDao,
 	usageService,
+	quota,
 	settingsService,
 	capabilityLayer,
 	plans,
@@ -132,6 +134,7 @@ export const createAiChatService = ({
 	messageDao: AiMessageDao;
 	toolCallDao: AiToolCallDao;
 	usageService: AiUsageService;
+	quota?: Pick<QuotaService, "authorize" | "settle" | "release">;
 	settingsService: OrgAiSettingsService;
 	capabilityLayer: CapabilityExecutor;
 	plans: PlanService;
@@ -197,11 +200,24 @@ export const createAiChatService = ({
 		const maxOutputTokens =
 			providerInfo.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
 		const estimatedInputTokens = Math.ceil(estimateMessageChars(messages) / 4);
-		await usageService.assertWithinQuota(
-			orgId,
-			plan,
-			estimatedInputTokens + maxOutputTokens,
-		);
+		const assistantId = crypto.randomUUID();
+		const reservationKey = `ai:${assistantId}`;
+		if (quota) {
+			await quota.authorize({
+				orgId,
+				meter: "ai.tokens",
+				quantity: estimatedInputTokens + maxOutputTokens,
+				idempotencyKey: reservationKey,
+				actor: { actorType: "user", actorId: userId },
+				dimensions: { surface: "chat", conversationId },
+			});
+		} else {
+			await usageService.assertWithinQuota(
+				orgId,
+				plan,
+				estimatedInputTokens + maxOutputTokens,
+			);
+		}
 
 		// Claim approvals only after the request is known to be serviceable.
 		await verifyApprovalResponses(
@@ -293,7 +309,6 @@ export const createAiChatService = ({
 		const maxSteps = providerInfo.maxSteps
 			? Math.min(planMaxSteps, providerInfo.maxSteps)
 			: planMaxSteps;
-		const assistantId = crypto.randomUUID();
 		let finalUsage: LanguageModelUsage | undefined;
 
 		const result = streamText({
@@ -394,13 +409,31 @@ export const createAiChatService = ({
 					const toolCallCount = { executed: 0 };
 					await persistToolCalls(responseMessage, toolCallCount);
 
-					await usageService.record({
-						orgId,
-						userId,
-						inputTokens,
-						outputTokens,
-						toolCalls: toolCallCount.executed,
-					});
+					if (quota) {
+						if (status === "complete") {
+							await quota.settle({
+								orgId,
+								idempotencyKey: reservationKey,
+								actualQuantity: inputTokens + outputTokens,
+								aiUsage: {
+									userId,
+									inputTokens,
+									outputTokens,
+									toolCalls: toolCallCount.executed,
+								},
+							});
+						} else {
+							await quota.release({ orgId, idempotencyKey: reservationKey });
+						}
+					} else {
+						await usageService.record({
+							orgId,
+							userId,
+							inputTokens,
+							outputTokens,
+							toolCalls: toolCallCount.executed,
+						});
+					}
 					await conversationService.touch(orgId, userId, conversationId, {
 						lastMessageAt: new Date(),
 						model: modelId,

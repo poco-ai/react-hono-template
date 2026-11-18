@@ -1,34 +1,47 @@
 import {
+	adjustCreditsSchema,
+	adminAuditListQuerySchema,
 	adminOrgListQuerySchema,
 	adminUserListQuerySchema,
 	banAdminUserSchema,
 	runtimeConfigUpdateSchema,
 	updateAdminUserRoleSchema,
+	updateQuotaPolicySchema,
 } from "@workspace/shared";
 import { Hono } from "hono";
 import { createAdminOrgController } from "../controllers/admin-org.controller";
 import { createAdminController } from "../controllers/admin-user.controller";
+import { createAuditController } from "../controllers/audit.controller";
 import { createConfigController } from "../controllers/config.controller";
+import { createQuotaController } from "../controllers/quota.controller";
 import { adminOrgParams, adminUserParams } from "../lib/params";
 import { validate } from "../lib/validation";
 import type { SessionEnv } from "../middleware/auth";
 import { requirePermission } from "../middleware/auth";
 import type { AdminOrgService } from "../services/admin-org.service";
 import type { AdminUserService } from "../services/admin-user.service";
+import type { AuditService } from "../services/audit.service";
 import type { ConfigService } from "../services/config.service";
+import type { QuotaService } from "../services/quota.service";
 
 export const createAdminRoutes = ({
 	users,
 	orgs,
 	config,
+	audit,
+	quota,
 }: {
 	users: AdminUserService;
 	orgs: AdminOrgService;
 	config: ConfigService;
+	audit: AuditService;
+	quota: QuotaService;
 }) => {
 	const adminController = createAdminController(users);
 	const adminOrgController = createAdminOrgController(orgs);
 	const configController = createConfigController(config);
+	const auditController = createAuditController(audit);
+	const quotaController = createQuotaController(quota);
 	return new Hono<SessionEnv>()
 		.get(
 			"/api/admin/users",
@@ -86,5 +99,37 @@ export const createAdminRoutes = ({
 			requirePermission({ config: ["write"] }),
 			validate(runtimeConfigUpdateSchema, "json"),
 			(c) => configController.update(c, c.req.valid("json")),
+		)
+		.get(
+			"/api/admin/audit",
+			requirePermission({ org: ["list"] }),
+			validate(adminAuditListQuerySchema, "query"),
+			(c) => auditController.listForAdmin(c, c.req.valid("query")),
+		)
+		.get(
+			"/api/admin/audit/export",
+			requirePermission({ org: ["list"] }),
+			validate(adminAuditListQuerySchema, "query"),
+			(c) => auditController.exportForAdmin(c, c.req.valid("query")),
+		)
+		.get(
+			"/api/admin/orgs/:orgId/quota",
+			requirePermission({ org: ["quota"] }),
+			validate(adminOrgParams, "param"),
+			(c) => quotaController.overview(c),
+		)
+		.post(
+			"/api/admin/orgs/:orgId/credits",
+			requirePermission({ org: ["quota"] }),
+			validate(adminOrgParams, "param"),
+			validate(adjustCreditsSchema, "json"),
+			(c) => quotaController.adjustCredits(c, c.req.valid("json")),
+		)
+		.put(
+			"/api/admin/orgs/:orgId/quota",
+			requirePermission({ org: ["quota"] }),
+			validate(adminOrgParams, "param"),
+			validate(updateQuotaPolicySchema, "json"),
+			(c) => quotaController.setPolicy(c, c.req.valid("json")),
 		);
 };

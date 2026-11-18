@@ -6,6 +6,7 @@ import type { ProjectDao } from "../dao/project.dao";
 import type { WebhookDao } from "../dao/webhook.dao";
 import type {
 	BillingDto,
+	BillingLimits,
 	CheckoutResponseDto,
 	PortalResponseDto,
 } from "../dto/billing.dto";
@@ -14,7 +15,9 @@ import {
 	type StripeSetup,
 	stripeUnavailableMessage,
 } from "../lib/stripe";
+import type { AuditService } from "./audit.service";
 import type { PlanService } from "./plan.service";
+import type { QuotaService } from "./quota.service";
 import type { StorageUsageService } from "./storage-usage.service";
 
 const subscriptionPlanFor = (status: string) =>
@@ -40,6 +43,8 @@ export const createBillingService = ({
 	mockEnabled,
 	plans,
 	storageUsage,
+	quota,
+	audit,
 }: {
 	billingDao: BillingDao;
 	memberDao: MemberDao;
@@ -49,9 +54,27 @@ export const createBillingService = ({
 	mockEnabled: boolean;
 	plans: PlanService;
 	storageUsage?: Pick<StorageUsageService, "getOrgUsage">;
+	quota?: Pick<QuotaService, "overview">;
+	audit?: Pick<AuditService, "record">;
 }) => {
-	const afterPlanChange = async (orgId: string) => {
+	const afterPlanChange = async (
+		orgId: string,
+		previousPlan: string,
+		nextPlan: string,
+		actor: { actorType: "user" | "system"; actorId?: string | null },
+	) => {
 		await plans.invalidatePlanCache(orgId);
+		if (previousPlan === nextPlan) return;
+		await audit?.record({
+			orgId,
+			actorType: actor.actorType,
+			actorId: actor.actorId,
+			action: "billing.plan_changed",
+			targetType: "subscription",
+			targetId: orgId,
+			before: { plan: previousPlan },
+			after: { plan: nextPlan },
+		});
 	};
 
 	const requireCompleteStripe = () => {
@@ -76,15 +99,34 @@ export const createBillingService = ({
 				webhookDao.countByOrg(orgId),
 				storageUsage ? storageUsage.getOrgUsage(orgId) : Promise.resolve(null),
 			]);
+			const overview = quota
+				? await quota.overview(orgId, storage?.total ?? 0)
+				: {
+						meters: [],
+						credits: { balance: 0, reserved: 0, available: 0 },
+					};
+			const storageMeter = overview.meters.find(
+				(meter) => meter.meter === "storage.bytes",
+			);
+			const aiMeter = overview.meters.find(
+				(meter) => meter.meter === "ai.tokens",
+			);
+			const limits: BillingLimits = {
+				...PLANS[subscription.plan],
+				...(storageMeter ? { storageBytes: storageMeter.included } : {}),
+				...(aiMeter ? { aiMonthlyTokens: aiMeter.included } : {}),
+			};
 			return {
 				plan: subscription.plan,
-				limits: PLANS[subscription.plan],
+				limits,
 				usage: {
 					members,
 					projects,
 					webhooks,
 					storageBytes: storage?.total ?? 0,
 				},
+				meters: overview.meters,
+				credits: overview.credits,
 				stripeEnabled: stripeSetup.status === "enabled",
 				mockMode: stripeSetup.status === "disabled" && mockEnabled,
 				currentPeriodEnd: subscription.currentPeriodEnd,
@@ -94,6 +136,7 @@ export const createBillingService = ({
 		createCheckout: async (
 			orgId: string,
 			origin: string,
+			actorId?: string,
 		): Promise<CheckoutResponseDto> => {
 			const stripe = requireCompleteStripe();
 			if (stripe) {
@@ -108,19 +151,25 @@ export const createBillingService = ({
 				});
 				return { url: session.url };
 			}
+			const previousPlan =
+				(await billingDao.findByOrg?.(orgId))?.plan ?? "free";
 			const seats = await memberDao.countByOrg(orgId);
 			await billingDao.upsert(orgId, {
 				plan: "pro",
 				status: "active",
 				seats,
 			});
-			await afterPlanChange(orgId);
+			await afterPlanChange(orgId, previousPlan, "pro", {
+				actorType: "user",
+				actorId,
+			});
 			return { url: null };
 		},
 
 		createPortal: async (
 			orgId: string,
 			origin: string,
+			actorId?: string,
 		): Promise<PortalResponseDto> => {
 			const stripe = requireCompleteStripe();
 			if (stripe) {
@@ -137,12 +186,17 @@ export const createBillingService = ({
 				});
 				return { url: session.url };
 			}
+			const previousPlan =
+				(await billingDao.findByOrg?.(orgId))?.plan ?? "free";
 			await billingDao.upsert(orgId, {
 				plan: "free",
 				status: "active",
 				currentPeriodEnd: null,
 			});
-			await afterPlanChange(orgId);
+			await afterPlanChange(orgId, previousPlan, "free", {
+				actorType: "user",
+				actorId,
+			});
 			return { url: null };
 		},
 
@@ -153,6 +207,8 @@ export const createBillingService = ({
 				if (!orgId) {
 					return;
 				}
+				const previousPlan =
+					(await billingDao.findByOrg?.(orgId))?.plan ?? "free";
 				const seats = await memberDao.countByOrg(orgId);
 				await billingDao.upsert(orgId, {
 					plan: "pro",
@@ -164,7 +220,9 @@ export const createBillingService = ({
 							: (session.subscription?.id ?? null),
 					seats,
 				});
-				await afterPlanChange(orgId);
+				await afterPlanChange(orgId, previousPlan, "pro", {
+					actorType: "system",
+				});
 				return;
 			}
 			if (
@@ -187,17 +245,22 @@ export const createBillingService = ({
 						stripeSubscriptionId: null,
 						currentPeriodEnd: null,
 					});
-					await afterPlanChange(row.orgId);
+					await afterPlanChange(row.orgId, row.plan, "free", {
+						actorType: "system",
+					});
 					return;
 				}
 				const periodEnd = subscriptionObject.items.data[0]?.current_period_end;
+				const nextPlan = subscriptionPlanFor(subscriptionObject.status);
 				await billingDao.update(row.orgId, {
-					plan: subscriptionPlanFor(subscriptionObject.status),
+					plan: nextPlan,
 					status: subscriptionObject.status,
 					stripeSubscriptionId: subscriptionObject.id,
 					currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
 				});
-				await afterPlanChange(row.orgId);
+				await afterPlanChange(row.orgId, row.plan, nextPlan, {
+					actorType: "system",
+				});
 			}
 		},
 	};

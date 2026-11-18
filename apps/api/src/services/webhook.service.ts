@@ -16,6 +16,7 @@ import type {
 } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
 import { randomHex } from "../lib/crypto";
+import type { AuditService } from "./audit.service";
 import type { PlanService } from "./plan.service";
 import type { WebhookDeliveryService } from "./webhook-delivery.service";
 
@@ -29,11 +30,13 @@ export const createWebhookService = ({
 	deliveryDao,
 	plans,
 	deliveries,
+	audit,
 }: {
 	webhookDao: WebhookDao;
 	deliveryDao: WebhookDeliveryDao;
 	plans: PlanService;
 	deliveries: WebhookDeliveryService;
+	audit?: Pick<AuditService, "record">;
 }) => {
 	const assertEventsValid = (events: string[]) => {
 		const invalid = events.filter(
@@ -86,7 +89,7 @@ export const createWebhookService = ({
 			);
 			assertUrlAllowed(input.url);
 			assertEventsValid(input.events);
-			return webhookDao.create({
+			const created = await webhookDao.create({
 				id: crypto.randomUUID(),
 				orgId,
 				url: input.url,
@@ -94,6 +97,16 @@ export const createWebhookService = ({
 				events: input.events,
 				createdById,
 			});
+			await audit?.record({
+				orgId,
+				actorType: "user",
+				actorId: createdById,
+				action: "webhook.created",
+				targetType: "webhook",
+				targetId: created.id,
+				after: { url: created.url, events: created.events },
+			});
+			return created;
 		},
 
 		updateWebhook: async (
@@ -122,14 +135,28 @@ export const createWebhookService = ({
 			return stripSecret(updated);
 		},
 
-		deleteWebhook: async (orgId: string, webhookId: string) => {
+		deleteWebhook: async (
+			orgId: string,
+			webhookId: string,
+			actorId?: string | null,
+		) => {
+			const existing = await webhookDao.findById(orgId, webhookId);
 			const deleted = await webhookDao.delete(orgId, webhookId);
-			if (!deleted) {
+			if (!deleted || !existing) {
 				throw new ApiError(
 					ApiErrorCode.WEBHOOK_NOT_FOUND,
 					`Webhook ${webhookId} not found`,
 				);
 			}
+			await audit?.record({
+				orgId,
+				actorType: "user",
+				actorId: actorId ?? existing.createdById,
+				action: "webhook.deleted",
+				targetType: "webhook",
+				targetId: existing.id,
+				before: { url: existing.url, events: existing.events },
+			});
 			return { deleted: true };
 		},
 

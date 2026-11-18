@@ -3,7 +3,7 @@ import { defaultStatements } from "better-auth/plugins/admin/access";
 
 export const statements = {
 	...defaultStatements,
-	org: ["list", "freeze", "stats"],
+	org: ["list", "freeze", "stats", "quota"],
 	config: ["write"],
 };
 
@@ -14,7 +14,7 @@ export const userRole = ac.newRole({});
 export const adminRole = ac.newRole({
 	user: ["create", "list", "set-role", "ban", "delete", "get", "update"],
 	session: ["list", "revoke", "delete"],
-	org: ["list", "freeze", "stats"],
+	org: ["list", "freeze", "stats", "quota"],
 	config: ["write"],
 });
 

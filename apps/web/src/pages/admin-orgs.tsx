@@ -31,6 +31,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
 import { TablePagination } from "@/components/table-pagination";
+import { OrgQuotaDialog } from "@/features/admin/components/org-quota-dialog";
 import {
 	adminOrganizationsQuery,
 	useFreezeOrganization,
@@ -50,6 +51,7 @@ export function AdminOrgsPage() {
 
 	const [searchInput, setSearchInput] = useState(search);
 	const [freezeTarget, setFreezeTarget] = useState<AdminOrgDto | null>(null);
+	const [quotaTarget, setQuotaTarget] = useState<AdminOrgDto | null>(null);
 
 	useEffect(() => {
 		setSearchInput(search);
@@ -193,25 +195,34 @@ export function AdminOrgsPage() {
 									)}
 								</TableCell>
 								<TableCell className="text-right">
-									{org.frozen ? (
+									<div className="flex justify-end gap-2">
 										<Button
 											variant="outline"
 											size="sm"
-											disabled={mutating}
-											onClick={() => unfreezeMutation.mutate(org.id)}
+											onClick={() => setQuotaTarget(org)}
 										>
-											{t("adminOrgs.unfreeze")}
+											{t("adminOrgs.quota")}
 										</Button>
-									) : (
-										<Button
-											variant="destructive"
-											size="sm"
-											disabled={mutating}
-											onClick={() => setFreezeTarget(org)}
-										>
-											{t("adminOrgs.freeze")}
-										</Button>
-									)}
+										{org.frozen ? (
+											<Button
+												variant="outline"
+												size="sm"
+												disabled={mutating}
+												onClick={() => unfreezeMutation.mutate(org.id)}
+											>
+												{t("adminOrgs.unfreeze")}
+											</Button>
+										) : (
+											<Button
+												variant="destructive"
+												size="sm"
+												disabled={mutating}
+												onClick={() => setFreezeTarget(org)}
+											>
+												{t("adminOrgs.freeze")}
+											</Button>
+										)}
+									</div>
 								</TableCell>
 							</TableRow>
 						))}
@@ -256,6 +267,12 @@ export function AdminOrgsPage() {
 				</div>
 			</CardContent>
 
+			<OrgQuotaDialog
+				orgId={quotaTarget?.id ?? ""}
+				orgName={quotaTarget?.name ?? ""}
+				open={quotaTarget !== null}
+				onOpenChange={(open) => !open && setQuotaTarget(null)}
+			/>
 			<ConfirmDialog
 				open={freezeTarget !== null}
 				onOpenChange={(open) => !open && setFreezeTarget(null)}

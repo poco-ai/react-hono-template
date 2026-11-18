@@ -28,6 +28,7 @@ export const createApiKeyController = (service: ApiKeyService) => ({
 			await service.revokeApiKey(
 				c.get("orgMember").orgId,
 				c.req.valid("param").keyId,
+				c.get("session").user.id,
 			),
 		),
 });

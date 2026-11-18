@@ -13,13 +13,17 @@ import type {
 	ListApiKeysDto,
 } from "../dto/api-key.dto";
 import { randomBase64Url, sha256Hex } from "../lib/crypto";
+import type { AuditService } from "./audit.service";
 
 const KEY_PREFIX = "sk_";
 const KEY_PREFIX_DISPLAY_LENGTH = 8;
 // Existing integrations rely on read+write access; admin must be explicit.
 const DEFAULT_CREATED_SCOPES: ApiKeyScope[] = ["read", "write"];
 
-export const createApiKeyService = (dao: ApiKeyDao) => ({
+export const createApiKeyService = (
+	dao: ApiKeyDao,
+	audit?: Pick<AuditService, "record">,
+) => ({
 	createApiKey: async (
 		orgId: string,
 		createdById: string,
@@ -39,6 +43,15 @@ export const createApiKeyService = (dao: ApiKeyDao) => ({
 			scopes,
 			createdById,
 		});
+		await audit?.record({
+			orgId,
+			actorType: "user",
+			actorId: createdById,
+			action: "apikey.created",
+			targetType: "api_key",
+			targetId: apiKey.id,
+			after: { name: apiKey.name, prefix: apiKey.prefix, scopes },
+		});
 		return { ...apiKey, key };
 	},
 
@@ -48,7 +61,11 @@ export const createApiKeyService = (dao: ApiKeyDao) => ({
 	): Promise<ListApiKeysDto> =>
 		dao.listByOrg(orgId, query.page, query.pageSize),
 
-	revokeApiKey: async (orgId: string, keyId: string): Promise<ApiKeyDto> => {
+	revokeApiKey: async (
+		orgId: string,
+		keyId: string,
+		actorId?: string,
+	): Promise<ApiKeyDto> => {
 		const existing = await dao.findById(orgId, keyId);
 		if (!existing) {
 			throw new ApiError(
@@ -57,6 +74,15 @@ export const createApiKeyService = (dao: ApiKeyDao) => ({
 			);
 		}
 		await dao.revoke(orgId, keyId);
+		await audit?.record({
+			orgId,
+			actorType: "user",
+			actorId: actorId ?? existing.createdById,
+			action: "apikey.revoked",
+			targetType: "api_key",
+			targetId: existing.id,
+			before: { name: existing.name, prefix: existing.prefix },
+		});
 		return { ...existing, revokedAt: new Date().toISOString() };
 	},
 });

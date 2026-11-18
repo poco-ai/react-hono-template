@@ -42,6 +42,7 @@ import { Route as AuthOrgsOrgIdProjectsIndexRouteImport } from './routes/_auth/o
 import { Route as AuthOrgsOrgIdSettingsIndexRouteImport } from './routes/_auth/orgs/$orgId/settings/index'
 import { Route as AuthOrgsOrgIdSettingsAiRouteImport } from './routes/_auth/orgs/$orgId/settings/ai'
 import { Route as AuthOrgsOrgIdSettingsApiKeysRouteImport } from './routes/_auth/orgs/$orgId/settings/api-keys'
+import { Route as AuthOrgsOrgIdSettingsAuditRouteImport } from './routes/_auth/orgs/$orgId/settings/audit'
 import { Route as AuthOrgsOrgIdSettingsBillingRouteImport } from './routes/_auth/orgs/$orgId/settings/billing'
 import { Route as AuthOrgsOrgIdSettingsLabelsRouteImport } from './routes/_auth/orgs/$orgId/settings/labels'
 import { Route as AuthOrgsOrgIdSettingsMcpRouteImport } from './routes/_auth/orgs/$orgId/settings/mcp'
@@ -222,6 +223,12 @@ const AuthOrgsOrgIdSettingsApiKeysRoute =
     path: '/api-keys',
     getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
   } as any)
+const AuthOrgsOrgIdSettingsAuditRoute =
+  AuthOrgsOrgIdSettingsAuditRouteImport.update({
+    id: '/audit',
+    path: '/audit',
+    getParentRoute: () => AuthOrgsOrgIdSettingsRouteRoute,
+  } as any)
 const AuthOrgsOrgIdSettingsBillingRoute =
   AuthOrgsOrgIdSettingsBillingRouteImport.update({
     id: '/billing',
@@ -313,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
   '/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
   '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  '/orgs/$orgId/settings/audit': typeof AuthOrgsOrgIdSettingsAuditRoute
   '/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
@@ -354,6 +362,7 @@ export interface FileRoutesByTo {
   '/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
   '/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
   '/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  '/orgs/$orgId/settings/audit': typeof AuthOrgsOrgIdSettingsAuditRoute
   '/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
@@ -400,6 +409,7 @@ export interface FileRoutesById {
   '/_auth/orgs/$orgId/ai/$conversationId': typeof AuthOrgsOrgIdAiConversationIdRoute
   '/_auth/orgs/$orgId/settings/ai': typeof AuthOrgsOrgIdSettingsAiRoute
   '/_auth/orgs/$orgId/settings/api-keys': typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  '/_auth/orgs/$orgId/settings/audit': typeof AuthOrgsOrgIdSettingsAuditRoute
   '/_auth/orgs/$orgId/settings/billing': typeof AuthOrgsOrgIdSettingsBillingRoute
   '/_auth/orgs/$orgId/settings/labels': typeof AuthOrgsOrgIdSettingsLabelsRoute
   '/_auth/orgs/$orgId/settings/mcp': typeof AuthOrgsOrgIdSettingsMcpRoute
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/ai/$conversationId'
     | '/orgs/$orgId/settings/ai'
     | '/orgs/$orgId/settings/api-keys'
+    | '/orgs/$orgId/settings/audit'
     | '/orgs/$orgId/settings/billing'
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/mcp'
@@ -487,6 +498,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/ai/$conversationId'
     | '/orgs/$orgId/settings/ai'
     | '/orgs/$orgId/settings/api-keys'
+    | '/orgs/$orgId/settings/audit'
     | '/orgs/$orgId/settings/billing'
     | '/orgs/$orgId/settings/labels'
     | '/orgs/$orgId/settings/mcp'
@@ -532,6 +544,7 @@ export interface FileRouteTypes {
     | '/_auth/orgs/$orgId/ai/$conversationId'
     | '/_auth/orgs/$orgId/settings/ai'
     | '/_auth/orgs/$orgId/settings/api-keys'
+    | '/_auth/orgs/$orgId/settings/audit'
     | '/_auth/orgs/$orgId/settings/billing'
     | '/_auth/orgs/$orgId/settings/labels'
     | '/_auth/orgs/$orgId/settings/mcp'
@@ -794,6 +807,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOrgsOrgIdSettingsApiKeysRouteImport
       parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
     }
+    '/_auth/orgs/$orgId/settings/audit': {
+      id: '/_auth/orgs/$orgId/settings/audit'
+      path: '/audit'
+      fullPath: '/orgs/$orgId/settings/audit'
+      preLoaderRoute: typeof AuthOrgsOrgIdSettingsAuditRouteImport
+      parentRoute: typeof AuthOrgsOrgIdSettingsRouteRoute
+    }
     '/_auth/orgs/$orgId/settings/billing': {
       id: '/_auth/orgs/$orgId/settings/billing'
       path: '/billing'
@@ -886,6 +906,7 @@ const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
 interface AuthOrgsOrgIdSettingsRouteRouteChildren {
   AuthOrgsOrgIdSettingsAiRoute: typeof AuthOrgsOrgIdSettingsAiRoute
   AuthOrgsOrgIdSettingsApiKeysRoute: typeof AuthOrgsOrgIdSettingsApiKeysRoute
+  AuthOrgsOrgIdSettingsAuditRoute: typeof AuthOrgsOrgIdSettingsAuditRoute
   AuthOrgsOrgIdSettingsBillingRoute: typeof AuthOrgsOrgIdSettingsBillingRoute
   AuthOrgsOrgIdSettingsLabelsRoute: typeof AuthOrgsOrgIdSettingsLabelsRoute
   AuthOrgsOrgIdSettingsMcpRoute: typeof AuthOrgsOrgIdSettingsMcpRoute
@@ -900,6 +921,7 @@ const AuthOrgsOrgIdSettingsRouteRouteChildren: AuthOrgsOrgIdSettingsRouteRouteCh
   {
     AuthOrgsOrgIdSettingsAiRoute: AuthOrgsOrgIdSettingsAiRoute,
     AuthOrgsOrgIdSettingsApiKeysRoute: AuthOrgsOrgIdSettingsApiKeysRoute,
+    AuthOrgsOrgIdSettingsAuditRoute: AuthOrgsOrgIdSettingsAuditRoute,
     AuthOrgsOrgIdSettingsBillingRoute: AuthOrgsOrgIdSettingsBillingRoute,
     AuthOrgsOrgIdSettingsLabelsRoute: AuthOrgsOrgIdSettingsLabelsRoute,
     AuthOrgsOrgIdSettingsMcpRoute: AuthOrgsOrgIdSettingsMcpRoute,

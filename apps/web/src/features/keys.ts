@@ -325,3 +325,11 @@ export const adminOrgsKey = (page: number, search: string) =>
 export function billingRootKey(orgId: string) {
 	return ["orgs", orgId, "billing"] as const;
 }
+
+export function auditRootKey(orgId: string) {
+	return ["orgs", orgId, "audit"] as const;
+}
+
+export function adminQuotaKey(orgId: string) {
+	return ["admin-quota", orgId] as const;
+}

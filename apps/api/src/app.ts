@@ -7,6 +7,7 @@ import { createDependencies } from "./dependencies";
 import { createAuth } from "./lib/auth";
 import type { BackgroundFn } from "./lib/background";
 import { createErrorHandler } from "./lib/on-error";
+import { runWithRequestMeta } from "./lib/request-context";
 import { fail } from "./lib/response";
 import { resolveMcpConfig } from "./mcp/config";
 import { createMcpEndpoint } from "./mcp/routes";
@@ -61,6 +62,17 @@ export const createApp = (platform: AppPlatform) => {
 			},
 			onOrganizationCreated: (orgId) =>
 				dependencies.services.statusService.ensureDefaultStatuses(orgId),
+			onMemberAudit: (event) =>
+				dependencies.services.auditService.record({
+					orgId: event.orgId,
+					actorType: "user",
+					actorId: event.actorId,
+					action: event.action,
+					targetType: event.targetType,
+					targetId: event.targetId,
+					before: event.before,
+					after: event.after,
+				}),
 		});
 
 	/**
@@ -86,6 +98,20 @@ export const createApp = (platform: AppPlatform) => {
 	// webhook, /mcp, /api/auth/*) are outside the sub-apps and need the same
 	// envelope guarantee as the main and v1 APIs.
 	app.onError(createErrorHandler("worker"));
+	app.use("*", async (c, next) => {
+		const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+		await runWithRequestMeta(
+			{
+				requestId:
+					c.req.header("cf-ray") ??
+					c.req.header("x-request-id") ??
+					crypto.randomUUID(),
+				ipAddress: c.req.header("cf-connecting-ip") ?? forwarded ?? null,
+				userAgent: c.req.header("user-agent") ?? null,
+			},
+			() => next(),
+		);
+	});
 	app.use(logger());
 	app.use(
 		"/api/*",
