@@ -63,10 +63,6 @@ export function parseCsvText(text: string): string[][] {
 			field += char;
 		}
 	}
-	if (inQuotes) {
-		// Unterminated quote: keep what was read so the caller can report the
-		// row instead of losing the whole document.
-	}
 	if (field !== "" || row.length > 0) {
 		pushRow();
 	}
@@ -99,8 +95,7 @@ export const isFormulaLike = (value: string): boolean =>
  * would otherwise strip). Normal text such as `'tis the season` is not quoted.
  */
 const needsCsvQuote = (value: string): boolean =>
-	isFormulaLike(value) ||
-	(value.startsWith("'") && needsCsvQuote(value.slice(1)));
+	isFormulaLike(value.replace(/^'+/, ""));
 
 /**
  * Neutralizes formula injection (CSV injection) by prefixing a single quote,
