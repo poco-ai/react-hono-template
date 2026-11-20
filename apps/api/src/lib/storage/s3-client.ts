@@ -5,6 +5,7 @@ export interface S3ClientOptions {
 	accessKeyId: string;
 	secretAccessKey: string;
 	endpoint: string;
+	signingEndpoint?: string;
 	region: string;
 	bucket: string;
 	publicBaseUrl?: string;
@@ -36,12 +37,14 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 		return aws;
 	};
 
-	const objectUrl = (key: string) =>
-		`${trimSlashes(options.endpoint)}/${options.bucket}/${encodeKey(key)}`;
+	const objectUrl = (key: string, endpoint = options.endpoint) =>
+		`${trimSlashes(endpoint)}/${options.bucket}/${encodeKey(key)}`;
+	const presignUrl = (key: string) =>
+		new URL(objectUrl(key, options.signingEndpoint));
 
 	return {
 		presignPut: async (key, contentType, expiresIn, size) => {
-			const url = new URL(objectUrl(key));
+			const url = presignUrl(key);
 			url.searchParams.set("X-Amz-Expires", String(expiresIn));
 			// Signing Content-Length makes the bucket reject bodies that differ
 			// from the reserved size instead of trusting the register-time HEAD.
@@ -56,7 +59,7 @@ export const createS3Client = (options: S3ClientOptions): StorageAdapter => {
 			return signed.url;
 		},
 		presignGet: async (key, expiresIn) => {
-			const url = new URL(objectUrl(key));
+			const url = presignUrl(key);
 			url.searchParams.set("X-Amz-Expires", String(expiresIn));
 			const signed = await client().sign(url.toString(), {
 				method: "GET",
@@ -111,6 +114,7 @@ export type S3EnvConfig = {
 	S3_ACCESS_KEY_ID?: string;
 	S3_SECRET_ACCESS_KEY?: string;
 	S3_ENDPOINT?: string;
+	S3_SIGNING_ENDPOINT?: string;
 	S3_BUCKET?: string;
 	S3_REGION?: string;
 	S3_PUBLIC_BASE_URL?: string;
@@ -129,6 +133,7 @@ export const s3ClientFromConfig = (env: S3EnvConfig): StorageAdapter | null => {
 		accessKeyId: env.S3_ACCESS_KEY_ID,
 		secretAccessKey: env.S3_SECRET_ACCESS_KEY,
 		endpoint: env.S3_ENDPOINT,
+		signingEndpoint: env.S3_SIGNING_ENDPOINT?.trim() || undefined,
 		region: env.S3_REGION || "auto",
 		bucket: env.S3_BUCKET,
 		publicBaseUrl: env.S3_PUBLIC_BASE_URL,

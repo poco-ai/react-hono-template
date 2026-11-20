@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -26,28 +26,35 @@ services:
       retries: 12
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.4
     environment:
       RUSTFS_ACCESS_KEY: rustfsadmin
       RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_CORS_ALLOWED_ORIGINS: http://localhost:8080,http://localhost:5173
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     volumes:
       - rustfsdata:/data
-    command: ["server", "/data"]
 
   rustfs-init:
-    image: minio/mc
+    image: rustfs/rustfs:1.0.4
     depends_on:
       - rustfs
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        s3() {
+          curl --fail --silent --show-error --max-time 3 \
+            --aws-sigv4 aws:amz:us-east-1:s3 --user rustfsadmin:rustfsadmin \
+            "$$@" http://rustfs:9000/app
+        }
         for i in 1 2 3 4 5 6 7 8 9 10; do
-          mc alias set local http://rustfs:9000 rustfsadmin rustfsadmin && break
+          if s3 --head >/dev/null 2>&1 || s3 --request PUT; then
+            exit 0
+          fi
           sleep 2
         done
-        mc mb -p local/app || true
+        exit 1
 
   api:
     build:
@@ -59,6 +66,7 @@ services:
       DATABASE_URL: postgres://app:app@postgres:5432/app
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://rustfs:9000
+      S3_SIGNING_ENDPOINT: http://localhost:9000
       S3_REGION: us-east-1
       S3_ACCESS_KEY_ID: rustfsadmin
       S3_SECRET_ACCESS_KEY: rustfsadmin
@@ -75,16 +83,22 @@ services:
       rustfs-init:
         condition: service_completed_successfully
     command: ["sh", "-c", "bun run db:migrate:pg && bun src/server.ts"]
+    healthcheck:
+      test: ["CMD", "bun", "-e", "if (!(await fetch('http://127.0.0.1:8787/')).ok) process.exit(1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   caddy:
     image: caddy:2
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./apps/web/dist:/srv:ro
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:

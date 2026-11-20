@@ -16,6 +16,7 @@ interface AppEnv {
 	/** Local-only billing mock; never enable in production. */
 	BILLING_MOCK_MODE?: string;
 	S3_PUBLIC_BASE_URL?: string;
+	S3_SIGNING_ENDPOINT?: string;
 	PUBLIC_API_URL?: string;
 	STRIPE_SECRET_KEY?: string;
 	STRIPE_PRICE_ID?: string;

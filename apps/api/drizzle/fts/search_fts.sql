@@ -12,8 +12,8 @@
 -- tables themselves survive). Any migration that rebuilds `issues` or
 -- `comments` must be followed by:
 --
---   bunx wrangler d1 execute react-hono-db --local  --file=drizzle/fts/search_fts.sql
---   bunx wrangler d1 execute react-hono-db --remote --file=drizzle/fts/search_fts.sql
+--   bunx wrangler d1 execute DB --local  --file=drizzle/fts/search_fts.sql
+--   bunx wrangler d1 execute DB --remote --file=drizzle/fts/search_fts.sql
 --
 -- Do not use `drizzle-kit push` to bypass migrations: it can also rebuild
 -- tables without restoring the triggers. The search tests assert the six

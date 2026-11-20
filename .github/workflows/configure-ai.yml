@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: configure-ai-${{ github.ref }}
+  group: deploy-api-production
   cancel-in-progress: false
 
 jobs:
@@ -25,9 +25,18 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check AI provider secret
+        run: |
+          if [ -z "$SILICONFLOW_API_KEY" ]; then
+            echo "::error::Set the SILICONFLOW_API_KEY repository secret before running this workflow."
+            exit 1
+          fi
+        env:
+          SILICONFLOW_API_KEY: ${{ secrets.SILICONFLOW_API_KEY }}
+
       - name: Apply remote D1 migrations
         working-directory: apps/api
-        run: bunx wrangler d1 migrations apply react-hono-db --remote
+        run: bun run db:migrate:remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

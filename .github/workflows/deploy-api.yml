@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-api-${{ github.ref }}
+  group: deploy-api-production
   cancel-in-progress: false
 
 jobs:

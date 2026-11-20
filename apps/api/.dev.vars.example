@@ -8,7 +8,9 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 # When MCP OAuth is enabled, use the API origin instead (http://localhost:8787)
 # so the issuer, JWKS and MCP resource audience agree.
 # Production BETTER_AUTH_URL is the API origin instead.
-# BETTER_AUTH_URL=http://localhost:5173
+BETTER_AUTH_URL=http://localhost:5173
+APP_WEB_URL=http://localhost:5173
+TRUSTED_ORIGINS=http://localhost:5173
 # GITHUB_CLIENT_ID=
 # GITHUB_CLIENT_SECRET=
 # GOOGLE_CLIENT_ID=
@@ -36,13 +38,13 @@ PUBLIC_API_URL=http://localhost:8787
 
 # S3-compatible storage for issue attachments (R2 in production).
 # Without these, attachment endpoints return 503 and uploads fail with a storage
-# error. For local dev, start MinIO and create a bucket (console on :9001):
-#   docker run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
+# error. From repo root: docker compose up -d rustfs
+# Then initialize the bucket: docker compose run --rm --no-deps rustfs-init
 # S3_ENDPOINT=http://localhost:9000
 # S3_REGION=us-east-1
-# S3_ACCESS_KEY_ID=minioadmin
-# S3_SECRET_ACCESS_KEY=minioadmin
-# S3_BUCKET=test-bucket
+# S3_ACCESS_KEY_ID=rustfsadmin
+# S3_SECRET_ACCESS_KEY=rustfsadmin
+# S3_BUCKET=app
 # R2 instead: S3_REGION=auto, S3_ENDPOINT=https://<accountId>.r2.cloudflarestorage.com
 
 # Stripe billing (all three or none; partial config returns 503)
@@ -56,8 +58,8 @@ PUBLIC_API_URL=http://localhost:8787
 # local gateway, ...) set AI_PROVIDER=openai-compatible and all three of
 # AI_BASE_URL, AI_API_KEY and AI_MODEL. Partial config fails closed with
 # AI_NOT_CONFIGURED.
-# AI_ENABLED=false
-# AI_PROVIDER=mock
+AI_ENABLED=false
+AI_PROVIDER=mock
 # AI_BASE_URL=https://api.example.com/v1
 # AI_API_KEY=
 # AI_MODEL=some-model
@@ -65,14 +67,12 @@ PUBLIC_API_URL=http://localhost:8787
 # AI_MODEL_ALLOWLIST=
 # AI_MAX_STEPS=8
 # AI_MAX_OUTPUT_TOKENS=2048
-# Public web origin used for deep links in AI replies and MCP login/consent.
-# APP_WEB_URL=http://localhost:5173
 
 # Remote MCP server (opt-in). The endpoint is POST <API origin>/mcp and accepts
 # either an API key (Authorization: Bearer sk_...) or better-auth MCP OAuth.
 # MCP_RESOURCE is the canonical protected-resource URL and OAuth audience; it
 # must match how clients reach the API (localhost:8787 in dev).
-# MCP_ENABLED=true
+MCP_ENABLED=false
 # MCP_RESOURCE=http://localhost:8787/mcp
 # MCP_LOGIN_PAGE=http://localhost:5173/login
 # MCP_CONSENT_PAGE=http://localhost:5173/consent
