@@ -73,12 +73,12 @@ export const createAttachmentDao = (db: Database) => ({
 		orgId: string,
 		id: string,
 	): Promise<AttachmentDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select(ATTACHMENT_SELECT)
 			.from(attachments)
 			.leftJoin(user, eq(user.id, attachments.uploaderId))
 			.where(and(eq(attachments.orgId, orgId), eq(attachments.id, id)))
-			.get();
+			.limit(1);
 		return row ? toAttachmentDto(row) : null;
 	},
 
@@ -116,29 +116,29 @@ export const createAttachmentDao = (db: Database) => ({
 			}
 			return statements;
 		});
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(attachments)
 			.where(
 				and(eq(attachments.orgId, data.orgId), eq(attachments.id, data.id)),
 			)
-			.get();
+			.limit(1);
 		if (!row) {
 			throw new Error(`Attachment ${data.id} not found after insert`);
 		}
 		let uploader: AttachmentJoinRow["uploader"] = null;
 		if (row.uploaderId) {
-			uploader =
-				(await db
-					.select({
-						id: user.id,
-						name: user.name,
-						email: user.email,
-						image: user.image,
-					})
-					.from(user)
-					.where(eq(user.id, row.uploaderId))
-					.get()) ?? null;
+			const [uploaderRow] = await db
+				.select({
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					image: user.image,
+				})
+				.from(user)
+				.where(eq(user.id, row.uploaderId))
+				.limit(1);
+			uploader = uploaderRow ?? null;
 		}
 		return {
 			id: row.id,
@@ -209,18 +209,18 @@ export const createAttachmentDao = (db: Database) => ({
 	},
 
 	sumSizeByOrg: async (orgId: string): Promise<number> => {
-		const row = await db
+		const [row] = await db
 			.select({
 				value: sql<number>`coalesce(sum(${attachments.size}), 0)`,
 			})
 			.from(attachments)
 			.where(eq(attachments.orgId, orgId))
-			.get();
+			.limit(1);
 		return Number(row?.value ?? 0);
 	},
 
 	countByIssue: async (orgId: string, issueId: string): Promise<number> => {
-		const row = await db
+		const [row] = await db
 			.select({ value: count() })
 			.from(attachments)
 			.where(
@@ -230,18 +230,18 @@ export const createAttachmentDao = (db: Database) => ({
 					isNull(attachments.commentId),
 				),
 			)
-			.get();
+			.limit(1);
 		return row?.value ?? 0;
 	},
 
 	countByComment: async (orgId: string, commentId: string): Promise<number> => {
-		const row = await db
+		const [row] = await db
 			.select({ value: count() })
 			.from(attachments)
 			.where(
 				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
 			)
-			.get();
+			.limit(1);
 		return row?.value ?? 0;
 	},
 
@@ -275,21 +275,21 @@ export const createAttachmentDao = (db: Database) => ({
 	},
 
 	findByKey: async (key: string): Promise<AttachmentDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select(ATTACHMENT_SELECT)
 			.from(attachments)
 			.leftJoin(user, eq(user.id, attachments.uploaderId))
 			.where(eq(attachments.key, key))
-			.get();
+			.limit(1);
 		return row ? toAttachmentDto(row) : null;
 	},
 
 	existsByKey: async (key: string): Promise<boolean> => {
-		const row = await db
+		const [row] = await db
 			.select({ id: attachments.id })
 			.from(attachments)
 			.where(eq(attachments.key, key))
-			.get();
+			.limit(1);
 		return !!row;
 	},
 });

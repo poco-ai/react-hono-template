@@ -18,20 +18,20 @@ export const createLabelDao = (db: Database) => ({
 	},
 
 	findById: async (orgId: string, id: string): Promise<LabelDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(labels)
 			.where(and(eq(labels.orgId, orgId), eq(labels.id, id)))
-			.get();
+			.limit(1);
 		return row ? toLabelDto(row) : null;
 	},
 
 	findByName: async (orgId: string, name: string): Promise<LabelDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(labels)
 			.where(and(eq(labels.orgId, orgId), eq(labels.name, name)))
-			.get();
+			.limit(1);
 		return row ? toLabelDto(row) : null;
 	},
 
@@ -52,7 +52,7 @@ export const createLabelDao = (db: Database) => ({
 		name: string;
 		color: string;
 	}): Promise<LabelDto> => {
-		const row = await db.insert(labels).values(data).returning().get();
+		const [row] = await db.insert(labels).values(data).returning();
 		return toLabelDto(row);
 	},
 
@@ -65,19 +65,18 @@ export const createLabelDao = (db: Database) => ({
 			Object.entries(patch).filter(([, value]) => value !== undefined),
 		) as Partial<{ name: string; color: string }>;
 		if (Object.keys(patchEntries).length === 0) {
-			const current = await db
+			const [current] = await db
 				.select()
 				.from(labels)
 				.where(and(eq(labels.orgId, orgId), eq(labels.id, id)))
-				.get();
+				.limit(1);
 			return current ? toLabelDto(current) : null;
 		}
-		const row = await db
+		const [row] = await db
 			.update(labels)
 			.set(patchEntries)
 			.where(and(eq(labels.orgId, orgId), eq(labels.id, id)))
-			.returning()
-			.get();
+			.returning();
 		return row ? toLabelDto(row) : null;
 	},
 

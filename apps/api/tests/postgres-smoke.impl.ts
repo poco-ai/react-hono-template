@@ -89,7 +89,7 @@ export const runSmoke = async () => {
 	await sql.end();
 
 	const runtime = platformFromProcess(process.env);
-	const { app } = createApp(runtime.platform);
+	const { app, dependencies } = createApp(runtime.platform);
 	try {
 		const hello = await request(app, "/");
 		assert.equal(await hello.text(), "Hello Hono!");
@@ -107,6 +107,8 @@ export const runSmoke = async () => {
 			}),
 		);
 		assert.ok(signup.user || signup.token || cookieJar.size > 0);
+		const userId = (signup.user as { id?: string } | undefined)?.id;
+		assert.ok(userId);
 
 		const orgBody = await jsonOrThrow(
 			await request(app, "/api/auth/organization/create", {
@@ -123,7 +125,7 @@ export const runSmoke = async () => {
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
 					name: "Smoke",
-					key: id.slice(0, 4).toUpperCase(),
+					key: "TEST",
 				}),
 			}),
 		);
@@ -156,6 +158,65 @@ export const runSmoke = async () => {
 		};
 		assert.ok(titles(longSearch).includes(title));
 		assert.ok(titles(shortSearch).includes(title));
+
+		const { aiConversationDao, aiUsageDao, memberDao, organizationDao } =
+			dependencies.daos;
+		const membership = await memberDao.findByOrgAndUser(orgId, userId);
+		assert.equal(membership?.role, "owner");
+		const memberships = await memberDao.listMembershipsByUser(userId);
+		assert.ok(memberships.some((entry) => entry.id === orgId));
+		const adminOrgs = await organizationDao.list({
+			page: 1,
+			pageSize: 10,
+			search: `smoke${id}`,
+		});
+		assert.equal(adminOrgs.items[0]?.members, 1);
+		assert.equal(adminOrgs.items[0]?.issues, 1);
+
+		const createConversation = (suffix: string) =>
+			aiConversationDao.create({
+				id: `smoke-${id}-${suffix}`,
+				orgId,
+				userId,
+				title: suffix,
+				contextType: null,
+				contextId: null,
+			});
+		const first = await createConversation("first");
+		const second = await createConversation("second");
+		await aiConversationDao.update(orgId, userId, first.id, { pinned: true });
+		const pinned = await aiConversationDao.findById(orgId, userId, first.id);
+		assert.ok(pinned);
+		assert.equal(pinned.pinned, true);
+		const page = await aiConversationDao.listByUser(orgId, userId, {
+			limit: 1,
+			cursor: {
+				pinned: pinned.pinned,
+				activityAt: Date.parse(pinned.createdAt),
+				id: pinned.id,
+			},
+		});
+		assert.deepEqual(
+			page.items.map((item) => item.id),
+			[second.id],
+		);
+
+		const day = new Date().toISOString().slice(0, 10);
+		await aiUsageDao.record({
+			orgId,
+			userId,
+			day,
+			requests: 1,
+			inputTokens: 2,
+			outputTokens: 3,
+			toolCalls: 4,
+		});
+		assert.deepEqual(await aiUsageDao.sumBetween(orgId, day, day), {
+			requests: 1,
+			inputTokens: 2,
+			outputTokens: 3,
+			toolCalls: 4,
+		});
 
 		const limiter = createRedisRateLimiter(runtime.redis, 2, `smoke:${id}`);
 		assert.equal((await limiter.limit({ key: id })).success, true);

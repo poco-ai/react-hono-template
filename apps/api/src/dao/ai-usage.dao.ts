@@ -41,12 +41,19 @@ export const createAiUsageDao = (db: Database) => ({
 		fromDay: string,
 		toDay: string,
 	): Promise<AiUsageTotals> => {
-		const row = await db
+		const [row] = await db
 			.select({
-				requests: sql<number>`coalesce(sum(${aiUsageDaily.requests}), 0)`,
-				inputTokens: sql<number>`coalesce(sum(${aiUsageDaily.inputTokens}), 0)`,
-				outputTokens: sql<number>`coalesce(sum(${aiUsageDaily.outputTokens}), 0)`,
-				toolCalls: sql<number>`coalesce(sum(${aiUsageDaily.toolCalls}), 0)`,
+				requests: sql`coalesce(sum(${aiUsageDaily.requests}), 0)`.mapWith(
+					Number,
+				),
+				inputTokens: sql`coalesce(sum(${aiUsageDaily.inputTokens}), 0)`.mapWith(
+					Number,
+				),
+				outputTokens:
+					sql`coalesce(sum(${aiUsageDaily.outputTokens}), 0)`.mapWith(Number),
+				toolCalls: sql`coalesce(sum(${aiUsageDaily.toolCalls}), 0)`.mapWith(
+					Number,
+				),
 			})
 			.from(aiUsageDaily)
 			.where(
@@ -56,7 +63,7 @@ export const createAiUsageDao = (db: Database) => ({
 					lte(aiUsageDaily.day, toDay),
 				),
 			)
-			.get();
+			.limit(1);
 		return (
 			row ?? {
 				requests: 0,

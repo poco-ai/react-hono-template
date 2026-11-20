@@ -138,11 +138,11 @@ export type IssueInsertData = {
 
 export const createIssueDao = (db: Database) => {
 	const describeIssue = async (row: IssueRow): Promise<IssueDto> => {
-		const status = await db
+		const [status] = await db
 			.select()
 			.from(issueStatuses)
 			.where(eq(issueStatuses.id, row.statusId))
-			.get();
+			.limit(1);
 		if (!status) {
 			throw new Error(`Issue references unknown status ${row.statusId}`);
 		}
@@ -209,11 +209,11 @@ export const createIssueDao = (db: Database) => {
 							? [activityInsertStatement(tx, activityRows)]
 							: []),
 					]);
-					const status = await db
+					const [status] = await db
 						.select()
 						.from(issueStatuses)
 						.where(eq(issueStatuses.id, data.statusId))
-						.get();
+						.limit(1);
 					if (!status) {
 						throw new Error(`Unknown status ${data.statusId}`);
 					}
@@ -320,15 +320,14 @@ export const createIssueDao = (db: Database) => {
 					.from(issues)
 					.where(where)
 					.orderBy(asc(issues.number))
-					.limit(limit)
-					.all(),
+					.limit(limit),
 				db.select({ value: count() }).from(issues).where(where),
 			]);
 			return { rows, total: totals[0]?.value ?? 0 };
 		},
 
 		findById: async (orgId: string, id: string): Promise<IssueDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(issues)
 				.where(
@@ -338,15 +337,15 @@ export const createIssueDao = (db: Database) => {
 						isNull(issues.deletedAt),
 					),
 				)
-				.get();
+				.limit(1);
 			if (!row) {
 				return null;
 			}
-			const status = await db
+			const [status] = await db
 				.select()
 				.from(issueStatuses)
 				.where(eq(issueStatuses.id, row.statusId))
-				.get();
+				.limit(1);
 			return status ? toIssueDto(row, toStatusDto(status)) : null;
 		},
 
@@ -355,7 +354,7 @@ export const createIssueDao = (db: Database) => {
 			projectId: string,
 			number: number,
 		): Promise<IssueDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(issues)
 				.where(
@@ -366,15 +365,15 @@ export const createIssueDao = (db: Database) => {
 						isNull(issues.deletedAt),
 					),
 				)
-				.get();
+				.limit(1);
 			if (!row) {
 				return null;
 			}
-			const status = await db
+			const [status] = await db
 				.select()
 				.from(issueStatuses)
 				.where(eq(issueStatuses.id, row.statusId))
-				.get();
+				.limit(1);
 			return status ? toIssueDto(row, toStatusDto(status)) : null;
 		},
 
@@ -465,7 +464,7 @@ export const createIssueDao = (db: Database) => {
 			projectId: string,
 			number: number,
 		): Promise<number | null> => {
-			const row = await db
+			const [row] = await db
 				.select({ number: issues.number })
 				.from(issues)
 				.where(
@@ -478,8 +477,7 @@ export const createIssueDao = (db: Database) => {
 					),
 				)
 				.orderBy(desc(issues.number))
-				.limit(1)
-				.get();
+				.limit(1);
 			return row?.number ?? null;
 		},
 
@@ -488,7 +486,7 @@ export const createIssueDao = (db: Database) => {
 			projectId: string,
 			number: number,
 		): Promise<number | null> => {
-			const row = await db
+			const [row] = await db
 				.select({ number: issues.number })
 				.from(issues)
 				.where(
@@ -501,8 +499,7 @@ export const createIssueDao = (db: Database) => {
 					),
 				)
 				.orderBy(asc(issues.number))
-				.limit(1)
-				.get();
+				.limit(1);
 			return row?.number ?? null;
 		},
 
@@ -666,15 +663,18 @@ export const createIssueDao = (db: Database) => {
 			const uniqueLabelIds = labelIds ? [...new Set(labelIds)] : labelIds;
 			if (!needsBatch) {
 				if (Object.keys(patchEntries).length === 0) {
-					const current = await db.select().from(issues).where(scope).get();
+					const [current] = await db
+						.select()
+						.from(issues)
+						.where(scope)
+						.limit(1);
 					return current ? describeIssue(current) : null;
 				}
-				const row = await db
+				const [row] = await db
 					.update(issues)
 					.set(patchEntries)
 					.where(scope)
-					.returning()
-					.get();
+					.returning();
 				return row ? describeIssue(row) : null;
 			}
 			const hasPatch = Object.keys(patchEntries).length > 0;
@@ -822,8 +822,7 @@ export const createIssueDao = (db: Database) => {
 				.innerJoin(issueStatuses, eq(issueStatuses.id, issues.statusId))
 				.where(and(...conditions))
 				.orderBy(desc(issues.createdAt), asc(issues.id))
-				.limit(100)
-				.all();
+				.limit(100);
 			return rows.map((row) => ({
 				...row,
 				identifier: `${row.projectKey}-${row.number}`,

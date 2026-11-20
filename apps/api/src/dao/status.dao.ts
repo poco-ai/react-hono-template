@@ -26,11 +26,11 @@ export const createStatusDao = (db: Database) => ({
 	},
 
 	findById: async (orgId: string, id: string): Promise<StatusDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(issueStatuses)
 			.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
-			.get();
+			.limit(1);
 		return row ? toStatusDto(row) : null;
 	},
 
@@ -38,11 +38,11 @@ export const createStatusDao = (db: Database) => ({
 		orgId: string,
 		name: string,
 	): Promise<StatusDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(issueStatuses)
 			.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.name, name)))
-			.get();
+			.limit(1);
 		return row ? toStatusDto(row) : null;
 	},
 
@@ -75,7 +75,7 @@ export const createStatusDao = (db: Database) => ({
 		position: number;
 		isDefault: boolean;
 	}): Promise<StatusDto> => {
-		const row = await db.insert(issueStatuses).values(data).returning().get();
+		const [row] = await db.insert(issueStatuses).values(data).returning();
 		return toStatusDto(row);
 	},
 
@@ -114,11 +114,11 @@ export const createStatusDao = (db: Database) => ({
 		);
 		const hasPatch = Object.keys(patchEntries).length > 0;
 		if (!hasPatch && !promoteDefault) {
-			const current = await db
+			const [current] = await db
 				.select()
 				.from(issueStatuses)
 				.where(and(eq(issueStatuses.orgId, orgId), eq(issueStatuses.id, id)))
-				.get();
+				.limit(1);
 			return current ? toStatusDto(current) : null;
 		}
 		let returningIndex = 0;

@@ -78,31 +78,29 @@ export const createAdminUserDao = (db: Database) => ({
 	},
 
 	hasAdminUser: async (): Promise<boolean> => {
-		const row = await db
+		const [row] = await db
 			.select({ id: userTable.id })
 			.from(userTable)
 			.where(eq(userTable.role, "admin"))
-			.limit(1)
-			.get();
+			.limit(1);
 		return row !== undefined;
 	},
 
 	findById: async (id: string): Promise<AdminUserDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(userTable)
 			.where(eq(userTable.id, id))
-			.get();
+			.limit(1);
 		return row ? toDto(row) : null;
 	},
 
 	updateRole: async (id: string, role: string): Promise<AdminUserDto> => {
-		const row = await db
+		const [row] = await db
 			.update(userTable)
 			.set({ role })
 			.where(eq(userTable.id, id))
-			.returning()
-			.get();
+			.returning();
 		return toDto(row);
 	},
 
@@ -126,12 +124,11 @@ export const createAdminUserDao = (db: Database) => ({
 	},
 
 	unban: async (id: string): Promise<AdminUserDto> => {
-		const row = await db
+		const [row] = await db
 			.update(userTable)
 			.set({ banned: false, banReason: null, banExpires: null })
 			.where(eq(userTable.id, id))
-			.returning()
-			.get();
+			.returning();
 		return toDto(row);
 	},
 });

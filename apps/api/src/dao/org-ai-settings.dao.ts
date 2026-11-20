@@ -25,11 +25,11 @@ const toDto = (row: SettingsRow): OrgAiSettingsDto => ({
 
 export const createOrgAiSettingsDao = (db: Database) => ({
 	findByOrg: async (orgId: string): Promise<OrgAiSettingsDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(orgAiSettings)
 			.where(eq(orgAiSettings.orgId, orgId))
-			.get();
+			.limit(1);
 		return row ? toDto(row) : null;
 	},
 
@@ -37,7 +37,7 @@ export const createOrgAiSettingsDao = (db: Database) => ({
 		orgId: string,
 		patch: OrgAiSettingsPatch,
 	): Promise<OrgAiSettingsDto> => {
-		const row = await db
+		const [row] = await db
 			.insert(orgAiSettings)
 			.values({ orgId, ...patch })
 			.onConflictDoUpdate({
@@ -50,8 +50,7 @@ export const createOrgAiSettingsDao = (db: Database) => ({
 					updatedBy: patch.updatedBy,
 				},
 			})
-			.returning()
-			.get();
+			.returning();
 		return toDto(row);
 	},
 });

@@ -31,7 +31,7 @@ export const createIssueSubscriptionDao = (db: Database) => ({
 		issueId: string,
 		userId: string,
 	): Promise<IssueSubscriptionRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(issueSubscriptions)
 			.where(
@@ -40,7 +40,7 @@ export const createIssueSubscriptionDao = (db: Database) => ({
 					eq(issueSubscriptions.userId, userId),
 				),
 			)
-			.get();
+			.limit(1);
 		return row ? toRow(row) : null;
 	},
 

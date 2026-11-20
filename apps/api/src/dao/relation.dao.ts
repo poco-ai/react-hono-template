@@ -69,11 +69,11 @@ export const createRelationDao = (db: Database) => ({
 		orgId: string,
 		id: string,
 	): Promise<IssueRelationDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(issueRelations)
 			.where(and(eq(issueRelations.orgId, orgId), eq(issueRelations.id, id)))
-			.get();
+			.limit(1);
 		return row ? toRelationDto(row) : null;
 	},
 
@@ -84,7 +84,7 @@ export const createRelationDao = (db: Database) => ({
 		relatedIssueId: string,
 		type: IssueRelationType,
 	): Promise<IssueRelationDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(issueRelations)
 			.where(
@@ -95,7 +95,7 @@ export const createRelationDao = (db: Database) => ({
 					eq(issueRelations.type, type),
 				),
 			)
-			.get();
+			.limit(1);
 		return row ? toRelationDto(row) : null;
 	},
 

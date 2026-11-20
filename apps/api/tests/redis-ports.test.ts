@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { createRedisCache } from "../src/lib/redis/cache";
 import type { RedisLike } from "../src/lib/redis/client";
 import { createRedisRateLimiter } from "../src/lib/redis/rate-limit";
@@ -7,6 +8,7 @@ import { withRedisLock } from "../src/lib/redis/scheduler";
 import {
 	createRedisWebhookQueue,
 	drainWebhookQueue,
+	startWebhookLoop,
 } from "../src/lib/redis/webhook-queue";
 import type { WebhookDeliveryService } from "../src/services/webhook-delivery.service";
 
@@ -176,4 +178,46 @@ test("webhook jobs are consumed from the redis list", async () => {
 	assert.equal(await drainWebhookQueue(redis, deliveries), 1);
 	assert.deepEqual(seen, ["del-1"]);
 	assert.equal(await drainWebhookQueue(redis, deliveries), 0);
+});
+
+test("webhook polling avoids overlapping drains and finishes the active delivery on stop", async () => {
+	const redis = new MemoryRedis();
+	const queue = createRedisWebhookQueue(redis);
+	const seen: string[] = [];
+	const started = Promise.withResolvers<void>();
+	const release = Promise.withResolvers<void>();
+	const deliveries = {
+		deliverFromQueue: async (deliveryId: string) => {
+			seen.push(deliveryId);
+			if (deliveryId === "del-1") {
+				started.resolve();
+				await release.promise;
+			}
+			return "success" as const;
+		},
+	} as unknown as WebhookDeliveryService;
+	await queue.send({ deliveryId: "del-1" });
+	await queue.send({ deliveryId: "del-2" });
+	const stop = startWebhookLoop(redis, deliveries, 1);
+	try {
+		await started.promise;
+		await delay(20);
+		assert.deepEqual(seen, ["del-1"]);
+
+		let stopped = false;
+		const stopping = stop().then(() => {
+			stopped = true;
+		});
+		await delay(0);
+		assert.equal(stopped, false);
+		release.resolve();
+		await stopping;
+		assert.deepEqual(seen, ["del-1"]);
+		assert.deepEqual(await redis.hgetall("webhook:processing"), {});
+		assert.equal(await drainWebhookQueue(redis, deliveries), 1);
+		assert.deepEqual(seen, ["del-1", "del-2"]);
+	} finally {
+		release.resolve();
+		await stop();
+	}
 });

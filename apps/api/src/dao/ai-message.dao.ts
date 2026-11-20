@@ -100,8 +100,7 @@ export const createAiMessageDao = (db: Database) => ({
 				),
 			)
 			.orderBy(desc(aiMessages.createdAt), desc(aiMessages.id))
-			.limit(limit)
-			.all();
+			.limit(limit);
 		return rows.reverse().map(toDto);
 	},
 });

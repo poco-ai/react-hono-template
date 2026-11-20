@@ -35,11 +35,7 @@ export type WebhookDeliveryAttemptPatch = {
 
 export const createWebhookDeliveryDao = (db: Database) => ({
 	create: async (data: WebhookDeliveryInsert): Promise<WebhookDeliveryDto> => {
-		const row = await db
-			.insert(webhookDeliveries)
-			.values(data)
-			.returning()
-			.get();
+		const [row] = await db.insert(webhookDeliveries).values(data).returning();
 		return toDeliveryDto(row);
 	},
 
@@ -47,22 +43,22 @@ export const createWebhookDeliveryDao = (db: Database) => ({
 		orgId: string,
 		id: string,
 	): Promise<WebhookDeliveryDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(webhookDeliveries)
 			.where(
 				and(eq(webhookDeliveries.orgId, orgId), eq(webhookDeliveries.id, id)),
 			)
-			.get();
+			.limit(1);
 		return row ? toDeliveryDto(row) : null;
 	},
 
 	findByIdUnscoped: async (id: string): Promise<WebhookDeliveryDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(webhookDeliveries)
 			.where(eq(webhookDeliveries.id, id))
-			.get();
+			.limit(1);
 		return row ? toDeliveryDto(row) : null;
 	},
 

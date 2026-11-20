@@ -37,11 +37,11 @@ export const createIssueTemplateDao = (db: Database) => {
 			orgId: string,
 			id: string,
 		): Promise<IssueTemplateDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(issueTemplates)
 				.where(scope(orgId, id))
-				.get();
+				.limit(1);
 			return row ? toTemplateDto(row) : null;
 		},
 
@@ -55,7 +55,7 @@ export const createIssueTemplateDao = (db: Database) => {
 			projectId: string | null,
 			name: string,
 		): Promise<IssueTemplateDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(issueTemplates)
 				.where(
@@ -67,7 +67,7 @@ export const createIssueTemplateDao = (db: Database) => {
 						eq(issueTemplates.name, name),
 					),
 				)
-				.get();
+				.limit(1);
 			return row ? toTemplateDto(row) : null;
 		},
 
@@ -84,11 +84,7 @@ export const createIssueTemplateDao = (db: Database) => {
 			estimate: number | null;
 			createdById: string | null;
 		}): Promise<IssueTemplateDto> => {
-			const row = await db
-				.insert(issueTemplates)
-				.values(data)
-				.returning()
-				.get();
+			const [row] = await db.insert(issueTemplates).values(data).returning();
 			return toTemplateDto(row);
 		},
 
@@ -110,19 +106,18 @@ export const createIssueTemplateDao = (db: Database) => {
 				Object.entries(patch).filter(([, value]) => value !== undefined),
 			);
 			if (Object.keys(patchEntries).length === 0) {
-				return db
+				const [current] = await db
 					.select()
 					.from(issueTemplates)
 					.where(scope(orgId, id))
-					.get()
-					.then((row) => (row ? toTemplateDto(row) : null));
+					.limit(1);
+				return current ? toTemplateDto(current) : null;
 			}
-			const row = await db
+			const [row] = await db
 				.update(issueTemplates)
 				.set(patchEntries)
 				.where(scope(orgId, id))
-				.returning()
-				.get();
+				.returning();
 			return row ? toTemplateDto(row) : null;
 		},
 

@@ -120,7 +120,7 @@ export const createAiToolCallDao = (db: Database) => ({
 		conversationId: string,
 		id: string,
 	): Promise<AiToolCallDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(aiToolCalls)
 			.where(
@@ -130,7 +130,7 @@ export const createAiToolCallDao = (db: Database) => ({
 					eq(aiToolCalls.id, id),
 				),
 			)
-			.get();
+			.limit(1);
 		return row ? toDto(row) : null;
 	},
 
@@ -148,8 +148,7 @@ export const createAiToolCallDao = (db: Database) => ({
 					eq(aiToolCalls.status, "proposed"),
 				),
 			)
-			.orderBy(desc(aiToolCalls.createdAt))
-			.all();
+			.orderBy(desc(aiToolCalls.createdAt));
 		return rows.map(toDto);
 	},
 

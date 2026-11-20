@@ -57,12 +57,12 @@ export type ApiKeyInsert = {
 
 export const createApiKeyDao = (db: Database) => ({
 	create: async (data: ApiKeyInsert): Promise<ApiKeyDto> => {
-		const row = await db.insert(apiKeys).values(data).returning().get();
+		const [row] = await db.insert(apiKeys).values(data).returning();
 		return toApiKeyDto(row);
 	},
 
 	findById: async (orgId: string, id: string): Promise<ApiKeyDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select(LIST_COLUMNS)
 			.from(apiKeys)
 			.where(
@@ -72,16 +72,16 @@ export const createApiKeyDao = (db: Database) => ({
 					isNull(apiKeys.revokedAt),
 				),
 			)
-			.get();
+			.limit(1);
 		return row ? toApiKeyDto(row) : null;
 	},
 
 	findByHash: async (keyHash: string): Promise<ApiKeyRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(apiKeys)
 			.where(eq(apiKeys.keyHash, keyHash))
-			.get();
+			.limit(1);
 		return row ?? null;
 	},
 

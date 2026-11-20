@@ -48,35 +48,34 @@ export const createBillingDao = (db: Database) => ({
 		const patchEntries = Object.fromEntries(
 			Object.entries(patch).filter(([, value]) => value !== undefined),
 		);
-		const row = await db
+		const [row] = await db
 			.insert(subscriptions)
 			.values({ orgId, ...patchEntries })
 			.onConflictDoUpdate({
 				target: subscriptions.orgId,
 				set: { ...patchEntries, updatedAt: new Date() },
 			})
-			.returning()
-			.get();
+			.returning();
 		return toDto(row);
 	},
 
 	findByOrg: async (orgId: string): Promise<SubscriptionDto> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(subscriptions)
 			.where(eq(subscriptions.orgId, orgId))
-			.get();
+			.limit(1);
 		return row ? toDto(row) : freeDefault(orgId);
 	},
 
 	findByStripeCustomer: async (
 		customerId: string,
 	): Promise<SubscriptionDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(subscriptions)
 			.where(eq(subscriptions.stripeCustomerId, customerId))
-			.get();
+			.limit(1);
 		return row ? toDto(row) : null;
 	},
 
@@ -88,19 +87,18 @@ export const createBillingDao = (db: Database) => ({
 			Object.entries(patch).filter(([, value]) => value !== undefined),
 		);
 		if (Object.keys(patchEntries).length === 0) {
-			const current = await db
+			const [current] = await db
 				.select()
 				.from(subscriptions)
 				.where(eq(subscriptions.orgId, orgId))
-				.get();
+				.limit(1);
 			return current ? toDto(current) : null;
 		}
-		const row = await db
+		const [row] = await db
 			.update(subscriptions)
 			.set(patchEntries)
 			.where(eq(subscriptions.orgId, orgId))
-			.returning()
-			.get();
+			.returning();
 		return row ? toDto(row) : null;
 	},
 });

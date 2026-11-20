@@ -117,12 +117,12 @@ export const createCommentDao = (db: Database) => ({
 			}
 			return statements;
 		});
-		const created = await db
+		const [created] = await db
 			.select(COMMENT_SELECT)
 			.from(comments)
 			.innerJoin(user, eq(user.id, comments.authorId))
 			.where(and(eq(comments.orgId, data.orgId), eq(comments.id, data.id)))
-			.get();
+			.limit(1);
 		if (!created) {
 			throw new Error(`Comment ${data.id} not found after insert`);
 		}
@@ -130,12 +130,12 @@ export const createCommentDao = (db: Database) => ({
 	},
 
 	findById: async (orgId: string, id: string): Promise<CommentDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select(COMMENT_SELECT)
 			.from(comments)
 			.innerJoin(user, eq(user.id, comments.authorId))
 			.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-			.get();
+			.limit(1);
 		return row ? toCommentDto(row) : null;
 	},
 
@@ -166,12 +166,12 @@ export const createCommentDao = (db: Database) => ({
 		if (rows.length === 0) {
 			return null;
 		}
-		const row = await db
+		const [row] = await db
 			.select(COMMENT_SELECT)
 			.from(comments)
 			.innerJoin(user, eq(user.id, comments.authorId))
 			.where(and(eq(comments.orgId, orgId), eq(comments.id, id)))
-			.get();
+			.limit(1);
 		return row ? toCommentDto(row) : null;
 	},
 

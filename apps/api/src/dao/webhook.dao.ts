@@ -35,11 +35,10 @@ export type WebhookPatch = {
 
 export const createWebhookDao = (db: Database) => ({
 	create: async (data: WebhookInsert): Promise<WebhookWithSecretDto> => {
-		const row = await db
+		const [row] = await db
 			.insert(webhooks)
 			.values({ ...data, events: data.events.join(",") })
-			.returning()
-			.get();
+			.returning();
 		return toWebhookDto(row);
 	},
 
@@ -47,11 +46,11 @@ export const createWebhookDao = (db: Database) => ({
 		orgId: string,
 		id: string,
 	): Promise<WebhookWithSecretDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(webhooks)
 			.where(and(eq(webhooks.orgId, orgId), eq(webhooks.id, id)))
-			.get();
+			.limit(1);
 		return row ? toWebhookDto(row) : null;
 	},
 
@@ -69,19 +68,18 @@ export const createWebhookDao = (db: Database) => ({
 				]),
 		);
 		if (Object.keys(patchEntries).length === 0) {
-			const current = await db
+			const [current] = await db
 				.select()
 				.from(webhooks)
 				.where(and(eq(webhooks.orgId, orgId), eq(webhooks.id, id)))
-				.get();
+				.limit(1);
 			return current ? toWebhookDto(current) : null;
 		}
-		const row = await db
+		const [row] = await db
 			.update(webhooks)
 			.set(patchEntries)
 			.where(and(eq(webhooks.orgId, orgId), eq(webhooks.id, id)))
-			.returning()
-			.get();
+			.returning();
 		return row ? toWebhookDto(row) : null;
 	},
 

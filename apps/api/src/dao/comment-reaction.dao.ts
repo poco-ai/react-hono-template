@@ -4,7 +4,6 @@ import { runBatch } from "../db/run-batch";
 import { commentReactions } from "../db/schema";
 import { sqlProfile } from "../db/sql-profile";
 import type { Database } from "../db/types";
-import { isUniqueConstraintViolation } from "../lib/db-errors";
 import { sqlNow } from "../lib/sql-dialect";
 
 export type CommentReactionRow = {
@@ -27,15 +26,21 @@ const toggleOnPostgres = async (
 			.where(where)
 			.returning({ commentId: commentReactions.commentId });
 		if (deleted.length > 0) return false;
-		try {
-			await tx.insert(commentReactions).values({
+		await tx
+			.insert(commentReactions)
+			.values({
 				...row,
 				createdAt: new Date(),
+			})
+			// A concurrent insert leaves the reaction enabled without aborting
+			// the PostgreSQL transaction on a unique violation.
+			.onConflictDoNothing({
+				target: [
+					commentReactions.commentId,
+					commentReactions.userId,
+					commentReactions.emoji,
+				],
 			});
-		} catch (error) {
-			if (isUniqueConstraintViolation(error)) return true;
-			throw error;
-		}
 		return true;
 	});
 };

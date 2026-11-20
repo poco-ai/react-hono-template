@@ -97,4 +97,4 @@ INSERT INTO "usage_balances" ("org_id", "meter", "period_key", "granted", "consu
 SELECT "org_id", 'ai.tokens', substr("day", 1, 7), 0, sum("input_tokens" + "output_tokens"), 0
 FROM "ai_usage_daily"
 WHERE substr("day", 1, 7) = to_char((now() AT TIME ZONE 'utc'), 'YYYY-MM')
-GROUP BY "org_id";
+GROUP BY "org_id", substr("day", 1, 7);

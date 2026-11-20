@@ -49,11 +49,11 @@ export const createFavoriteDao = (db: Database) => {
 			entityType: FavoriteEntityType,
 			entityId: string,
 		): Promise<FavoriteDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(favorites)
 				.where(scope(orgId, userId, entityType, entityId))
-				.get();
+				.limit(1);
 			return row ? toFavoriteDto(row) : null;
 		},
 
@@ -65,20 +65,19 @@ export const createFavoriteDao = (db: Database) => {
 			entityType: FavoriteEntityType;
 			entityId: string;
 		}): Promise<FavoriteDto> => {
-			const inserted = await db
+			const [inserted] = await db
 				.insert(favorites)
 				.values(data)
 				.onConflictDoNothing()
-				.returning()
-				.get();
+				.returning();
 			if (inserted) {
 				return toFavoriteDto(inserted);
 			}
-			const existing = await db
+			const [existing] = await db
 				.select()
 				.from(favorites)
 				.where(scope(data.orgId, data.userId, data.entityType, data.entityId))
-				.get();
+				.limit(1);
 			if (!existing) {
 				throw new Error("Favorite insert conflicted but the row is missing");
 			}

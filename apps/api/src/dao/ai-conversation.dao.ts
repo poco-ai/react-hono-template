@@ -27,16 +27,15 @@ const toDto = (row: ConversationRow): AiConversationDto => ({
 
 const activityAt = sql<number>`coalesce(${aiConversations.lastMessageAt}, ${aiConversations.createdAt})`;
 
-const cursorCondition = (cursor: AiConversationCursor): SQL => sql`
-	(${aiConversations.pinned} < ${cursor.pinned ? 1 : 0})
-	or (
-		${aiConversations.pinned} = ${cursor.pinned ? 1 : 0}
-		and (
-			${activityAt} < ${cursor.activityAt}
-			or (${activityAt} = ${cursor.activityAt} and ${aiConversations.id} < ${cursor.id})
-		)
-	)
-`;
+const cursorCondition = (cursor: AiConversationCursor): SQL | undefined =>
+	or(
+		cursor.pinned ? eq(aiConversations.pinned, false) : undefined,
+		and(
+			eq(aiConversations.pinned, cursor.pinned),
+			sql`(${activityAt} < ${cursor.activityAt}
+				or (${activityAt} = ${cursor.activityAt} and ${aiConversations.id} < ${cursor.id}))`,
+		),
+	);
 
 export const createAiConversationDao = (db: Database) => ({
 	create: async (data: {
@@ -48,7 +47,7 @@ export const createAiConversationDao = (db: Database) => ({
 		contextId: string | null;
 		model?: string | null;
 	}): Promise<AiConversationDto> => {
-		const row = await db.insert(aiConversations).values(data).returning().get();
+		const [row] = await db.insert(aiConversations).values(data).returning();
 		return toDto(row);
 	},
 
@@ -58,7 +57,7 @@ export const createAiConversationDao = (db: Database) => ({
 		userId: string,
 		id: string,
 	): Promise<AiConversationDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(aiConversations)
 			.where(
@@ -69,7 +68,7 @@ export const createAiConversationDao = (db: Database) => ({
 					isNull(aiConversations.deletedAt),
 				),
 			)
-			.get();
+			.limit(1);
 		return row ? toDto(row) : null;
 	},
 
@@ -82,7 +81,7 @@ export const createAiConversationDao = (db: Database) => ({
 			cursor?: AiConversationCursor;
 		},
 	): Promise<{ items: AiConversationDto[]; hasMore: boolean }> => {
-		const conditions = [
+		const conditions: (SQL | undefined)[] = [
 			eq(aiConversations.orgId, orgId),
 			eq(aiConversations.userId, userId),
 			isNull(aiConversations.deletedAt),
@@ -102,8 +101,7 @@ export const createAiConversationDao = (db: Database) => ({
 				desc(activityAt),
 				desc(aiConversations.id),
 			)
-			.limit(options.limit + 1)
-			.all();
+			.limit(options.limit + 1);
 		const hasMore = rows.length > options.limit;
 		return {
 			items: rows.slice(0, options.limit).map(toDto),
@@ -118,7 +116,7 @@ export const createAiConversationDao = (db: Database) => ({
 		patch: { title?: string | null; pinned?: boolean },
 	): Promise<AiConversationDto | null> => {
 		if (Object.keys(patch).length === 0) {
-			return await db
+			const [row] = await db
 				.select()
 				.from(aiConversations)
 				.where(
@@ -129,8 +127,8 @@ export const createAiConversationDao = (db: Database) => ({
 						isNull(aiConversations.deletedAt),
 					),
 				)
-				.get()
-				.then((row) => (row ? toDto(row) : null));
+				.limit(1);
+			return row ? toDto(row) : null;
 		}
 		const rows = await db
 			.update(aiConversations)
@@ -159,7 +157,9 @@ export const createAiConversationDao = (db: Database) => ({
 			.where(
 				and(
 					isNull(aiConversations.deletedAt),
-					sql`coalesce(${aiConversations.lastMessageAt}, ${aiConversations.updatedAt}) < ${nowMs} - coalesce((select retention_days from org_ai_settings where org_id = ${aiConversations.orgId}), 30) * 86400000`,
+					sql`coalesce(${aiConversations.lastMessageAt}, ${aiConversations.updatedAt}) <
+						cast(${nowMs} as bigint) -
+						cast(coalesce((select retention_days from org_ai_settings where org_id = ${aiConversations.orgId}), 30) as bigint) * 86400000`,
 				),
 			)
 			.returning({ id: aiConversations.id });

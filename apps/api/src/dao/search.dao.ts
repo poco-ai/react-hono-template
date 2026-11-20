@@ -136,7 +136,7 @@ const ISSUE_JOINS = sql`
 	join issues i on i.rowid = issue_search.rowid
 	join projects p on p.id = i.project_id
 	join issue_statuses s on s.id = i.status_id
-	left join user u on u.id = i.assignee_id
+	left join "user" u on u.id = i.assignee_id
 `;
 
 const COMMENT_PROJECTION = sql`
@@ -157,7 +157,7 @@ const COMMENT_JOINS = sql`
 	join comments c on c.rowid = comment_search.rowid
 	join issues i on i.id = c.issue_id
 	join projects p on p.id = i.project_id
-	join user u on u.id = c.author_id
+	join "user" u on u.id = c.author_id
 `;
 
 const toIssueHit = (
@@ -231,14 +231,14 @@ const ISSUE_TABLE_FROM = sql`
 	issues i
 	join projects p on p.id = i.project_id
 	join issue_statuses s on s.id = i.status_id
-	left join user u on u.id = i.assignee_id
+	left join "user" u on u.id = i.assignee_id
 `;
 
 const COMMENT_TABLE_FROM = sql`
 	comments c
 	join issues i on i.id = c.issue_id
 	join projects p on p.id = i.project_id
-	join user u on u.id = c.author_id
+	join "user" u on u.id = c.author_id
 `;
 
 /**
@@ -401,7 +401,7 @@ export const createSearchDao = (db: Database) => ({
 				u.name as name,
 				u.image as image
 			from member m
-			join user u on u.id = m.user_id
+			join "user" u on u.id = m.user_id
 			where m.organization_id = ${orgId}
 				and ${joinAnd(terms.tokens.map(memberInstr))}
 			order by u.name, m.user_id

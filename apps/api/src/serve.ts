@@ -33,10 +33,14 @@ export const listen = async () => {
 	});
 	console.log(`[api] listening on http://${hostname}:${server.port}`);
 
+	let stopping = false;
 	const shutdown = async () => {
-		stopWebhook();
+		if (stopping) return;
+		stopping = true;
+		const webhookDrained = stopWebhook();
 		stopCron();
 		server.stop();
+		await webhookDrained;
 		await runtime.close();
 		process.exit(0);
 	};

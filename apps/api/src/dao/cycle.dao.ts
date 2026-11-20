@@ -53,13 +53,12 @@ export const createCycleDao = (db: Database) => {
 		and(eq(cycles.orgId, orgId), eq(cycles.projectId, projectId));
 
 	const maxNumber = async (orgId: string, projectId: string) => {
-		const row = await db
+		const [row] = await db
 			.select({ number: cycles.number })
 			.from(cycles)
 			.where(projectScope(orgId, projectId))
 			.orderBy(desc(cycles.number))
-			.limit(1)
-			.get();
+			.limit(1);
 		return row?.number ?? 0;
 	};
 
@@ -122,17 +121,16 @@ export const createCycleDao = (db: Database) => {
 				.select()
 				.from(cycles)
 				.where(projectScope(orgId, projectId))
-				.orderBy(asc(cycles.startsAt), asc(cycles.number))
-				.all();
+				.orderBy(asc(cycles.startsAt), asc(cycles.number));
 			return rows.map(toCycleDto);
 		},
 
 		findById: async (orgId: string, id: string): Promise<CycleDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(cycles)
 				.where(and(eq(cycles.orgId, orgId), eq(cycles.id, id)))
-				.get();
+				.limit(1);
 			return row ? toCycleDto(row) : null;
 		},
 
@@ -141,11 +139,11 @@ export const createCycleDao = (db: Database) => {
 			projectId: string,
 			id: string,
 		): Promise<CycleDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(cycles)
 				.where(and(projectScope(orgId, projectId), eq(cycles.id, id)))
-				.get();
+				.limit(1);
 			return row ? toCycleDto(row) : null;
 		},
 
@@ -171,11 +169,11 @@ export const createCycleDao = (db: Database) => {
 			if (excludeId) {
 				conditions.push(sql`${cycles.id} <> ${excludeId}`);
 			}
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(cycles)
 				.where(and(...conditions))
-				.get();
+				.limit(1);
 			return row ? toCycleDto(row) : null;
 		},
 
@@ -207,8 +205,7 @@ export const createCycleDao = (db: Database) => {
 						isNull(issues.archivedAt),
 					),
 				)
-				.groupBy(issues.cycleId)
-				.all();
+				.groupBy(issues.cycleId);
 			for (const row of rows) {
 				if (!row.cycleId) {
 					continue;
@@ -239,11 +236,10 @@ export const createCycleDao = (db: Database) => {
 			for (let attempt = 0; attempt < MAX_INSERT_ATTEMPTS; attempt++) {
 				const number = (await maxNumber(data.orgId, data.projectId)) + 1;
 				try {
-					const row = await db
+					const [row] = await db
 						.insert(cycles)
 						.values({ ...data, number })
-						.returning()
-						.get();
+						.returning();
 					return toCycleDto(row);
 				} catch (err) {
 					lastError = err;
@@ -268,19 +264,18 @@ export const createCycleDao = (db: Database) => {
 				Object.entries(patch).filter(([, value]) => value !== undefined),
 			);
 			if (Object.keys(patchEntries).length === 0) {
-				return db
+				const [current] = await db
 					.select()
 					.from(cycles)
 					.where(and(eq(cycles.orgId, orgId), eq(cycles.id, id)))
-					.get()
-					.then((row) => (row ? toCycleDto(row) : null));
+					.limit(1);
+				return current ? toCycleDto(current) : null;
 			}
-			const row = await db
+			const [row] = await db
 				.update(cycles)
 				.set(patchEntries)
 				.where(and(eq(cycles.orgId, orgId), eq(cycles.id, id)))
-				.returning()
-				.get();
+				.returning();
 			return row ? toCycleDto(row) : null;
 		},
 

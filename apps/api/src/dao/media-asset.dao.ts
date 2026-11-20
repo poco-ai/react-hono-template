@@ -31,29 +31,29 @@ const numeric = (value: unknown) => Number(value ?? 0);
 
 export const createMediaAssetDao = (db: Database) => ({
 	findById: async (id: string): Promise<MediaAssetRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(mediaAssets)
 			.where(eq(mediaAssets.id, id))
-			.get();
+			.limit(1);
 		return row ?? null;
 	},
 
 	findByKey: async (key: string): Promise<MediaAssetRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(mediaAssets)
 			.where(eq(mediaAssets.key, key))
-			.get();
+			.limit(1);
 		return row ?? null;
 	},
 
 	existsByKey: async (key: string): Promise<boolean> => {
-		const row = await db
+		const [row] = await db
 			.select({ id: mediaAssets.id })
 			.from(mediaAssets)
 			.where(eq(mediaAssets.key, key))
-			.get();
+			.limit(1);
 		return !!row;
 	},
 
@@ -98,11 +98,11 @@ export const createMediaAssetDao = (db: Database) => ({
 				),
 			tx.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
 		]);
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(mediaAssets)
 			.where(eq(mediaAssets.id, asset.id))
-			.get();
+			.limit(1);
 		if (!row) {
 			throw new Error(`Media asset ${asset.id} not found after insert`);
 		}
@@ -114,7 +114,7 @@ export const createMediaAssetDao = (db: Database) => ({
 	},
 
 	sumActiveSizeByOrg: async (orgId: string): Promise<number> => {
-		const row = await db
+		const [row] = await db
 			.select({
 				value: sql<number>`coalesce(sum(${mediaAssets.size}), 0)`,
 			})
@@ -126,7 +126,7 @@ export const createMediaAssetDao = (db: Database) => ({
 					notInArray(mediaAssets.kind, [...NON_QUOTA_MEDIA_KINDS]),
 				),
 			)
-			.get();
+			.limit(1);
 		return numeric(row?.value);
 	},
 

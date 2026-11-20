@@ -97,12 +97,12 @@ export const createProjectUpdateDao = (db: Database) => {
 			projectId: string,
 			id: string,
 		): Promise<ProjectUpdateDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select(UPDATE_SELECT)
 				.from(projectUpdates)
 				.leftJoin(user, eq(user.id, projectUpdates.authorId))
 				.where(and(projectScope(orgId, projectId), eq(projectUpdates.id, id)))
-				.get();
+				.limit(1);
 			return row ? toProjectUpdateDto(row) : null;
 		},
 
@@ -126,7 +126,7 @@ export const createProjectUpdateDao = (db: Database) => {
 				return statements;
 			});
 			// Re-read so the author projection matches list responses.
-			const created = await db
+			const [created] = await db
 				.select(UPDATE_SELECT)
 				.from(projectUpdates)
 				.leftJoin(user, eq(user.id, projectUpdates.authorId))
@@ -136,7 +136,7 @@ export const createProjectUpdateDao = (db: Database) => {
 						eq(projectUpdates.id, data.id),
 					),
 				)
-				.get();
+				.limit(1);
 			if (!created) {
 				throw new Error(`Project update ${data.id} not found after insert`);
 			}
@@ -171,12 +171,12 @@ export const createProjectUpdateDao = (db: Database) => {
 				}
 				return statements;
 			});
-			const row = await db
+			const [row] = await db
 				.select(UPDATE_SELECT)
 				.from(projectUpdates)
 				.leftJoin(user, eq(user.id, projectUpdates.authorId))
 				.where(and(projectScope(orgId, projectId), eq(projectUpdates.id, id)))
-				.get();
+				.limit(1);
 			return row ? toProjectUpdateDto(row) : null;
 		},
 

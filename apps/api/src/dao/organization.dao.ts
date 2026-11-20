@@ -22,7 +22,7 @@ export type OrgRecordDto = {
 
 export const createOrganizationDao = (db: Database) => ({
 	findById: async (orgId: string): Promise<OrgRecordDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select({
 				id: organization.id,
 				name: organization.name,
@@ -34,7 +34,7 @@ export const createOrganizationDao = (db: Database) => ({
 			.from(organization)
 			.leftJoin(subscriptions, eq(subscriptions.orgId, organization.id))
 			.where(eq(organization.id, orgId))
-			.get();
+			.limit(1);
 		return row
 			? {
 					id: row.id,
@@ -74,8 +74,14 @@ export const createOrganizationDao = (db: Database) => ({
 					createdAt: organization.createdAt,
 					plan: subscriptions.plan,
 					status: subscriptions.status,
-					members: sql<number>`(select count(*) from member where member.organization_id = ${organization.id})`,
-					issues: sql<number>`(select count(*) from issues where issues.org_id = ${organization.id})`,
+					members:
+						sql`(select count(*) from member where member.organization_id = ${organization.id})`.mapWith(
+							Number,
+						),
+					issues:
+						sql`(select count(*) from issues where issues.org_id = ${organization.id})`.mapWith(
+							Number,
+						),
 				})
 				.from(organization)
 				.leftJoin(subscriptions, eq(subscriptions.orgId, organization.id))
@@ -104,12 +110,11 @@ export const createOrganizationDao = (db: Database) => ({
 	},
 
 	updateFrozen: async (orgId: string, frozen: boolean) => {
-		const row = await db
+		const [row] = await db
 			.update(organization)
 			.set({ frozen })
 			.where(eq(organization.id, orgId))
-			.returning({ id: organization.id, frozen: organization.frozen })
-			.get();
+			.returning({ id: organization.id, frozen: organization.frozen });
 		return row ?? null;
 	},
 

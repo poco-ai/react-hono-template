@@ -35,21 +35,21 @@ export const createMemberDao = (db: Database) => ({
 		orgId: string,
 		userId: string,
 	): Promise<MemberWithOrg | undefined> => {
-		const row = await db
+		const [row] = await db
 			.select({ member, frozen: organization.frozen })
 			.from(member)
 			.innerJoin(organization, eq(member.organizationId, organization.id))
 			.where(and(eq(member.organizationId, orgId), eq(member.userId, userId)))
-			.get();
+			.limit(1);
 		return row ? { ...row.member, frozen: row.frozen } : undefined;
 	},
 
 	isOrgFrozen: async (orgId: string): Promise<boolean> => {
-		const row = await db
+		const [row] = await db
 			.select({ frozen: organization.frozen })
 			.from(organization)
 			.where(eq(organization.id, orgId))
-			.get();
+			.limit(1);
 		return row?.frozen ?? false;
 	},
 
@@ -67,8 +67,7 @@ export const createMemberDao = (db: Database) => ({
 			.from(member)
 			.innerJoin(organization, eq(organization.id, member.organizationId))
 			.where(eq(member.userId, userId))
-			.orderBy(asc(organization.name), asc(organization.id))
-			.all();
+			.orderBy(asc(organization.name), asc(organization.id));
 		return rows;
 	},
 
@@ -85,8 +84,7 @@ export const createMemberDao = (db: Database) => ({
 			.from(member)
 			.innerJoin(user, eq(user.id, member.userId))
 			.where(eq(member.organizationId, orgId))
-			.orderBy(asc(user.name), asc(member.userId))
-			.all();
+			.orderBy(asc(user.name), asc(member.userId));
 		return rows;
 	},
 
@@ -154,11 +152,11 @@ export const createMemberDao = (db: Database) => ({
 	},
 
 	findInvitationOrgId: async (invitationId: string): Promise<string | null> => {
-		const row = await db
+		const [row] = await db
 			.select({ organizationId: invitation.organizationId })
 			.from(invitation)
 			.where(eq(invitation.id, invitationId))
-			.get();
+			.limit(1);
 		return row?.organizationId ?? null;
 	},
 
@@ -180,12 +178,12 @@ export const createMemberDao = (db: Database) => ({
 	},
 
 	findOwnerEmail: async (orgId: string): Promise<string | null> => {
-		const row = await db
+		const [row] = await db
 			.select({ email: user.email })
 			.from(member)
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(eq(member.organizationId, orgId), eq(member.role, "owner")))
-			.get();
+			.limit(1);
 		return row?.email ?? null;
 	},
 });

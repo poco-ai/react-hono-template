@@ -1,5 +1,5 @@
-import { and, asc, eq, lte, type SQL } from "drizzle-orm";
-import { issueRecurrences } from "../db/schema";
+import { and, asc, eq, getTableColumns, lte, type SQL } from "drizzle-orm";
+import { issueRecurrences, organization, projects } from "../db/schema";
 import type { Database } from "../db/types";
 import type { RecurrenceDto } from "../dto/recurrence.dto";
 
@@ -49,11 +49,11 @@ export const createRecurrenceDao = (db: Database) => {
 			projectId: string,
 			id: string,
 		): Promise<RecurrenceDto | null> => {
-			const row = await db
+			const [row] = await db
 				.select()
 				.from(issueRecurrences)
 				.where(scope(orgId, projectId, id))
-				.get();
+				.limit(1);
 			return row ? toRecurrenceDto(row) : null;
 		},
 
@@ -94,12 +94,11 @@ export const createRecurrenceDao = (db: Database) => {
 			if (Object.keys(entries).length === 0) {
 				return null;
 			}
-			const row = await db
+			const [row] = await db
 				.update(issueRecurrences)
 				.set(entries)
 				.where(scope(orgId, projectId, id))
-				.returning()
-				.get();
+				.returning();
 			return row ? toRecurrenceDto(row) : null;
 		},
 
@@ -115,14 +114,31 @@ export const createRecurrenceDao = (db: Database) => {
 			return rows.length > 0;
 		},
 
-		/** Active recurrences whose scheduled run is due, oldest first. */
+		/** Runnable recurrences whose scheduled run is due, oldest first. */
 		listDue: async (
 			now: Date,
 			limit: number = RECURRENCE_DUE_LIMIT,
 		): Promise<RecurrenceDto[]> => {
+			// Blocked schedules keep their due date so they can resume. Exclude
+			// them before applying the limit so they cannot starve runnable jobs.
 			const rows = await db
-				.select()
+				.select(getTableColumns(issueRecurrences))
 				.from(issueRecurrences)
+				.innerJoin(
+					projects,
+					and(
+						eq(projects.id, issueRecurrences.projectId),
+						eq(projects.orgId, issueRecurrences.orgId),
+						eq(projects.archived, false),
+					),
+				)
+				.innerJoin(
+					organization,
+					and(
+						eq(organization.id, issueRecurrences.orgId),
+						eq(organization.frozen, false),
+					),
+				)
 				.where(
 					and(
 						eq(issueRecurrences.active, true),

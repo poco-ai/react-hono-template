@@ -27,17 +27,16 @@ export const createProjectDao = (db: Database) => ({
 					? eq(projects.orgId, orgId)
 					: and(eq(projects.orgId, orgId), eq(projects.archived, false)),
 			)
-			.orderBy(desc(projects.createdAt), desc(projects.id))
-			.all();
+			.orderBy(desc(projects.createdAt), desc(projects.id));
 		return rows.map(toProjectDto);
 	},
 
 	findById: async (orgId: string, id: string): Promise<ProjectDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(projects)
 			.where(and(eq(projects.orgId, orgId), eq(projects.id, id)))
-			.get();
+			.limit(1);
 		return row ? toProjectDto(row) : null;
 	},
 
@@ -65,11 +64,11 @@ export const createProjectDao = (db: Database) => ({
 	},
 
 	findByKey: async (orgId: string, key: string): Promise<ProjectDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(projects)
 			.where(and(eq(projects.orgId, orgId), eq(projects.key, key)))
-			.get();
+			.limit(1);
 		return row ? toProjectDto(row) : null;
 	},
 
@@ -94,8 +93,7 @@ export const createProjectDao = (db: Database) => ({
 			.select({ projectId: issues.projectId, value: count() })
 			.from(issues)
 			.where(notDeleted)
-			.groupBy(issues.projectId)
-			.all();
+			.groupBy(issues.projectId);
 		const open = await db
 			.select({
 				// Joined table columns need unique SQL names — see drizzle-orm#6038.
@@ -110,8 +108,7 @@ export const createProjectDao = (db: Database) => ({
 					notInArray(issueStatuses.category, [...TERMINAL_STATUS_CATEGORIES]),
 				),
 			)
-			.groupBy(issues.projectId)
-			.all();
+			.groupBy(issues.projectId);
 		const counts = new Map<string, ProjectIssueStats>();
 		for (const row of totals) {
 			counts.set(row.projectId, {
@@ -136,7 +133,7 @@ export const createProjectDao = (db: Database) => ({
 		description: string | null;
 		color: string | null;
 	}): Promise<ProjectDto> => {
-		const row = await db.insert(projects).values(data).returning().get();
+		const [row] = await db.insert(projects).values(data).returning();
 		return toProjectDto(row);
 	},
 
@@ -158,19 +155,18 @@ export const createProjectDao = (db: Database) => ({
 			Object.entries(patch).filter(([, value]) => value !== undefined),
 		);
 		if (Object.keys(patchEntries).length === 0) {
-			const current = await db
+			const [current] = await db
 				.select()
 				.from(projects)
 				.where(and(eq(projects.orgId, orgId), eq(projects.id, id)))
-				.get();
+				.limit(1);
 			return current ? toProjectDto(current) : null;
 		}
-		const row = await db
+		const [row] = await db
 			.update(projects)
 			.set(patchEntries)
 			.where(and(eq(projects.orgId, orgId), eq(projects.id, id)))
-			.returning()
-			.get();
+			.returning();
 		return row ? toProjectDto(row) : null;
 	},
 });

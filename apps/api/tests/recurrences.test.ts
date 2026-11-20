@@ -12,6 +12,7 @@ import {
 	createCapabilityRegistry,
 } from "../src/capabilities";
 import { createIssueDao } from "../src/dao/issue.dao";
+import { createMemberDao } from "../src/dao/member.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createRecurrenceDao } from "../src/dao/recurrence.dao";
 import type { BackgroundFn } from "../src/lib/background";
@@ -21,7 +22,12 @@ import {
 	createRecurrenceService,
 } from "../src/services/recurrence.service";
 import type { WebhookDispatcher } from "../src/services/webhook-delivery.service";
-import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
+import {
+	seedIssue,
+	seedOrganization,
+	seedProject,
+	seedStatus,
+} from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -48,6 +54,8 @@ const setup = (
 	} = {},
 ) => {
 	const { sqlite, db } = createTestDb();
+	seedOrganization(sqlite, { id: ORG, frozen: options.frozen });
+	seedOrganization(sqlite, { id: OTHER_ORG });
 	for (const [id, orgId, key, archived] of [
 		[PROJECT, ORG, "WEB", options.archived ?? false],
 		[OTHER_PROJECT, ORG, "API", false],
@@ -96,7 +104,6 @@ const setup = (
 	const recurrenceDao = createRecurrenceDao(db);
 	const issueDao = createIssueDao(db);
 	const projectDao = createProjectDao(db);
-	const frozen = { value: options.frozen ?? false };
 	const labels = new Map([
 		["label-1", { id: "label-1" }],
 		["label-2", { id: "label-2" }],
@@ -108,7 +115,7 @@ const setup = (
 	const memberDao = {
 		findByOrgAndUser: async (orgId: string, userId: string) =>
 			orgId === ORG && userId === USER ? { userId } : undefined,
-		isOrgFrozen: async () => frozen.value,
+		isOrgFrozen: createMemberDao(db).isOrgFrozen,
 	};
 	const statusService = {
 		resolveStatus: async (orgId: string, input: { statusId?: string }) => {
@@ -145,7 +152,6 @@ const setup = (
 		issueDao,
 		projectDao,
 		service,
-		frozen,
 		labelDao,
 		memberDao,
 		statusService,
@@ -556,7 +562,7 @@ test("archived projects and frozen organizations pause the recurrence", async ()
 	const archivedResult = await archived.service.processDue(
 		new Date("2026-06-01T00:15:00Z"),
 	);
-	assert.deepEqual(archivedResult, { created: 0, skipped: 1, failed: 0 });
+	assert.deepEqual(archivedResult, { created: 0, skipped: 0, failed: 0 });
 	const archivedRow = await archived.recurrenceDao.findById(
 		ORG,
 		PROJECT,
@@ -577,7 +583,7 @@ test("archived projects and frozen organizations pause the recurrence", async ()
 	const frozenResult = await frozenSetup.service.processDue(
 		new Date("2026-06-01T00:15:00Z"),
 	);
-	assert.deepEqual(frozenResult, { created: 0, skipped: 1, failed: 0 });
+	assert.deepEqual(frozenResult, { created: 0, skipped: 0, failed: 0 });
 	const frozenRow = await frozenSetup.recurrenceDao.findById(
 		ORG,
 		OTHER_PROJECT,
@@ -591,11 +597,53 @@ test("archived projects and frozen organizations pause the recurrence", async ()
 	assert.equal(frozenIssues.value, 0);
 
 	// Unfreezing resumes the recurrence on the next tick.
-	frozenSetup.frozen.value = false;
+	frozenSetup.sqlite.run(
+		"UPDATE organization SET frozen = 0 WHERE id = ?",
+		ORG,
+	);
 	const frozenResumed = await frozenSetup.service.processDue(
 		new Date("2026-06-01T00:15:00Z"),
 	);
 	assert.deepEqual(frozenResumed, { created: 1, skipped: 0, failed: 0 });
+});
+
+test("older blocked recurrences do not consume the runnable batch", async () => {
+	const { recurrenceDao, service, sqlite } = setup({ frozen: true });
+	seedProject(sqlite, { id: "p4", orgId: OTHER_ORG, archived: true });
+	const occurredAt = new Date("2026-06-01T00:00:00.000Z");
+	const runnableAt = new Date("2026-06-02T00:00:00.000Z");
+
+	for (const [id, orgId, projectId, nextRunAt] of [
+		["archived", OTHER_ORG, "p4", occurredAt],
+		["frozen", ORG, OTHER_PROJECT, occurredAt],
+		["runnable", OTHER_ORG, "p3", runnableAt],
+	] as const) {
+		await recurrenceDao.create({
+			id,
+			orgId,
+			projectId,
+			title: id,
+			description: null,
+			statusId: null,
+			priority: 0,
+			assigneeId: null,
+			labelIds: [],
+			estimate: null,
+			cadence: "daily",
+			nextRunAt,
+			anchorDay: nextRunAt.getUTCDate(),
+			createdById: null,
+		});
+	}
+	assert.deepEqual(await service.processDue(runnableAt, undefined, 1), {
+		created: 1,
+		skipped: 0,
+		failed: 0,
+	});
+	assert.equal(
+		(await recurrenceDao.findById(OTHER_ORG, "p3", "runnable"))?.lastRunAt,
+		runnableAt.toISOString(),
+	);
 });
 
 test("createRecurrence validates scope, cadence and nextRunAt", async () => {

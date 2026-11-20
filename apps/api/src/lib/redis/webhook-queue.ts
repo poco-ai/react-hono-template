@@ -108,17 +108,17 @@ const handleOne = async (
 	await Promise.all(pending);
 };
 
-/** Pulls ready jobs and promotes delayed retries. Safe to call from one process. */
+/** Pulls ready jobs and promotes delayed retries. */
 export const drainWebhookQueue = async (
 	redis: RedisLike,
 	deliveries: WebhookDeliveryService,
-	options?: { max?: number },
+	options?: { max?: number; shouldStop?: () => boolean },
 ) => {
 	await promoteDelayed(redis);
 	await requeueStale(redis);
 	const max = options?.max ?? 10;
 	let processed = 0;
-	while (processed < max) {
+	while (processed < max && !options?.shouldStop?.()) {
 		const raw = await redis.rpop(READY_KEY);
 		if (!raw) break;
 		await handleOne(redis, deliveries, raw);
@@ -132,10 +132,28 @@ export const startWebhookLoop = (
 	deliveries: WebhookDeliveryService,
 	intervalMs = 500,
 ) => {
-	const timer = setInterval(() => {
-		drainWebhookQueue(redis, deliveries).catch((error) => {
+	let stopping = false;
+	let activeDrain: Promise<void> | undefined;
+	const tick = async () => {
+		try {
+			await drainWebhookQueue(redis, deliveries, {
+				shouldStop: () => stopping,
+			});
+		} catch (error) {
 			console.error("[webhook] redis consumer failed:", error);
+		}
+	};
+	const timer = setInterval(() => {
+		// A drained batch may include several slow HTTP deliveries. Do not
+		// start a second consumer every time the poll interval elapses.
+		if (stopping || activeDrain) return;
+		activeDrain = tick().finally(() => {
+			activeDrain = undefined;
 		});
 	}, intervalMs);
-	return () => clearInterval(timer);
+	return async () => {
+		stopping = true;
+		clearInterval(timer);
+		await activeDrain;
+	};
 };

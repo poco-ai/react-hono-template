@@ -88,11 +88,11 @@ export const createViewDao = (db: Database) => ({
 	},
 
 	findById: async (orgId: string, id: string): Promise<ViewDto | null> => {
-		const row = await db
+		const [row] = await db
 			.select(RAW_VIEW_COLUMNS)
 			.from(views)
 			.where(and(eq(views.orgId, orgId), eq(views.id, id)))
-			.get();
+			.limit(1);
 		return row ? toViewDto(row) : null;
 	},
 
@@ -147,16 +147,15 @@ export const createViewDao = (db: Database) => ({
 		);
 		const scope = and(eq(views.orgId, orgId), eq(views.id, id));
 		if (Object.keys(patchEntries).length === 0) {
-			const current = await db.select().from(views).where(scope).get();
+			const [current] = await db.select().from(views).where(scope).limit(1);
 			return current ? toViewDto(current) : null;
 		}
 		if (patch.isDefault !== true) {
-			const row = await db
+			const [row] = await db
 				.update(views)
 				.set(patchEntries)
 				.where(scope)
-				.returning()
-				.get();
+				.returning();
 			return row ? toViewDto(row) : null;
 		}
 		const [, rows] = await runBatch(db, (tx) => [
@@ -179,12 +178,11 @@ export const createViewDao = (db: Database) => ({
 	): Promise<ViewDto | null> => {
 		const scope = and(eq(views.orgId, orgId), eq(views.id, id));
 		if (!isDefault) {
-			const row = await db
+			const [row] = await db
 				.update(views)
 				.set({ isDefault: false })
 				.where(scope)
-				.returning()
-				.get();
+				.returning();
 			return row ? toViewDto(row) : null;
 		}
 		const [, rows] = await runBatch(db, (tx) => [

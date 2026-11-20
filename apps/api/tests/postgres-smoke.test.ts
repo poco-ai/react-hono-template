@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-test("postgres and redis smoke", async (t) => {
+test("postgres and redis smoke", { timeout: 30_000 }, async (t) => {
 	if (!process.env.DATABASE_URL?.trim() || !process.env.REDIS_URL?.trim()) {
 		t.skip("DATABASE_URL and REDIS_URL are not set");
 		return;

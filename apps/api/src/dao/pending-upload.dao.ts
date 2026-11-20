@@ -34,11 +34,11 @@ export const createPendingUploadDao = (db: Database) => ({
 	},
 
 	findByKey: async (key: string): Promise<PendingUploadRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(pendingUploads)
 			.where(eq(pendingUploads.key, key))
-			.get();
+			.limit(1);
 		return row ?? null;
 	},
 
@@ -69,7 +69,7 @@ export const createPendingUploadDao = (db: Database) => ({
 	},
 
 	sumDeclaredSizeByOrg: async (orgId: string, now: Date): Promise<number> => {
-		const row = await db
+		const [row] = await db
 			.select({
 				value: sql<number>`coalesce(sum(${pendingUploads.declaredSize}), 0)`,
 			})
@@ -81,7 +81,7 @@ export const createPendingUploadDao = (db: Database) => ({
 					inArray(pendingUploads.kind, [...QUOTA_UPLOAD_KINDS]),
 				),
 			)
-			.get();
+			.limit(1);
 		return numeric(row?.value);
 	},
 
@@ -91,7 +91,7 @@ export const createPendingUploadDao = (db: Database) => ({
 		targetId: string,
 		now: Date,
 	): Promise<number> => {
-		const row = await db
+		const [row] = await db
 			.select({
 				value: sql<number>`count(*)`,
 			})
@@ -104,7 +104,7 @@ export const createPendingUploadDao = (db: Database) => ({
 					gt(pendingUploads.expiresAt, now),
 				),
 			)
-			.get();
+			.limit(1);
 		return numeric(row?.value);
 	},
 });

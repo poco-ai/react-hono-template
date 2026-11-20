@@ -101,7 +101,7 @@ export const createQuotaDao = (db: Database) => {
 		orgId: string,
 		idempotencyKey: string,
 	): Promise<QuotaReservationRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(quotaReservations)
 			.where(
@@ -110,18 +110,18 @@ export const createQuotaDao = (db: Database) => {
 					eq(quotaReservations.idempotencyKey, idempotencyKey),
 				),
 			)
-			.get();
+			.limit(1);
 		return row ? reservationFrom(row) : null;
 	};
 
 	const findReservationById = async (
 		id: string,
 	): Promise<QuotaReservationRow | null> => {
-		const row = await db
+		const [row] = await db
 			.select()
 			.from(quotaReservations)
 			.where(eq(quotaReservations.id, id))
-			.get();
+			.limit(1);
 		return row ? reservationFrom(row) : null;
 	};
 
@@ -130,7 +130,7 @@ export const createQuotaDao = (db: Database) => {
 			orgId: string,
 			meter: string,
 		): Promise<QuotaPolicyRow | null> => {
-			const row = await db
+			const [row] = await db
 				.select({
 					orgId: quotaPolicies.orgId,
 					meter: quotaPolicies.meter,
@@ -142,7 +142,7 @@ export const createQuotaDao = (db: Database) => {
 				.where(
 					and(eq(quotaPolicies.orgId, orgId), eq(quotaPolicies.meter, meter)),
 				)
-				.get();
+				.limit(1);
 			return row ?? null;
 		},
 
@@ -219,7 +219,7 @@ export const createQuotaDao = (db: Database) => {
 			meter: string,
 			periodKey: string,
 		): Promise<UsageBalanceRow | null> => {
-			const row = await db
+			const [row] = await db
 				.select({
 					granted: usageBalances.granted,
 					consumed: usageBalances.consumed,
@@ -233,7 +233,7 @@ export const createQuotaDao = (db: Database) => {
 						eq(usageBalances.periodKey, periodKey),
 					),
 				)
-				.get();
+				.limit(1);
 			return row ?? null;
 		},
 
@@ -247,14 +247,14 @@ export const createQuotaDao = (db: Database) => {
 		readCreditBalance: async (
 			orgId: string,
 		): Promise<CreditBalanceRow | null> => {
-			const row = await db
+			const [row] = await db
 				.select({
 					balance: creditBalances.balance,
 					reserved: creditBalances.reserved,
 				})
 				.from(creditBalances)
 				.where(eq(creditBalances.orgId, orgId))
-				.get();
+				.limit(1);
 			return row ?? null;
 		},
 
@@ -406,7 +406,7 @@ export const createQuotaDao = (db: Database) => {
 			orgId: string,
 			idempotencyKey: string,
 		): Promise<boolean> => {
-			const row = await db
+			const [row] = await db
 				.select({ id: usageLedger.id })
 				.from(usageLedger)
 				.where(
@@ -415,7 +415,7 @@ export const createQuotaDao = (db: Database) => {
 						eq(usageLedger.idempotencyKey, idempotencyKey),
 					),
 				)
-				.get();
+				.limit(1);
 			return Boolean(row);
 		},
 

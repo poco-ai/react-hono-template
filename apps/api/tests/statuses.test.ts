@@ -18,6 +18,8 @@ import type { Auth } from "../src/lib/auth";
 import { createRoutes } from "../src/routes";
 import { createIssueService } from "../src/services/issue.service";
 import { createStatusService } from "../src/services/status.service";
+import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
+import { createTestDb } from "./helpers/test-db";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 
@@ -469,48 +471,22 @@ test("status migration activities use one insert with explicit columns", () => {
 });
 
 test("project open counts treat completed/canceled categories as closed", async () => {
-	const wheres: unknown[] = [];
-	const chain = {
-		select: () => chain,
-		from: () => chain,
-		innerJoin: () => chain,
-		where: (condition: unknown) => {
-			wheres.push(condition);
-			return chain;
-		},
-		groupBy: () => chain,
-		all: async () => [],
-	};
-	const dao = createProjectDao({ select: () => chain } as unknown as Database);
-	await dao.listIssueCountsByOrg("org");
-
-	const strings: string[] = [];
-	const seen = new Set<unknown>();
-	const collect = (value: unknown) => {
-		if (typeof value === "string") {
-			strings.push(value);
-			return;
-		}
-		if (!value || typeof value !== "object" || seen.has(value)) {
-			return;
-		}
-		seen.add(value);
-		if (Array.isArray(value)) {
-			for (const item of value) collect(item);
-			return;
-		}
-		for (const key of ["queryChunks", "value"]) {
-			if (key in value) {
-				collect((value as Record<string, unknown>)[key]);
-			}
-		}
-	};
-	for (const where of wheres) {
-		collect(where);
+	const { sqlite, db } = createTestDb();
+	seedProject(sqlite, { id: "project", orgId: "org" });
+	for (const category of ["started", "completed", "canceled"]) {
+		seedStatus(sqlite, { id: category, orgId: "org", category });
+		seedIssue(sqlite, {
+			id: `issue-${category}`,
+			orgId: "org",
+			projectId: "project",
+			statusId: category,
+		});
 	}
-	assert.ok(strings.includes("completed"));
-	assert.ok(strings.includes("canceled"));
-	assert.ok(!strings.includes("started"));
+	const counts = await createProjectDao(db).listIssueCountsByOrg("org");
+	assert.deepEqual(counts.get("project"), {
+		totalIssueCount: 3,
+		openIssueCount: 1,
+	});
 });
 
 const appFor = ({
