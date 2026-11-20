@@ -1,7 +1,7 @@
 import type { IssueDetailDto, ListIssuesDto } from "@api/dto/issue.dto";
 import type { StatusDto } from "@api/dto/status.dto";
 import {
-	keepPreviousData,
+	hashKey,
 	type QueryClient,
 	queryOptions,
 	useMutation,
@@ -211,11 +211,16 @@ export function projectIssuesQuery(
 	projectId: string,
 	filters: IssueFilters,
 ) {
+	const rowsKey = hashKey(
+		projectIssuesKey(orgId, projectId, { ...filters, groupBy: undefined }),
+	);
 	return queryOptions({
 		queryKey: projectIssuesKey(orgId, projectId, filters),
-		// Grouping is client-side: keeping the previous page while the
-		// grouping-specific cache entry fills in avoids a skeleton flash.
-		placeholderData: keepPreviousData,
+		// Grouping only changes presentation. Reusing rows across any other
+		// transition would make old rows interactive under the new query.
+		meta: { rowsKey },
+		placeholderData: (previous, query) =>
+			query?.meta?.rowsKey === rowsKey ? previous : undefined,
 		queryFn: () =>
 			unwrap(
 				client.api.orgs[":orgId"].projects[":projectId"].issues.$get({
@@ -269,7 +274,7 @@ export function issueSearchQuery(
 ) {
 	const search = term.trim();
 	return queryOptions({
-		queryKey: issueSearchKey(orgId, search, projectId),
+		queryKey: issueSearchKey(orgId, search, projectId, pageSize),
 		queryFn: () =>
 			unwrap(
 				client.api.orgs[":orgId"].issues.$get({
@@ -724,4 +729,12 @@ export const issueSearchKey = (
 	orgId: string,
 	term: string,
 	projectId?: string,
-) => [...orgIssuesRootKey(orgId), "search", projectId ?? "all", term] as const;
+	pageSize = ISSUE_SEARCH_LIMIT,
+) =>
+	[
+		...orgIssuesRootKey(orgId),
+		"search",
+		projectId ?? "all",
+		term,
+		pageSize,
+	] as const;

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { QueryClient } from "@tanstack/react-query";
 import {
 	resolveContentType,
 	uploadAttachment,
@@ -11,6 +12,7 @@ import {
 	resolveComment,
 	toggleCommentReaction,
 } from "../src/features/comments/data";
+import { projectIssuesQuery } from "../src/features/issues/data";
 import { uploadOrganizationLogo } from "../src/features/organizations/data";
 import { createProject, updateProject } from "../src/features/projects/data";
 import { saveWebhook } from "../src/features/webhooks/data";
@@ -55,6 +57,40 @@ async function withRequests(
 }
 
 const ok = (data: unknown) => Response.json({ ok: true, data });
+
+test("project list and board page sizes both forward the archive filter", () =>
+	withRequests(
+		() => ok({ items: [], total: 0, page: 1, pageSize: 20 }),
+		async (requests) => {
+			const filters = { search: "", page: 1, includeArchived: true };
+			const list = projectIssuesQuery("org", "project", filters);
+			const board = projectIssuesQuery("org", "project", {
+				...filters,
+				pageSize: 100,
+			});
+			const activeOnly = projectIssuesQuery("org", "project", {
+				...filters,
+				pageSize: 100,
+				includeArchived: false,
+			});
+			const queryClient = new QueryClient();
+			await queryClient.fetchQuery(list);
+			await queryClient.fetchQuery(board);
+			await queryClient.fetchQuery(activeOnly);
+
+			assert.deepEqual(
+				requests.map(({ url }) => [
+					url.searchParams.get("pageSize"),
+					url.searchParams.get("includeArchived"),
+				]),
+				[
+					["20", "true"],
+					["100", "true"],
+					["100", null],
+				],
+			);
+		},
+	));
 
 test("project requests use validated mutation variables and preserve nullable edits", () =>
 	withRequests(

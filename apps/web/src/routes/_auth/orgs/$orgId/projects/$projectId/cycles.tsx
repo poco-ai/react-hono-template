@@ -4,6 +4,7 @@ import { ProjectCyclesPage } from "@/pages/project-cycles";
 export const Route = createFileRoute(
 	"/_auth/orgs/$orgId/projects/$projectId/cycles",
 )({
+	remountDeps: ({ params: { orgId, projectId } }) => [orgId, projectId],
 	component: ProjectCyclesRoute,
 });
 

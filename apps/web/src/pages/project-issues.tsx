@@ -182,27 +182,16 @@ export function ProjectIssuesPage({
 			: null,
 	);
 
-	const issues = useQuery(
-		projectIssuesQuery(orgId, projectId, {
-			filter: effectiveFilter,
-			sorts: resolved.sorts,
-			groupBy: resolved.groupBy,
-			search: resolved.search,
-			cycleId: resolved.cycleId,
-			includeArchived,
-			page: search.page,
-		}),
-	);
-
-	const listFilters = {
+	const issueFilters = {
 		filter: effectiveFilter,
 		sorts: resolved.sorts,
 		groupBy: resolved.groupBy,
 		search: resolved.search,
 		cycleId: resolved.cycleId,
 		includeArchived,
-		page: search.page,
 	};
+	const listFilters = { ...issueFilters, page: search.page };
+	const issues = useQuery(projectIssuesQuery(orgId, projectId, listFilters));
 
 	const {
 		columns,
@@ -739,13 +728,7 @@ export function ProjectIssuesPage({
 						projectId={projectId}
 						projectKey={project.data?.key ?? ""}
 						frozen={frozen}
-						filters={{
-							filter: effectiveFilter,
-							sorts: resolved.sorts,
-							groupBy: resolved.groupBy,
-							search: resolved.search,
-							cycleId: resolved.cycleId,
-						}}
+						filters={issueFilters}
 						members={members.data ?? []}
 						labels={labels.data ?? []}
 						statuses={statuses.data ?? []}

@@ -43,6 +43,11 @@ export const Route = createFileRoute(
 			throw notFound();
 		}
 	},
+	remountDeps: ({ params: { orgId, projectId, issueNumber } }) => [
+		orgId,
+		projectId,
+		issueNumber,
+	],
 	component: () => {
 		const { orgId, projectId, issueNumber } = Route.useParams();
 		return (

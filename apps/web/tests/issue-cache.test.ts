@@ -2,14 +2,73 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { IssueDetailDto } from "@api/dto/issue.dto";
 import type { StatusDto } from "@api/dto/status.dto";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import {
 	applyIssueUpdate,
 	invalidateBulkIssueQueries,
 	invalidateIssueQueries,
 	invalidateRelationQueries,
+	issueSearchQuery,
+	type ListIssuesDto,
+	projectIssuesQuery,
 } from "../src/features/issues/data";
 import { issueSearchSchema } from "../src/features/issues/search";
+
+test("issue picker requests with different limits cannot share a cache entry", () => {
+	const client = new QueryClient();
+	const small = issueSearchQuery("org", " bug ", { projectId: "project" });
+	const large = issueSearchQuery("org", "bug", {
+		projectId: "project",
+		pageSize: 20,
+	});
+	client.setQueryData(small.queryKey, {
+		items: [],
+		total: 0,
+		page: 1,
+		pageSize: 8,
+	});
+	assert.equal(client.getQueryData(large.queryKey), undefined);
+	assert.deepEqual(
+		small.queryKey,
+		issueSearchQuery("org", "bug", { projectId: "project", pageSize: 8 })
+			.queryKey,
+	);
+});
+
+test("project list placeholders only reuse rows for a presentation-only regroup", () => {
+	const client = new QueryClient();
+	const filters = { search: "", page: 1 };
+	const initial = projectIssuesQuery("org", "project", filters);
+	const rows: ListIssuesDto = { items: [], total: 30, page: 1, pageSize: 20 };
+	client.setQueryData(initial.queryKey, rows);
+	const observer = new QueryObserver(client, initial);
+
+	const regrouped = observer.getOptimisticResult(
+		client.defaultQueryOptions(
+			projectIssuesQuery("org", "project", { ...filters, groupBy: "status" }),
+		),
+	);
+	assert.equal(regrouped.isPlaceholderData, true);
+	assert.equal(regrouped.data, rows);
+
+	for (const options of [
+		projectIssuesQuery("org", "other-project", filters),
+		projectIssuesQuery("other-org", "project", filters),
+		projectIssuesQuery("org", "project", { ...filters, page: 2 }),
+		projectIssuesQuery("org", "project", { ...filters, search: "bug" }),
+		projectIssuesQuery("org", "project", { ...filters, includeArchived: true }),
+	]) {
+		const result = observer.getOptimisticResult(
+			client.defaultQueryOptions(options),
+		);
+		assert.equal(
+			result.isPlaceholderData,
+			false,
+			JSON.stringify(options.queryKey),
+		);
+		assert.equal(result.data, undefined);
+	}
+});
 
 test("issue writes invalidate lists, details and activities only in their organization", async () => {
 	const client = new QueryClient();

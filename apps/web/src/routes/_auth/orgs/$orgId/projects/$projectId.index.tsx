@@ -5,6 +5,7 @@ import { ProjectIssuesPage } from "@/pages/project-issues";
 export const Route = createFileRoute("/_auth/orgs/$orgId/projects/$projectId/")(
 	{
 		validateSearch: issueSearchSchema,
+		remountDeps: ({ params: { orgId, projectId } }) => [orgId, projectId],
 		component: ProjectIssuesRoute,
 	},
 );
