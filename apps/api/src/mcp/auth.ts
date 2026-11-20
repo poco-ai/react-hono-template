@@ -88,7 +88,8 @@ export const normalizeOAuthScopes = (scopeClaim: unknown): ApiKeyScope[] => {
 			: [];
 	const mapped = new Set<ApiKeyScope>();
 	for (const value of raw) {
-		if (typeof value !== "string") continue;
+		if (typeof value !== "string" || !Object.hasOwn(OAUTH_TO_APP_SCOPE, value))
+			continue;
 		const scope = OAUTH_TO_APP_SCOPE[value];
 		if (scope) mapped.add(scope);
 	}

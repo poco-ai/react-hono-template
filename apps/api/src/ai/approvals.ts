@@ -13,6 +13,16 @@ type ApprovalLookup = Pick<
 	"findForConversation" | "claimProposedStatus"
 >;
 
+export type ChatApprovalGrant = {
+	consume: (
+		toolCallId: string,
+		toolName: string,
+		input: unknown,
+	) => Promise<boolean>;
+};
+
+const hashInput = (input: unknown) => sha256Hex(JSON.stringify(input ?? null));
+
 const forceDenial = (part: unknown) => {
 	if (typeof part !== "object" || part === null || !("approval" in part))
 		return;
@@ -26,19 +36,25 @@ const forceDenial = (part: unknown) => {
  * Every response must match a stored `proposed` tool call for this
  * conversation (tool name and input hash). Claiming the proposal is a
  * compare-and-set, so concurrent replays can execute at most once; the loser
- * is forced to a denial. Denials are recorded so the pending list stays
- * accurate, but the capability is never executed.
+ * is forced to a denial. Successful claims return one-use grants so the SDK
+ * cannot execute a different action when it resolves the submitted history.
  */
 export const verifyApprovalResponses = async (
 	messages: UIMessage[],
 	lookup: ApprovalLookup,
 	orgId: string,
 	conversationId: string,
-): Promise<void> => {
+): Promise<ChatApprovalGrant> => {
 	const seen = new Set<string>();
+	const claimedWrites = new Map<
+		string,
+		{ toolName: string; inputHash: string }
+	>();
 	const pending: {
 		part: UIMessage["parts"][number];
 		toolCallId: string;
+		toolName: string;
+		inputHash: string;
 		approved: boolean;
 	}[] = [];
 
@@ -50,7 +66,12 @@ export const verifyApprovalResponses = async (
 		for (const part of message.parts) {
 			if (!isToolUIPart(part) && !isDynamicToolUIPart(part)) continue;
 			if (part.state !== "approval-responded") continue;
-			if (seen.has(part.toolCallId)) continue;
+			if (seen.has(part.toolCallId)) {
+				throw new ApiError(
+					ApiErrorCode.AI_MESSAGE_INVALID,
+					"Each tool call can have only one approval response.",
+				);
+			}
 			seen.add(part.toolCallId);
 
 			const stored = await lookup.findForConversation(
@@ -82,19 +103,19 @@ export const verifyApprovalResponses = async (
 			}
 
 			const input = "input" in part ? part.input : undefined;
-			if (stored.inputHash) {
-				const submittedHash = await sha256Hex(JSON.stringify(input ?? null));
-				if (submittedHash !== stored.inputHash) {
-					throw new ApiError(
-						ApiErrorCode.AI_APPROVAL_NOT_FOUND,
-						`The approved input for tool call ${part.toolCallId} does not match the proposed action.`,
-					);
-				}
+			const submittedHash = await hashInput(input);
+			if (submittedHash !== stored.inputHash) {
+				throw new ApiError(
+					ApiErrorCode.AI_APPROVAL_NOT_FOUND,
+					`The approved input for tool call ${part.toolCallId} does not match the proposed action.`,
+				);
 			}
 
 			pending.push({
 				part,
 				toolCallId: part.toolCallId,
+				toolName: stored.toolName,
+				inputHash: submittedHash,
 				approved: part.approval?.approved === true,
 			});
 		}
@@ -107,8 +128,27 @@ export const verifyApprovalResponses = async (
 			item.toolCallId,
 			item.approved ? "approved" : "rejected",
 		);
-		if (!claimed) forceDenial(item.part);
+		if (!claimed) {
+			forceDenial(item.part);
+		} else if (item.approved) {
+			claimedWrites.set(item.toolCallId, {
+				toolName: item.toolName,
+				inputHash: item.inputHash,
+			});
+		}
 	}
+
+	return {
+		consume: async (toolCallId, toolName, input) => {
+			const grant = claimedWrites.get(toolCallId);
+			if (grant?.toolName !== toolName) return false;
+			const inputHash = await hashInput(input);
+			if (inputHash !== grant.inputHash) return false;
+			// Deleting synchronously after hashing allows only one execution even
+			// when the SDK schedules tool calls concurrently.
+			return claimedWrites.delete(toolCallId);
+		},
+	};
 };
 
 /**

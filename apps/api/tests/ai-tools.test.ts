@@ -280,7 +280,7 @@ test("an approved input that differs from the hash is rejected", async () => {
 	);
 });
 
-test("an approved input matching the hash is claimed", async () => {
+test("a claimed approval permits exactly one matching write", async () => {
 	const message = approvalMessage("call-hash-ok", true);
 	const inputHash = await sha256Hex(JSON.stringify({ issueId: "issue-1" }));
 	const claimed: string[] = [];
@@ -300,7 +300,7 @@ test("an approved input matching the hash is claimed", async () => {
 			return true;
 		},
 	};
-	await verifyApprovalResponses(
+	const approvals = await verifyApprovalResponses(
 		[message],
 		lookup as never,
 		ORG_ID,
@@ -309,6 +309,58 @@ test("an approved input matching the hash is claimed", async () => {
 	assert.deepEqual(claimed, ["call-hash-ok"]);
 	const part = message.parts[0] as { approval?: { approved?: boolean } };
 	assert.equal(part.approval?.approved, true);
+	const calls: { name: string; input: unknown }[] = [];
+	const tools = buildChatTools({
+		capabilities: [writeCapability],
+		layer: layerFor(calls),
+		ctx: ctx(),
+		approvals,
+	});
+	const write = tools.delete_issue as unknown as {
+		execute: (
+			input: unknown,
+			options: { toolCallId: string },
+		) => Promise<unknown>;
+	};
+	const execute = () =>
+		write.execute({ issueId: "issue-1" }, { toolCallId: "call-hash-ok" });
+	const results = await Promise.allSettled([execute(), execute()]);
+	assert.equal(
+		results.filter((result) => result.status === "fulfilled").length,
+		1,
+	);
+	assert.deepEqual(calls, [
+		{ name: "delete_issue", input: { issueId: "issue-1" } },
+	]);
+});
+
+test("duplicate decisions are rejected before claiming a proposal", async () => {
+	const message = approvalMessage("call-duplicate", true);
+	const inputHash = await sha256Hex(JSON.stringify({ issueId: "issue-1" }));
+	let claimed = false;
+	const lookup = {
+		findForConversation: async () => ({
+			id: "call-duplicate",
+			toolName: "delete_issue",
+			status: "proposed",
+			inputHash,
+		}),
+		claimProposedStatus: async () => {
+			claimed = true;
+			return true;
+		},
+	};
+	await assert.rejects(
+		verifyApprovalResponses(
+			[message, structuredClone(message)],
+			lookup as never,
+			ORG_ID,
+			CONVERSATION_ID,
+		),
+		(err: unknown) =>
+			err instanceof ApiError && err.code === ApiErrorCode.AI_MESSAGE_INVALID,
+	);
+	assert.equal(claimed, false);
 });
 
 test("a later invalid part prevents earlier proposals from being claimed", async () => {
@@ -333,6 +385,7 @@ test("a later invalid part prevents earlier proposals from being claimed", async
 		],
 	} as unknown as UIMessage;
 	const claimed: string[] = [];
+	const inputHash = await sha256Hex(JSON.stringify({ issueId: "issue-1" }));
 	const lookup = {
 		findForConversation: async (
 			_orgId: string,
@@ -342,6 +395,7 @@ test("a later invalid part prevents earlier proposals from being claimed", async
 			id,
 			toolName: "delete_issue",
 			status: "proposed",
+			inputHash,
 		}),
 		claimProposedStatus: async (
 			_orgId: string,
@@ -395,15 +449,17 @@ test("replayed approvals are forced to deny instead of executing again", async (
 
 test("a lost approval claim is forced to deny", async () => {
 	const message = approvalMessage("call-race", true);
+	const inputHash = await sha256Hex(JSON.stringify({ issueId: "issue-1" }));
 	const lookup = {
 		findForConversation: async () => ({
 			id: "call-race",
 			toolName: "delete_issue",
 			status: "proposed",
+			inputHash,
 		}),
 		claimProposedStatus: async () => false,
 	};
-	await verifyApprovalResponses(
+	const approvals = await verifyApprovalResponses(
 		[message],
 		lookup as never,
 		ORG_ID,
@@ -413,15 +469,23 @@ test("a lost approval claim is forced to deny", async () => {
 		approval?: { approved?: boolean };
 	};
 	assert.equal(part.approval?.approved, false);
+	assert.equal(
+		await approvals.consume("call-race", "delete_issue", {
+			issueId: "issue-1",
+		}),
+		false,
+	);
 });
 
 test("rejected approvals are recorded and keep the denial", async () => {
 	const marked: { id: string; status: string }[] = [];
+	const inputHash = await sha256Hex(JSON.stringify({ issueId: "issue-1" }));
 	const lookup = {
 		findForConversation: async () => ({
 			id: "call-1",
 			toolName: "delete_issue",
 			status: "proposed",
+			inputHash,
 		}),
 		claimProposedStatus: async (
 			_orgId: string,

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import type { UIMessage } from "ai";
 import {
 	AI_TOOL_TITLE_KEYS,
 	aiToolEffect,
@@ -84,7 +85,7 @@ test("tool effect classifies capability names for approval badges", () => {
 });
 
 test("finished write tool parts trigger business cache invalidation", () => {
-	const messages = [
+	const messages: UIMessage[] = [
 		{
 			id: "assistant",
 			role: "assistant",
@@ -98,8 +99,15 @@ test("finished write tool parts trigger business cache invalidation", () => {
 				},
 			],
 		},
-	] as never;
+	];
 	assert.equal(hasAiWriteTool(messages), true);
+	assert.equal(
+		hasAiWriteTool([
+			...messages,
+			{ id: "next", role: "user", parts: [{ type: "text", text: "list" }] },
+		]),
+		false,
+	);
 	assert.equal(
 		hasAiWriteTool([
 			{

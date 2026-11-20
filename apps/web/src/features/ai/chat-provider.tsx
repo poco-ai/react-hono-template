@@ -466,7 +466,7 @@ export function AiChatProvider({
 		if (!usage.data) {
 			return aiErrorCode(usage.error) === "AI_DISABLED" ? "disabled" : "ready";
 		}
-		if (!usage.data.enabled) {
+		if (!usage.data.enabled || !usage.data.provider.enabled) {
 			return "disabled";
 		}
 		return usage.data.provider.configured ? "ready" : "unconfigured";

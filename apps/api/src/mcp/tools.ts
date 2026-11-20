@@ -50,9 +50,8 @@ export type McpToolRuntime = {
  * - API keys may run admin capabilities when the key has the admin scope;
  *   owner-only capabilities stay user-only.
  * - For OAuth callers the organization is not in the token, so listing uses
- *   the caller's memberships: role-gated tools appear when at least one
- *   membership satisfies the role, and writes disappear when every membership
- *   is frozen.
+ *   the caller's memberships: at least one organization must satisfy both
+ *   the role requirement and (for writes) be unfrozen.
  * - A frozen API-key organization hides writes from `tools/list`; the
  *   executor still enforces this on every call.
  */
@@ -90,22 +89,13 @@ export const filterMcpCapabilities = async ({
 			return true;
 		}
 
-		if (!memberships || memberships.length === 0) return false;
-		if (
-			capability.minOrgRole &&
-			!memberships.some((membership) =>
-				roleSatisfies(membership.role, capability.minOrgRole),
-			)
-		) {
-			return false;
-		}
-		if (
-			capability.effect !== "read" &&
-			!memberships.some((membership) => !membership.frozen)
-		) {
-			return false;
-		}
-		return true;
+		return (
+			memberships?.some(
+				(membership) =>
+					roleSatisfies(membership.role, capability.minOrgRole) &&
+					(capability.effect === "read" || !membership.frozen),
+			) ?? false
+		);
 	});
 };
 

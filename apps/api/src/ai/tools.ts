@@ -1,8 +1,9 @@
-import { scopeSatisfies } from "@workspace/shared";
+import { ApiError, ApiErrorCode, scopeSatisfies } from "@workspace/shared";
 import { type ToolSet, tool } from "ai";
 import { roleSatisfies } from "../capabilities/access";
 import type { CapabilityExecutor } from "../capabilities/executor";
 import type { CapabilityContext, CapabilityEntry } from "../capabilities/types";
+import type { ChatApprovalGrant } from "./approvals";
 
 /** Capabilities the chat actor may invoke, before the executor re-checks. */
 export const filterChatCapabilities = (
@@ -20,16 +21,18 @@ export const filterChatCapabilities = (
  * Adapts capability entries to AI SDK tools.
  *
  * Read capabilities execute immediately; writes and destructive capabilities
- * require explicit user approval (AI SDK tool approval).
+ * require both an AI SDK approval and a server-side grant at execution time.
  */
 export const buildChatTools = ({
 	capabilities,
 	layer,
 	ctx,
+	approvals,
 }: {
 	capabilities: readonly CapabilityEntry[];
 	layer: Pick<CapabilityExecutor, "execute">;
 	ctx: CapabilityContext;
+	approvals?: ChatApprovalGrant;
 }): ToolSet => {
 	const tools: ToolSet = {};
 
@@ -38,7 +41,16 @@ export const buildChatTools = ({
 			description: capability.description,
 			inputSchema: capability.input,
 			needsApproval: capability.effect !== "read",
-			execute: async (input) => {
+			execute: async (input, { toolCallId }) => {
+				if (
+					capability.effect !== "read" &&
+					!(await approvals?.consume(toolCallId, capability.name, input))
+				) {
+					throw new ApiError(
+						ApiErrorCode.AI_APPROVAL_NOT_FOUND,
+						"This write requires a verified approval.",
+					);
+				}
 				const result = await layer.execute(
 					capability.name,
 					ctx,

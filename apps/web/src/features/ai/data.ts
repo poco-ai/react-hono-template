@@ -362,6 +362,7 @@ export function aiToolEffect(toolName: string): AiToolEffect {
 export function hasAiWriteTool(messages: UIMessage[]): boolean {
 	for (let index = messages.length - 1; index >= 0; index -= 1) {
 		const message = messages[index];
+		if (message.role === "user") return false;
 		if (message.role !== "assistant") continue;
 		for (const part of message.parts) {
 			if (!isToolUIPart(part) && !isDynamicToolUIPart(part)) continue;

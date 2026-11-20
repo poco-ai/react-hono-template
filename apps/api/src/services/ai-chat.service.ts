@@ -1,10 +1,7 @@
 import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import {
 	convertToModelMessages,
-	getToolName,
-	isDynamicToolUIPart,
 	isTextUIPart,
-	isToolUIPart,
 	type LanguageModelUsage,
 	stepCountIs,
 	streamText,
@@ -58,26 +55,6 @@ const estimateMessageChars = (messages: UIMessage[]): number =>
 		return total;
 	}, 0);
 
-const statusOfPart = (part: {
-	state?: string;
-	approval?: { approved?: boolean };
-}): AiToolCallStatus | null => {
-	switch (part.state) {
-		case "approval-requested":
-			return "proposed";
-		case "approval-responded":
-			return part.approval?.approved === true ? "approved" : "rejected";
-		case "output-available":
-			return "succeeded";
-		case "output-error":
-			return "failed";
-		case "output-denied":
-			return "rejected";
-		default:
-			return null;
-	}
-};
-
 const idempotencyKeyOf = (input: unknown): string | null => {
 	if (input && typeof input === "object" && "idempotencyKey" in input) {
 		const value = (input as { idempotencyKey?: unknown }).idempotencyKey;
@@ -99,9 +76,6 @@ const summarizeInput = (input: unknown): string | null => {
 		return null;
 	}
 };
-
-const isExecutedState = (state: string | undefined): boolean =>
-	state === "output-available" || state === "output-error";
 
 export type AiChatInput = {
 	orgId: string;
@@ -219,233 +193,291 @@ export const createAiChatService = ({
 			);
 		}
 
-		// Claim approvals only after the request is known to be serviceable.
-		await verifyApprovalResponses(
-			clientMessages,
-			toolCallDao,
-			orgId,
-			conversationId,
-		);
-
-		const now = new Date();
-		const userMessages = messages.filter((message) => message.role === "user");
-		const latestUserMessage = userMessages[userMessages.length - 1];
-		await messageDao.insertManyIfAbsent(
-			userMessages.map((message, index) => ({
-				id: message.id,
-				conversationId,
-				orgId,
-				userId,
-				role: "user",
-				parts: message.parts,
-				status: "complete",
-				model: null,
-				context: message === latestUserMessage ? context : null,
-				createdAt: new Date(now.getTime() - (userMessages.length - 1 - index)),
-			})),
-		);
-		if (latestUserMessage) {
-			const text = textOfParts(latestUserMessage.parts);
-			await conversationService.setTitleIfEmpty(
-				orgId,
-				userId,
-				conversationId,
-				text,
-			);
-		}
-		await conversationService.touch(orgId, userId, conversationId, {
-			lastMessageAt: now,
-		});
-
-		const modelId =
-			settings.defaultModel ??
-			conversation.model ??
-			providerInfo.modelId ??
-			null;
-		const model = providerInstance.resolveModel(modelId);
-
-		const org = await organizationDao.findById(orgId);
-		if (!org) {
-			throw new ApiError(ApiErrorCode.NOT_FOUND, "Organization not found.");
-		}
-
-		const capabilityContext: CapabilityContext = {
-			orgId,
-			actor: {
-				userId,
-				surface: "chat",
-				scopes: ["read", "write", "admin"],
-				role: input.orgRole as CapabilityContext["actor"]["role"],
-			},
-			canWrite: true,
-			locale: input.locale,
-			webBaseUrl,
-			background: (task) => {
-				input.background(async () => {
-					await task();
-				});
-			},
+		const reservation = { orgId, idempotencyKey: reservationKey };
+		let finalizationStarted = false;
+		const finalizeReservation = async (finalize: () => Promise<void>) => {
+			if (finalizationStarted) return;
+			finalizationStarted = true;
+			await finalize();
 		};
-		const tools = buildChatTools({
-			capabilities: capabilityLayer.list(),
-			layer: capabilityLayer,
-			ctx: capabilityContext,
-		});
-
-		let modelMessages: Awaited<ReturnType<typeof convertToModelMessages>>;
-		try {
-			modelMessages = await convertToModelMessages(messages, {
-				tools,
-				ignoreIncompleteToolCalls: true,
-			});
-		} catch {
-			throw new ApiError(
-				ApiErrorCode.AI_MESSAGE_INVALID,
-				"Chat messages are not valid UI messages.",
-			);
-		}
-
-		const planMaxSteps = PLANS[plan].aiMaxSteps;
-		const maxSteps = providerInfo.maxSteps
-			? Math.min(planMaxSteps, providerInfo.maxSteps)
-			: planMaxSteps;
-		let finalUsage: LanguageModelUsage | undefined;
-
-		const result = streamText({
-			model,
-			system: buildSystemPrompt({
-				orgName: org.name,
-				role: input.orgRole,
-				locale: input.locale,
-				timezone: input.timezone,
-				context,
-				now,
-			}),
-			messages: modelMessages,
-			tools,
-			stopWhen: stepCountIs(maxSteps),
-			maxOutputTokens: providerInfo.maxOutputTokens ?? undefined,
-			abortSignal: input.abortSignal,
-			onEnd: (event) => {
-				finalUsage = event.usage;
-			},
-		});
-
-		const persistToolCalls = async (
-			responseMessage: UIMessage,
-			toolCallCount: { executed: number },
-		): Promise<void> => {
-			for (const part of responseMessage.parts) {
-				if (!isToolUIPart(part) && !isDynamicToolUIPart(part)) continue;
-				const capability = capabilityLayer.get(getToolName(part));
-				if (!capability) continue;
-				const status = statusOfPart(part);
-				if (!status) continue;
-				if (isExecutedState(part.state)) {
-					toolCallCount.executed += 1;
-				}
-				const toolInput =
-					"input" in part ? (part as { input?: unknown }).input : undefined;
-				try {
-					await toolCallDao.upsert({
-						id: part.toolCallId,
-						orgId,
-						userId,
-						conversationId,
-						surface: "chat",
-						toolName: capability.name,
-						effect: capability.effect,
-						status,
-						inputHash: await sha256Hex(JSON.stringify(toolInput ?? null)),
-						inputSummary: summarizeInput(toolInput),
-						idempotencyKey: idempotencyKeyOf(toolInput),
-						errorCode: status === "failed" ? ApiErrorCode.AI_TOOL_FAILED : null,
-					});
-				} catch (err) {
-					// A duplicate idempotency key must not break the response stream.
-					console.error(
-						"[ai] failed to persist tool call:",
-						err instanceof Error ? err.message : err,
-					);
-				}
+		const releaseReservation = async () => {
+			if (!quota) return;
+			try {
+				await finalizeReservation(() => quota.release(reservation));
+			} catch (error) {
+				// Do not replace the original chat error with a cleanup failure.
+				console.error("[ai] failed to release token reservation:", error);
 			}
 		};
 
-		return result.toUIMessageStreamResponse({
-			originalMessages: messages,
-			generateMessageId: () => assistantId,
-			onError: () => "AI request failed.",
-			onEnd: async ({ responseMessage, isAborted, outcome }) => {
-				try {
-					const usage = finalUsage;
-					const messageText = textOfParts(responseMessage.parts);
-					const inputTokens =
-						usage?.inputTokens && usage.inputTokens > 0
-							? usage.inputTokens
-							: estimatedInputTokens;
-					const outputTokens =
-						usage?.outputTokens && usage.outputTokens > 0
-							? usage.outputTokens
-							: estimateTokens(messageText);
-					const status =
-						outcome.status === "completed"
-							? "complete"
-							: isAborted || outcome.status === "aborted"
-								? "aborted"
-								: "error";
+		const startStream = async () => {
+			// Claim approvals only after the request is known to be serviceable.
+			const approvals = await verifyApprovalResponses(
+				clientMessages,
+				toolCallDao,
+				orgId,
+				conversationId,
+			);
 
-					await messageDao.upsertAssistant({
-						id: responseMessage.id || assistantId,
-						conversationId,
-						orgId,
-						userId,
-						parts: responseMessage.parts,
-						status,
-						model: modelId,
-						inputTokens,
-						outputTokens,
+			const now = new Date();
+			const userMessages = messages.filter(
+				(message) => message.role === "user",
+			);
+			const latestUserMessage = userMessages[userMessages.length - 1];
+			await messageDao.insertManyIfAbsent(
+				userMessages.map((message, index) => ({
+					id: message.id,
+					conversationId,
+					orgId,
+					userId,
+					role: "user",
+					parts: message.parts,
+					status: "complete",
+					model: null,
+					context: message === latestUserMessage ? context : null,
+					createdAt: new Date(
+						now.getTime() - (userMessages.length - 1 - index),
+					),
+				})),
+			);
+			if (latestUserMessage) {
+				const text = textOfParts(latestUserMessage.parts);
+				await conversationService.setTitleIfEmpty(
+					orgId,
+					userId,
+					conversationId,
+					text,
+				);
+			}
+			await conversationService.touch(orgId, userId, conversationId, {
+				lastMessageAt: now,
+			});
+
+			const modelId =
+				settings.defaultModel ??
+				conversation.model ??
+				providerInfo.modelId ??
+				null;
+			const model = providerInstance.resolveModel(modelId);
+
+			const org = await organizationDao.findById(orgId);
+			if (!org) {
+				throw new ApiError(ApiErrorCode.NOT_FOUND, "Organization not found.");
+			}
+
+			const capabilityContext: CapabilityContext = {
+				orgId,
+				actor: {
+					userId,
+					surface: "chat",
+					scopes: ["read", "write", "admin"],
+					role: input.orgRole as CapabilityContext["actor"]["role"],
+				},
+				canWrite: true,
+				locale: input.locale,
+				webBaseUrl,
+				background: (task) => {
+					input.background(async () => {
+						await task();
 					});
+				},
+			};
+			const tools = buildChatTools({
+				capabilities: capabilityLayer.list(),
+				layer: capabilityLayer,
+				ctx: capabilityContext,
+				approvals,
+			});
 
-					const toolCallCount = { executed: 0 };
-					await persistToolCalls(responseMessage, toolCallCount);
+			let modelMessages: Awaited<ReturnType<typeof convertToModelMessages>>;
+			try {
+				modelMessages = await convertToModelMessages(messages, {
+					tools,
+					ignoreIncompleteToolCalls: true,
+				});
+			} catch {
+				throw new ApiError(
+					ApiErrorCode.AI_MESSAGE_INVALID,
+					"Chat messages are not valid UI messages.",
+				);
+			}
 
-					if (quota) {
-						if (status === "complete") {
-							await quota.settle({
-								orgId,
-								idempotencyKey: reservationKey,
-								actualQuantity: inputTokens + outputTokens,
-								aiUsage: {
-									userId,
-									inputTokens,
-									outputTokens,
-									toolCalls: toolCallCount.executed,
-								},
-							});
-						} else {
-							await quota.release({ orgId, idempotencyKey: reservationKey });
-						}
-					} else {
-						await usageService.record({
-							orgId,
-							userId,
-							inputTokens,
-							outputTokens,
-							toolCalls: toolCallCount.executed,
+			const planMaxSteps = PLANS[plan].aiMaxSteps;
+			const maxSteps = providerInfo.maxSteps
+				? Math.min(planMaxSteps, providerInfo.maxSteps)
+				: planMaxSteps;
+			let finalUsage: LanguageModelUsage | undefined;
+			// Continuation UI messages include parts from the submitted history.
+			// Only a fresh server-side tool event may create or update an audit row.
+			const emittedToolCalls = new Map<
+				string,
+				{ toolName: string; input: unknown; status: AiToolCallStatus }
+			>();
+
+			const result = streamText({
+				model,
+				system: buildSystemPrompt({
+					orgName: org.name,
+					role: input.orgRole,
+					locale: input.locale,
+					timezone: input.timezone,
+					context,
+					now,
+				}),
+				messages: modelMessages,
+				tools,
+				stopWhen: stepCountIs(maxSteps),
+				maxOutputTokens: providerInfo.maxOutputTokens ?? undefined,
+				abortSignal: input.abortSignal,
+				onChunk: ({ chunk }) => {
+					if (chunk.type === "tool-approval-request") {
+						const { toolCallId, toolName, input } = chunk.toolCall;
+						emittedToolCalls.set(toolCallId, {
+							toolName,
+							input,
+							status: "proposed",
+						});
+					} else if (
+						chunk.type === "tool-error" ||
+						(chunk.type === "tool-result" && !chunk.preliminary)
+					) {
+						emittedToolCalls.set(chunk.toolCallId, {
+							toolName: chunk.toolName,
+							input: chunk.input,
+							status: chunk.type === "tool-error" ? "failed" : "succeeded",
 						});
 					}
-					await conversationService.touch(orgId, userId, conversationId, {
-						lastMessageAt: new Date(),
-						model: modelId,
-					});
-				} catch (err) {
-					console.error(
-						"[ai] failed to persist chat result:",
-						err instanceof Error ? err.message : err,
-					);
+				},
+				onEnd: (event) => {
+					finalUsage = event.usage;
+				},
+			});
+
+			const persistToolCalls = async (): Promise<void> => {
+				for (const [
+					id,
+					{ toolName, input: toolInput, status },
+				] of emittedToolCalls) {
+					const capability = capabilityLayer.get(toolName);
+					if (!capability) continue;
+					try {
+						await toolCallDao.upsert({
+							id,
+							orgId,
+							userId,
+							conversationId,
+							surface: "chat",
+							toolName: capability.name,
+							effect: capability.effect,
+							status,
+							inputHash: await sha256Hex(JSON.stringify(toolInput ?? null)),
+							inputSummary: summarizeInput(toolInput),
+							idempotencyKey: idempotencyKeyOf(toolInput),
+							errorCode:
+								status === "failed" ? ApiErrorCode.AI_TOOL_FAILED : null,
+						});
+					} catch (err) {
+						// A duplicate idempotency key must not break the response stream.
+						console.error(
+							"[ai] failed to persist tool call:",
+							err instanceof Error ? err.message : err,
+						);
+					}
 				}
-			},
-		});
+			};
+
+			return result.toUIMessageStreamResponse({
+				originalMessages: messages,
+				generateMessageId: () => assistantId,
+				onError: () => "AI request failed.",
+				onEnd: async ({ responseMessage, isAborted, outcome }) => {
+					// Release failed streams even if persisting their partial output fails.
+					if (outcome.status !== "completed") await releaseReservation();
+					try {
+						const usage = finalUsage;
+						const messageText = textOfParts(responseMessage.parts);
+						const inputTokens =
+							usage?.inputTokens && usage.inputTokens > 0
+								? usage.inputTokens
+								: estimatedInputTokens;
+						const outputTokens =
+							usage?.outputTokens && usage.outputTokens > 0
+								? usage.outputTokens
+								: estimateTokens(messageText);
+						const status =
+							outcome.status === "completed"
+								? "complete"
+								: isAborted || outcome.status === "aborted"
+									? "aborted"
+									: "error";
+
+						const toolCalls = [...emittedToolCalls.values()].filter(
+							({ toolName, status }) =>
+								(status === "succeeded" || status === "failed") &&
+								capabilityLayer.get(toolName),
+						).length;
+						if (quota && status === "complete") {
+							try {
+								await finalizeReservation(() =>
+									quota.settle({
+										...reservation,
+										actualQuantity: inputTokens + outputTokens,
+										aiUsage: { userId, inputTokens, outputTokens, toolCalls },
+									}),
+								);
+							} catch (error) {
+								// Settlement can commit before its usage record fails. Do not
+								// release on an ambiguous failure or skip message persistence.
+								console.error(
+									"[ai] failed to settle token reservation:",
+									error,
+								);
+							}
+						}
+
+						await messageDao.upsertAssistant({
+							id: responseMessage.id || assistantId,
+							conversationId,
+							orgId,
+							userId,
+							parts: responseMessage.parts,
+							status,
+							model: modelId,
+							inputTokens,
+							outputTokens,
+						});
+
+						await persistToolCalls();
+
+						if (!quota) {
+							await usageService.record({
+								orgId,
+								userId,
+								inputTokens,
+								outputTokens,
+								toolCalls,
+							});
+						}
+						await conversationService.touch(orgId, userId, conversationId, {
+							lastMessageAt: new Date(),
+							model: modelId,
+						});
+					} catch (err) {
+						console.error(
+							"[ai] failed to persist chat result:",
+							err instanceof Error ? err.message : err,
+						);
+					}
+				},
+			});
+		};
+
+		try {
+			return await startStream();
+		} catch (error) {
+			await releaseReservation();
+			throw error;
+		}
 	};
 
 	return {

@@ -652,6 +652,7 @@ test("OAuth scope claims map onto app scopes", () => {
 		"admin",
 	]);
 	assert.deepEqual(normalizeOAuthScopes("openid offline_access"), []);
+	assert.deepEqual(normalizeOAuthScopes("openid constructor"), []);
 });
 
 test("OAuth callers must disambiguate between multiple organizations", async () => {
@@ -764,6 +765,39 @@ test("admin tools are hidden from OAuth members but shown to org admins", async 
 	});
 	const adminNames = await toolNames(handlerFor(adminRuntime));
 	assert.ok(adminNames.includes("create_project"));
+});
+
+test("an advertised OAuth write requires one eligible, unfrozen organization", async () => {
+	const handler = handlerFor(
+		runtimeFor({
+			principal: oauthPrincipal(),
+			layer: createLayer(),
+			memberState: {
+				frozen: false,
+				role: "member",
+				member: true,
+				memberships: [
+					{
+						id: "org-1",
+						name: "Acme",
+						slug: "acme",
+						role: "admin",
+						frozen: true,
+					},
+					{
+						id: "org-2",
+						name: "Beta",
+						slug: "beta",
+						role: "member",
+						frozen: false,
+					},
+				],
+			},
+		}),
+	);
+	const names = await toolNames(handler);
+	assert.ok(names.includes("create_issue"));
+	assert.ok(!names.includes("create_project"));
 });
 
 test("resource templates read issues and projects through capabilities", async () => {
