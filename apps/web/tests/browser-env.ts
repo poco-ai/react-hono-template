@@ -1,11 +1,11 @@
-// Feature data modules use the real i18n instance. Tests only need language detection.
+// Feature data modules use language detection; route imports also load Base UI.
 Object.defineProperty(globalThis, "localStorage", {
 	configurable: true,
 	value: { getItem: () => null },
 });
 Object.defineProperty(globalThis, "navigator", {
 	configurable: true,
-	value: { language: "en" },
+	value: { language: "en", userAgent: "" },
 });
 
 // The auth SDK captures fetch during initialization; route that call to the

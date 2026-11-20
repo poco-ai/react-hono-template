@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { sessionOptions } from "@/features/auth/data";
+import { loadAppSession } from "@/features/auth/data";
 import { HomePage } from "@/pages/home";
 import { LandingPage } from "@/pages/landing";
 
 export const Route = createFileRoute("/")({
 	beforeLoad: async ({ context }) => {
-		const session = await context.queryClient.ensureQueryData(sessionOptions);
+		const session = await loadAppSession(context.queryClient);
 		return { session };
 	},
 	component: IndexRoute,

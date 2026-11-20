@@ -1,14 +1,35 @@
 "use client";
 
 import { useAuth } from "@better-auth-ui/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { refreshAppSession } from "@/features/auth/data";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { useRefreshAppSession } from "@/features/auth/data";
 import {
 	isTwoFactorRedirect,
 	storeTwoFactorMethods,
 	TWO_FACTOR_PLUGIN_ID,
 } from "./two-factor-methods";
+
+/** Stop navigation and surface lookup failures without exposing server details. */
+export function useContinueAfterAppSessionRefresh() {
+	const refresh = useRefreshAppSession();
+	const { t } = useTranslation();
+
+	return useCallback(
+		(onSuccess: () => void) => {
+			function retry() {
+				void refresh().then(onSuccess, () => {
+					toast.error(t("error.description"), {
+						action: { label: t("error.retry"), onClick: retry },
+					});
+				});
+			}
+			retry();
+		},
+		[refresh, t],
+	);
+}
 
 /**
  * Resolve what happens after a sign-in request succeeds.
@@ -31,7 +52,7 @@ import {
  */
 export function useSignInContinuation() {
 	const { basePaths, navigate, plugins, redirectTo } = useAuth();
-	const queryClient = useQueryClient();
+	const continueAfterRefresh = useContinueAfterAppSessionRefresh();
 
 	const twoFactorPath = plugins.find(
 		(plugin) => plugin.id === TWO_FACTOR_PLUGIN_ID,
@@ -48,10 +69,10 @@ export function useSignInContinuation() {
 				return;
 			}
 
-			void refreshAppSession(queryClient).then(() => {
+			continueAfterRefresh(() => {
 				navigate({ to: redirectTo });
 			});
 		},
-		[basePaths.auth, navigate, queryClient, redirectTo, twoFactorPath],
+		[basePaths.auth, continueAfterRefresh, navigate, redirectTo, twoFactorPath],
 	);
 }

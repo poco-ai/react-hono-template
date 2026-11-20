@@ -21,8 +21,8 @@ import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { cn } from "cn";
 import type { ComponentProps } from "react";
-import { useRefreshAppSession } from "@/features/auth/data";
 import { frontendCallbackURL } from "@/lib/auth/safe-redirect";
+import { useContinueAfterAppSessionRefresh } from "@/lib/auth/use-sign-in-continuation";
 import { LastUsedBadge } from "./last-login-method/last-used-badge";
 
 export type ProviderButtonProps = {
@@ -48,7 +48,7 @@ export function ProviderButton({
 	const { authClient, localization, navigate, redirectTo, socialSignInMode } =
 		useAuth();
 
-	const refreshAppSession = useRefreshAppSession();
+	const continueAfterRefresh = useContinueAfterAppSessionRefresh();
 	const callbackURL = frontendCallbackURL(redirectTo);
 	const { fetchOptions, resetFetchOptions } = useFetchOptions();
 
@@ -80,7 +80,7 @@ export function ProviderButton({
 				},
 				{
 					onSuccess: () => {
-						void refreshAppSession().then(() => {
+						continueAfterRefresh(() => {
 							navigate({ to: redirectTo });
 						});
 					},

@@ -1,11 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { sessionOptions } from "@/features/auth/data";
+import { loadAppSession } from "@/features/auth/data";
 import { inviteSearchSchema } from "@/features/members/search";
 import { InvitePage } from "@/pages/invite";
 
 export const Route = createFileRoute("/invite")({
 	beforeLoad: async ({ context, location }) => {
-		const session = await context.queryClient.ensureQueryData(sessionOptions);
+		const session = await loadAppSession(context.queryClient);
 		if (!session) {
 			throw redirect({
 				to: "/login",

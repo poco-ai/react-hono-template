@@ -32,28 +32,80 @@ export type Session = NonNullable<
 
 export type SessionUser = Session["user"];
 
+class SessionLookupError extends Error {
+	readonly status: number;
+	readonly code: string | undefined;
+
+	constructor(status: number, code: string | undefined, message: string) {
+		super(message);
+		this.status = status;
+		this.code = code;
+	}
+}
+
 export const sessionOptions = queryOptions({
 	queryKey: sessionKey(),
-	queryFn: async () => {
-		const { data } = await authClient.getSession();
-		return data ?? null;
+	queryFn: async ({ signal }) => {
+		const { data, error } = await authClient.getSession({
+			fetchOptions: { signal },
+		});
+		if (error) {
+			// Better Auth uses 401 for an invalidated session, but can use the
+			// same error code on 500. Only the status distinguishes the two.
+			if (error.status === 401) return null;
+			throw new SessionLookupError(
+				error.status,
+				error.code,
+				error.message ?? "Could not load session",
+			);
+		}
+		if (data === null) return null;
+		if (
+			!data?.session?.id ||
+			!data.user?.id ||
+			!Number.isFinite(new Date(data.session.expiresAt).getTime())
+		) {
+			throw new Error("Invalid session response");
+		}
+		return data;
 	},
-	staleTime: Infinity,
+	// Reuse a successful check, but never use a locally expired session.
+	staleTime: ({ state: { data, dataUpdatedAt } }) => {
+		if (!data) return Infinity;
+		const expiresAt = new Date(data.session.expiresAt).getTime();
+		return Math.max(0, expiresAt - dataUpdatedAt);
+	},
+	// Match the app's retry bound, but classify Better Auth errors by HTTP
+	// status rather than application API error codes.
+	retry: (failureCount, error) =>
+		failureCount < 3 &&
+		(!(error instanceof SessionLookupError) ||
+			error.status === 429 ||
+			error.status >= 500),
 });
+
+/** Guard reads must await a new check when the cached result is stale. */
+export function loadAppSession(queryClient: QueryClient) {
+	return queryClient.fetchQuery(sessionOptions);
+}
 
 export function useSession() {
 	return useQuery(sessionOptions);
 }
 
 /**
- * The route guards read `sessionKey()` with `staleTime: Infinity`. A sign-in
- * or sign-up that only updates Better Auth UI's own query still leaves that
- * cache empty, so `/` keeps rendering the signed-out landing page. Write the
- * fresh session in before navigating.
+ * Better Auth UI updates its own cache on sign-in. Refresh the app cache
+ * before navigating, without replacing the prior result with a false null.
  */
 export async function refreshAppSession(queryClient: QueryClient) {
-	const { data } = await authClient.getSession();
-	queryClient.setQueryData(sessionKey(), data ?? null);
+	const queryKey = sessionOptions.queryKey;
+	await queryClient.cancelQueries({ queryKey, exact: true });
+	await queryClient.invalidateQueries({
+		queryKey,
+		exact: true,
+		refetchType: "none",
+	});
+	await loadAppSession(queryClient);
 }
 
 export async function uploadAvatar(file: File): Promise<string> {
@@ -92,8 +144,8 @@ export async function signOut() {
 }
 
 /**
- * The header reads `sessionKey()` with `staleTime: Infinity`, not the auth UI
- * session query. Refresh it after a profile update succeeds, including when
+ * The header reads the app's `sessionKey()`, not the auth UI session query.
+ * Refresh it after a profile update succeeds, including when
  * the account page has already unmounted.
  */
 export function useRefreshSessionOnUserUpdate() {

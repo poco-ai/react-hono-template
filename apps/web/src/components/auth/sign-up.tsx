@@ -43,7 +43,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { useRefreshAppSession } from "@/features/auth/data";
+import { useContinueAfterAppSessionRefresh } from "@/lib/auth/use-sign-in-continuation";
 import {
 	getAuthAdditionalFieldValidators,
 	isAuthFormFieldInvalid,
@@ -104,7 +104,7 @@ export function SignUp({
 		navigate,
 		Link,
 	} = useAuth();
-	const refreshAppSession = useRefreshAppSession();
+	const continueAfterRefresh = useContinueAfterAppSessionRefresh();
 	const { t } = useTranslation();
 
 	const { fetchOptions, resetFetchOptions } = useFetchOptions();
@@ -143,7 +143,7 @@ export function SignUp({
 					),
 				});
 			} else {
-				void refreshAppSession().then(() => {
+				continueAfterRefresh(() => {
 					if (onSignUpSuccess) {
 						onSignUpSuccess();
 					} else {
