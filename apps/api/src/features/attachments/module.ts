@@ -1,10 +1,13 @@
 import type { FeatureModule } from "../../core/compose";
+import type {
+	BillingFeaturePort,
+	WebhooksFeaturePort,
+} from "../../core/lib/ports/feature-services";
+import { unlimitedStorageUsage } from "../../core/lib/ports/storage-usage";
 import type { FullFeatureContext } from "../../feature-context";
-import type { BillingContribution } from "../billing/module";
 import type { CommentsContribution } from "../comments/module";
 import type { IssuesContribution } from "../issues/module";
 import type { ProjectsContribution } from "../projects/module";
-import type { WebhooksContribution } from "../webhooks/module";
 import { createAttachmentDao } from "./dao/attachment.dao";
 import { createMediaAssetDao } from "./dao/media-asset.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
@@ -57,11 +60,12 @@ export const attachmentsModule = {
 			pendingUploadDao: ctx.daos.pendingUploadDao,
 			storage: ctx.storage,
 			webhooks:
-				ctx.features.get<WebhooksContribution>("webhooks").services
+				ctx.features.find<WebhooksFeaturePort>("webhooks")?.services
 					.webhookDeliveryService,
 			plans: ctx.core.planService,
 			storageUsage:
-				ctx.features.get<BillingContribution>("billing").extras.storageUsage,
+				ctx.features.find<BillingFeaturePort>("billing")?.extras.storageUsage ??
+				unlimitedStorageUsage,
 		});
 		return {
 			services: { attachmentService, mediaService },
@@ -90,7 +94,7 @@ export const attachmentsModule = {
 					mediaAssetDao: ctx.daos.mediaAssetDao,
 					storage: ctx.storage,
 					quota:
-						ctx.features.get<BillingContribution>("billing").services
+						ctx.features.find<BillingFeaturePort>("billing")?.services
 							.quotaService,
 				}),
 			],

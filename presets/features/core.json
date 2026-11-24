@@ -42,6 +42,8 @@
 		"apps/web/src/i18n/index.ts",
 		"apps/web/src/i18n/locales/en.ts",
 		"apps/web/src/i18n/locales/zh.ts",
-		"apps/web/src/components/quota-error.tsx"
+		"apps/web/src/components/quota-error.tsx",
+		"apps/web/src/i18n/locales/en/activity.ts",
+		"apps/web/src/i18n/locales/zh/activity.ts"
 	]
 }

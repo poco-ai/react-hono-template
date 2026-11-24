@@ -1,10 +1,10 @@
 import type { FeatureModule, ScheduledJob } from "../../core/compose";
+import type { WebhooksFeaturePort } from "../../core/lib/ports/feature-services";
 import type { IssuesContribution } from "../issues/module";
 import type { LabelsContribution } from "../labels/module";
 import type { NotificationsContribution } from "../notifications/module";
 import type { ProjectsContribution } from "../projects/module";
 import type { StatusesContribution } from "../statuses/module";
-import type { WebhooksContribution } from "../webhooks/module";
 import { createRecurrenceDao } from "./dao/recurrence.dao";
 import { createRecurrencesRoutes } from "./routes/recurrences";
 import { createRecurrenceService } from "./services/recurrence.service";
@@ -48,7 +48,7 @@ export const recurrencesModule = {
 				ctx.features.get<NotificationsContribution>("notifications").services
 					.notificationService,
 			webhooks:
-				ctx.features.get<WebhooksContribution>("webhooks").services
+				ctx.features.find<WebhooksFeaturePort>("webhooks")?.services
 					.webhookDeliveryService,
 		});
 		return {

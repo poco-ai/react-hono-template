@@ -1,4 +1,5 @@
 const attachments = {
+	megabytes: "{{value}} MB",
 	title: "Attachments",
 	add: "Add files",
 	dropHint: "Drag & drop files here, or click to browse",

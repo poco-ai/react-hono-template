@@ -69,6 +69,25 @@ test("sqlite and postgres schemas share table, column and index names", () => {
 	assert.ok(tables > 10);
 });
 
+test("cross-slice foreign keys survive the schema spread order", () => {
+	// `issues.cycleId` is a deferred `kit.ref("cycles", "id")` foreign key,
+	// registered only when the cycles tables are spread before issues. This
+	// pins the aggregator order so a reorder cannot silently drop the FK.
+	const built = defineSchema("sqlite") as unknown as Record<
+		string,
+		Parameters<typeof sqliteTableConfig>[0]
+	>;
+	// Trimmed presets may drop either slice; the invariants below only apply
+	// when both tables exist (the template ships them together).
+	if (!("issues" in built) || !("cycles" in built)) return;
+	const foreignKeys = sqliteTableConfig(built.issues).foreignKeys;
+	const cycleFk = foreignKeys.find(
+		(fk) => fk.reference().foreignTable === built.cycles,
+	);
+	assert.ok(cycleFk, "issues must keep its cycle foreign key");
+	assert.equal(cycleFk.onDelete, "set null");
+});
+
 test("mysql is a named dialect slot that throws", () => {
 	assert.throws(
 		() => setSqlDialect("mysql"),

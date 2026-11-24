@@ -67,3 +67,15 @@ export type PendingUploadUsageDao = {
 export type MediaAssetUsageDao = {
 	sumActiveSizeByOrg: (orgId: string) => Promise<number>;
 };
+
+/**
+ * No-op accounting used when the billing feature is trimmed: uploads are not
+ * metered, so every guard passes and the gauge stays at zero.
+ */
+export const unlimitedStorageUsage: StorageUsage = {
+	getOrgUsage: async () => ({ attachments: 0, pending: 0, media: 0, total: 0 }),
+	assertCanUpload: async () => {},
+	settleHold: async () => {},
+	releaseHold: async () => {},
+	refundGauge: async () => {},
+};

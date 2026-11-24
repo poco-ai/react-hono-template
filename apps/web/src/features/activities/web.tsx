@@ -22,7 +22,6 @@ function IssueActivitySection(context: IssueDetailContext) {
 /** Activity feed: sidebar entry, palette jump target, `activity` strings. */
 export const activitiesWeb: WebFeatureDecl = {
 	id: "activities",
-	i18nNamespaces: ["activity"],
 	nav: () => [
 		{
 			id: "activity",

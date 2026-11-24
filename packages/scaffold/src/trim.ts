@@ -67,6 +67,17 @@ export type TrimResult = {
 
 export function trimClaims(outDir: string, preset: ResolvedPreset): TrimResult {
 	const patterns = disabledClaimPatterns(preset);
+	// Enabled claims must never overlap a disabled claim: that would delete a
+	// file an enabled feature still needs (compile failure at best, silently
+	// missing code at worst). The architecture test already forbids overlap in
+	// the template; this guards the generator itself.
+	const enabledPatterns: RegExp[] = [];
+	for (const feature of preset.allFeatures) {
+		if (!preset.enabled.has(feature.id)) continue;
+		for (const claim of feature.claims) {
+			enabledPatterns.push(globToRegExp(claim));
+		}
+	}
 	const disabled = preset.features
 		.filter((feature) => !preset.enabled.has(feature.id))
 		.map((feature) => feature.id);
@@ -74,6 +85,11 @@ export function trimClaims(outDir: string, preset: ResolvedPreset): TrimResult {
 	let deleted = 0;
 	for (const relativePath of files) {
 		if (!patterns.some((pattern) => pattern.test(relativePath))) continue;
+		if (enabledPatterns.some((pattern) => pattern.test(relativePath))) {
+			throw new Error(
+				`claim overlap: "${relativePath}" is owned by both an enabled and a disabled feature`,
+			);
+		}
 		rmSync(path.join(outDir, relativePath), { force: true });
 		deleted++;
 	}
@@ -103,26 +119,17 @@ export function deleteTemplateOnlyFiles(
 ): number {
 	const always = [
 		"docs/模板化重构方案.md",
+		".github/workflows/preset-matrix.yml",
+		".github/workflows/configure-ai.yml",
 		"apps/api/tests/architecture.test.ts",
 		"apps/api/tests/compose-order.test.ts",
 		"apps/api/tests/route-contributions.test.ts",
 		"apps/web/tests/web-registry.test.ts",
-		"apps/web/src/routeTree.gen.ts",
 	];
-	const aiDisabled = [
-		".github/workflows/configure-ai.yml",
-		"apps/api/tests/search-fts.test.ts", // only with search; guarded below
-	];
+	const aiDisabled = ["apps/api/tests/search-fts.test.ts"];
 	let deleted = 0;
 	for (const relativePath of always) {
 		const absolute = path.join(outDir, relativePath);
-		if (existsSync(absolute)) {
-			rmSync(absolute, { force: true });
-			deleted++;
-		}
-	}
-	if (!preset.enabled.has("ai")) {
-		const absolute = path.join(outDir, aiDisabled[0]);
 		if (existsSync(absolute)) {
 			rmSync(absolute, { force: true });
 			deleted++;
@@ -139,6 +146,18 @@ export function deleteTemplateOnlyFiles(
 			"apps/api/drizzle-pg/fts",
 		]) {
 			rmSync(path.join(outDir, relativePath), { recursive: true, force: true });
+		}
+	}
+	// Docs subset: keep only the docs the preset declares (README is root-level).
+	const allowed = new Set(preset.decl.docs ?? []);
+	const docsDir = path.join(outDir, "docs");
+	if (existsSync(docsDir)) {
+		for (const entry of readdirSync(docsDir, { withFileTypes: true })) {
+			if (!entry.isFile()) continue;
+			const relativePath = `docs/${entry.name}`;
+			if (allowed.has(relativePath)) continue;
+			rmSync(path.join(outDir, relativePath), { force: true });
+			deleted++;
 		}
 	}
 	return deleted;

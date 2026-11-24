@@ -486,6 +486,44 @@ function rewriteWebTypes(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, source);
 }
 
+/**
+ * Fails when a feature marker is unbalanced or nested: an unterminated start
+ * would silently delete the rest of the file.
+ */
+function assertMarkerPairs(source: string, commentPrefix: string): void {
+	const startRe = new RegExp(
+		`^\\s*${commentPrefix} @feature:([a-z0-9-]+):start\\s*$`,
+	);
+	const endRe = new RegExp(
+		`^\\s*${commentPrefix} @feature:([a-z0-9-]+):end\\s*$`,
+	);
+	const open: string[] = [];
+	for (const line of source.split("\n")) {
+		const start = line.match(startRe);
+		if (start) {
+			if (open.length > 0) {
+				throw new Error(
+					`nested feature marker "${start[1]}" (inside ${open.join(", ")})`,
+				);
+			}
+			open.push(start[1]);
+			continue;
+		}
+		const end = line.match(endRe);
+		if (end) {
+			const last = open.pop();
+			if (last !== end[1]) {
+				throw new Error(
+					`unbalanced feature marker "${end[1]}" (open: ${last ?? "none"})`,
+				);
+			}
+		}
+	}
+	if (open.length > 0) {
+		throw new Error(`unterminated feature marker "${open[0]}"`);
+	}
+}
+
 function stripFeatureMarkers(
 	source: string,
 	commentPrefix: string,
@@ -613,6 +651,7 @@ export function stripJsonComments(source: string): string {
 function rewriteWrangler(outDir: string, preset: ResolvedPreset): void {
 	const relativePath = "apps/api/wrangler.jsonc";
 	let source = readOut(outDir, relativePath);
+	assertMarkerPairs(source, "//");
 	source = stripFeatureMarkers(source, "//", preset);
 	source = removeTrailingCommas(source);
 	const parsed = JSON.parse(stripJsonComments(source)) as {
@@ -622,6 +661,25 @@ function rewriteWrangler(outDir: string, preset: ResolvedPreset): void {
 		vars?: Record<string, string>;
 	};
 	const rateLimitNames = (parsed.ratelimits ?? []).map((entry) => entry.name);
+	if (!preset.enabled.has("webhooks") && parsed.queues) {
+		throw new Error("wrangler.jsonc still declares queues without webhooks");
+	}
+	if (!preset.enabled.has("mcp")) {
+		for (const name of Object.keys(parsed.vars ?? {})) {
+			if (name.startsWith("MCP_")) {
+				throw new Error(`wrangler.jsonc still declares ${name} without mcp`);
+			}
+		}
+	}
+	if (!preset.enabled.has("attachments")) {
+		for (const name of Object.keys(parsed.vars ?? {})) {
+			if (name.startsWith("S3_")) {
+				throw new Error(
+					`wrangler.jsonc still declares ${name} without attachments`,
+				);
+			}
+		}
+	}
 	if (!preset.enabled.has("ai")) {
 		for (const name of rateLimitNames) {
 			if (name.startsWith("RATE_LIMITER_AI_")) {
@@ -635,6 +693,7 @@ function rewriteWrangler(outDir: string, preset: ResolvedPreset): void {
 function rewriteDevVars(outDir: string, preset: ResolvedPreset): void {
 	const relativePath = "apps/api/.dev.vars.example";
 	let source = readOut(outDir, relativePath);
+	assertMarkerPairs(source, "#");
 	source = stripFeatureMarkers(source, "#", preset);
 	// Collapse runs of blank lines left behind by removed sections.
 	source = source.replace(/\n{3,}/g, "\n\n");
@@ -645,7 +704,103 @@ function rewriteReadme(outDir: string, preset: ResolvedPreset): void {
 	const relativePath = "README.md";
 	const source = readOut(outDir, relativePath);
 	const header = `> 本项目由 [react-hono-template](https://github.com/poco-ai/react-hono-template) 的 \`${preset.name}\` preset 生成。模板仓库后续的改动不会自动同步，需要按上游 diff 自行合并。\n\n`;
-	writeOut(outDir, relativePath, `${header}${source}`);
+	const allowedDocs = new Set(preset.decl.docs ?? []);
+	const lines = source.split("\n").filter((line) => {
+		if (line.includes("线上示例：")) return false;
+		if (line.startsWith("[![") && line.includes("img.shields.io")) return false;
+		const row = line.match(/^\| \[[^\]]+\]\((docs\/[^)]+)\)/);
+		if (row && !allowedDocs.has(row[1])) return false;
+		if (!preset.enabled.has("api-keys") && line.includes("- **开放能力**")) {
+			return false;
+		}
+		if (!preset.enabled.has("billing") && line.includes("- **订阅**")) {
+			return false;
+		}
+		if (!preset.enabled.has("ai") && line.includes("- **AI 与 MCP**")) {
+			return false;
+		}
+		if (
+			!preset.enabled.has("attachments") &&
+			line.includes("- **内容与附件**")
+		) {
+			return false;
+		}
+		if (!preset.enabled.has("ai") && line.includes("| [AI 与 MCP]")) {
+			return false;
+		}
+		return true;
+	});
+	const joined = lines
+		.map((line) => {
+			if (!line.startsWith("面向 Cloudflare")) return line;
+			let intro = line;
+			if (!preset.enabled.has("billing")) intro = intro.replace("、订阅", "");
+			if (!preset.enabled.has("ai")) intro = intro.replace("和 AI", "");
+			return intro.replace(/ {2,}/g, " ").replace(/\s+这条/, "这条");
+		})
+		.join("\n");
+	writeOut(outDir, relativePath, `${header}${joined}`);
+}
+
+/** Markdown docs that describe template-only workflows or trimmed features. */
+function rewriteAgentsDoc(outDir: string, preset: ResolvedPreset): void {
+	const relativePath = "AGENTS.md";
+	let source = readOut(outDir, relativePath);
+	source = removeMarkdownSection(
+		source,
+		"## AI & MCP",
+		!preset.enabled.has("ai"),
+	);
+	const lines = source.split("\n").filter((line) => {
+		if (line.includes("presets/") || line.includes("packages/scaffold")) {
+			return false;
+		}
+		if (line.includes("route-contributions.test.ts")) return false;
+		if (!preset.enabled.has("billing") && line.startsWith("- Billing:")) {
+			return false;
+		}
+		if (
+			!preset.enabled.has("webhooks") &&
+			line.startsWith("- Webhook retries")
+		) {
+			return false;
+		}
+		if (!preset.enabled.has("public-api") && line.startsWith("- Public API:")) {
+			return false;
+		}
+		if (
+			!preset.enabled.has("search") &&
+			line.startsWith("- Full-text search")
+		) {
+			return false;
+		}
+		if (
+			!preset.enabled.has("mcp") &&
+			line.includes("MCP_") &&
+			line.includes("vars")
+		) {
+			return false;
+		}
+		return true;
+	});
+	const header = `> 本项目由 react-hono-template 的 \`${preset.name}\` preset 生成（已裁剪未启用特性）。\n\n`;
+	writeOut(outDir, relativePath, `${header}${lines.join("\n")}`);
+}
+
+function removeMarkdownSection(
+	source: string,
+	heading: string,
+	remove: boolean,
+): string {
+	if (!remove) return source;
+	const start = source.indexOf(heading);
+	if (start === -1) return source;
+	const rest = source.slice(start + heading.length);
+	const next = rest.search(/^## /m);
+	return (
+		source.slice(0, start) +
+		(next === -1 ? "" : rest.slice(next).replace(/^## /, "## "))
+	);
 }
 
 function rewriteRootPackage(outDir: string): void {
@@ -681,8 +836,9 @@ const TEST_REQUIREMENTS: Record<string, string[]> = {
 	"apps/api/tests/config-safety.test.ts": ["webhooks"],
 	"apps/api/tests/cleanup.test.ts": ["attachments", "webhooks", "recurrences"],
 	"apps/api/tests/redis-ports.test.ts": ["webhooks"],
-	"apps/api/tests/postgres-smoke.test.ts": [],
-	"apps/api/tests/postgres-smoke.entry.ts": ["attachments"],
+	"apps/api/tests/postgres-smoke.test.ts": ["attachments", "ai", "webhooks"],
+	"apps/api/tests/postgres-smoke.entry.ts": ["attachments", "ai", "webhooks"],
+	"apps/api/tests/postgres-smoke.impl.ts": ["attachments", "ai", "webhooks"],
 	"apps/web/tests/feature-cache.test.ts": [
 		"attachments",
 		"webhooks",
@@ -736,6 +892,7 @@ export function rewriteAggregators(
 	rewriteWrangler(outDir, preset);
 	rewriteDevVars(outDir, preset);
 	rewriteReadme(outDir, preset);
+	rewriteAgentsDoc(outDir, preset);
 	rewriteRootPackage(outDir);
 	rewriteApiTsconfig(outDir);
 	rewriteTests(outDir, preset);

@@ -68,14 +68,10 @@ export type McpEnvConfigPort = {
 	BETTER_AUTH_URL?: string;
 };
 
-export type WebhookJobQueuePort = {
-	send(message: { deliveryId: string }): Promise<void>;
-};
+import type { WebhookDeliveryQueueTarget, WebhookJobQueue } from "./webhooks";
 
-/** Delivery surface the self-host Redis loop needs (webhooks feature). */
-export type WebhookDeliveryQueueTarget = {
-	deliverFromQueue: (deliveryId: string, attempts: number) => Promise<unknown>;
-};
+export type WebhookJobQueuePort = WebhookJobQueue;
+export type { WebhookDeliveryQueueTarget };
 
 /**
  * Raw env fields feature platform contributions read. `WEBHOOK_QUEUE` is the

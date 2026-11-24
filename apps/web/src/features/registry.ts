@@ -1,3 +1,4 @@
+import { ATTACHMENT_MAX_SIZE } from "@workspace/shared";
 import { activitiesWeb } from "./activities/web";
 import { aiWeb } from "./ai/web";
 import { apiKeysWeb } from "./api-keys/web";
@@ -41,6 +42,7 @@ import type {
 	WebProjectExtras,
 	WebProvider,
 	WebSidebarSection,
+	WebStorageLimits,
 } from "./web-types";
 import { webhooksWeb } from "./webhooks/web";
 
@@ -49,7 +51,7 @@ import { webhooksWeb } from "./webhooks/web";
  * rewrites per preset, mirroring `apps/api/src/manifest.ts`.
  *
  * The template repository always ships the full set. Features without a web
- * surface (`capabilities`, `public-api`, `relations`, `search`, `views`) and
+ * surface (`capabilities`, `public-api`, `search`) and
  * features owned by the core shell (`admin`, `audit`, `auth`, `members`,
  * `organizations`) have no `web.ts` and are therefore absent here.
  *
@@ -213,6 +215,18 @@ export function webProjectExtras(): readonly WebProjectExtras[] {
 /** Fullscreen panels mounted at the end of the org layout. */
 export function webPanels(): WebPanel[] {
 	return WEB_FEATURES.flatMap((feature) => feature.panels ?? []);
+}
+
+const DEFAULT_STORAGE_LIMITS: WebStorageLimits = {
+	useAttachmentMaxSize: () => ATTACHMENT_MAX_SIZE,
+};
+
+/** Plan-derived storage limits; the shared Pro default when billing is trimmed. */
+export function webStorageLimits(): WebStorageLimits {
+	return (
+		WEB_FEATURES.find((feature) => feature.storageLimits)?.storageLimits ??
+		DEFAULT_STORAGE_LIMITS
+	);
 }
 
 const NOOP_PALETTE_PANEL: WebPalettePanel = { useOpen: () => () => {} };

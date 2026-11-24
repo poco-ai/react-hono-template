@@ -1,5 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import { ATTACHMENT_MAX_SIZE } from "@workspace/shared";
 import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
 import {
 	attachmentUploadErrorKey,
@@ -11,7 +9,7 @@ import {
 	useDeleteCommentAttachment,
 } from "@/features/attachments/data";
 import { useAttachmentDraft } from "@/features/attachments/use-attachment-draft";
-import { billingQuery } from "@/features/billing/data";
+import { webStorageLimits } from "@/features/registry";
 import type {
 	CommentAttachmentExtras,
 	IssueDetailContext,
@@ -30,8 +28,9 @@ function IssueAttachmentsSection(context: IssueDetailContext) {
 }
 
 function useAttachmentMaxSize(orgId: string): number {
-	const billing = useQuery(billingQuery(orgId));
-	return billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
+	// Billing contributes the plan-derived cap; without it the shared Pro
+	// default applies (same fallback as before, no billing request).
+	return webStorageLimits().useAttachmentMaxSize(orgId);
 }
 
 const commentExtras: CommentAttachmentExtras = {

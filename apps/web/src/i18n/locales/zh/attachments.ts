@@ -1,6 +1,7 @@
 import type en from "../en";
 
 const attachments: typeof en.attachments = {
+	megabytes: "{{value}} MB",
 	title: "附件",
 	add: "添加文件",
 	dropHint: "拖放文件到此处，或点击选择文件",

@@ -1,3 +1,5 @@
+import { existsSync, realpathSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { copyTemplate, prepareOutDir } from "./copy";
 import { generateBaselines, runOrThrow } from "./db-baseline";
@@ -61,8 +63,21 @@ function main(): void {
 
 	const preset = resolvePreset(options.preset);
 	const outDir = path.resolve(options.out);
-	if (outDir === REPO_ROOT || outDir.startsWith(`${REPO_ROOT}${path.sep}`)) {
+	const realOutDir = existsSync(outDir) ? realpathSync(outDir) : outDir;
+	const realRepo = realpathSync(REPO_ROOT);
+	if (
+		realOutDir === realRepo ||
+		realOutDir.startsWith(`${realRepo}${path.sep}`)
+	) {
 		throw new Error("--out must be outside the template repository");
+	}
+	if (realOutDir === path.parse(realOutDir).root || realOutDir === homedir()) {
+		throw new Error(`refusing to generate into "${realOutDir}"`);
+	}
+	if (existsSync(path.join(realOutDir, ".git"))) {
+		throw new Error(
+			`refusing to replace "${realOutDir}": it contains a .git directory`,
+		);
 	}
 
 	log.step(
@@ -95,6 +110,16 @@ function main(): void {
 
 	log.step("install workspace dependencies");
 	runOrThrow("bun", ["install"], outDir, "bun install");
+
+	// The generated project commits `routeTree.gen.ts`; always regenerate it
+	// (not only under --verify) so the output typechecks out of the box.
+	log.step("regenerate route tree");
+	runOrThrow(
+		"bunx",
+		["vite", "build"],
+		path.join(outDir, "apps/web"),
+		"web vite build (route tree)",
+	);
 
 	log.step("regenerate database baselines");
 	const baselines = generateBaselines(outDir, preset.enabled.has("search"));

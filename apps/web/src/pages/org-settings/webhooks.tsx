@@ -96,7 +96,7 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 								{t("webhooks.active")}
 							</TableHead>
 							<TableHead className="hidden md:table-cell">
-								{t("apiKeys.created")}
+								{t("webhooks.created")}
 							</TableHead>
 							<TableHead className="text-right">
 								{t("common.actions")}

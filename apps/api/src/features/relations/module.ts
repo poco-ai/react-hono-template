@@ -1,7 +1,7 @@
 import type { FeatureModule } from "../../core/compose";
+import type { WebhooksFeaturePort } from "../../core/lib/ports/feature-services";
 import type { IssuesContribution } from "../issues/module";
 import type { ProjectsContribution } from "../projects/module";
-import type { WebhooksContribution } from "../webhooks/module";
 import { createRelationDao } from "./dao/relation.dao";
 import { createRelationsRoutes } from "./routes/relations";
 import { createRelationService } from "./services/relation.service";
@@ -21,7 +21,7 @@ export const relationsModule = {
 			projectDao:
 				ctx.features.get<ProjectsContribution>("projects").daos.projectDao,
 			webhooks:
-				ctx.features.get<WebhooksContribution>("webhooks").services
+				ctx.features.find<WebhooksFeaturePort>("webhooks")?.services
 					.webhookDeliveryService,
 		});
 		return {

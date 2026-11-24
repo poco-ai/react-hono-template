@@ -1,3 +1,5 @@
+// Required when apps/web typechecks this file through the @api/* alias:
+// the web tsconfig has no "node" types, unlike apps/api.
 /// <reference types="node" />
 import { AsyncLocalStorage } from "node:async_hooks";
 

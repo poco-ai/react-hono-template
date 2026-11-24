@@ -1,8 +1,8 @@
 import type { FeatureModule } from "../../core/compose";
+import type { BillingFeaturePort } from "../../core/lib/ports/feature-services";
 import type { QuotaUsageSink } from "../../core/lib/ports/quota";
 import type { FullFeatureContext } from "../../feature-context";
 import type { ActivitiesContribution } from "../activities/module";
-import type { BillingContribution } from "../billing/module";
 import { createCapabilityLayer } from "../capabilities/index";
 import type { CommentsContribution } from "../comments/module";
 import type { CyclesContribution } from "../cycles/module";
@@ -147,7 +147,8 @@ export const aiModule = {
 			messageDao: ctx.daos.aiMessageDao,
 			toolCallDao: ctx.daos.aiToolCallDao,
 			usageService: aiUsageService,
-			quota: get<BillingContribution>("billing").services.quotaService,
+			quota:
+				ctx.features.find<BillingFeaturePort>("billing")?.services.quotaService,
 			settingsService: orgAiSettingsService,
 			capabilityLayer,
 			plans: ctx.core.planService,

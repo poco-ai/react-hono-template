@@ -1,4 +1,3 @@
-import path from "node:path";
 import { runOrThrow } from "./db-baseline";
 import { log } from "./log";
 
@@ -16,12 +15,6 @@ export function verifyOutput(outDir: string): void {
 			cwd: outDir,
 			command: "bun",
 			args: ["install"],
-		},
-		{
-			label: "regenerate route tree (vite build)",
-			cwd: path.join(outDir, "apps/web"),
-			command: "bunx",
-			args: ["vite", "build"],
 		},
 		{
 			label: "bun run check",

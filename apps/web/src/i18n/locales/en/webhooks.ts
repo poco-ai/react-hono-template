@@ -1,4 +1,5 @@
 const webhooks = {
+	created: "Created",
 	create: "New webhook",
 	createTitle: "Create webhook",
 	editTitle: "Edit webhook",

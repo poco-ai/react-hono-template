@@ -1,6 +1,7 @@
 import type en from "../en";
 
 const webhooks: typeof en.webhooks = {
+	created: "创建时间",
 	create: "新建 Webhook",
 	createTitle: "创建 Webhook",
 	editTitle: "编辑 Webhook",

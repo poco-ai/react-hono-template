@@ -394,6 +394,14 @@ export type WebMediaActions = {
 };
 
 /**
+ * Feature-provided storage limits: billing derives the attachment cap from the
+ * org plan; a trimmed registry falls back to the shared Pro constant.
+ */
+export type WebStorageLimits = {
+	useAttachmentMaxSize: (orgId: string) => number;
+};
+
+/**
  * What a feature contributes to the web shell. `features/<id>/web.ts` exports
  * one of these; `features/registry.ts` aggregates them. Scaffold (Phase 6)
  * rewrites the registry per preset, so trimming a feature also removes every
@@ -417,6 +425,8 @@ export type WebFeatureDecl = {
 	mobileTabs?: () => MobileTabItem[];
 	/** Fullscreen panels mounted at the end of the org layout. */
 	panels?: readonly WebPanel[];
+	/** Plan-derived storage limits (attachments read this without billing). */
+	storageLimits?: WebStorageLimits;
 	/** Opens this feature's panel from the command palette. */
 	palettePanel?: WebPalettePanel;
 	/** Locale namespaces this feature owns (`i18n/locales/<lang>/<ns>.ts`). */

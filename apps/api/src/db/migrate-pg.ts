@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
@@ -18,8 +18,12 @@ const sql = postgres(databaseUrl, { max: 1 });
 await migrate(drizzle({ client: sql }), {
 	migrationsFolder: resolve(apiRoot, "drizzle-pg"),
 });
-await sql.unsafe(
-	readFileSync(resolve(apiRoot, "drizzle-pg/fts/search_trgm.sql"), "utf8"),
-);
-await sql.end();
-console.log("[db] migrated PostgreSQL and applied search indexes");
+const trgmScript = resolve(apiRoot, "drizzle-pg/fts/search_trgm.sql");
+if (existsSync(trgmScript)) {
+	await sql.unsafe(readFileSync(trgmScript, "utf8"));
+	await sql.end();
+	console.log("[db] migrated PostgreSQL and applied search indexes");
+} else {
+	await sql.end();
+	console.log("[db] migrated PostgreSQL (search indexes disabled)");
+}

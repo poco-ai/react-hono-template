@@ -1,9 +1,6 @@
 import type { AttachmentWithUrlDto } from "@api/features/attachments/dto/attachment.dto";
 import { useQuery } from "@tanstack/react-query";
-import {
-	ATTACHMENT_CONTENT_TYPES,
-	ATTACHMENT_MAX_SIZE,
-} from "@workspace/shared";
+import { ATTACHMENT_CONTENT_TYPES } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Item,
@@ -37,8 +34,8 @@ import {
 	useUploadAttachment,
 } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
-import { billingQuery } from "@/features/billing/data";
 import { useOrgRole } from "@/features/organizations/use-org-role";
+import { webStorageLimits } from "@/features/registry";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 
 const ALLOWED_CONTENT_TYPES = ATTACHMENT_CONTENT_TYPES;
@@ -76,8 +73,7 @@ export function IssueAttachments({
 	const { t } = useTranslation();
 
 	const { data: session } = useSession();
-	const billing = useQuery(billingQuery(orgId));
-	const maxSize = billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
+	const maxSize = webStorageLimits().useAttachmentMaxSize(orgId);
 	const attachments = useQuery(attachmentsQuery(orgId, projectId, issueNumber));
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [dragOver, setDragOver] = useState(false);
@@ -193,7 +189,7 @@ export function IssueAttachments({
 					<span className="text-muted-foreground text-xs">
 						{t("attachments.dropHint")} ·{" "}
 						{t("attachments.typeLimit", {
-							size: t("billing.megabytes", {
+							size: t("attachments.megabytes", {
 								value: maxSize / (1024 * 1024),
 							}),
 						})}

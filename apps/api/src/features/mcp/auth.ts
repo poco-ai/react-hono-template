@@ -3,7 +3,7 @@ import type { AuthInfo } from "@modelcontextprotocol/server";
 import { type ApiKeyScope, normalizeApiKeyScopes } from "@workspace/shared";
 import type { Auth } from "../../core/lib/auth";
 import { sha256Hex } from "../../core/lib/crypto";
-import type { ApiKeyDao } from "../api-keys/dao/api-key.dao";
+import type { ApiKeyLookup } from "../../core/lib/ports/api-keys";
 import type { McpConfig } from "./config";
 
 const TOUCH_THROTTLE_MS = 60_000;
@@ -39,7 +39,7 @@ export type McpPrincipal = {
 };
 
 export type McpAuthDeps = {
-	apiKeyDao: Pick<ApiKeyDao, "findByHash" | "touchLastUsed">;
+	apiKeyDao: ApiKeyLookup;
 	/** Wait-until style callback used for lastUsedAt touches. */
 	background?: (task: () => Promise<unknown>) => void;
 };

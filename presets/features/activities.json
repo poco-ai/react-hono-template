@@ -7,8 +7,6 @@
 		"apps/web/src/features/activities/**",
 		"packages/shared/src/schemas/activity.ts",
 		"apps/web/src/routes/_auth/orgs/$orgId/activity.tsx",
-		"apps/web/src/pages/org-activity.tsx",
-		"apps/web/src/i18n/locales/en/activity.ts",
-		"apps/web/src/i18n/locales/zh/activity.ts"
+		"apps/web/src/pages/org-activity.tsx"
 	]
 }

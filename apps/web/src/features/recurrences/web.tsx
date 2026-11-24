@@ -77,7 +77,7 @@ function IssueRecurrenceAction(context: IssuePropertiesContext) {
 				orgId={context.orgId}
 				projectId={context.projectId}
 				issueId={context.issueId}
-				issueKey={`${context.projectKey}-$context.issueNumber`}
+				issueKey={`${context.projectKey}-${context.issueNumber}`}
 			/>
 		</>
 	);
