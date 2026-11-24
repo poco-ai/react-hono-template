@@ -1,0 +1,22 @@
+{
+	"id": "recurrences",
+	"tier": 2,
+	"dependsOn": [
+		"core",
+		"issues",
+		"cycles",
+		"notifications",
+		"labels",
+		"statuses"
+	],
+	"softDependsOn": ["webhooks"],
+	"claims": [
+		"apps/api/src/controllers/recurrence.controller.ts",
+		"apps/api/src/dao/recurrence.dao.ts",
+		"apps/api/src/dto/recurrence.dto.ts",
+		"apps/api/src/routes/recurrences.ts",
+		"apps/api/src/services/recurrence.service.ts",
+		"apps/web/src/features/recurrences/**",
+		"packages/shared/src/schemas/recurrence.ts"
+	]
+}

@@ -1,0 +1,6 @@
+{
+	"id": "public-api",
+	"tier": 3,
+	"dependsOn": ["core", "api-keys", "issues", "labels", "projects"],
+	"claims": ["apps/api/src/v1/**"]
+}

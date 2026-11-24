@@ -1,0 +1,14 @@
+{
+	"name": "minimal",
+	"features": [
+		"core",
+		"projects",
+		"issues",
+		"labels",
+		"statuses",
+		"comments",
+		"activities"
+	],
+	"platform": ["cloudflare", "bun-selfhost"],
+	"docs": ["README.md", "docs/本地开发.md", "docs/部署.md"]
+}

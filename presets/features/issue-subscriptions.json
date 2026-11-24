@@ -1,0 +1,12 @@
+{
+	"id": "issue-subscriptions",
+	"tier": 2,
+	"dependsOn": ["core", "issues", "notifications"],
+	"claims": [
+		"apps/api/src/controllers/issue-subscription.controller.ts",
+		"apps/api/src/dao/issue-subscription.dao.ts",
+		"apps/api/src/dto/issue-subscription.dto.ts",
+		"apps/api/src/routes/issue-subscriptions.ts",
+		"apps/api/src/services/issue-subscription.service.ts"
+	]
+}

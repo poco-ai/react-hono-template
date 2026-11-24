@@ -1,0 +1,14 @@
+{
+	"id": "relations",
+	"tier": 2,
+	"dependsOn": ["core", "issues"],
+	"softDependsOn": ["webhooks"],
+	"claims": [
+		"apps/api/src/controllers/relation.controller.ts",
+		"apps/api/src/dao/relation.dao.ts",
+		"apps/api/src/dto/relation.dto.ts",
+		"apps/api/src/routes/relations.ts",
+		"apps/api/src/services/relation.service.ts",
+		"packages/shared/src/schemas/relation.ts"
+	]
+}

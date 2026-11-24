@@ -1,0 +1,14 @@
+{
+	"id": "statuses",
+	"tier": 1,
+	"dependsOn": ["core"],
+	"claims": [
+		"apps/api/src/controllers/status.controller.ts",
+		"apps/api/src/dao/status.dao.ts",
+		"apps/api/src/dto/status.dto.ts",
+		"apps/api/src/routes/statuses.ts",
+		"apps/api/src/services/status.service.ts",
+		"apps/web/src/features/statuses/**",
+		"packages/shared/src/schemas/status.ts"
+	]
+}

@@ -1,0 +1,15 @@
+{
+	"id": "projects",
+	"tier": 1,
+	"dependsOn": ["core"],
+	"claims": [
+		"apps/api/src/controllers/project.controller.ts",
+		"apps/api/src/dao/project.dao.ts",
+		"apps/api/src/dto/project.dto.ts",
+		"apps/api/src/routes/projects.ts",
+		"apps/api/src/services/project-access.ts",
+		"apps/api/src/services/project.service.ts",
+		"apps/web/src/features/projects/**",
+		"packages/shared/src/schemas/project.ts"
+	]
+}

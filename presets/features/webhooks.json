@@ -1,0 +1,18 @@
+{
+	"id": "webhooks",
+	"tier": 2,
+	"dependsOn": ["core"],
+	"softDependsOn": ["issues"],
+	"claims": [
+		"apps/api/src/controllers/webhook.controller.ts",
+		"apps/api/src/dao/webhook-delivery.dao.ts",
+		"apps/api/src/dao/webhook.dao.ts",
+		"apps/api/src/dto/webhook.dto.ts",
+		"apps/api/src/lib/webhook-signature.ts",
+		"apps/api/src/routes/webhooks.ts",
+		"apps/api/src/services/webhook-delivery.service.ts",
+		"apps/api/src/services/webhook.service.ts",
+		"apps/web/src/features/webhooks/**",
+		"packages/shared/src/schemas/webhook.ts"
+	]
+}

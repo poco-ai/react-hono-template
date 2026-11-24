@@ -1,0 +1,16 @@
+{
+	"id": "mcp",
+	"tier": 4,
+	"dependsOn": ["core", "capabilities"],
+	"softDependsOn": ["api-keys"],
+	"env": {
+		"optional": [
+			"MCP_ENABLED",
+			"MCP_RESOURCE",
+			"MCP_LOGIN_PAGE",
+			"MCP_CONSENT_PAGE",
+			"MCP_DCR_ENABLED"
+		]
+	},
+	"claims": ["apps/api/src/mcp/**", "apps/web/src/features/mcp/**"]
+}

@@ -1,0 +1,17 @@
+{
+	"id": "comments",
+	"tier": 1,
+	"dependsOn": ["core", "issues"],
+	"softDependsOn": ["attachments", "notifications", "billing"],
+	"claims": [
+		"apps/api/src/controllers/comment.controller.ts",
+		"apps/api/src/dao/comment-mention.dao.ts",
+		"apps/api/src/dao/comment-reaction.dao.ts",
+		"apps/api/src/dao/comment.dao.ts",
+		"apps/api/src/dto/comment.dto.ts",
+		"apps/api/src/routes/comments.ts",
+		"apps/api/src/services/comment.service.ts",
+		"apps/web/src/features/comments/**",
+		"packages/shared/src/schemas/comment.ts"
+	]
+}

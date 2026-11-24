@@ -1,0 +1,15 @@
+{
+	"name": "collaboration",
+	"extends": "minimal",
+	"features": [
+		"+attachments",
+		"+webhooks",
+		"+notifications",
+		"+search",
+		"+favorites",
+		"+relations",
+		"+issue-subscriptions",
+		"+project-updates"
+	],
+	"platform": ["cloudflare", "bun-selfhost"]
+}

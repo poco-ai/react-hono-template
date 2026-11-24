@@ -1,0 +1,15 @@
+{
+	"name": "saas",
+	"extends": "collaboration",
+	"features": [
+		"+cycles",
+		"+roadmap",
+		"+recurrences",
+		"+views",
+		"+templates",
+		"+billing",
+		"+api-keys",
+		"+public-api"
+	],
+	"platform": ["cloudflare", "bun-selfhost"]
+}

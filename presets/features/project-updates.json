@@ -1,0 +1,14 @@
+{
+	"id": "project-updates",
+	"tier": 2,
+	"dependsOn": ["core", "projects"],
+	"claims": [
+		"apps/api/src/controllers/project-update.controller.ts",
+		"apps/api/src/dao/project-update.dao.ts",
+		"apps/api/src/dto/project-update.dto.ts",
+		"apps/api/src/routes/project-updates.ts",
+		"apps/api/src/services/project-update.service.ts",
+		"apps/web/src/features/project-updates/**",
+		"packages/shared/src/schemas/project-update.ts"
+	]
+}

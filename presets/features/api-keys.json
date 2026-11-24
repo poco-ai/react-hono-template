@@ -1,0 +1,16 @@
+{
+	"id": "api-keys",
+	"tier": 3,
+	"dependsOn": ["core"],
+	"claims": [
+		"apps/api/src/controllers/api-key.controller.ts",
+		"apps/api/src/dao/api-key.dao.ts",
+		"apps/api/src/dto/api-key.dto.ts",
+		"apps/api/src/middleware/api-key.ts",
+		"apps/api/src/routes/api-keys.ts",
+		"apps/api/src/services/api-key.service.ts",
+		"apps/web/src/features/api-keys/**",
+		"packages/shared/src/api-key-scopes.ts",
+		"packages/shared/src/schemas/api-key.ts"
+	]
+}

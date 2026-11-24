@@ -1,0 +1,32 @@
+{
+	"name": "full",
+	"features": [
+		"core",
+		"projects",
+		"issues",
+		"labels",
+		"statuses",
+		"comments",
+		"activities",
+		"attachments",
+		"webhooks",
+		"notifications",
+		"search",
+		"favorites",
+		"relations",
+		"issue-subscriptions",
+		"project-updates",
+		"cycles",
+		"roadmap",
+		"recurrences",
+		"views",
+		"templates",
+		"billing",
+		"api-keys",
+		"public-api",
+		"capabilities",
+		"ai",
+		"mcp"
+	],
+	"platform": ["cloudflare", "bun-selfhost"]
+}

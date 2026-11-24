@@ -1,0 +1,32 @@
+{
+	"id": "billing",
+	"tier": 3,
+	"dependsOn": ["core"],
+	"env": {
+		"optional": [
+			"STRIPE_SECRET_KEY",
+			"STRIPE_PRICE_ID",
+			"STRIPE_WEBHOOK_SECRET"
+		],
+		"mockFlag": "BILLING_MOCK_MODE=true"
+	},
+	"claims": [
+		"apps/api/src/controllers/billing.controller.ts",
+		"apps/api/src/controllers/quota.controller.ts",
+		"apps/api/src/controllers/stripe.controller.ts",
+		"apps/api/src/dao/billing.dao.ts",
+		"apps/api/src/dao/quota.dao.ts",
+		"apps/api/src/dto/billing.dto.ts",
+		"apps/api/src/dto/subscription.dto.ts",
+		"apps/api/src/lib/stripe.ts",
+		"apps/api/src/routes/billing.ts",
+		"apps/api/src/services/billing.service.ts",
+		"apps/api/src/services/plan.service.ts",
+		"apps/api/src/services/quota.service.ts",
+		"apps/api/src/services/storage-usage.service.ts",
+		"apps/web/src/features/billing/**",
+		"packages/shared/src/plans.ts",
+		"packages/shared/src/quota.ts",
+		"packages/shared/src/schemas/billing.ts"
+	]
+}

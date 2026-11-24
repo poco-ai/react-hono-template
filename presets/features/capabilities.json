@@ -1,0 +1,22 @@
+{
+	"id": "capabilities",
+	"tier": 4,
+	"dependsOn": [
+		"core",
+		"issues",
+		"projects",
+		"comments",
+		"labels",
+		"statuses",
+		"activities",
+		"relations",
+		"views",
+		"cycles",
+		"project-updates",
+		"search",
+		"favorites",
+		"templates",
+		"recurrences"
+	],
+	"claims": ["apps/api/src/capabilities/**"]
+}

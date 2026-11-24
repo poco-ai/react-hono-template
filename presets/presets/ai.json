@@ -1,0 +1,6 @@
+{
+	"name": "ai",
+	"extends": "saas",
+	"features": ["+capabilities", "+ai", "+mcp"],
+	"platform": ["cloudflare", "bun-selfhost"]
+}

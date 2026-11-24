@@ -1,0 +1,15 @@
+{
+	"id": "views",
+	"tier": 2,
+	"dependsOn": ["core", "projects"],
+	"softDependsOn": ["billing"],
+	"claims": [
+		"apps/api/src/controllers/view.controller.ts",
+		"apps/api/src/dao/view.dao.ts",
+		"apps/api/src/dto/view.dto.ts",
+		"apps/api/src/routes/views.ts",
+		"apps/api/src/services/view.service.ts",
+		"apps/web/src/features/views/**",
+		"packages/shared/src/schemas/view.ts"
+	]
+}
