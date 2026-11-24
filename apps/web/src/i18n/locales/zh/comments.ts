@@ -12,6 +12,8 @@ const comments: typeof en.comments = {
 	edited: "已编辑",
 	deleteTitle: "删除评论？",
 	deleteDescription: "该评论将被永久删除。",
+	attachmentDeleteTitle: "删除附件？",
+	attachmentDeleteDescription: "“{{filename}}”将被永久删除。",
 	attach: "添加附件",
 	removeFile: "移除 {{filename}}",
 	reply: "回复",

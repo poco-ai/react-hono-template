@@ -5,6 +5,7 @@
 	"softDependsOn": ["webhooks"],
 	"claims": [
 		"apps/api/src/features/relations/**",
-		"packages/shared/src/schemas/relation.ts"
+		"packages/shared/src/schemas/relation.ts",
+		"apps/web/src/features/relations/**"
 	]
 }

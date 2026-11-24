@@ -1,16 +1,22 @@
 import { createApp } from "./app";
 import { detachBackground } from "./core/lib/background";
+import type { WebhookDeliveryQueueTarget } from "./core/lib/ports/webhooks";
 import { startScheduledLoop } from "./core/lib/redis/scheduler";
 import { startWebhookLoop } from "./core/lib/redis/webhook-queue";
 import { platformFromProcess } from "./core/platform/server";
+import { FEATURE_MODULES } from "./manifest";
 
 export const listen = async () => {
-	const runtime = platformFromProcess(process.env);
+	const runtime = platformFromProcess(process.env, FEATURE_MODULES);
 	const { app, dependencies, runScheduled } = createApp(runtime.platform);
-	const stopWebhook = startWebhookLoop(
-		runtime.redis,
-		dependencies.services.webhookDeliveryService,
-	);
+	const webhookDelivery = (
+		dependencies.services as {
+			webhookDeliveryService?: WebhookDeliveryQueueTarget;
+		}
+	).webhookDeliveryService;
+	const stopWebhook = webhookDelivery
+		? startWebhookLoop(runtime.redis, webhookDelivery)
+		: async () => {};
 	const stopCron = startScheduledLoop(runtime.redis, () =>
 		runScheduled(detachBackground),
 	);

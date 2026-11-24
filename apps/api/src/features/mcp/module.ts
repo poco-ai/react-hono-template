@@ -14,6 +14,17 @@ import { createMcpEndpoint, createMcpRoutes } from "./routes";
  */
 export const mcpModule = {
 	id: "mcp",
+	platform: (env) => ({
+		mcpEnv: {
+			MCP_ENABLED: env.MCP_ENABLED,
+			MCP_RESOURCE: env.MCP_RESOURCE,
+			MCP_LOGIN_PAGE: env.MCP_LOGIN_PAGE,
+			MCP_CONSENT_PAGE: env.MCP_CONSENT_PAGE,
+			MCP_DCR_ENABLED: env.MCP_DCR_ENABLED,
+			APP_WEB_URL: env.APP_WEB_URL,
+			BETTER_AUTH_URL: env.BETTER_AUTH_URL,
+		},
+	}),
 	register: (ctx) => {
 		const config = resolveMcpConfig(ctx.mcpEnv);
 		return {

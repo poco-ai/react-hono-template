@@ -75,6 +75,13 @@ export type SchemaKit = {
 	 * the cast is compile-time only).
 	 */
 	ref: (table: string, column: string) => () => AnySQLiteColumn;
+	/**
+	 * Whether a table built through this kit has already been registered. The
+	 * spread order in `define-schema.ts` is topological, so a slice can guard an
+	 * optional foreign key (e.g. `issues.cycle_id` when the planning features
+	 * are trimmed) without importing the other slice.
+	 */
+	hasTable: (table: string) => boolean;
 };
 
 /**
@@ -126,6 +133,7 @@ export const createSchemaKit = (dialect: SchemaDialect): SchemaKit => {
 			timestampDefault: SQLITE_NOW,
 			trueLiteral: sql`1`,
 			ref,
+			hasTable: (table: string) => registry.has(table),
 		};
 	}
 
@@ -161,5 +169,6 @@ export const createSchemaKit = (dialect: SchemaDialect): SchemaKit => {
 		timestampDefault: POSTGRES_NOW,
 		trueLiteral: sql`true`,
 		ref,
+		hasTable: (table: string) => registry.has(table),
 	};
 };

@@ -1,5 +1,17 @@
 import { Bell, InboxIcon } from "lucide-react";
-import type { WebFeatureDecl } from "@/features/web-types";
+import { IssueSubscriptionButton } from "@/features/notifications/components/issue-subscription-button";
+import type { IssueDetailContext, WebFeatureDecl } from "@/features/web-types";
+
+function IssueSubscriptionAction(context: IssueDetailContext) {
+	return (
+		<IssueSubscriptionButton
+			orgId={context.orgId}
+			projectId={context.projectId}
+			issueNumber={context.issueNumber}
+			disabled={context.frozen}
+		/>
+	);
+}
 
 /** Notifications: inbox sidebar entry, palette jump target and mobile tab. */
 export const notificationsWeb: WebFeatureDecl = {
@@ -38,5 +50,8 @@ export const notificationsWeb: WebFeatureDecl = {
 			exact: true,
 			search: { filter: "all" },
 		},
+	],
+	issueHeaderActions: [
+		{ id: "subscription", order: 20, component: IssueSubscriptionAction },
 	],
 };

@@ -294,6 +294,23 @@ export const createNotificationDao = (db: Database) => ({
 		return rows.length > 0;
 	},
 
+	/** Nulls comment back-references before the comments feature deletes rows. */
+	clearCommentReferences: async (
+		orgId: string,
+		commentIds: string[],
+	): Promise<void> => {
+		if (commentIds.length === 0) return;
+		await db
+			.update(notifications)
+			.set({ commentId: null })
+			.where(
+				and(
+					eq(notifications.orgId, orgId),
+					inArray(notifications.commentId, commentIds),
+				),
+			);
+	},
+
 	/**
 	 * Retention cleanup: deletes at most `limit` expired read rows (by
 	 * `readAt`) and `limit` expired unread rows (by `createdAt`, since an

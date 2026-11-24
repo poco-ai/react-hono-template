@@ -40,6 +40,12 @@ export type AttachmentFileLookup = {
 	) => Promise<Map<string, AttachmentFileSummary[]>>;
 	/** Storage keys for a comment and its replies; read before deleting rows. */
 	keysForComment: (orgId: string, commentId: string) => Promise<string[]>;
+	/**
+	 * Deletes the attachment rows of a comment thread. Comments call this
+	 * before removing the comments so D1's explicit child deletes still happen
+	 * when the attachments slice is enabled.
+	 */
+	deleteCommentThreadRows: (orgId: string, commentId: string) => Promise<void>;
 	/** Best-effort object removal; call only after the rows are gone. */
 	removeObjects: (keys: string[]) => Promise<void>;
 };

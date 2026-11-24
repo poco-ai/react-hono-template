@@ -15,10 +15,6 @@ import {
 	type CommentReactionEmoji,
 } from "@workspace/shared";
 import {
-	deleteCommentAttachment,
-	uploadCommentAttachment,
-} from "@/features/attachments/data";
-import {
 	billingRootKey,
 	commentsQueryKey,
 	issueActivitiesKey,
@@ -34,7 +30,6 @@ import {
 	useOptimisticMutation,
 } from "@/lib/optimistic-mutation";
 import { nextPageParam } from "@/lib/pagination";
-import { isAbortError } from "@/lib/upload";
 
 export const COMMENTS_PAGE_SIZE = 20;
 
@@ -157,6 +152,15 @@ export function applyReactionToggle(
 	);
 }
 
+export type CommentUploader = (
+	orgId: string,
+	projectId: string,
+	issueNumber: number,
+	commentId: string,
+	files: readonly File[],
+	signal: AbortSignal,
+) => Promise<{ file: File; error: unknown }[]>;
+
 export function usePostComment(
 	orgId: string,
 	projectId: string,
@@ -173,6 +177,7 @@ export function usePostComment(
 			signal?: AbortSignal;
 		}
 	>,
+	uploadFiles?: CommentUploader,
 ) {
 	const queryClient = useQueryClient();
 
@@ -196,51 +201,25 @@ export function usePostComment(
 				body,
 				parentId,
 			);
-			const failed: { file: File; error: unknown }[] = [];
-			for (const file of files) {
-				try {
-					await uploadCommentAttachment(
-						orgId,
-						projectId,
-						issueNumber,
-						comment.id,
-						{ file, signal },
-					);
-				} catch (error) {
-					if (isAbortError(error)) throw error;
-					failed.push({ file, error });
-				}
-			}
+			// Attachments are an optional slice: without an uploader there are no
+			// draft files (the composer hides the picker), so this is a no-op.
+			const failed =
+				uploadFiles && files.length > 0
+					? await uploadFiles(
+							orgId,
+							projectId,
+							issueNumber,
+							comment.id,
+							files,
+							signal ?? new AbortController().signal,
+						)
+					: [];
 			return { comment, failed };
 		},
 		onSettled: (...args) => {
 			void invalidateCommentQueries(queryClient, orgId, projectId, issueNumber);
 			return callbacks?.onSettled?.(...args);
 		},
-	});
-}
-
-export function useDeleteCommentAttachment(
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-	callbacks?: MutationCallbacks<
-		Awaited<ReturnType<typeof deleteCommentAttachment>>,
-		{ commentId: string; attachmentId: string }
-	>,
-) {
-	return useInvalidatingMutation({
-		mutationFn: (input: { commentId: string; attachmentId: string }) =>
-			deleteCommentAttachment(
-				orgId,
-				projectId,
-				issueNumber,
-				input.commentId,
-				input.attachmentId,
-			),
-		invalidate: (queryClient) =>
-			invalidateCommentQueries(queryClient, orgId, projectId, issueNumber),
-		callbacks,
 	});
 }
 

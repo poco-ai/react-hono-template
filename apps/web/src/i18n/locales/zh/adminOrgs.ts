@@ -6,6 +6,8 @@ const adminOrgs: typeof en.adminOrgs = {
 	searchPlaceholder: "按名称或 Slug 搜索…",
 	org: "组织",
 	plan: "方案",
+	planFree: "免费",
+	planPro: "专业版",
 	members: "成员",
 	issues: "事项",
 	created: "创建时间",

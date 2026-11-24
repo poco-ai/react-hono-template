@@ -21,3 +21,10 @@ export type UpdateAdminUserRoleInput = z.infer<
 >;
 
 export type BanAdminUserInput = z.infer<typeof banAdminUserSchema>;
+
+export const adminOrgListQuerySchema = z.object({
+	...paginationQueryShape(20),
+	search: z.string().trim().max(200).optional(),
+});
+
+export type AdminOrgListQuery = z.infer<typeof adminOrgListQuerySchema>;

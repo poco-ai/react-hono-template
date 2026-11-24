@@ -377,6 +377,11 @@ export const createCommentService = ({
 			// would leave visible rows pointing at gone objects; the reverse
 			// order only ever leaves orphan objects (invisible, reclaimable).
 			const keys = (await files?.keysForComment(orgId, comment.id)) ?? [];
+			// Optional slices clean their own child rows before the comments
+			// batch (D1 does not always enforce foreign keys). The hooks are
+			// absent when attachments/notifications are trimmed.
+			await files?.deleteCommentThreadRows(orgId, comment.id);
+			await notifications?.clearCommentReferences?.(orgId, [comment.id]);
 			const deleted = await commentDao.delete(orgId, commentId);
 			if (deleted && keys.length > 0) {
 				await files?.removeObjects(keys);

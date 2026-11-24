@@ -1,7 +1,7 @@
 {
 	"id": "activities",
 	"tier": 1,
-	"dependsOn": ["core", "issues"],
+	"dependsOn": ["core", "issues", "labels"],
 	"claims": [
 		"apps/api/src/features/activities/**",
 		"apps/web/src/features/activities/**",

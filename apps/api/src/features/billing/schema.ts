@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { SchemaKit } from "../../db/kit";
 
-/** Subscriptions, quota policy, balances, ledger and reservations. */
+/** Quota policy, balances, ledger and reservations. */
 export const defineBillingTables = (kit: SchemaKit) => {
 	const {
 		sqliteTable,
@@ -12,25 +12,6 @@ export const defineBillingTables = (kit: SchemaKit) => {
 		primaryKey,
 		timestampDefault,
 	} = kit;
-
-	const subscriptions = sqliteTable("subscriptions", {
-		orgId: text("org_id")
-			.primaryKey()
-			.references(kit.ref("organization", "id"), { onDelete: "cascade" }),
-		plan: text("plan").notNull().default("free"),
-		status: text("status").notNull().default("active"),
-		stripeCustomerId: text("stripe_customer_id"),
-		stripeSubscriptionId: text("stripe_subscription_id"),
-		seats: integer("seats").notNull().default(0),
-		currentPeriodEnd: integer("current_period_end", { mode: "timestamp_ms" }),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(timestampDefault)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(timestampDefault)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
-	});
 
 	/**
 	 * Sparse org override of a meter's price card. Missing rows use the plan
@@ -167,7 +148,6 @@ export const defineBillingTables = (kit: SchemaKit) => {
 	);
 
 	return {
-		subscriptions,
 		quotaPolicies,
 		usageBalances,
 		creditBalances,

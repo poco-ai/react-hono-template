@@ -241,6 +241,11 @@ export const createNotificationService = ({
 			}
 		},
 
+		/** Comment deletion hook: drops dangling `comment_id` references. */
+		clearCommentReferences: async (orgId: string, commentIds: string[]) => {
+			await notificationDao.clearCommentReferences(orgId, commentIds);
+		},
+
 		onIssueCreated,
 
 		/**

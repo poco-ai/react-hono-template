@@ -1,8 +1,11 @@
 import type { IssueFilterGroup } from "@workspace/shared";
 import { useEffect, useState } from "react";
+import {
+	detachedFilterSearch,
+	type IssueQueryState,
+} from "@/features/issues/query";
+import type { IssuesSearch } from "@/features/issues/search";
 import type { ViewDto } from "@/features/views/data";
-import { detachedFilterSearch, type IssueQueryState } from "./query";
-import type { IssuesSearch } from "./search";
 
 type SearchOverrides = Partial<Pick<IssuesSearch, "sort" | "groupBy" | "page">>;
 

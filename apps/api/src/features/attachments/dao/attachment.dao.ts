@@ -277,6 +277,28 @@ export const createAttachmentDao = (db: Database) => ({
 		return rows.map((row) => row.key);
 	},
 
+	/** Removes attachment rows for a comment and its direct replies. */
+	deleteForCommentThread: async (
+		orgId: string,
+		commentId: string,
+	): Promise<void> => {
+		const replyIds = db
+			.select({ id: comments.id })
+			.from(comments)
+			.where(and(eq(comments.orgId, orgId), eq(comments.parentId, commentId)));
+		await db
+			.delete(attachments)
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					or(
+						eq(attachments.commentId, commentId),
+						inArray(attachments.commentId, replyIds),
+					),
+				),
+			);
+	},
+
 	findByKey: async (key: string): Promise<AttachmentDto | null> => {
 		const [row] = await db
 			.select(ATTACHMENT_SELECT)

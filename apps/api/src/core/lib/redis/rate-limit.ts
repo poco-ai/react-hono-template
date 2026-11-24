@@ -1,5 +1,5 @@
 import { PLANS } from "@workspace/shared";
-import type { AiRateLimiters } from "../../../features/ai/services/ai-usage.service";
+import type { AiRateLimitersPort } from "../ports/platform";
 import {
 	type PlanRateLimiters,
 	RATE_LIMIT_WINDOW_MS,
@@ -26,7 +26,7 @@ export const createRedisRateLimiter = (
 
 export const createPlanRateLimiters = (
 	redis: RedisLike,
-): { api: PlanRateLimiters; ai: AiRateLimiters } => ({
+): { api: PlanRateLimiters; ai: AiRateLimitersPort } => ({
 	api: {
 		free: createRedisRateLimiter(redis, PLANS.free.apiRateLimit, "api:free"),
 		pro: createRedisRateLimiter(redis, PLANS.pro.apiRateLimit, "api:pro"),

@@ -3,7 +3,7 @@ import { Button } from "@workspace/ui/components/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { BillingSettings } from "@/components/auth/billing/billing-settings";
+import { BillingSettings } from "@/features/billing/components/auth-billing/billing-settings";
 import { DowngradeDialog } from "@/features/billing/components/downgrade-dialog";
 import { QuotaSummary } from "@/features/billing/components/quota-summary";
 import { UpgradeDialog } from "@/features/billing/components/upgrade-dialog";

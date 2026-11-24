@@ -3,10 +3,11 @@ import "@scalar/api-reference-react/style.css";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@workspace/ui/components/button";
-import { ArrowLeft, KeyRound } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { orgsQuery } from "@/features/organizations/data";
+import { webApiDocsAction } from "@/features/registry";
 import { useDocumentTitle } from "@/lib/use-document-title";
 
 function useDarkMode() {
@@ -29,6 +30,7 @@ function useDarkMode() {
 
 export function ApiDocsPage() {
 	const { t } = useTranslation();
+	const ApiDocsAction = webApiDocsAction();
 	useDocumentTitle(t("apiDocs.title"));
 	const dark = useDarkMode();
 	const orgs = useQuery(orgsQuery());
@@ -54,16 +56,9 @@ export function ApiDocsPage() {
 					<span className="text-muted-foreground hidden sm:inline">
 						{t("apiDocs.authHint")}
 					</span>
-					{firstOrgId && (
-						<Link
-							to="/orgs/$orgId/settings/api-keys"
-							params={{ orgId: firstOrgId }}
-							className={buttonVariants({ variant: "outline", size: "sm" })}
-						>
-							<KeyRound />
-							{t("apiDocs.manageKeys")}
-						</Link>
-					)}
+					{firstOrgId && ApiDocsAction ? (
+						<ApiDocsAction orgId={firstOrgId} />
+					) : null}
 				</div>
 			</header>
 			<div className="min-h-0 flex-1">

@@ -25,7 +25,7 @@ import {
 	adminQuotaQuery,
 	useAdjustOrgCredits,
 	useUpdateOrgQuotaPolicy,
-} from "@/features/admin/data";
+} from "@/features/billing/data";
 import { useZodForm } from "@/lib/use-zod-form";
 
 const creditSchema = z.object({

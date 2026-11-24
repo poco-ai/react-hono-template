@@ -13,8 +13,14 @@ import { PLANS } from "@workspace/shared";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { billingRootKey, organizationsKey } from "@/features/keys";
+import {
+	adminQuotaKey,
+	billingRootKey,
+	organizationsKey,
+} from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
+import { useInvalidatingMutation } from "@/lib/feature-mutation";
+import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
 export function billingQuery(orgId: string) {
 	return queryOptions({
@@ -188,4 +194,64 @@ export function useAppBillingAdapter(
 			createAppBillingAdapter({ orgId, queryClient, t, canManage, confirm }),
 		[orgId, queryClient, t, canManage, confirm],
 	);
+}
+
+export function adminQuotaQuery(orgId: string) {
+	return queryOptions({
+		queryKey: adminQuotaKey(orgId),
+		queryFn: () =>
+			unwrap(client.api.admin.orgs[":orgId"].quota.$get({ param: { orgId } })),
+	});
+}
+
+export const adjustOrgCredits = (
+	orgId: string,
+	input: { amount: number; reason: string },
+) =>
+	unwrap(
+		client.api.admin.orgs[":orgId"].credits.$post({
+			param: { orgId },
+			json: input,
+		}),
+	);
+
+export function useAdjustOrgCredits(
+	orgId: string,
+	callbacks?: MutationCallbacks<
+		Awaited<ReturnType<typeof adjustOrgCredits>>,
+		{ amount: number; reason: string }
+	>,
+) {
+	return useInvalidatingMutation({
+		mutationFn: (input: { amount: number; reason: string }) =>
+			adjustOrgCredits(orgId, input),
+		invalidate: (client) =>
+			client.invalidateQueries({ queryKey: adminQuotaKey(orgId) }),
+		callbacks,
+	});
+}
+
+export const updateOrgQuotaPolicy = (
+	orgId: string,
+	input: {
+		meter: "ai.tokens" | "storage.bytes";
+		mode: "independent" | "pooled" | "hybrid";
+		included: number;
+		creditRate: number;
+	},
+) =>
+	unwrap(
+		client.api.admin.orgs[":orgId"].quota.$put({
+			param: { orgId },
+			json: input,
+		}),
+	);
+
+export function useUpdateOrgQuotaPolicy(orgId: string) {
+	return useInvalidatingMutation({
+		mutationFn: (input: Parameters<typeof updateOrgQuotaPolicy>[1]) =>
+			updateOrgQuotaPolicy(orgId, input),
+		invalidate: (client) =>
+			client.invalidateQueries({ queryKey: adminQuotaKey(orgId) }),
+	});
 }

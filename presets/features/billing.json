@@ -13,12 +13,9 @@
 	"claims": [
 		"apps/api/src/features/billing/**",
 		"apps/web/src/features/billing/**",
-		"packages/shared/src/plans.ts",
-		"packages/shared/src/quota.ts",
 		"packages/shared/src/schemas/billing.ts",
 		"apps/web/src/routes/_auth/orgs/$orgId/settings/billing.tsx",
 		"apps/web/src/pages/org-settings/billing.tsx",
-		"apps/web/src/components/quota-error.tsx",
 		"apps/web/src/i18n/locales/en/billing.ts",
 		"apps/web/src/i18n/locales/zh/billing.ts",
 		"apps/web/src/i18n/locales/en/quota.ts",

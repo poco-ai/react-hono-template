@@ -10,6 +10,8 @@ const comments = {
 	edited: "edited",
 	deleteTitle: "Delete comment?",
 	deleteDescription: "This comment will be permanently deleted.",
+	attachmentDeleteTitle: "Delete attachment?",
+	attachmentDeleteDescription: '"{{filename}}" will be permanently deleted.',
 	attach: "Attach files",
 	removeFile: "Remove {{filename}}",
 	reply: "Reply",

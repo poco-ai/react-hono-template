@@ -12,7 +12,6 @@ import {
 } from "@tanstack/react-query";
 import type {
 	CreateIssueInput,
-	CreateIssueRelationInput,
 	ImportIssuesInput,
 	IssueFilterGroup,
 	IssueImportResultDto,
@@ -20,10 +19,9 @@ import type {
 	IssueQuerySort,
 	UpdateIssueInput,
 } from "@workspace/shared";
-import { invalidateFavoriteQueries } from "@/features/favorites/data";
 import {
+	favoritesRootKey,
 	issueKey,
-	issueRelationsKey,
 	orgActivitiesRootKey,
 	orgIssuesRootKey,
 	projectIssuesRootKey,
@@ -309,53 +307,6 @@ export function issueQuery(orgId: string, projectId: string, number: number) {
 	});
 }
 
-export function issueRelationsQuery(
-	orgId: string,
-	projectId: string,
-	number: number,
-) {
-	return queryOptions({
-		queryKey: issueRelationsKey(orgId, projectId, number),
-		queryFn: () =>
-			unwrap(
-				client.api.orgs[":orgId"].projects[":projectId"].issues[
-					":number"
-				].relations.$get({
-					param: { orgId, projectId, number: String(number) },
-				}),
-			),
-	});
-}
-
-export const createIssueRelation = (
-	orgId: string,
-	projectId: string,
-	number: number,
-	input: CreateIssueRelationInput,
-) =>
-	unwrap(
-		client.api.orgs[":orgId"].projects[":projectId"].issues[
-			":number"
-		].relations.$post({
-			param: { orgId, projectId, number: String(number) },
-			json: input,
-		}),
-	);
-
-export const deleteIssueRelation = (
-	orgId: string,
-	projectId: string,
-	number: number,
-	relationId: string,
-) =>
-	unwrap(
-		client.api.orgs[":orgId"].projects[":projectId"].issues[
-			":number"
-		].relations[":relationId"].$delete({
-			param: { orgId, projectId, number: String(number), relationId },
-		}),
-	);
-
 export type { ListIssuesDto };
 
 export const invalidateIssueQueries = (
@@ -374,7 +325,7 @@ export const invalidateIssueQueries = (
 		queryClient.invalidateQueries({ queryKey: triageRootKey(orgId) }),
 		// Favorite rows are hydrated with issue titles/status, and archived or
 		// deleted issues are dropped from that list by the API.
-		invalidateFavoriteQueries(queryClient, orgId),
+		queryClient.invalidateQueries({ queryKey: favoritesRootKey(orgId) }),
 	]);
 
 export function useCreateIssue(orgId: string, projectId: string) {
@@ -425,66 +376,6 @@ export function useUpdateIssue(
 		invalidate: (client) => invalidateIssueQueries(client, orgId),
 	});
 }
-
-export function useCreateIssueRelation(
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: (input: CreateIssueRelationInput) =>
-			createIssueRelation(orgId, projectId, issueNumber, input),
-		onSuccess: () => {
-			void invalidateRelationQueries(
-				queryClient,
-				orgId,
-				projectId,
-				issueNumber,
-			);
-		},
-	});
-}
-
-export function useDeleteIssueRelation(
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: (relationId: string) =>
-			deleteIssueRelation(orgId, projectId, issueNumber, relationId),
-		onSuccess: () => {
-			void invalidateRelationQueries(
-				queryClient,
-				orgId,
-				projectId,
-				issueNumber,
-			);
-		},
-	});
-}
-
-/**
- * Relation writes refresh the issue detail tree and org-wide lists.
- *
- * `issueKey` is a prefix of `issueRelationsKey` (and of the issue's activity
- * key), so invalidating it already covers the relation groups — no separate
- * relations invalidation is needed.
- */
-export const invalidateRelationQueries = (
-	queryClient: QueryClient,
-	orgId: string,
-	projectId: string,
-	issueNumber: number,
-) =>
-	Promise.all([
-		queryClient.invalidateQueries({
-			queryKey: issueKey(orgId, projectId, issueNumber),
-		}),
-		invalidateIssueQueries(queryClient, orgId),
-	]);
 
 export function useDeleteIssue(
 	orgId: string,

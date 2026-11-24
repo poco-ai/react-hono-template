@@ -32,6 +32,7 @@
 				"period": 60
 			}
 		},
+		// @feature:ai:start
 		{
 			"name": "RATE_LIMITER_AI_FREE",
 			"namespace_id": "1003",
@@ -48,6 +49,7 @@
 				"period": 60
 			}
 		}
+		// @feature:ai:end
 	],
 	"kv_namespaces": [
 		{
@@ -55,6 +57,7 @@
 			"id": "104dbf8a6fae459682493aee112b46ed"
 		}
 	],
+	// @feature:webhooks:start
 	"queues": {
 		"producers": [
 			{
@@ -76,10 +79,12 @@
 			}
 		]
 	},
+	// @feature:webhooks:end
 	"triggers": {
 		"crons": ["*/15 * * * *"]
 	},
 	"vars": {
+		// @feature:ai:start
 		"AI_ENABLED": "true",
 		"AI_PROVIDER": "openai-compatible",
 		"AI_BASE_URL": "https://api.siliconflow.cn/v1",
@@ -87,16 +92,21 @@
 		"AI_MODEL_ALLOWLIST": "deepseek-ai/DeepSeek-V4.1-Flash",
 		"AI_MAX_STEPS": "8",
 		"AI_MAX_OUTPUT_TOKENS": "2048",
+		// @feature:ai:end
 		"APP_WEB_URL": "https://react-hono-web.poco-ai.workers.dev",
 		"BETTER_AUTH_URL": "https://react-hono-api.poco-ai.workers.dev",
 		"PUBLIC_API_URL": "https://react-hono-api.poco-ai.workers.dev",
+		// @feature:mcp:start
 		"MCP_ENABLED": "true",
 		"MCP_RESOURCE": "https://react-hono-api.poco-ai.workers.dev/mcp",
 		"MCP_LOGIN_PAGE": "https://react-hono-web.poco-ai.workers.dev/login",
 		"MCP_CONSENT_PAGE": "https://react-hono-web.poco-ai.workers.dev/consent",
 		"MCP_DCR_ENABLED": "false",
+		// @feature:mcp:end
+		// @feature:attachments:start
 		"S3_ENDPOINT": "https://e3299b6523b3e90e23ce76f0004eda78.r2.cloudflarestorage.com",
 		"S3_REGION": "auto",
 		"S3_BUCKET": "react-hono-attachments"
+		// @feature:attachments:end
 	}
 }

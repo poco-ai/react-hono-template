@@ -1,10 +1,12 @@
-import type { FeatureModule } from "../../core/compose";
+import type { FeatureModule, StripeWebhookHandler } from "../../core/compose";
 import type { FullFeatureContext } from "../../feature-context";
 import type { AttachmentsContribution } from "../attachments/module";
 import type { ProjectsContribution } from "../projects/module";
 import type { WebhooksContribution } from "../webhooks/module";
+import { createStripeController } from "./controllers/stripe.controller";
 import { createBillingDao } from "./dao/billing.dao";
 import { createQuotaDao } from "./dao/quota.dao";
+import { type StripeSetup, setupStripe } from "./lib/stripe";
 import { createAdminQuotaRoutes } from "./routes/admin-quota";
 import { createBillingRoutes } from "./routes/billing";
 import { createBillingService } from "./services/billing.service";
@@ -24,6 +26,13 @@ export type BillingDaos = { billingDao: ReturnType<typeof createBillingDao> };
  */
 export const billingModule = {
 	id: "billing",
+	platform: (env) => ({
+		stripeSetup: setupStripe({
+			secretKey: env.STRIPE_SECRET_KEY,
+			priceId: env.STRIPE_PRICE_ID,
+			webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+		}),
+	}),
 	createDaos: ({ db }) => ({ billingDao: createBillingDao(db) }),
 	register: (ctx) => {
 		ctx.setPlanSource({
@@ -56,12 +65,19 @@ export const billingModule = {
 				ctx.features.get<ProjectsContribution>("projects").daos.projectDao,
 			webhookDao:
 				ctx.features.get<WebhooksContribution>("webhooks").daos.webhookDao,
-			stripeSetup: ctx.stripeSetup,
+			stripeSetup: ctx.stripeSetup as StripeSetup,
 			mockEnabled: ctx.billingMockEnabled,
 			plans: ctx.core.planService,
 			storageUsage: storageUsageService,
 			quota: quotaService,
 			audit: ctx.core.auditService,
+		});
+		// The Stripe webhook sits outside the typed Hono chain (AppType); the
+		// billing module contributes it as an app-level handler so `app.ts` never
+		// imports the feature.
+		const stripeController = createStripeController({
+			service: billingService,
+			stripeSetup: ctx.stripeSetup as StripeSetup,
 		});
 		return {
 			services: { billingService, quotaService },
@@ -80,7 +96,11 @@ export const billingModule = {
 			freezeWriteExempt: ["/billing"],
 			// Storage accounting is billing-internal (not part of the public
 			// service graph) but the attachments feature consumes it.
-			extras: { storageUsage: storageUsageService },
+			extras: {
+				storageUsage: storageUsageService,
+				stripeWebhook: ((c) =>
+					stripeController.webhook(c as never)) as StripeWebhookHandler,
+			},
 		};
 	},
 } satisfies FeatureModule<BillingDaos, FullFeatureContext>;

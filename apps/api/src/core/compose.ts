@@ -1,3 +1,4 @@
+import type { Context } from "hono";
 import type { Database } from "../db/types";
 import { createActivityDao } from "./dao/activity.dao";
 import { createAdminUserDao } from "./dao/admin-user.dao";
@@ -10,6 +11,7 @@ import type { BackgroundFn } from "./lib/background";
 import type { CacheStore } from "./lib/kv/types";
 import type { CleanupHandler } from "./lib/ports/cleanup";
 import { createPlanSourceHolder, type PlanSource } from "./lib/ports/plan";
+import type { FeaturePlatformPieces, PlatformEnv } from "./lib/ports/platform";
 import type { QuotaUsageSink } from "./lib/ports/quota";
 import type { PlanRateLimiters } from "./lib/rate-limit";
 import { createAdminOrgService } from "./services/admin-org.service";
@@ -53,6 +55,9 @@ export type RouteContribution = {
 	phase: MountPhase;
 	create: (deps: never) => unknown;
 };
+
+/** App-level route handler contributed by a feature (billing's Stripe webhook). */
+export type StripeWebhookHandler = (c: Context) => Response | Promise<Response>;
 
 /** Cron contribution: one independently-guarded scheduled run. */
 export type ScheduledJob = {
@@ -151,6 +156,8 @@ export type CoreServices = CoreContextServices & {
 export type FeatureLookup = {
 	/** Typed accessor for another feature's registration (daos + services). */
 	get<T>(id: string): T;
+	/** `get` for optional (soft) dependencies: undefined when trimmed. */
+	find<T>(id: string): T | undefined;
 };
 
 export type FeatureContextBase = Omit<
@@ -186,6 +193,12 @@ export type FeatureModule<
 	Ctx extends FeatureContextBase = FeatureContextBase,
 > = {
 	id: string;
+	/**
+	 * Feature-owned platform pieces (S3 client, Stripe setup, AI/MCP env, queue).
+	 * Called before composition so core defaults can be replaced without core
+	 * importing any feature module.
+	 */
+	platform?(env: PlatformEnv): FeaturePlatformPieces;
 	/** Phase A: stateless DAO factories for this feature. */
 	createDaos?(ctx: { db: Database }): OwnDaos;
 	/** Phase B: services, routes and lifecycle contributions. */
@@ -261,6 +274,13 @@ type McpEndpointOf<Modules extends readonly FeatureModule[]> =
 		? (auth: Auth) => R
 		: null;
 
+type StripeWebhookOf<Modules extends readonly FeatureModule[]> =
+	ExtrasOf<Modules> extends { stripeWebhook: infer F }
+		? F extends StripeWebhookHandler
+			? F
+			: null
+		: null;
+
 export type ComposedResult<Modules extends readonly FeatureModule[]> = {
 	/** The full service graph; re-exported as `Dependencies` for consumers. */
 	dependencies: {
@@ -281,6 +301,7 @@ export type ComposedResult<Modules extends readonly FeatureModule[]> = {
 	mcpConfig: McpConfigOf<Modules>;
 	v1App: V1AppOf<Modules>;
 	mcpEndpoint: McpEndpointOf<Modules>;
+	stripeWebhook: StripeWebhookOf<Modules>;
 };
 
 type Registration = FeatureContribution & { daos: object };
@@ -367,6 +388,8 @@ export const composeModules = <const Modules extends readonly FeatureModule[]>(
 			}
 			return registration as never;
 		},
+		find: <T>(id: string): T | undefined =>
+			registrations.get(id) as T | undefined,
 	};
 	const context = {
 		db,
@@ -456,6 +479,8 @@ export const composeModules = <const Modules extends readonly FeatureModule[]>(
 		mcpEndpoint: mcpExtras?.createEndpoint
 			? (auth: Auth) => mcpExtras.createEndpoint?.(dependencies as never, auth)
 			: null,
+		stripeWebhook:
+			(extras.stripeWebhook as StripeWebhookHandler | undefined) ?? null,
 	};
 
 	return {

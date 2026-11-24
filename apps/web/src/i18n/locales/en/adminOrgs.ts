@@ -5,6 +5,8 @@ const adminOrgs = {
 	searchPlaceholder: "Search by name or slug...",
 	org: "Organization",
 	plan: "Plan",
+	planFree: "Free",
+	planPro: "Pro",
 	members: "Members",
 	issues: "Issues",
 	created: "Created",

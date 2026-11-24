@@ -8,6 +8,7 @@ import type { WebhooksContribution } from "../webhooks/module";
 import { createAttachmentDao } from "./dao/attachment.dao";
 import { createMediaAssetDao } from "./dao/media-asset.dao";
 import { createPendingUploadDao } from "./dao/pending-upload.dao";
+import { s3ClientFromConfig } from "./lib/s3-client";
 import { createAttachmentsRoutes } from "./routes/attachments";
 import {
 	createMediaRoutes,
@@ -33,6 +34,7 @@ export type AttachmentsDaos = {
  */
 export const attachmentsModule = {
 	id: "attachments",
+	platform: (env) => ({ storage: s3ClientFromConfig(env) }),
 	createDaos: ({ db }) => ({
 		attachmentDao: createAttachmentDao(db),
 		pendingUploadDao: createPendingUploadDao(db),

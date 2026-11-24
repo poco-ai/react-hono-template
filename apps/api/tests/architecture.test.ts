@@ -329,34 +329,13 @@ function resolveImport(fromRelPath: string, specifier: string): string | null {
  * occur also fail (they must be removed when fixed).
  */
 const KNOWN_VIOLATIONS: Array<[string, string]> = [
-	// ---- core infrastructure aware of optional features ----
-	["apps/api/src/core/lib/redis/rate-limit.ts", "ai"], // Phase 4: rate-limiter binding templating
-	["apps/api/src/core/lib/redis/webhook-queue.ts", "webhooks"], // Phase 4: queue binding templating
-	["apps/api/src/core/platform/cloudflare.ts", "webhooks"], // Phase 4: wrangler templating
-	["apps/api/src/core/platform/shared.ts", "ai"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/shared.ts", "attachments"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/shared.ts", "billing"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/shared.ts", "mcp"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/types.ts", "ai"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/types.ts", "attachments"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/types.ts", "billing"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/types.ts", "mcp"], // Phase 4: env contract folding
-	["apps/api/src/core/platform/types.ts", "webhooks"], // Phase 4: env contract folding
-	// ---- web cross-feature data references (docs §9.4) ----
-	["apps/web/src/features/activities/components/issue-activity.tsx", "labels"], // Phase 5: label dto in activity history
-	["apps/web/src/features/cycles/data.ts", "issues"], // Phase 5
-	[
-		"apps/web/src/features/issues/components/create-issue-dialog.tsx",
-		"templates",
-	], // Phase 5
-	[
-		"apps/web/src/features/issues/components/relations-section.tsx",
-		"relations",
-	], // Phase 5: relation dto types (cannot be declared: relations → issues)
-	["apps/web/src/features/issues/data.ts", "favorites"], // Phase 5
-	["apps/web/src/features/issues/use-view-detach.ts", "views"], // Phase 5
-	["apps/web/src/features/labels/data.ts", "issues"], // Phase 5
-	["apps/web/src/features/statuses/data.ts", "issues"], // Phase 5
+	// ---- web cross-feature data references ----
+	// These are type-level or cache-level references that cannot be declared as
+	// a hard dependency without creating a cycle; both sides are in every
+	// supported preset that includes either feature.
+	["apps/web/src/features/cycles/data.ts", "issues"],
+	["apps/web/src/features/labels/data.ts", "issues"],
+	["apps/web/src/features/statuses/data.ts", "issues"],
 ];
 
 function collectViolations(): Array<[string, string]> {

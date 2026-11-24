@@ -35,9 +35,14 @@ export const defineIssuesTables = (kit: SchemaKit) => {
 				.notNull()
 				.references(kit.ref("issue_statuses", "id"), { onDelete: "restrict" }),
 			// Planning cycle; deleting a cycle detaches its issues (set null).
-			cycleId: text("cycle_id").references(kit.ref("cycles", "id"), {
-				onDelete: "set null",
-			}),
+			// The FK is optional: a preset without the planning features keeps
+			// `cycle_id` as a plain column so the shared issue slice still
+			// typechecks and generates a schema.
+			cycleId: kit.hasTable("cycles")
+				? text("cycle_id").references(kit.ref("cycles", "id"), {
+						onDelete: "set null",
+					})
+				: text("cycle_id"),
 			priority: integer("priority").notNull().default(0),
 			assigneeId: text("assignee_id").references(kit.ref("user", "id"), {
 				onDelete: "set null",

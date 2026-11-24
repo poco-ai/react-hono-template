@@ -94,6 +94,17 @@
         "wrangler": "^4.141.0",
       },
     },
+    "packages/scaffold": {
+      "name": "@workspace/scaffold",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@types/node": "^24",
+        "typescript": "~6",
+      },
+    },
     "packages/shared": {
       "name": "@workspace/shared",
       "version": "0.0.0",
@@ -849,6 +860,8 @@
     "@workflow/serde": ["@workflow/serde@4.1.0", "", {}, "sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ=="],
 
     "@workspace/presets": ["@workspace/presets@workspace:presets"],
+
+    "@workspace/scaffold": ["@workspace/scaffold@workspace:packages/scaffold"],
 
     "@workspace/shared": ["@workspace/shared@workspace:packages/shared"],
 

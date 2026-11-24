@@ -46,6 +46,18 @@ export type AiDaos = {
  */
 export const aiModule = {
 	id: "ai",
+	platform: (env) => ({
+		aiConfig: {
+			AI_ENABLED: env.AI_ENABLED,
+			AI_PROVIDER: env.AI_PROVIDER,
+			AI_BASE_URL: env.AI_BASE_URL,
+			AI_API_KEY: env.AI_API_KEY,
+			AI_MODEL: env.AI_MODEL,
+			AI_MODEL_ALLOWLIST: env.AI_MODEL_ALLOWLIST,
+			AI_MAX_STEPS: env.AI_MAX_STEPS,
+			AI_MAX_OUTPUT_TOKENS: env.AI_MAX_OUTPUT_TOKENS,
+		},
+	}),
 	createDaos: ({ db }) => ({
 		aiConversationDao: createAiConversationDao(db),
 		aiMessageDao: createAiMessageDao(db),

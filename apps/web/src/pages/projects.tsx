@@ -27,23 +27,12 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import {
-	CircleAlert,
-	CircleDot,
-	MoreHorizontal,
-	Plus,
-	Star,
-} from "lucide-react";
+import { CircleAlert, CircleDot, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
-import {
-	favoritesQuery,
-	isFavorited,
-	useToggleFavorite,
-} from "@/features/favorites/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { CreateProjectDialog } from "@/features/projects/components/create-project-dialog";
@@ -54,6 +43,7 @@ import {
 	projectHealthOf,
 	projectTargetDateStatus,
 } from "@/features/projects/utils";
+import { webProjectRowActions } from "@/features/registry";
 import { apiErrorMessage } from "@/lib/errors";
 import { formatRelativeTime, formatUtcDate } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
@@ -73,10 +63,6 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [archiveTarget, setArchiveTarget] = useState<ProjectDto | null>(null);
 	const [editTarget, setEditTarget] = useState<ProjectDto | null>(null);
-	const favorites = useQuery(favoritesQuery(orgId));
-	const favoriteMutation = useToggleFavorite(orgId, {
-		onError: (error) => toast.error(apiErrorMessage(t, error)),
-	});
 
 	const setShowArchived = (next: boolean) =>
 		navigate({
@@ -262,47 +248,19 @@ export function ProjectsPage({ orgId }: { orgId: string }) {
 												/>
 											)}
 										</div>
-										{(() => {
-											const favorited = isFavorited(
-												favorites.data,
-												"project",
-												project.id,
-											);
-											const favoriteLabel = project.archived
-												? t("favorites.archivedProject")
-												: t(
-														favorited
-															? "favorites.removeProject"
-															: "favorites.addProject",
-													);
-											return (
-												<Button
-													variant="ghost"
-													size="icon-sm"
-													aria-label={favoriteLabel}
-													aria-pressed={favorited}
-													title={favoriteLabel}
-													disabled={
-														frozen ||
-														project.archived ||
-														favoriteMutation.isPending
-													}
-													className="shrink-0"
-													onClick={(event) => {
-														event.stopPropagation();
-														favoriteMutation.mutate({
-															entityType: "project",
-															entityId: project.id,
-															favorited,
-														});
-													}}
-												>
-													<Star
-														className={favorited ? "fill-current" : undefined}
-													/>
-												</Button>
-											);
-										})()}
+										{webProjectRowActions().map(({ id, component: Action }) => (
+											<Action
+												key={id}
+												orgId={orgId}
+												frozen={frozen}
+												project={{
+													id: project.id,
+													name: project.name,
+													key: project.key,
+													archived: Boolean(project.archived),
+												}}
+											/>
+										))}
 										{canManage && (
 											<DropdownMenu>
 												<Tooltip>

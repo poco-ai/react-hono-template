@@ -1,4 +1,5 @@
 import { ApiErrorCode } from "@workspace/shared";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -9,7 +10,6 @@ import { createErrorHandler } from "./core/lib/on-error";
 import { runWithRequestMeta } from "./core/lib/request-context";
 import { fail } from "./core/lib/response";
 import type { AppPlatform } from "./core/platform/types";
-import { createStripeController } from "./features/billing/controllers/stripe.controller";
 import { FEATURE_MODULES } from "./manifest";
 import { createRoutes } from "./routes";
 import { handleScheduled } from "./scheduled";
@@ -25,7 +25,14 @@ export const createApp = (platform: AppPlatform) => {
 	const app = new Hono();
 	const composed = composeModules(platform, FEATURE_MODULES);
 	const { dependencies } = composed;
-	const mcpConfig = composed.mcpConfig;
+	const mcpConfig = composed.mcpConfig as {
+		enabled: boolean;
+		resource?: string;
+		loginPage?: string;
+		consentPage?: string;
+		dcrEnabled?: boolean;
+		oauthScopes?: readonly string[];
+	};
 
 	const buildAuth = () =>
 		createAuth({
@@ -38,14 +45,16 @@ export const createApp = (platform: AppPlatform) => {
 			email: platform.email,
 			dialect: platform.dialect,
 			allowInsecureLogging: platform.allowInsecureLogging,
-			mcp: {
-				enabled: mcpConfig.enabled,
-				resource: mcpConfig.resource,
-				loginPage: mcpConfig.loginPage,
-				consentPage: mcpConfig.consentPage,
-				dcrEnabled: mcpConfig.dcrEnabled,
-				scopes: mcpConfig.oauthScopes,
-			},
+			mcp: mcpConfig.enabled
+				? {
+						enabled: true,
+						resource: mcpConfig.resource ?? "",
+						loginPage: mcpConfig.loginPage ?? "",
+						consentPage: mcpConfig.consentPage ?? "",
+						dcrEnabled: mcpConfig.dcrEnabled ?? false,
+						scopes: mcpConfig.oauthScopes ?? [],
+					}
+				: undefined,
 			// Organization-created hooks fold the feature contributions
 			// (statuses seeds the default issue statuses).
 			onOrganizationCreated: (orgId) =>
@@ -157,15 +166,15 @@ export const createApp = (platform: AppPlatform) => {
 	// protected-resource metadata, and read authorization-server metadata from
 	// the same place. The better-auth router dispatches these by full pathname.
 	app.on(["GET", "HEAD"], "/.well-known/*", (c) => auth.handler(c.req.raw));
-	if (composed.mcpEndpoint) {
-		app.all("/mcp", composed.mcpEndpoint(auth));
+	const mcpEndpoint = composed.mcpEndpoint as unknown as
+		| ((auth: unknown) => (c: Context) => Response)
+		| null;
+	if (mcpEndpoint) {
+		app.all("/mcp", mcpEndpoint(auth));
 	}
 
-	const stripeController = createStripeController({
-		service: dependencies.services.billingService,
-		stripeSetup: platform.stripeSetup,
-	});
-	app.post("/api/stripe/webhook", (c) => stripeController.webhook(c));
+	const stripeWebhook = composed.stripeWebhook;
+	if (stripeWebhook) app.post("/api/stripe/webhook", stripeWebhook);
 	app.notFound((c) => fail(c, ApiErrorCode.NOT_FOUND, "Route not found", 404));
 	app.get("/", (c) => c.text("Hello Hono!"));
 

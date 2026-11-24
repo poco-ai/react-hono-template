@@ -1,4 +1,4 @@
-import type { AttachmentWithUrlDto } from "@api/features/attachments/dto/attachment.dto";
+import type { AttachmentFileSummary } from "@api/core/lib/ports/attachments";
 import type { CommentDto } from "@api/features/comments/dto/comment.dto";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ATTACHMENT_MAX_SIZE } from "@workspace/shared";
@@ -18,25 +18,48 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MutationError } from "@/components/mutation-error";
-import { attachmentUploadErrorKey } from "@/features/attachments/data";
 import { useSession } from "@/features/auth/data";
-import { billingQuery } from "@/features/billing/data";
 import { CommentCard } from "@/features/comments/components/comment-card";
 import { CommentComposer } from "@/features/comments/components/comment-composer";
 import {
 	commentsQuery,
 	groupCommentThreads,
 	useDeleteComment,
-	useDeleteCommentAttachment,
 	usePostComment,
 	useResolveComment,
 	useToggleCommentReaction,
 	useUpdateComment,
 } from "@/features/comments/data";
-import { useAttachmentDraft } from "@/features/comments/use-attachment-draft";
 import { useCommentDeepLink } from "@/features/comments/use-comment-deep-link";
 import { membersQuery } from "@/features/members/data";
 import { useOrgRole } from "@/features/organizations/use-org-role";
+import { webCommentExtras } from "@/features/registry";
+import type { CommentAttachmentDraft } from "@/features/web-types";
+
+function useNoopAttachmentDraft(): CommentAttachmentDraft {
+	const [selected] = useState<CommentAttachmentDraft["selected"]>([]);
+	return {
+		selected,
+		files: [],
+		addFiles: () => {},
+		removeFile: () => {},
+		clear: () => {},
+		newSignal: () => new AbortController().signal,
+	};
+}
+
+function useNoopMaxSize(): number {
+	return ATTACHMENT_MAX_SIZE;
+}
+
+function useNoopDeleteAttachment() {
+	return {
+		mutate: (_input: { commentId: string; attachmentId: string }) => {},
+		isPending: false,
+		isError: false,
+		error: null,
+	};
+}
 
 export function IssueComments({
 	orgId,
@@ -53,8 +76,16 @@ export function IssueComments({
 
 	const { data: session } = useSession();
 	const members = useQuery(membersQuery(orgId));
-	const billing = useQuery(billingQuery(orgId));
-	const maxSize = billing.data?.limits.attachmentMaxSize ?? ATTACHMENT_MAX_SIZE;
+	const extras = webCommentExtras();
+	const useMaxSize = extras.useMaxSize ?? useNoopMaxSize;
+	const maxSize = useMaxSize(orgId);
+	const useDraft = extras.useDraft ?? useNoopAttachmentDraft;
+	const draft = useDraft(maxSize);
+	const useDeleteAttachment =
+		extras.useDeleteAttachment ?? useNoopDeleteAttachment;
+	const deleteFileMutation = useDeleteAttachment(orgId, projectId, issueNumber);
+	const uploadErrorKey =
+		extras.uploadErrorKey ?? (() => "errors.generic" as const);
 	const [body, setBody] = useState("");
 	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [focusRequest, setFocusRequest] = useState(0);
@@ -64,7 +95,7 @@ export function IssueComments({
 	const [deleting, setDeleting] = useState<CommentDto | null>(null);
 	const [deletingFile, setDeletingFile] = useState<{
 		commentId: string;
-		attachment: AttachmentWithUrlDto;
+		attachment: AttachmentFileSummary;
 	} | null>(null);
 
 	const currentUserId = session?.user.id;
@@ -81,7 +112,6 @@ export function IssueComments({
 
 	const { highlightedId, deepLinkMissing, scrollToComment } =
 		useCommentDeepLink({ query, comments });
-	const draft = useAttachmentDraft({ maxSize });
 
 	const mentionCandidates = useMemo(
 		() =>
@@ -94,25 +124,31 @@ export function IssueComments({
 		[members.data],
 	);
 
-	const createMutation = usePostComment(orgId, projectId, issueNumber, {
-		onSuccess: (result) => {
-			toast.success(t("toast.commentPosted"));
-			for (const failed of result.failed) {
-				toast.error(
-					t(attachmentUploadErrorKey(failed.error), {
-						filename: failed.file.name,
-					}),
-				);
-			}
-			setBody("");
-			draft.clear();
-			setReplyTo(null);
-			setEditorResetKey((key) => key + 1);
-			// The refetched pages contain the new comment; the shared scroll
-			// target finds it (loading more pages if necessary) without a timer.
-			scrollToComment(result.comment.id, false);
+	const createMutation = usePostComment(
+		orgId,
+		projectId,
+		issueNumber,
+		{
+			onSuccess: (result) => {
+				toast.success(t("toast.commentPosted"));
+				for (const failed of result.failed) {
+					toast.error(
+						t(uploadErrorKey(failed.error), {
+							filename: failed.file.name,
+						}),
+					);
+				}
+				setBody("");
+				draft.clear();
+				setReplyTo(null);
+				setEditorResetKey((key) => key + 1);
+				// The refetched pages contain the new comment; the shared scroll
+				// target finds it (loading more pages if necessary) without a timer.
+				scrollToComment(result.comment.id, false);
+			},
 		},
-	});
+		extras.uploadFiles,
+	);
 
 	const updateMutation = useUpdateComment(orgId, projectId, issueNumber);
 	const resolveMutation = useResolveComment(orgId, projectId, issueNumber, {
@@ -138,16 +174,6 @@ export function IssueComments({
 			setDeleting(null);
 		},
 	});
-	const deleteFileMutation = useDeleteCommentAttachment(
-		orgId,
-		projectId,
-		issueNumber,
-		{
-			onSuccess: () => {
-				setDeletingFile(null);
-			},
-		},
-	);
 
 	const startReply = (comment: CommentDto) => {
 		setReplyTo({ id: comment.id, name: comment.author.name });
@@ -302,8 +328,8 @@ export function IssueComments({
 			<ConfirmDialog
 				open={deletingFile !== null}
 				onOpenChange={(open) => !open && setDeletingFile(null)}
-				title={t("attachments.deleteTitle")}
-				description={t("attachments.deleteDescription", {
+				title={t("comments.attachmentDeleteTitle")}
+				description={t("comments.attachmentDeleteDescription", {
 					filename: deletingFile?.attachment.filename ?? "",
 				})}
 				confirmLabel={t("common.delete")}

@@ -1,0 +1,16 @@
+{
+	"name": "@workspace/scaffold",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@types/node": "^24",
+		"typescript": "~6"
+	}
+}

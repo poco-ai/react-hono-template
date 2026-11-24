@@ -1,0 +1,59 @@
+name: Preset matrix
+
+# Template trust lifeline (Phase 7 of the refactoring plan): every pull request
+# that can affect generated output regenerates the supported presets and runs
+# the full quality gate *inside* the generated project. The repository's own
+# quality job already covers the `full` preset shape (that is the template).
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "presets/**"
+      - "bun.lock"
+      - "package.json"
+      - "tsconfig.base.json"
+      - ".github/workflows/preset-matrix.yml"
+  push:
+    branches: [main]
+
+concurrency:
+  group: preset-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: Generate '${{ matrix.preset }}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # `full` is the repository itself and is covered by ci.yml.
+        # `collaboration`/`planning`/`saas` extend the same slices as `ai`;
+        # minimal + ai pin the two structural extremes.
+        preset: [minimal, ai]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Scaffold and verify
+        run: >-
+          bun run scaffold
+          --preset ${{ matrix.preset }}
+          --out "${{ runner.temp }}/generated-${{ matrix.preset }}"
+          --verify
+
+      - name: Upload generated project on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-${{ matrix.preset }}
+          path: ${{ runner.temp }}/generated-${{ matrix.preset }}
+          retention-days: 3

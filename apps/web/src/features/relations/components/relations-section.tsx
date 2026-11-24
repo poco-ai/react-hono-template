@@ -38,17 +38,22 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
+import {
+	IssueSearchPicker,
+	type PickableIssue,
+} from "@/features/issues/components/issue-search-picker";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import {
 	ISSUE_PICKER_PAGE_SIZE,
 	ISSUE_SEARCH_MIN_LENGTH,
-	issueRelationsQuery,
 	issueSearchQuery,
+} from "@/features/issues/data";
+import {
+	issueRelationsQuery,
 	useCreateIssueRelation,
 	useDeleteIssueRelation,
-} from "@/features/issues/data";
-import { IssueSearchPicker, type PickableIssue } from "./issue-search-picker";
+} from "@/features/relations/data";
 
 type RelationLink = IssueRelationsDto["blocks"][number];
 

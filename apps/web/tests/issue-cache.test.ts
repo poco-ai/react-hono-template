@@ -7,12 +7,12 @@ import {
 	applyIssueUpdate,
 	invalidateBulkIssueQueries,
 	invalidateIssueQueries,
-	invalidateRelationQueries,
 	issueSearchQuery,
 	type ListIssuesDto,
 	projectIssuesQuery,
 } from "../src/features/issues/data";
 import { issueSearchSchema } from "../src/features/issues/search";
+import { invalidateRelationQueries } from "../src/features/relations/data";
 
 test("issue picker requests with different limits cannot share a cache entry", () => {
 	const client = new QueryClient();

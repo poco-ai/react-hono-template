@@ -1,5 +1,5 @@
 import type { QueueConsumer } from "./core/compose";
-import type { WebhookDeliveryService } from "./features/webhooks/services/webhook-delivery.service";
+import type { WebhookDeliveryQueueTarget } from "./core/lib/ports/webhooks";
 
 export type WebhookQueueMessage = {
 	body: { deliveryId: string };
@@ -10,7 +10,7 @@ export type WebhookQueueMessage = {
 
 export const handleWebhookQueue = async (
 	batch: { messages: readonly WebhookQueueMessage[] },
-	deliveries: WebhookDeliveryService,
+	deliveries: WebhookDeliveryQueueTarget,
 ) => {
 	for (const message of batch.messages) {
 		try {
@@ -37,8 +37,8 @@ export const handleWebhookQueue = async (
 
 /**
  * Worker entry dispatch: runs every contributed queue consumer against the
- * incoming batch. The webhooks module contributes the WEBHOOK_QUEUE
- * consumer (its handler closes over the delivery service).
+ * incoming batch. The webhooks module contributes the WEBHOOK_QUEUE consumer;
+ * a trimmed manifest simply contributes none.
  */
 export const dispatchQueueConsumers = async (
 	consumers: readonly QueueConsumer[],

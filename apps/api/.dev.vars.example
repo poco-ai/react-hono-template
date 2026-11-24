@@ -28,7 +28,9 @@ AUTH_ALLOW_INSECURE_LOGGING=true
 # Leave unset in production and provision the admin explicitly.
 ALLOW_FIRST_USER_ADMIN=true
 
+# @feature:billing:start
 BILLING_MOCK_MODE=true
+# @feature:billing:end
 
 # Stable origin baked into avatar and organization logo URLs.
 # Stored values look like ${PUBLIC_API_URL}/api/media/<assetId>, never a bucket host.
@@ -36,6 +38,7 @@ BILLING_MOCK_MODE=true
 # hit the Worker directly so they do not depend on BETTER_AUTH_URL.
 PUBLIC_API_URL=http://localhost:8787
 
+# @feature:attachments:start
 # S3-compatible storage for issue attachments (R2 in production).
 # Without these, attachment endpoints return 503 and uploads fail with a storage
 # error. From repo root: docker compose up -d rustfs
@@ -46,12 +49,16 @@ PUBLIC_API_URL=http://localhost:8787
 # S3_SECRET_ACCESS_KEY=rustfsadmin
 # S3_BUCKET=app
 # R2 instead: S3_REGION=auto, S3_ENDPOINT=https://<accountId>.r2.cloudflarestorage.com
+# @feature:attachments:end
 
+# @feature:billing:start
 # Stripe billing (all three or none; partial config returns 503)
 # STRIPE_SECRET_KEY=
 # STRIPE_PRICE_ID=
 # STRIPE_WEBHOOK_SECRET=
+# @feature:billing:end
 
+# @feature:ai:start
 # AI assistant and MCP server (both features are opt-in).
 # AI assistant (opt-in). Local AI defaults to the deterministic, network-free
 # mock provider. To use an OpenAI-compatible endpoint (DeepSeek, OpenRouter, a
@@ -67,7 +74,9 @@ AI_PROVIDER=mock
 # AI_MODEL_ALLOWLIST=
 # AI_MAX_STEPS=8
 # AI_MAX_OUTPUT_TOKENS=2048
+# @feature:ai:end
 
+# @feature:mcp:start
 # Remote MCP server (opt-in). The endpoint is POST <API origin>/mcp and accepts
 # either an API key (Authorization: Bearer sk_...) or better-auth MCP OAuth.
 # MCP_RESOURCE is the canonical protected-resource URL and OAuth audience; it
@@ -80,3 +89,4 @@ MCP_ENABLED=false
 # authentication. Local/dev only: any party could register a client. In
 # production leave this off and use CIMD or manually provisioned clients.
 # MCP_DCR_ENABLED=false
+# @feature:mcp:end

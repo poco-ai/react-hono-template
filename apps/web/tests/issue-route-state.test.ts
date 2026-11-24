@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 // Include the same module augmentations as the application without booting it.
-import type {} from "../src/lib/auth/auth-plugin";
 import type {} from "../src/router";
 import { Route as IssueDetailRoute } from "../src/routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber";
 import { Route as ProjectCyclesRoute } from "../src/routes/_auth/orgs/$orgId/projects/$projectId/cycles";

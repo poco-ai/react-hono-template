@@ -23,31 +23,20 @@ import {
 	CircleAlert,
 	CornerUpLeft,
 	Pencil,
-	Star,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MutationError } from "@/components/mutation-error";
 import { NotFoundState } from "@/components/not-found-state";
 import { UserAvatar } from "@/components/user-avatar";
-import { IssueActivityTimeline } from "@/features/activities/components/issue-activity";
-import { IssueAttachments } from "@/features/attachments/components/issue-attachments";
 import { useSession } from "@/features/auth/data";
-import { IssueComments } from "@/features/comments/components/issue-comments";
-import { cyclesQuery } from "@/features/cycles/data";
-import {
-	favoritesQuery,
-	isFavorited,
-	useToggleFavorite,
-} from "@/features/favorites/data";
 import { IssueArchiveDialog } from "@/features/issues/components/issue-archive-dialog";
 import { IssueDeleteDialog } from "@/features/issues/components/issue-delete-dialog";
 import { IssueDescription } from "@/features/issues/components/issue-description";
 import { IssuePropertiesPanel } from "@/features/issues/components/issue-properties-panel";
 import { IssuePropertiesSheet } from "@/features/issues/components/issue-properties-sheet";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
-import { RelationsSection } from "@/features/issues/components/relations-section";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { SubIssuesSection } from "@/features/issues/components/sub-issues-section";
 import {
@@ -59,15 +48,25 @@ import {
 } from "@/features/issues/data";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
-import { IssueSubscriptionButton } from "@/features/notifications/components/issue-subscription-button";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { projectQuery } from "@/features/projects/data";
-import { RecurrenceDialog } from "@/features/recurrences/components/recurrence-dialog";
+import {
+	webIssueDetailSections,
+	webIssueExtras,
+	webIssueHeaderActions,
+} from "@/features/registry";
 import { useRecordRecentIssue } from "@/features/search/data";
 import { statusesQuery } from "@/features/statuses/data";
+import type { IssueCycleOption } from "@/features/web-types";
 import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
 import { formatDateTime, formatRelativeTime } from "@/lib/format";
 import { useDocumentTitle } from "@/lib/use-document-title";
+
+const NO_CYCLES: IssueCycleOption[] = [];
+
+function useNoCycles(): IssueCycleOption[] {
+	return NO_CYCLES;
+}
 
 export function IssueDetailPage({
 	orgId,
@@ -88,7 +87,8 @@ export function IssueDetailPage({
 	const members = useQuery(membersQuery(orgId));
 	const labels = useQuery(labelsQuery(orgId));
 	const statuses = useQuery(statusesQuery(orgId));
-	const cycles = useQuery(cyclesQuery(orgId, projectId));
+	const useCycles = webIssueExtras().useCycles ?? useNoCycles;
+	const cycles = useCycles(orgId, projectId);
 	const frozen = useOrgFrozen(orgId);
 	const { data: session } = useSession();
 
@@ -108,7 +108,6 @@ export function IssueDetailPage({
 	const [title, setTitle] = useState("");
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [archiveOpen, setArchiveOpen] = useState(false);
-	const [recurringOpen, setRecurringOpen] = useState(false);
 	const [propertiesOpen, setPropertiesOpen] = useState(false);
 
 	useEffect(() => {
@@ -118,23 +117,6 @@ export function IssueDetailPage({
 	const updateMutation = useUpdateIssue(orgId, projectId, issueNumber);
 	const deleteMutation = useDeleteIssue(orgId, projectId, issueNumber);
 	const archiveMutation = useSetIssueArchived(orgId, projectId, issueNumber);
-	const favorites = useQuery(favoritesQuery(orgId));
-	const favoriteMutation = useToggleFavorite(orgId, {
-		onError: (error) => toast.error(apiErrorMessage(t, error)),
-	});
-	const favorited = issue.data
-		? isFavorited(favorites.data, "issue", issue.data.id)
-		: false;
-	const toggleFavorite = () => {
-		if (!issue.data) {
-			return;
-		}
-		favoriteMutation.mutate({
-			entityType: "issue",
-			entityId: issue.data.id,
-			favorited,
-		});
-	};
 
 	const setArchived = (archived: boolean) => {
 		archiveMutation.mutate(archived, {
@@ -227,11 +209,16 @@ export function IssueDetailPage({
 	const assignee = data.assigneeId
 		? (members.data ?? []).find((member) => member.userId === data.assigneeId)
 		: undefined;
-	const favoriteLabel = data.archivedAt
-		? t("favorites.archivedIssue")
-		: t(favorited ? "favorites.removeIssue" : "favorites.addIssue");
-	const favoriteDisabled =
-		frozen || Boolean(data.archivedAt) || favoriteMutation.isPending;
+
+	const issueDetailContext = {
+		orgId,
+		projectId,
+		issueNumber: data.number,
+		issueId: data.id,
+		projectKey: project.data?.key ?? "",
+		frozen,
+		archivedAt: data.archivedAt,
+	};
 
 	return (
 		<div className="flex flex-col gap-8 px-4 py-8 lg:flex-row lg:px-6">
@@ -262,24 +249,9 @@ export function IssueDetailPage({
 							</BreadcrumbPage>
 						</BreadcrumbItem>
 						<BreadcrumbItem className="ml-auto">
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								className="size-7 max-md:size-9"
-								aria-label={favoriteLabel}
-								aria-pressed={favorited}
-								title={favoriteLabel}
-								disabled={favoriteDisabled}
-								onClick={toggleFavorite}
-							>
-								<Star className={favorited ? "fill-current" : undefined} />
-							</Button>
-							<IssueSubscriptionButton
-								orgId={orgId}
-								projectId={projectId}
-								issueNumber={data.number}
-								disabled={frozen}
-							/>
+							{webIssueHeaderActions().map(({ id, component: Action }) => (
+								<Action key={id} {...issueDetailContext} />
+							))}
 							<Button
 								variant="ghost"
 								size="icon-sm"
@@ -451,37 +423,12 @@ export function IssueDetailPage({
 						labels={labels.data ?? []}
 						statuses={statuses.data ?? []}
 					/>
-					<Separator />
-					<RelationsSection
-						orgId={orgId}
-						projectId={projectId}
-						projectKey={project.data?.key ?? ""}
-						issueId={data.id}
-						issueNumber={data.number}
-						frozen={frozen}
-					/>
-					<Separator />
-					<IssueComments
-						orgId={orgId}
-						projectId={projectId}
-						issueNumber={issueNumber}
-						frozen={frozen}
-					/>
-					<Separator />
-					<IssueAttachments
-						orgId={orgId}
-						projectId={projectId}
-						issueNumber={issueNumber}
-						frozen={frozen}
-					/>
-					<Separator />
-					<IssueActivityTimeline
-						orgId={orgId}
-						projectId={projectId}
-						issueNumber={issueNumber}
-						members={members.data ?? []}
-						labels={labels.data ?? []}
-					/>
+					{webIssueDetailSections().map(({ id, component: Section }) => (
+						<Fragment key={id}>
+							<Separator />
+							<Section {...issueDetailContext} />
+						</Fragment>
+					))}
 				</div>
 			</div>
 
@@ -498,7 +445,7 @@ export function IssueDetailPage({
 					members={members.data ?? []}
 					labels={labels.data ?? []}
 					statuses={statuses.data ?? []}
-					cycles={cycles.data?.items ?? []}
+					cycles={cycles}
 					frozen={frozen}
 					onUpdate={update}
 					onArchive={() =>
@@ -507,15 +454,6 @@ export function IssueDetailPage({
 							: setArchiveOpen(true)
 					}
 					onDelete={() => setDeleteOpen(true)}
-					onMakeRecurring={() => setRecurringOpen(true)}
-				/>
-				<RecurrenceDialog
-					open={recurringOpen}
-					onOpenChange={setRecurringOpen}
-					orgId={orgId}
-					projectId={projectId}
-					issueId={data.id}
-					issueKey={`${project.data?.key ?? ""}-${data.number}`}
 				/>
 				<IssueArchiveDialog
 					open={archiveOpen}
@@ -555,7 +493,7 @@ export function IssueDetailPage({
 				members={members.data ?? []}
 				labels={labels.data ?? []}
 				statuses={statuses.data ?? []}
-				cycles={cycles.data?.items ?? []}
+				cycles={cycles}
 				frozen={frozen}
 				onUpdate={update}
 				onArchive={() =>
@@ -564,7 +502,6 @@ export function IssueDetailPage({
 						: setArchiveOpen(true)
 				}
 				onDelete={() => setDeleteOpen(true)}
-				onMakeRecurring={() => setRecurringOpen(true)}
 				footer={
 					<>
 						{deleteMutation.isError && (

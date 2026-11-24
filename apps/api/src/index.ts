@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
 import { createApp } from "./app";
 import { platformFromBindings } from "./core/platform/cloudflare";
+import { FEATURE_MODULES } from "./manifest";
 import { dispatchQueueConsumers } from "./queue";
 
 const { app, queueConsumers, runScheduled } = createApp(
-	platformFromBindings(env),
+	platformFromBindings(env, FEATURE_MODULES),
 );
 
 export default {

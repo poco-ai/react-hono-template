@@ -2,7 +2,7 @@ import type { ListIssuesDto } from "@api/features/issues/dto/issue.dto";
 import { useHotkeys } from "@tanstack/react-hotkeys";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { IssueFilterGroup, IssueQuery } from "@workspace/shared";
+import type { IssueFilterGroup } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import {
@@ -26,17 +26,13 @@ import {
 import {
 	Archive,
 	ArrowLeft,
-	CalendarRange,
-	Clock3,
 	Columns3,
 	Download,
 	List,
 	ListChecks,
-	Megaphone,
 	MoreHorizontal,
 	Plus,
 	SlidersHorizontal,
-	Star,
 	Upload,
 } from "lucide-react";
 import {
@@ -48,17 +44,8 @@ import {
 } from "react";
 
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { NotFoundState } from "@/components/not-found-state";
 import { useSession } from "@/features/auth/data";
-import { CurrentCycleCard } from "@/features/cycles/components/current-cycle-card";
-import { CycleFilterBadge } from "@/features/cycles/components/cycle-filter-badge";
-import { cyclesQuery } from "@/features/cycles/data";
-import {
-	favoritesQuery,
-	isFavorited,
-	useToggleFavorite,
-} from "@/features/favorites/data";
 import { BoardView } from "@/features/issues/components/board-view";
 import { BulkActionBar } from "@/features/issues/components/bulk-bar";
 import { CreateIssueDialog } from "@/features/issues/components/create-issue-dialog";
@@ -75,29 +62,41 @@ import {
 	useIssueListPreferences,
 } from "@/features/issues/list-preferences";
 import {
+	detachedFilterSearch,
 	filterConditionCount,
 	primarySortField,
 	resolveIssueQuery,
 } from "@/features/issues/query";
 import type { IssuesSearch } from "@/features/issues/search";
-import { useViewDetach } from "@/features/issues/use-view-detach";
 import { labelsQuery } from "@/features/labels/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
-import { ProjectUpdatesSheet } from "@/features/project-updates/components/project-updates-sheet";
 import { ProjectMeta } from "@/features/projects/components/project-meta";
 import { projectQuery, projectsQuery } from "@/features/projects/data";
-import { RecurrencesSheet } from "@/features/recurrences/components/recurrences-sheet";
+import {
+	webIssueExtras,
+	webIssueViewDetach,
+	webIssueViewState,
+	webProjectBanners,
+	webProjectFilterBadges,
+	webProjectHeaderActions,
+	webProjectMenuItems,
+} from "@/features/registry";
 import { useRecordRecentProject } from "@/features/search/data";
 import { defaultStatusOf, statusesQuery } from "@/features/statuses/data";
-import { ViewSwitcher } from "@/features/views/components/view-switcher";
-import { type ViewDto, viewsQuery } from "@/features/views/data";
-import { apiErrorMessage, isNotFoundError } from "@/lib/errors";
+import type { IssueCycleOption } from "@/features/web-types";
+import { isNotFoundError } from "@/lib/errors";
 import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";
 import { useBulkSelection } from "@/lib/use-bulk-selection";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useMediaQuery } from "@/lib/use-media-query";
+
+const NO_CYCLES: IssueCycleOption[] = [];
+
+function useNoCycles(): IssueCycleOption[] {
+	return NO_CYCLES;
+}
 
 export function ProjectIssuesPage({
 	orgId,
@@ -117,11 +116,12 @@ export function ProjectIssuesPage({
 	const labels = useQuery(labelsQuery(orgId));
 	const projects = useQuery(projectsQuery(orgId));
 	const statuses = useQuery(statusesQuery(orgId));
-	const cycles = useQuery(cyclesQuery(orgId, projectId));
+	const useCycles = webIssueExtras().useCycles ?? useNoCycles;
+	const cycles = useCycles(orgId, projectId);
 	const frozen = useOrgFrozen(orgId);
+	const { canManage } = useOrgRole(orgId);
+	const { data: session } = useSession();
 	const [createOpen, setCreateOpen] = useState(false);
-	const [updatesOpen, setUpdatesOpen] = useState(false);
-	const [recurrencesOpen, setRecurrencesOpen] = useState(false);
 	const [importOpen, setImportOpen] = useState(false);
 	const [selectionMode, setSelectionMode] = useState(false);
 	const [createStatusId, setCreateStatusId] = useState<string | undefined>(
@@ -136,40 +136,30 @@ export function ProjectIssuesPage({
 	const view = search.view ?? "list";
 	const includeArchived = search.includeArchived ?? false;
 
-	const favorites = useQuery(favoritesQuery(orgId));
-	const favoriteMutation = useToggleFavorite(orgId, {
-		onError: (error) => toast.error(apiErrorMessage(t, error)),
+	const viewState = webIssueViewState({
+		orgId,
+		projectId,
+		viewId: search.viewId,
+		layout: view === "board" ? "board" : "list",
+		canManage,
+		currentUserId: session?.user.id,
+		resolved: {
+			filter: undefined,
+			sorts: [],
+			groupBy: undefined,
+			search: "",
+			cycleId: undefined,
+		},
+		setSearch: (next) => setSearch(next as Partial<IssuesSearch>),
+		onSelectionReset: () => {},
 	});
-	const projectFavorited = project.data
-		? isFavorited(favorites.data, "project", project.data.id)
-		: false;
-	const projectArchived = Boolean(project.data?.archived);
-	const projectFavoriteLabel = projectArchived
-		? t("favorites.archivedProject")
-		: t(projectFavorited ? "favorites.removeProject" : "favorites.addProject");
-	const toggleProjectFavorite = () => {
-		if (!project.data) {
-			return;
-		}
-		favoriteMutation.mutate({
-			entityType: "project",
-			entityId: project.data.id,
-			favorited: projectFavorited,
-		});
-	};
-
-	const views = useQuery(viewsQuery(orgId, projectId));
-	const currentView = search.viewId
-		? views.data?.find((entry) => entry.id === search.viewId)
-		: undefined;
+	const currentViewQuery = viewState?.currentViewQuery;
 	const resolved = resolveIssueQuery(search, {
-		view: currentView?.query,
+		view: currentViewQuery,
 		statuses: statuses.data,
 	});
 	const effectiveFilter = resolved.filter;
 	const sortField = primarySortField(resolved.sorts);
-	const { canManage } = useOrgRole(orgId);
-	const { data: session } = useSession();
 	useRecordRecentProject(
 		orgId,
 		session?.user.id,
@@ -210,7 +200,7 @@ export function ProjectIssuesPage({
 	const filterCount = filterConditionCount(effectiveFilter);
 	const cycleFilterId = resolved.cycleId;
 	const cycleFilterCycle = cycleFilterId
-		? cycles.data?.items.find((cycle) => cycle.id === cycleFilterId)
+		? cycles.find((cycle) => cycle.id === cycleFilterId)
 		: undefined;
 	const hasFilters =
 		filterCount > 0 || resolved.search !== "" || Boolean(cycleFilterId);
@@ -223,20 +213,51 @@ export function ProjectIssuesPage({
 		ids: result?.items.map((issue) => issue.id) ?? [],
 	});
 
-	const { dirtyView, clearDirtyView, detachView, updateSearch } = useViewDetach(
-		{
-			viewId: search.viewId,
-			currentView,
-			resolved,
-			views: {
-				data: views.data,
-				isSuccess: views.isSuccess,
-				isFetching: views.isFetching,
-			},
-			setSearch,
-			onSelectionReset: clear,
+	const viewDetach = webIssueViewDetach({
+		orgId,
+		projectId,
+		viewId: search.viewId,
+		layout: view === "board" ? "board" : "list",
+		canManage,
+		currentUserId: session?.user.id,
+		resolved: {
+			filter: effectiveFilter,
+			sorts: resolved.sorts,
+			groupBy: resolved.groupBy,
+			search: resolved.search,
+			cycleId: resolved.cycleId,
 		},
-	);
+		setSearch: (next) => setSearch(next as Partial<IssuesSearch>),
+		onSelectionReset: clear,
+	});
+
+	const detachView =
+		viewDetach?.detach ??
+		((
+			nextFilter: IssueFilterGroup | undefined,
+			options?: {
+				search?: string;
+				overrides?: { sort?: string; groupBy?: string; page?: number };
+				extra?: Record<string, string | undefined>;
+			},
+		) => {
+			clear();
+			setSearch({
+				...detachedFilterSearch({
+					view: undefined,
+					resolved,
+					filter: nextFilter,
+					search: options?.search,
+					overrides: options?.overrides as never,
+				}),
+				...options?.extra,
+			} as Partial<IssuesSearch>);
+		});
+
+	const updateSearch =
+		viewDetach?.updateSearch ??
+		((next: Record<string, unknown>) =>
+			setSearch(next as Partial<IssuesSearch>));
 
 	const setGroupBy = (next: IssuesSearch["groupBy"]) => {
 		updateSearch({ groupBy: next });
@@ -251,55 +272,11 @@ export function ProjectIssuesPage({
 		detachView(next);
 	};
 
-	const applyView = (next: ViewDto) => {
-		clearDirtyView();
-		clear();
-		setSearch({
-			viewId: next.id,
-			filter: "",
-			sort: "updated",
-			groupBy: undefined,
-			statusId: "",
-			status: "",
-			priority: "",
-			assigneeId: "",
-			labelId: "",
-			cycleId: "",
-			page: 1,
-			view: next.layout === "board" ? "board" : "list",
-		});
-	};
-
-	const clearView = () => {
-		clearDirtyView();
-		clear();
-		setSearch({
-			viewId: undefined,
-			filter: "",
-			sort: "updated",
-			groupBy: undefined,
-			statusId: "",
-			status: "",
-			priority: "",
-			assigneeId: "",
-			labelId: "",
-			cycleId: "",
-			page: 1,
-		});
-	};
-
 	// Clearing filters keeps the user's sort/grouping (and a view's resolved
 	// ones) intact; it is not the same as resetting to defaults. The flat cycle
 	// filter is cleared here too, in the same navigation.
 	const clearFilters = () => {
 		detachView(undefined, { search: "", extra: { cycleId: "" } });
-	};
-
-	const savedQuery: IssueQuery = {
-		filter: effectiveFilter,
-		sort: resolved.sorts,
-		groupBy: resolved.groupBy ?? null,
-		layout: view === "board" ? "board" : "list",
 	};
 	// The empty state owns the only "create" call to action on a fresh project.
 	const hideHeaderCreate =
@@ -403,6 +380,29 @@ export function ProjectIssuesPage({
 		);
 	}
 
+	const projectPageContext = {
+		orgId,
+		projectId,
+		frozen,
+		canManage,
+		project: project.data
+			? {
+					id: project.data.id,
+					name: project.data.name,
+					key: project.data.key,
+					archived: Boolean(project.data.archived),
+				}
+			: undefined,
+	};
+
+	const filterBadgeContext = {
+		orgId,
+		projectId,
+		cycleId: cycleFilterId,
+		cycleName: cycleFilterCycle?.name,
+		clearCycle: () => setSearch({ cycleId: "", page: 1 }),
+	};
+
 	const archivedToggle = (
 		<Toggle
 			variant="outline"
@@ -429,7 +429,7 @@ export function ProjectIssuesPage({
 		members: members.data ?? [],
 		labels: labels.data ?? [],
 		projects: projects.data ?? [],
-		cycles: cycles.data?.items ?? [],
+		cycles,
 		showSort: view === "list",
 		sort: sortField,
 		searchInput,
@@ -471,50 +471,9 @@ export function ProjectIssuesPage({
 						)}
 					</div>
 					<div className="flex max-md:flex-wrap items-center gap-2">
-						<Button
-							variant="outline"
-							size="icon-sm"
-							className="hidden md:inline-flex"
-							aria-label={projectFavoriteLabel}
-							aria-pressed={projectFavorited}
-							title={projectFavoriteLabel}
-							disabled={
-								!project.data || projectArchived || favoriteMutation.isPending
-							}
-							onClick={toggleProjectFavorite}
-						>
-							<Star className={projectFavorited ? "fill-current" : undefined} />
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							className="hidden md:inline-flex"
-							onClick={() => setUpdatesOpen(true)}
-						>
-							<Megaphone className="size-4" />
-							{t("projectUpdates.title")}
-						</Button>
-						<Link
-							to="/orgs/$orgId/projects/$projectId/cycles"
-							params={{ orgId, projectId }}
-							className={buttonVariants({
-								variant: "outline",
-								size: "sm",
-								className: "hidden md:inline-flex",
-							})}
-						>
-							<CalendarRange className="size-4" />
-							{t("cycles.title")}
-						</Link>
-						<Button
-							variant="outline"
-							size="sm"
-							className="hidden md:inline-flex"
-							onClick={() => setRecurrencesOpen(true)}
-						>
-							<Clock3 className="size-4" />
-							{t("recurrences.title")}
-						</Button>
+						{webProjectHeaderActions().map(({ id, component: Action }) => (
+							<Action key={id} {...projectPageContext} />
+						))}
 						{view === "list" && (
 							<div className="hidden md:block">
 								<IssueListToolbar
@@ -527,25 +486,7 @@ export function ProjectIssuesPage({
 								/>
 							</div>
 						)}
-						<ViewSwitcher
-							orgId={orgId}
-							projectId={projectId}
-							views={views.data ?? []}
-							viewsLoading={views.isPending}
-							viewsError={views.isError ? views.error : null}
-							onRetryViews={() => {
-								void views.refetch();
-							}}
-							currentView={currentView}
-							dirtyView={dirtyView}
-							query={savedQuery}
-							layout={view === "board" ? "board" : "list"}
-							canManage={canManage}
-							currentUserId={session?.user.id}
-							onApply={applyView}
-							onUpdated={applyView}
-							onCleared={clearView}
-						/>
+						{viewDetach?.toolbar}
 						<ToggleGroup
 							value={[view]}
 							onValueChange={(next) => {
@@ -594,38 +535,9 @@ export function ProjectIssuesPage({
 								}
 							/>
 							<DropdownMenuContent align="end" className="w-52">
-								<DropdownMenuItem
-									disabled={
-										!project.data ||
-										projectArchived ||
-										favoriteMutation.isPending
-									}
-									onClick={toggleProjectFavorite}
-								>
-									<Star
-										className={projectFavorited ? "fill-current" : undefined}
-									/>
-									{projectFavoriteLabel}
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setUpdatesOpen(true)}>
-									<Megaphone className="size-4" />
-									{t("projectUpdates.title")}
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									render={
-										<Link
-											to="/orgs/$orgId/projects/$projectId/cycles"
-											params={{ orgId, projectId }}
-										/>
-									}
-								>
-									<CalendarRange className="size-4" />
-									{t("cycles.title")}
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => setRecurrencesOpen(true)}>
-									<Clock3 className="size-4" />
-									{t("recurrences.title")}
-								</DropdownMenuItem>
+								{webProjectMenuItems().map(({ id, component: Action }) => (
+									<Action key={id} {...projectPageContext} />
+								))}
 								<DropdownMenuSeparator />
 								<DropdownMenuItem
 									disabled={frozen}
@@ -655,28 +567,24 @@ export function ProjectIssuesPage({
 			</header>
 
 			<div className="border-b px-4 py-3 empty:hidden lg:px-6">
-				<CurrentCycleCard orgId={orgId} projectId={projectId} />
+				{webProjectBanners().map(({ id, component: Banner }) => (
+					<Banner key={id} {...projectPageContext} />
+				))}
 			</div>
 
 			{isDesktop ? (
 				<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
-					{cycleFilterCycle && (
-						<CycleFilterBadge
-							name={cycleFilterCycle.name}
-							onClear={() => setSearch({ cycleId: "", page: 1 })}
-						/>
-					)}
+					{webProjectFilterBadges().map(({ id, component: Badge }) => (
+						<Badge key={id} {...filterBadgeContext} />
+					))}
 					<IssueFilterControls {...filterControlsProps} variant="inline" />
 					{archivedToggle}
 				</div>
 			) : (
 				<div className="border-b flex flex-wrap items-center gap-2 px-4 py-3 lg:px-6">
-					{cycleFilterCycle && (
-						<CycleFilterBadge
-							name={cycleFilterCycle.name}
-							onClear={() => setSearch({ cycleId: "", page: 1 })}
-						/>
-					)}
+					{webProjectFilterBadges().map(({ id, component: Badge }) => (
+						<Badge key={id} {...filterBadgeContext} />
+					))}
 					{view === "list" && (
 						<Toggle
 							variant="outline"
@@ -790,22 +698,7 @@ export function ProjectIssuesPage({
 				members={members.data ?? []}
 				labels={labels.data ?? []}
 				statuses={statuses.data ?? []}
-				cycles={cycles.data?.items ?? []}
-			/>
-
-			<ProjectUpdatesSheet
-				orgId={orgId}
-				projectId={projectId}
-				open={updatesOpen}
-				onOpenChange={setUpdatesOpen}
-				frozen={frozen}
-			/>
-			<RecurrencesSheet
-				orgId={orgId}
-				projectId={projectId}
-				open={recurrencesOpen}
-				onOpenChange={setRecurrencesOpen}
-				frozen={frozen}
+				cycles={cycles}
 			/>
 		</div>
 	);

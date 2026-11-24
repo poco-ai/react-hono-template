@@ -13,10 +13,8 @@ import { useCallback, useEffect } from "react";
 import { bootstrapKey, oauthProvidersKey, sessionKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
-import { codedError, errorCode } from "@/lib/errors";
-import { isMediaAssetUrl } from "@/lib/media";
+import { codedError } from "@/lib/errors";
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
-import { imageContentType, uploadViaPresign } from "@/lib/upload";
 
 export function bootstrapQuery() {
 	return queryOptions({
@@ -106,36 +104,6 @@ export async function refreshAppSession(queryClient: QueryClient) {
 		refetchType: "none",
 	});
 	await loadAppSession(queryClient);
-}
-
-export async function uploadAvatar(file: File): Promise<string> {
-	const contentType = imageContentType(file);
-	const registered = await uploadViaPresign<{ url: string }>({
-		file,
-		contentType,
-		presign: () =>
-			client.api.me.avatar.presign.$post({
-				json: {
-					filename: file.name || `avatar.${contentType.split("/")[1]}`,
-					contentType,
-					size: file.size,
-				},
-			}),
-		register: (key) => client.api.me.avatar.$post({ json: { key } }),
-	});
-	return registered.url;
-}
-
-export async function deleteAvatar(url: string): Promise<void> {
-	// OAuth/legacy avatars are not media assets; there is nothing to delete.
-	if (!isMediaAssetUrl(url)) return;
-	try {
-		await unwrap(client.api.me.avatar.$delete({ json: { url } }));
-	} catch (error) {
-		const code = errorCode(error);
-		if (code === "ASSET_NOT_FOUND" || code === "VALIDATION") return;
-		throw error;
-	}
 }
 
 export async function signOut() {

@@ -271,11 +271,14 @@ test("deleting a comment commits rows before removing stored files", async () =>
 				order.push("keys");
 				return ["attachments/comment-1/a.png"];
 			},
+			deleteCommentThreadRows: async () => {
+				order.push("rows");
+			},
 			removeObjects: async () => {
 				order.push("remove");
 			},
 		},
 	});
 	await deleting.deleteComment("org", "project-1", 7, "comment-1", "author-1");
-	assert.deepEqual(order, ["keys", "delete", "remove"]);
+	assert.deepEqual(order, ["keys", "rows", "delete", "remove"]);
 });

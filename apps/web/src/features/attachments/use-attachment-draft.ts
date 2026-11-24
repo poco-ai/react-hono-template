@@ -3,9 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveContentType } from "@/features/attachments/data";
 
-export const COMMENT_ATTACHMENT_ACCEPT =
-	".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
-
 export interface CommentDraftFile {
 	id: string;
 	file: File;

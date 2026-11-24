@@ -88,18 +88,23 @@ test("issue create works end to end with every optional port absent", async () =
 	);
 
 	// ...while the absent optional features produced no side effects at all.
-	const deliveries = sqlite
-		.query("SELECT count(*) AS n FROM webhook_deliveries")
-		.get() as { n: number };
-	assert.equal(deliveries.n, 0);
-	const notifications = sqlite
-		.query("SELECT count(*) AS n FROM notifications")
-		.get() as { n: number };
-	assert.equal(notifications.n, 0);
-	const subscriptions = sqlite
-		.query("SELECT count(*) AS n FROM issue_subscriptions")
-		.get() as { n: number };
-	assert.equal(subscriptions.n, 0);
+	// A trimmed preset removes their tables, so only assert when present.
+	const countRows = (table: string) => {
+		const exists = sqlite
+			.query(
+				"SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?",
+			)
+			.get(table);
+		if (!exists) return 0;
+		return (
+			sqlite.query(`SELECT count(*) AS n FROM ${table}`).get() as {
+				n: number;
+			}
+		).n;
+	};
+	assert.equal(countRows("webhook_deliveries"), 0);
+	assert.equal(countRows("notifications"), 0);
+	assert.equal(countRows("issue_subscriptions"), 0);
 
 	// A second write through the same wiring still resolves the number
 	// sequence, proving the dao layer is fully functional.

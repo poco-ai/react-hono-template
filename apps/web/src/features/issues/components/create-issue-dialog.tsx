@@ -1,6 +1,5 @@
 import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { useStore } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
 import {
 	type CreateIssueInput,
 	createIssueSchema,
@@ -44,7 +43,6 @@ import { z } from "zod";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { MultiSelect } from "@/components/multi-select";
 import { MutationError } from "@/components/mutation-error";
-import type { CycleWithProgressDto } from "@/features/cycles/data";
 import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
 import {
 	IssueAssigneeSelect,
@@ -55,16 +53,25 @@ import {
 	buildCreateIssueInput,
 	type CreateIssueFormState,
 } from "@/features/issues/create-issue-input";
-import {
-	applyIssueTemplate,
-	templatesForProject,
-} from "@/features/templates/apply";
-import { issueTemplatesQuery } from "@/features/templates/data";
+import { webIssueExtras } from "@/features/registry";
+import type {
+	IssueCycleOption,
+	IssueTemplatesExtras,
+} from "@/features/web-types";
 import { useZodForm } from "@/lib/use-zod-form";
 import { useCreateIssue } from "../data";
 
 const NO_CYCLE = "__no_cycle__";
 const NO_TEMPLATE = "__no_template__";
+
+const NO_TEMPLATES: IssueTemplatesExtras = {
+	options: [],
+	prefill: () => null,
+};
+
+function useNoIssueTemplates(): IssueTemplatesExtras {
+	return NO_TEMPLATES;
+}
 
 /**
  * Dialog form values. `assigneeId` uses `null` (not `undefined`) for
@@ -144,7 +151,7 @@ export function CreateIssueDialog({
 	labels: { id: string; name: string }[];
 	statuses: StatusDto[];
 	/** Project cycles offered for planning; omitted by callers without them. */
-	cycles?: CycleWithProgressDto[];
+	cycles?: IssueCycleOption[];
 }) {
 	const { t } = useTranslation();
 	// The mobile layout pins the footer outside the scrollable form; the id
@@ -155,11 +162,9 @@ export function CreateIssueDialog({
 		null,
 	);
 
-	const templates = useQuery({
-		...issueTemplatesQuery(orgId),
-		enabled: open,
-	});
-	const projectTemplates = templatesForProject(templates.data, projectId);
+	const useTemplates = webIssueExtras().useTemplates ?? useNoIssueTemplates;
+	const templates = useTemplates(orgId, projectId, open);
+	const projectTemplates = templates.options;
 
 	const createMutation = useCreateIssue(orgId, projectId);
 
@@ -209,11 +214,23 @@ export function CreateIssueDialog({
 		}
 		// Event handlers read the live form store; the subsequent change also
 		// clears any previously submitted error map (see useZodForm).
-		const next = applyIssueTemplate(
-			toCreateIssueFormState(form.state.values),
-			template,
-			{ availableLabelIds: labels.map((label) => label.id) },
+		const current = form.state.values;
+		const next = templates.prefill(
+			value,
+			{
+				title: current.title,
+				description: current.description,
+				statusId: current.statusId,
+				priority: current.priority,
+				labelIds: current.labelIds,
+				estimate: current.estimate,
+			},
+			labels.map((label) => label.id),
 		);
+		if (!next) {
+			setAppliedTemplateName(null);
+			return;
+		}
 		form.setFieldValue("title", next.title);
 		form.setFieldValue("description", next.description);
 		form.setFieldValue("statusId", next.statusId);
@@ -287,9 +304,7 @@ export function CreateIssueDialog({
 									</SelectItem>
 									{projectTemplates.map((template) => (
 										<SelectItem key={template.id} value={template.id}>
-											{template.projectId === null
-												? `${template.name} · ${t("templates.orgWide")}`
-												: template.name}
+											{template.label}
 										</SelectItem>
 									))}
 								</SelectContent>

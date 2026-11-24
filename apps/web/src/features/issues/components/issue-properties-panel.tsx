@@ -23,17 +23,10 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import {
-	Archive,
-	ArchiveRestore,
-	MoreHorizontal,
-	Repeat2,
-	Trash2,
-} from "lucide-react";
+import { Archive, ArchiveRestore, MoreHorizontal, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiSelect } from "@/components/multi-select";
-import type { CycleWithProgressDto } from "@/features/cycles/data";
 import { IssueDueDateField } from "@/features/issues/components/issue-due-date-field";
 import {
 	IssueAssigneeSelect,
@@ -45,6 +38,11 @@ import {
 	type ParentSummary,
 } from "@/features/issues/components/parent-issue-field";
 import { LabelBadge } from "@/features/labels/components/label-badge";
+import { webIssuePropertiesActions } from "@/features/registry";
+import type {
+	IssueCycleOption,
+	IssuePropertiesContext,
+} from "@/features/web-types";
 import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 
 const NO_CYCLE = "__no_cycle__";
@@ -64,7 +62,6 @@ export function IssuePropertiesPanel({
 	onUpdate,
 	onArchive,
 	onDelete,
-	onMakeRecurring,
 }: {
 	orgId: string;
 	projectId: string;
@@ -77,18 +74,24 @@ export function IssuePropertiesPanel({
 	members: { userId: string; user: { name: string } }[];
 	labels: LabelDto[];
 	statuses: StatusDto[];
-	/** Cycles of the issue's project. */
-	cycles: CycleWithProgressDto[];
+	/** Cycles of the issue's project (only id/name are rendered). */
+	cycles: IssueCycleOption[];
 	frozen: boolean;
 	onUpdate: (input: UpdateIssueInput) => void;
 	/** Archive (or restore, when the issue is archived). */
 	onArchive: () => void;
 	onDelete: () => void;
-	/** Opens the "make recurring" dialog. */
-	onMakeRecurring: () => void;
 }) {
 	const { t } = useTranslation();
 	const [estimateDraft, setEstimateDraft] = useState("");
+	const propertiesContext: IssuePropertiesContext = {
+		orgId,
+		projectId,
+		issueId: issue.id,
+		issueNumber: issue.number,
+		projectKey,
+		disabled: frozen,
+	};
 
 	useEffect(() => {
 		setEstimateDraft(
@@ -121,10 +124,9 @@ export function IssuePropertiesPanel({
 						<TooltipContent>{t("common.actions")}</TooltipContent>
 					</Tooltip>
 					<DropdownMenuContent align="end">
-						<DropdownMenuItem disabled={frozen} onClick={onMakeRecurring}>
-							<Repeat2 />
-							{t("recurrences.makeRecurring")}
-						</DropdownMenuItem>
+						{webIssuePropertiesActions().map(({ id, component: Action }) => (
+							<Action key={id} {...propertiesContext} />
+						))}
 						<DropdownMenuItem disabled={frozen} onClick={onArchive}>
 							{issue.archivedAt ? <ArchiveRestore /> : <Archive />}
 							{issue.archivedAt

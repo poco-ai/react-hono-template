@@ -7,10 +7,10 @@ import {
 	MarkdownEditor,
 	type MentionCandidate,
 } from "@/components/markdown-editor";
-import {
-	COMMENT_ATTACHMENT_ACCEPT,
-	type CommentAttachmentDraft,
-} from "@/features/comments/use-attachment-draft";
+import type { CommentAttachmentDraft } from "@/features/web-types";
+
+export const COMMENT_ATTACHMENT_ACCEPT =
+	".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.markdown,.zip";
 
 const COMMENT_MAX_LENGTH = 10000;
 

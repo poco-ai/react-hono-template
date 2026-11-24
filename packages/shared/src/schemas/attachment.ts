@@ -1,22 +1,11 @@
 import { z } from "zod";
-import { PLANS } from "../plans";
+import { ATTACHMENT_MAX_SIZE, attachmentMaxSizeMessage } from "../constants";
 
-export const ATTACHMENT_MAX_SIZE = PLANS.pro.attachmentMaxSize;
-
-export const attachmentMaxSizeMessage = `File size exceeds the ${
-	ATTACHMENT_MAX_SIZE / (1024 * 1024)
-}MB limit`;
-
-export const ATTACHMENT_CONTENT_TYPES = [
-	"image/png",
-	"image/jpeg",
-	"image/webp",
-	"image/gif",
-	"application/pdf",
-	"text/plain",
-	"text/markdown",
-	"application/zip",
-] as const;
+export {
+	ATTACHMENT_CONTENT_TYPES,
+	ATTACHMENT_MAX_SIZE,
+	attachmentMaxSizeMessage,
+} from "../constants";
 
 export const attachmentPresignSchema = z.object({
 	filename: z.string().trim().min(1).max(255),

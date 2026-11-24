@@ -63,6 +63,11 @@ export type CommentNotifications = {
 		actorId: string;
 		activityId?: string | null;
 	}) => Promise<void>;
+	/** Comment deletion hook: nulls comment back-references (optional). */
+	clearCommentReferences?: (
+		orgId: string,
+		commentIds: string[],
+	) => Promise<void>;
 };
 
 /** Shape used by the recurrence cron. */

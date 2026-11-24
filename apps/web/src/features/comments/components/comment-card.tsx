@@ -1,4 +1,4 @@
-import type { AttachmentWithUrlDto } from "@api/features/attachments/dto/attachment.dto";
+import type { AttachmentFileSummary } from "@api/core/lib/ports/attachments";
 import type { CommentDto } from "@api/features/comments/dto/comment.dto";
 import type { CommentReactionEmoji } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
@@ -56,7 +56,7 @@ export function CommentCard({
 	onToggleReaction: (comment: CommentDto, emoji: CommentReactionEmoji) => void;
 	onDeleteAttachment: (
 		comment: CommentDto,
-		attachment: AttachmentWithUrlDto,
+		attachment: AttachmentFileSummary,
 	) => void;
 }) {
 	const { t } = useTranslation();

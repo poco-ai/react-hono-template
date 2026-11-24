@@ -725,6 +725,15 @@ export const createAttachmentService = ({
 		keysForComment: async (orgId: string, commentId: string) =>
 			attachmentDao.listKeysForCommentThread(orgId, commentId),
 
+		/**
+		 * Deletes the attachment rows of a comment thread. The comments feature
+		 * calls this before removing the comments when the attachments slice is
+		 * enabled (D1 batch semantics stay inside each feature).
+		 */
+		deleteCommentThreadRows: async (orgId: string, commentId: string) => {
+			await attachmentDao.deleteForCommentThread(orgId, commentId);
+		},
+
 		/** Best-effort object removal; call only after the rows are gone. */
 		removeObjects: async (keys: string[]) => {
 			if (!storage) return;

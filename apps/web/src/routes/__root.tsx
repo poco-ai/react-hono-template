@@ -20,15 +20,10 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { NotFoundState } from "@/components/not-found-state";
 import { useTheme } from "@/components/theme-provider";
 import {
-	deleteAvatar,
 	oauthProvidersQuery,
-	uploadAvatar,
 	useRefreshSessionOnUserUpdate,
 } from "@/features/auth/data";
-import {
-	deleteOrganizationLogo,
-	uploadOrganizationLogo,
-} from "@/features/organizations/data";
+import { webMediaActions } from "@/features/registry";
 import { adminFlowLocalization } from "@/lib/auth/admin-localization";
 import { adminPlugin } from "@/lib/auth/admin-plugin";
 import {
@@ -37,11 +32,16 @@ import {
 	emailOtpFlowLocalization,
 	organizationFlowLocalization,
 } from "@/lib/auth/auth-localization";
+// Side-effect type import: the shadcn `AuthPlugin` augmentation must be part
+// of the app program, not only of the test project.
+import type {} from "@/lib/auth/auth-plugin";
 import { emailOtpPlugin } from "@/lib/auth/email-otp-plugin";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { resolveSafeRedirect } from "@/lib/auth/safe-redirect";
 import { themePlugin } from "@/lib/auth/theme-plugin";
 import { authClient } from "@/lib/auth-client";
+
+const mediaActions = webMediaActions();
 
 export interface RouterContext {
 	queryClient: QueryClient;
@@ -203,8 +203,8 @@ function RootComponent() {
 					enabled: true,
 					size: 256,
 					extension: "webp",
-					upload: uploadOrganizationLogo,
-					delete: deleteOrganizationLogo,
+					upload: mediaActions.uploadOrganizationLogo,
+					delete: mediaActions.deleteOrganizationLogo,
 				},
 			}),
 		],
@@ -267,8 +267,8 @@ function RootComponent() {
 				enabled: true,
 				size: 256,
 				extension: "webp",
-				upload: uploadAvatar,
-				delete: deleteAvatar,
+				upload: mediaActions.uploadAvatar,
+				delete: mediaActions.deleteAvatar,
 			}}
 			emailAndPassword={{
 				enabled: true,

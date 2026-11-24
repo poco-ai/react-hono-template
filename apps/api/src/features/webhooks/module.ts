@@ -22,6 +22,15 @@ export type WebhooksDaos = {
  */
 export const webhooksModule = {
 	id: "webhooks",
+	platform: (env) => ({
+		webhookQueue: env.WEBHOOK_QUEUE
+			? {
+					send: async (message) => {
+						await env.WEBHOOK_QUEUE?.send(message);
+					},
+				}
+			: null,
+	}),
 	createDaos: ({ db }) => ({
 		webhookDao: createWebhookDao(db),
 		webhookDeliveryDao: createWebhookDeliveryDao(db),

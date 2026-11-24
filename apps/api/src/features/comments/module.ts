@@ -1,9 +1,9 @@
 import type { FeatureModule } from "../../core/compose";
-import type { AttachmentsContribution } from "../attachments/module";
+import type { AttachmentFileLookup } from "../../core/lib/ports/attachments";
+import type { CommentNotifications } from "../../core/lib/ports/notifications";
+import type { WebhookDispatcher } from "../../core/lib/ports/webhook-dispatcher";
 import type { IssuesContribution } from "../issues/module";
-import type { NotificationsContribution } from "../notifications/module";
 import type { ProjectsContribution } from "../projects/module";
-import type { WebhooksContribution } from "../webhooks/module";
 import { createCommentDao } from "./dao/comment.dao";
 import { createCommentMentionDao } from "./dao/comment-mention.dao";
 import { createCommentReactionDao } from "./dao/comment-reaction.dao";
@@ -18,8 +18,8 @@ export type CommentsDaos = {
 
 /**
  * Comments: threaded discussion with reactions and mentions. Attachment
- * decoration degrades to plain text when the attachments feature is
- * trimmed (Phase 1 port).
+ * decoration, webhook fan-out and notifications are optional ports; the
+ * feature degrades gracefully when a soft dependency is trimmed.
  */
 export const commentsModule = {
 	id: "comments",
@@ -29,20 +29,23 @@ export const commentsModule = {
 		commentMentionDao: createCommentMentionDao(db),
 	}),
 	register: (ctx) => {
+		const webhooks = ctx.features.find<{
+			services: { webhookDeliveryService: WebhookDispatcher };
+		}>("webhooks");
+		const attachments = ctx.features.find<{
+			services: { attachmentService: AttachmentFileLookup };
+		}>("attachments");
+		const notifications = ctx.features.find<{
+			services: { notificationService: CommentNotifications };
+		}>("notifications");
 		const commentService = createCommentService({
 			commentDao: ctx.daos.commentDao,
 			issueDao: ctx.features.get<IssuesContribution>("issues").daos.issueDao,
 			projectDao:
 				ctx.features.get<ProjectsContribution>("projects").daos.projectDao,
-			webhooks:
-				ctx.features.get<WebhooksContribution>("webhooks").services
-					.webhookDeliveryService,
-			files:
-				ctx.features.get<AttachmentsContribution>("attachments").services
-					.attachmentService,
-			notifications:
-				ctx.features.get<NotificationsContribution>("notifications").services
-					.notificationService,
+			webhooks: webhooks?.services.webhookDeliveryService,
+			files: attachments?.services.attachmentService,
+			notifications: notifications?.services.notificationService,
 			memberDao: ctx.daos.memberDao,
 			reactionDao: ctx.daos.commentReactionDao,
 			mentionDao: ctx.daos.commentMentionDao,

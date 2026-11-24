@@ -34,12 +34,12 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
 import { TablePagination } from "@/components/table-pagination";
-import { OrgQuotaDialog } from "@/features/admin/components/org-quota-dialog";
 import {
 	adminOrganizationsQuery,
 	useFreezeOrganization,
 	useUnfreezeOrganization,
 } from "@/features/admin/data";
+import { webAdminOrgActions } from "@/features/registry";
 
 import { apiErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -54,7 +54,6 @@ export function AdminOrgsPage() {
 
 	const [searchInput, setSearchInput] = useState(search);
 	const [freezeTarget, setFreezeTarget] = useState<AdminOrgDto | null>(null);
-	const [quotaTarget, setQuotaTarget] = useState<AdminOrgDto | null>(null);
 
 	useEffect(() => {
 		setSearchInput(search);
@@ -175,10 +174,10 @@ export function AdminOrgsPage() {
 								<TableCell className="hidden sm:table-cell">
 									{org.plan === "pro" ? (
 										<Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-											{t("billing.planPro")}
+											{t("adminOrgs.planPro")}
 										</Badge>
 									) : (
-										<Badge variant="outline">{t("billing.planFree")}</Badge>
+										<Badge variant="outline">{t("adminOrgs.planFree")}</Badge>
 									)}
 								</TableCell>
 								<TableCell className="hidden sm:table-cell">
@@ -199,13 +198,9 @@ export function AdminOrgsPage() {
 								</TableCell>
 								<TableCell className="text-right">
 									<div className="flex justify-end gap-2">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setQuotaTarget(org)}
-										>
-											{t("adminOrgs.quota")}
-										</Button>
+										{webAdminOrgActions().map(({ id, component: Action }) => (
+											<Action key={id} org={org} />
+										))}
 										{org.frozen ? (
 											<Button
 												variant="outline"
@@ -270,12 +265,6 @@ export function AdminOrgsPage() {
 				</div>
 			</CardContent>
 
-			<OrgQuotaDialog
-				orgId={quotaTarget?.id ?? ""}
-				orgName={quotaTarget?.name ?? ""}
-				open={quotaTarget !== null}
-				onOpenChange={(open) => !open && setQuotaTarget(null)}
-			/>
 			<ConfirmDialog
 				open={freezeTarget !== null}
 				onOpenChange={(open) => !open && setFreezeTarget(null)}

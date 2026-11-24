@@ -1,10 +1,10 @@
+import { handleWebhookQueue } from "../../../queue";
 import {
 	WEBHOOK_MAX_ATTEMPTS,
 	WEBHOOK_RETRY_DELAY_MS,
-	type WebhookDeliveryService,
+	type WebhookDeliveryQueueTarget,
 	type WebhookJobQueue,
-} from "../../../features/webhooks/services/webhook-delivery.service";
-import { handleWebhookQueue } from "../../../queue";
+} from "../ports/webhooks";
 import type { RedisLike } from "./client";
 
 const READY_KEY = "webhook:ready";
@@ -64,7 +64,7 @@ const requeueStale = async (redis: RedisLike) => {
 
 const handleOne = async (
 	redis: RedisLike,
-	deliveries: WebhookDeliveryService,
+	deliveries: WebhookDeliveryQueueTarget,
 	raw: string,
 ) => {
 	const job = decode(raw);
@@ -111,7 +111,7 @@ const handleOne = async (
 /** Pulls ready jobs and promotes delayed retries. */
 export const drainWebhookQueue = async (
 	redis: RedisLike,
-	deliveries: WebhookDeliveryService,
+	deliveries: WebhookDeliveryQueueTarget,
 	options?: { max?: number; shouldStop?: () => boolean },
 ) => {
 	await promoteDelayed(redis);
@@ -129,7 +129,7 @@ export const drainWebhookQueue = async (
 
 export const startWebhookLoop = (
 	redis: RedisLike,
-	deliveries: WebhookDeliveryService,
+	deliveries: WebhookDeliveryQueueTarget,
 	intervalMs = 500,
 ) => {
 	let stopping = false;

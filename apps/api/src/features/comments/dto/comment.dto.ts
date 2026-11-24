@@ -1,5 +1,5 @@
 import type { Paginated } from "@workspace/shared";
-import type { AttachmentWithUrlDto } from "../../attachments/dto/attachment.dto";
+import type { AttachmentFileSummary } from "../../../core/lib/ports/attachments";
 
 export type CommentAuthorDto = {
 	id: string;
@@ -26,7 +26,7 @@ export type CommentDto = {
 	updatedAt: string;
 	resolvedAt: string | null;
 	resolvedById: string | null;
-	attachments: AttachmentWithUrlDto[];
+	attachments: AttachmentFileSummary[];
 	reactions: CommentReactionSummaryDto[];
 	mentions: CommentAuthorDto[];
 };

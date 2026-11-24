@@ -1,17 +1,18 @@
 import { composeModules } from "./core/compose";
 import type { CacheStore } from "./core/lib/kv/types";
+import type {
+	AiProviderConfigPort,
+	AiRateLimitersPort,
+	McpEnvConfigPort,
+	StorageAdapter,
+	StripeSetupPort,
+	WebhookJobQueuePort,
+} from "./core/lib/ports/platform";
 import type { PlanRateLimiters } from "./core/lib/rate-limit";
 import type { Database } from "./db/types";
-import type { AiProviderConfig } from "./features/ai/provider";
-import type { AiRateLimiters } from "./features/ai/services/ai-usage.service";
-import type { StorageAdapter } from "./features/attachments/lib/types";
-import type { StripeSetup } from "./features/billing/lib/stripe";
-import type { McpEnvConfig } from "./features/mcp/config";
-import type { WebhookJobQueue } from "./features/webhooks/services/webhook-delivery.service";
 import { FEATURE_MODULES } from "./manifest";
 
 export type { PlanRateLimiters, RateLimiter } from "./core/lib/rate-limit";
-export type { FullFeatureContext } from "./feature-context";
 
 /**
  * Thin facade over the module composition (Phase 2b): the service graph is
@@ -37,16 +38,16 @@ export const createDependencies = ({
 	db: Database;
 	storage: StorageAdapter | null;
 	cache: CacheStore;
-	stripeSetup: StripeSetup;
+	stripeSetup: StripeSetupPort;
 	billingMockEnabled: boolean;
-	webhookQueue?: WebhookJobQueue | null;
-	aiConfig?: AiProviderConfig;
-	aiRateLimiters?: AiRateLimiters;
+	webhookQueue?: WebhookJobQueuePort | null;
+	aiConfig?: AiProviderConfigPort;
+	aiRateLimiters?: AiRateLimitersPort;
 	apiRateLimiters?: PlanRateLimiters;
 	appWebUrl?: string;
 	resolvePublicApiUrl?: (requestUrl: string) => string;
 	allowFirstUserAdmin?: boolean;
-	mcpEnv?: McpEnvConfig;
+	mcpEnv?: McpEnvConfigPort;
 }) =>
 	composeModules(
 		{

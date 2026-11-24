@@ -1,26 +1,30 @@
 import type { FeatureContextBase } from "./core/compose";
-import type { AiProviderConfig } from "./features/ai/provider";
-import type { AiRateLimiters } from "./features/ai/services/ai-usage.service";
-import type { StorageAdapter } from "./features/attachments/lib/types";
-import type { StripeSetup } from "./features/billing/lib/stripe";
-import type { McpEnvConfig } from "./features/mcp/config";
-import type { WebhookJobQueue } from "./features/webhooks/services/webhook-delivery.service";
+import type {
+	AiProviderConfigPort,
+	AiRateLimitersPort,
+	McpEnvConfigPort,
+	StorageAdapter,
+	StripeSetupPort,
+	WebhookJobQueuePort,
+} from "./core/lib/ports/platform";
 
 /**
- * Feature registration context with the concrete feature-owned platform
- * types narrowed. Modules whose `register` touches storage, Stripe, the
- * webhook queue, the AI provider or MCP env declare this as their context
- * type.
+ * Feature registration context with the feature-owned platform slots narrowed
+ * to their structural port types. Modules whose `register` touches storage,
+ * Stripe, the webhook queue, the AI provider or MCP env declare this as their
+ * context type; a module with a concrete SDK type (billing's Stripe client)
+ * narrows it locally.
  *
  * Deliberately standalone: this file must not reference `Dependencies` (or
  * anything derived from the module graph), otherwise the module types
- * become circular and collapse to `any`.
+ * become circular and collapse to `any`. It must also not import
+ * `features/**`: trimmed presets still typecheck this composition root.
  */
 export type FullFeatureContext = FeatureContextBase & {
 	storage: StorageAdapter | null;
-	stripeSetup: StripeSetup;
-	webhookQueue?: WebhookJobQueue | null;
-	aiConfig?: AiProviderConfig;
-	aiRateLimiters?: AiRateLimiters;
-	mcpEnv?: McpEnvConfig;
+	stripeSetup: StripeSetupPort;
+	webhookQueue?: WebhookJobQueuePort | null;
+	aiConfig?: AiProviderConfigPort;
+	aiRateLimiters?: AiRateLimitersPort;
+	mcpEnv?: McpEnvConfigPort;
 };

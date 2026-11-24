@@ -1,4 +1,5 @@
 import { KeyRoundIcon } from "lucide-react";
+import { ApiDocsManageKeysLink } from "@/features/api-keys/components/api-docs-manage-keys-link";
 import type { WebFeatureDecl } from "@/features/web-types";
 
 /** API keys: settings page + palette shortcut, `apiKeys` strings. */
@@ -13,6 +14,7 @@ export const apiKeysWeb: WebFeatureDecl = {
 			requiresManage: true,
 		},
 	],
+	apiDocsAction: ApiDocsManageKeysLink,
 	paletteActions: () => [
 		{
 			id: "settings-api-keys",

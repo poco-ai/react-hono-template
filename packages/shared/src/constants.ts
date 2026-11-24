@@ -1,3 +1,5 @@
+import { PLANS } from "./plans";
+
 /**
  * @deprecated Workflow statuses are organization data (`issue_statuses`) now.
  * These names are still accepted by the API as a compatibility layer for
@@ -36,8 +38,10 @@ export const isTerminalStatusCategory = (
 ): category is (typeof TERMINAL_STATUS_CATEGORIES)[number] =>
 	(TERMINAL_STATUS_CATEGORIES as readonly string[]).includes(category);
 
-/** Hex colors used by the default statuses and new-status suggestions. */
-export const STATUS_CATEGORY_COLORS: Record<StatusCategory, string> = {
+/** Hex colors used by the default statuses and new-status suggestions. */ export const STATUS_CATEGORY_COLORS: Record<
+	StatusCategory,
+	string
+> = {
 	backlog: "#64748b",
 	unstarted: "#3b82f6",
 	started: "#f59e0b",
@@ -154,3 +158,33 @@ export const WEBHOOK_EVENTS = [
 ] as const;
 
 export type WebhookEventName = (typeof WEBHOOK_EVENTS)[number];
+
+/**
+ * Entity kinds a personal favorite can point at. Core path-param schemas and
+ * the favorites feature share it, so it stays with the workspace constants.
+ */
+export const FAVORITE_ENTITY_TYPES = ["issue", "project"] as const;
+
+export type FavoriteEntityType = (typeof FAVORITE_ENTITY_TYPES)[number];
+
+/**
+ * Attachment limits and content types shared by the attachments feature, the
+ * comment composer and the shared request schemas. They stay with core so a
+ * preset without attachments can still validate file input.
+ */
+export const ATTACHMENT_MAX_SIZE = PLANS.pro.attachmentMaxSize;
+
+export const attachmentMaxSizeMessage = `File size exceeds the ${
+	ATTACHMENT_MAX_SIZE / (1024 * 1024)
+}MB limit`;
+
+export const ATTACHMENT_CONTENT_TYPES = [
+	"image/png",
+	"image/jpeg",
+	"image/webp",
+	"image/gif",
+	"application/pdf",
+	"text/plain",
+	"text/markdown",
+	"application/zip",
+] as const;

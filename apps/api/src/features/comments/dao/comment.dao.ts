@@ -8,11 +8,9 @@ import {
 import { user } from "../../../db/auth-schema";
 import { runBatch } from "../../../db/run-batch";
 import {
-	attachments,
 	commentMentions,
 	commentReactions,
 	comments,
-	notifications,
 } from "../../../db/schema";
 import type { Database } from "../../../db/types";
 import type { CommentDto, ListCommentsDto } from "../dto/comment.dto";
@@ -201,23 +199,11 @@ export const createCommentDao = (db: Database) => ({
 				.delete(commentMentions)
 				.where(threadComment(commentMentions.commentId)),
 			tx
-				.delete(attachments)
-				.where(
-					and(
-						eq(attachments.orgId, orgId),
-						threadComment(attachments.commentId),
-					),
-				),
-			tx
-				.update(notifications)
-				.set({ commentId: null })
-				.where(threadComment(notifications.commentId)),
-			tx
 				.delete(comments)
 				.where(and(eq(comments.orgId, orgId), threadComment(comments.id)))
 				.returning({ id: comments.id }),
 		]);
-		const deleted = results[4] as { id: string }[];
+		const deleted = results[2] as { id: string }[];
 		return deleted.some((row) => row.id === id);
 	},
 

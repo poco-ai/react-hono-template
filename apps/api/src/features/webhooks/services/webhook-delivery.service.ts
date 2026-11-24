@@ -1,5 +1,10 @@
 import type { BackgroundFn } from "../../../core/lib/background";
 import type { CleanupHandler } from "../../../core/lib/ports/cleanup";
+import {
+	ABANDONED_DELIVERY_AGE_MS,
+	ABANDONED_DELIVERY_ERROR,
+	type WebhookJobQueue,
+} from "../../../core/lib/ports/webhooks";
 import type { WebhookDao } from "../dao/webhook.dao";
 import type { WebhookDeliveryDao } from "../dao/webhook-delivery.dao";
 import type { WebhookDeliveryDto } from "../dto/webhook.dto";
@@ -8,17 +13,15 @@ import {
 	signStandardWebhook,
 } from "../lib/webhook-signature";
 
-const WEBHOOK_TIMEOUT_MS = 5_000;
-// Mirrors the queue consumer's `max_retries + 1` (Cloudflare starts `attempts`
-// at 1 and includes the current delivery). Retries are owned by Queues; the
-// in-process fallback makes a single attempt.
-export const WEBHOOK_MAX_ATTEMPTS = 3;
-/** Matches the Queues `retry_delay` of 5 seconds. */
-export const WEBHOOK_RETRY_DELAY_MS = 5_000;
+export {
+	ABANDONED_DELIVERY_AGE_MS,
+	ABANDONED_DELIVERY_ERROR,
+	WEBHOOK_MAX_ATTEMPTS,
+	WEBHOOK_RETRY_DELAY_MS,
+	type WebhookJobQueue,
+} from "../../../core/lib/ports/webhooks";
 
-/** Pending deliveries that stopped making progress are failed after this long. */
-export const ABANDONED_DELIVERY_AGE_MS = 15 * 60 * 1000;
-export const ABANDONED_DELIVERY_ERROR = "delivery timed out";
+const WEBHOOK_TIMEOUT_MS = 5_000;
 
 /**
  * Periodic cleanup contribution of the webhooks feature: fails abandoned
@@ -34,10 +37,6 @@ export const createWebhookCleanupHandler =
 		);
 		return { failedDeliveries };
 	};
-
-export type WebhookJobQueue = {
-	send(message: { deliveryId: string }): Promise<void>;
-};
 
 export type WebhookTarget = {
 	id: string;

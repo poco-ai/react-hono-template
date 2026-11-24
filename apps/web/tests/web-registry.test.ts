@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -32,6 +32,32 @@ const REPO_ROOT = path.resolve(
 );
 const LOCALES = path.join(REPO_ROOT, "apps/web/src/i18n/locales");
 const PRESET_FEATURES = path.join(REPO_ROOT, "presets/features");
+const WEB_FEATURE_DIRS = path.join(REPO_ROOT, "apps/web/src/features");
+
+test("every feature web declaration is registered in WEB_FEATURES", () => {
+	// Guards the regression where a feature shipped web.ts(x) but was left out
+	// of the registry, silently removing its shell contributions.
+	const declared: string[] = [];
+	for (const entry of readdirSync(WEB_FEATURE_DIRS, {
+		withFileTypes: true,
+	})) {
+		if (!entry.isDirectory()) continue;
+		for (const file of ["web.ts", "web.tsx"]) {
+			const full = path.join(WEB_FEATURE_DIRS, entry.name, file);
+			if (!existsSync(full)) continue;
+			const source = readFileSync(full, "utf8");
+			const id = source.match(/\bid:\s*"([^"]+)"/)?.[1];
+			if (id) declared.push(id);
+		}
+	}
+	const registered = new Set(WEB_FEATURES.map((feature) => feature.id));
+	for (const id of declared) {
+		assert.ok(
+			registered.has(id),
+			`feature "${id}" has web.ts but is not registered`,
+		);
+	}
+});
 
 /** `orgSidebarNav()` as shipped by HEAD (`components/org-sidebar-nav.ts`). */
 const HEAD_SIDEBAR = [

@@ -2,18 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
 import {
+	deleteAvatar,
 	resolveContentType,
 	uploadAttachment,
+	uploadAvatar,
 	uploadCommentAttachment,
+	uploadOrganizationLogo,
 } from "../src/features/attachments/data";
-import { deleteAvatar, uploadAvatar } from "../src/features/auth/data";
 import {
 	createComment,
 	resolveComment,
 	toggleCommentReaction,
 } from "../src/features/comments/data";
 import { projectIssuesQuery } from "../src/features/issues/data";
-import { uploadOrganizationLogo } from "../src/features/organizations/data";
 import { createProject, updateProject } from "../src/features/projects/data";
 import { saveWebhook } from "../src/features/webhooks/data";
 
