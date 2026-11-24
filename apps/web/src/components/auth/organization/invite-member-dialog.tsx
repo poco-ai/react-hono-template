@@ -50,7 +50,6 @@ import { cn } from "cn";
 import { ChevronDown, CircleAlert, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { QuotaError } from "@/components/quota-error";
 import { SecretReveal } from "@/components/secret-reveal";
 import { useInviteMember } from "@/features/members/data";
 import { useOrgWriteLocked } from "@/features/organizations/org-write-lock";
@@ -60,7 +59,6 @@ import {
 	organizationActionMessage,
 } from "@/lib/auth/organization-errors";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
-import { codedError } from "@/lib/errors";
 import {
 	getAuthAdditionalFieldValidators,
 	isAuthFormFieldInvalid,
@@ -487,17 +485,13 @@ export function InviteMemberDialog({
 									{localization.settings.cancel}
 								</DialogClose>
 
-								{submitError &&
-								isOrganizationQuotaError(submitError) &&
-								activeOrganizationId ? (
-									<QuotaError
-										error={codedError(
-											submitError instanceof Error ? submitError.message : "",
-											"PLAN_LIMIT_EXCEEDED",
-										)}
-										orgId={activeOrganizationId}
-										canUpgrade={canInvite.data?.success === true}
-									/>
+								{submitError && isOrganizationQuotaError(submitError) ? (
+									<Alert variant="destructive">
+										<CircleAlert />
+										<AlertDescription>
+											{submitError instanceof Error ? submitError.message : ""}
+										</AlertDescription>
+									</Alert>
 								) : null}
 								{submitError && !isOrganizationQuotaError(submitError) ? (
 									<Alert variant="destructive">

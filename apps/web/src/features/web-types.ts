@@ -156,6 +156,15 @@ export type WebProjectExtras = ComponentType<{
 export type WebPanel = ComponentType;
 
 /**
+ * Hook-owned palette controller: lets the command palette open a feature panel
+ * (the AI chat) without importing the feature module. `useOpen` must follow
+ * the rules of hooks; the registry returns a noop when no feature contributes.
+ */
+export type WebPalettePanel = {
+	useOpen: () => () => void;
+};
+
+/**
  * What a feature contributes to the web shell. `features/<id>/web.ts` exports
  * one of these; `features/registry.ts` aggregates them. Scaffold (Phase 6)
  * rewrites the registry per preset, so trimming a feature also removes every
@@ -179,6 +188,8 @@ export type WebFeatureDecl = {
 	mobileTabs?: () => MobileTabItem[];
 	/** Fullscreen panels mounted at the end of the org layout. */
 	panels?: readonly WebPanel[];
+	/** Opens this feature's panel from the command palette. */
+	palettePanel?: WebPalettePanel;
 	/** Locale namespaces this feature owns (`i18n/locales/<lang>/<ns>.ts`). */
 	i18nNamespaces?: string[];
 };

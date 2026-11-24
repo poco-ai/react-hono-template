@@ -29,7 +29,6 @@ import {
 	type PaletteActionContext,
 } from "@/components/command-palette/actions";
 import { UserAvatar } from "@/components/user-avatar";
-import { useAiChat } from "@/features/ai/chat-provider";
 import { useSession } from "@/features/auth/data";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import {
@@ -39,6 +38,7 @@ import {
 import { issueQuery } from "@/features/issues/data";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { projectsQuery } from "@/features/projects/data";
+import { webPalettePanel } from "@/features/registry";
 import {
 	commentTarget,
 	emptySearchResults,
@@ -79,7 +79,7 @@ export function CommandPalette({
 	const { canManage } = useOrgRole(orgId);
 	const { data: session } = useSession();
 	const userId = session?.user.id;
-	const { setPanelOpen } = useAiChat();
+	const openPanel = webPalettePanel().useOpen();
 	const projects = useQuery({ ...projectsQuery(orgId), enabled: open });
 
 	// cmdk owns the input; mirror the term so it can be debounced into a search
@@ -193,7 +193,9 @@ export function CommandPalette({
 		orgId,
 		currentProjectId,
 		navigate,
-		setPanelOpen,
+		setPanelOpen: (open) => {
+			if (open) openPanel();
+		},
 		canManage,
 		isAdmin,
 	};

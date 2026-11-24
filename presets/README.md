@@ -3,8 +3,9 @@
 `presets/features/*.json` and `presets/presets/*.json` are the declarative
 source of truth for template features and presets (Phase 0 of the refactor in
 `docs/模板化重构方案.md`). `presets/schema.ts` defines the zod contracts;
-`apps/api/tests/architecture.test.ts` (api) and
-`apps/web/tests/architecture.test.ts` (web) enforce them.
+`apps/api/tests/architecture.test.ts` enforces claims coverage, dependency
+boundaries and preset closure; `apps/web/tests/web-registry.test.ts` pins the
+web contributions.
 
 ## Claims ownership conventions
 
@@ -28,6 +29,19 @@ source of truth for template features and presets (Phase 0 of the refactor in
 - Claim globs must match at least one existing file — the architecture test
   fails on stale claims, so a move or deletion must update the manifest in
   the same change.
+- Web claims cover more than the feature folder: each feature also claims its
+  `apps/web/src/routes/**` files, `apps/web/src/pages/**` pages,
+  feature-owned `apps/web/src/components/**` files and its
+  `apps/web/src/i18n/locales/{en,zh}/<namespace>.ts` files. Unclaimed web
+  files are the core shell and survive every preset. (There is no
+  `components/**` catch-all because glob syntax has no exclusions — a broad
+  glob would overlap feature claims.)
+- `presets/features/*.json` also drives the scaffold's regeneration list:
+  `apps/api/src/manifest.ts`, `apps/api/src/routes.ts`,
+  `apps/web/src/features/registry.ts`, the i18n aggregators,
+  `packages/shared/src/index.ts`, the schema aggregators
+  (`db/define-schema.ts`, `db/schema*.ts`, `db/auth-schema.ts`) and
+  `apps/web/src/features/web-types.ts` route unions are rewritten per preset.
 
 ## Special ownerships (files that live in `core/` but serve a feature)
 

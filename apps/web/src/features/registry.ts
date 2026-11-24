@@ -22,6 +22,7 @@ import type {
 	PaletteAction,
 	SettingsNavItem,
 	WebFeatureDecl,
+	WebPalettePanel,
 	WebPanel,
 	WebProjectExtras,
 	WebProvider,
@@ -196,4 +197,17 @@ export function webProjectExtras(): readonly WebProjectExtras[] {
 /** Fullscreen panels mounted at the end of the org layout. */
 export function webPanels(): WebPanel[] {
 	return WEB_FEATURES.flatMap((feature) => feature.panels ?? []);
+}
+
+const NOOP_PALETTE_PANEL: WebPalettePanel = { useOpen: () => () => {} };
+
+/**
+ * The feature (currently only `ai`) that owns a command-palette panel. A
+ * trimmed registry falls back to a noop opener so the palette still compiles.
+ */
+export function webPalettePanel(): WebPalettePanel {
+	return (
+		WEB_FEATURES.find((feature) => feature.palettePanel)?.palettePanel ??
+		NOOP_PALETTE_PANEL
+	);
 }

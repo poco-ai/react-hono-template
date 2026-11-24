@@ -10,7 +10,7 @@ import {
 	TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
 import { useTranslation } from "react-i18next";
-import { ACTIVE_ITEM_CLASS } from "./org-sidebar-link";
+import { ACTIVE_ITEM_CLASS } from "./org-sidebar-item-class";
 
 export function ConversationRow({
 	orgId,

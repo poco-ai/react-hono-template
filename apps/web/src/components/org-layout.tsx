@@ -21,7 +21,7 @@ import {
 	useSidebar,
 } from "@workspace/ui/components/sidebar";
 import { Search, Snowflake } from "lucide-react";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
@@ -149,8 +149,11 @@ function OrgFeatureProviders({
 	orgId: string;
 	children: ReactNode;
 }) {
-	return webProviders().reduceRight<ReactNode>((child, provide) => {
-		const Provider = provide(orgId);
+	const providers = useMemo(
+		() => webProviders().map((provide) => provide(orgId)),
+		[orgId],
+	);
+	return providers.reduceRight<ReactNode>((child, Provider) => {
 		return <Provider key={orgId}>{child}</Provider>;
 	}, children);
 }

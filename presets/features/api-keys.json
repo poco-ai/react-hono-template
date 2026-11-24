@@ -10,6 +10,7 @@
 		"apps/web/src/routes/_auth/orgs/$orgId/settings/api-keys.tsx",
 		"apps/web/src/pages/org-settings/api-keys.tsx",
 		"apps/web/src/i18n/locales/en/apiKeys.ts",
-		"apps/web/src/i18n/locales/zh/apiKeys.ts"
+		"apps/web/src/i18n/locales/zh/apiKeys.ts",
+		"apps/web/src/components/auth/api-key/**"
 	]
 }

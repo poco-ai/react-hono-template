@@ -6,14 +6,14 @@ import {
 } from "@workspace/ui/components/sidebar";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { ACTIVE_ITEM_CLASS } from "./org-sidebar-item-class";
 import {
 	type OrgSidebarNavContext,
 	type OrgSidebarNavTo,
 	orgSidebarNav,
 } from "./org-sidebar-nav";
 
-export const ACTIVE_ITEM_CLASS =
-	"bg-sidebar-accent text-sidebar-accent-foreground font-medium";
+export { ACTIVE_ITEM_CLASS } from "./org-sidebar-item-class";
 
 export function OrgSidebarLink({
 	to,

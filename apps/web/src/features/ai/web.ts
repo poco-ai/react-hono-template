@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { createElement, type ReactNode } from "react";
-import { AiChatProvider } from "@/features/ai/chat-provider";
+import { AiChatProvider, useAiChat } from "@/features/ai/chat-provider";
 import { AiChatPanelMount } from "@/features/ai/components/org-ai-panel";
 import { OrgAiSidebar } from "@/features/ai/components/org-ai-sidebar";
 import { ProjectChatExtras } from "@/features/ai/components/project-conversations";
@@ -49,4 +49,12 @@ export const aiWeb: WebFeatureDecl = {
 	sidebarSections: [OrgAiSidebar],
 	projectExtras: [ProjectChatExtras],
 	panels: [AiChatPanelMount],
+	// The `ask-ai` palette action opens the panel through this hook so the
+	// palette shell never imports the ai feature.
+	palettePanel: {
+		useOpen: () => {
+			const { setPanelOpen } = useAiChat();
+			return () => setPanelOpen(true);
+		},
+	},
 };

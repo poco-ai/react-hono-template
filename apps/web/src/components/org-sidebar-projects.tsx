@@ -12,7 +12,7 @@ import { Folder } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { webProjectExtras } from "@/features/registry";
-import { ACTIVE_ITEM_CLASS } from "./org-sidebar-link";
+import { ACTIVE_ITEM_CLASS } from "./org-sidebar-item-class";
 
 export function OrgSidebarProjects({
 	orgId,

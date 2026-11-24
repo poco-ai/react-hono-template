@@ -4,8 +4,6 @@
 	"features": [
 		"+attachments",
 		"+webhooks",
-		"+notifications",
-		"+search",
 		"+favorites",
 		"+relations",
 		"+project-updates"
