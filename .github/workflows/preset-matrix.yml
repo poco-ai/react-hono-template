@@ -30,9 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         # `full` is the repository itself and is covered by ci.yml.
-        # `collaboration`/`planning`/`saas` extend the same slices as `ai`;
-        # minimal + ai pin the two structural extremes.
-        preset: [minimal, ai]
+        preset: [minimal, collaboration, planning, saas, ai]
     steps:
       - uses: actions/checkout@v4
 
