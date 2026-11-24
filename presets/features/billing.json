@@ -16,5 +16,6 @@
 		"packages/shared/src/plans.ts",
 		"packages/shared/src/quota.ts",
 		"packages/shared/src/schemas/billing.ts"
-	]
+	],
+	"softDependsOn": ["attachments"]
 }

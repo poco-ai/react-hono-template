@@ -1,16 +1,12 @@
 import {
-	adjustCreditsSchema,
 	adminAuditListQuerySchema,
 	adminOrgListQuerySchema,
 	adminUserListQuerySchema,
 	banAdminUserSchema,
 	runtimeConfigUpdateSchema,
 	updateAdminUserRoleSchema,
-	updateQuotaPolicySchema,
 } from "@workspace/shared";
 import { Hono } from "hono";
-import { createQuotaController } from "../../features/billing/controllers/quota.controller";
-import type { QuotaService } from "../../features/billing/services/quota.service";
 import { createAdminOrgController } from "../controllers/admin-org.controller";
 import { createAdminController } from "../controllers/admin-user.controller";
 import { createAuditController } from "../controllers/audit.controller";
@@ -24,24 +20,27 @@ import type { AdminUserService } from "../services/admin-user.service";
 import type { AuditService } from "../services/audit.service";
 import type { ConfigService } from "../services/config.service";
 
+/**
+ * Platform administration: users, organizations, runtime config and audit.
+ * The admin quota endpoints live with the billing feature
+ * (features/billing/routes/admin-quota.ts) and mount in the same `admin`
+ * phase right after this router.
+ */
 export const createAdminRoutes = ({
 	users,
 	orgs,
 	config,
 	audit,
-	quota,
 }: {
 	users: AdminUserService;
 	orgs: AdminOrgService;
 	config: ConfigService;
 	audit: AuditService;
-	quota: QuotaService;
 }) => {
 	const adminController = createAdminController(users);
 	const adminOrgController = createAdminOrgController(orgs);
 	const configController = createConfigController(config);
 	const auditController = createAuditController(audit);
-	const quotaController = createQuotaController(quota);
 	return new Hono<SessionEnv>()
 		.get(
 			"/api/admin/users",
@@ -111,25 +110,5 @@ export const createAdminRoutes = ({
 			requirePermission({ org: ["list"] }),
 			validate(adminAuditListQuerySchema, "query"),
 			(c) => auditController.exportForAdmin(c, c.req.valid("query")),
-		)
-		.get(
-			"/api/admin/orgs/:orgId/quota",
-			requirePermission({ org: ["quota"] }),
-			validate(adminOrgParams, "param"),
-			(c) => quotaController.overview(c),
-		)
-		.post(
-			"/api/admin/orgs/:orgId/credits",
-			requirePermission({ org: ["quota"] }),
-			validate(adminOrgParams, "param"),
-			validate(adjustCreditsSchema, "json"),
-			(c) => quotaController.adjustCredits(c, c.req.valid("json")),
-		)
-		.put(
-			"/api/admin/orgs/:orgId/quota",
-			requirePermission({ org: ["quota"] }),
-			validate(adminOrgParams, "param"),
-			validate(updateQuotaPolicySchema, "json"),
-			(c) => quotaController.setPolicy(c, c.req.valid("json")),
 		);
 };

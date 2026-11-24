@@ -52,3 +52,23 @@ export type PlanLimitsSource = {
 export type PlanSource = {
 	load: (orgId: string) => Promise<PlanName>;
 };
+
+/**
+ * Mutable holder around a PlanSource. Core builds `plan.service` before any
+ * feature registers (auth-policy and most services inject it), but the
+ * DB-backed source only exists once the billing feature contributes it. The
+ * holder exposes one stable PlanSource that forwards every read to the
+ * current implementation, so swapping the source after assembly is invisible
+ * to consumers.
+ */
+export const createPlanSourceHolder = (initial: PlanSource) => {
+	let current = initial;
+	return {
+		source: {
+			load: (orgId: string) => current.load(orgId),
+		} satisfies PlanSource,
+		set: (next: PlanSource) => {
+			current = next;
+		},
+	};
+};

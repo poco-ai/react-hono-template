@@ -18,6 +18,7 @@ import {
 	seedStatus,
 	seedUser,
 } from "./helpers/fixtures";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -463,7 +464,14 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return { app: createRoutes({ auth, dependencies }), calls };
+	return {
+		app: createRoutes({
+			auth,
+			dependencies,
+			freezeWriteExempt: fullFreezeWriteExempt,
+		}),
+		calls,
+	};
 };
 
 test("archive/restore routes are org-scoped and blocked when frozen", async () => {

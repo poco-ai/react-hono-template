@@ -10,7 +10,7 @@ import { createAuthPolicyService } from "../src/core/services/auth-policy.servic
 import {
 	type QuotaAssert,
 	quotaAssertFor,
-} from "../src/features/billing/services/plan.service";
+} from "../src/core/services/plan.service";
 
 const policyFor = ({
 	orgPlans = [] as string[],

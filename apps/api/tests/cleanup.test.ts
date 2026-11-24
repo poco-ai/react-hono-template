@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MemberDao } from "../src/core/dao/member.dao";
+import { createCleanupScheduledJob } from "../src/core/jobs/cleanup-job";
 import type { BackgroundFn } from "../src/core/lib/background";
 import { createCleanupService } from "../src/core/services/cleanup.service";
 import type { MediaAssetDao } from "../src/features/attachments/dao/media-asset.dao";
@@ -13,6 +14,7 @@ import {
 	READ_NOTIFICATION_TTL_MS,
 	UNREAD_NOTIFICATION_TTL_MS,
 } from "../src/features/notifications/services/notification.service";
+import { createRecurrenceScheduledJob } from "../src/features/recurrences/module";
 import type { WebhookDeliveryDao } from "../src/features/webhooks/dao/webhook-delivery.dao";
 import {
 	ABANDONED_DELIVERY_AGE_MS,
@@ -177,8 +179,8 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 		errors.push(args);
 	};
 	try {
-		await handleScheduled(
-			{
+		await handleScheduled([
+			createCleanupScheduledJob({
 				cleanup: async () => ({
 					expiredInvitations: 2,
 					failedDeliveries: 1,
@@ -187,9 +189,9 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 					expiredPendingUploads: 4,
 					supersededMedia: 5,
 				}),
-			},
-			recurrencesStub,
-		);
+			}),
+			createRecurrenceScheduledJob(recurrencesStub),
+		]);
 		assert.ok(
 			logs.some(
 				(args) =>
@@ -197,14 +199,14 @@ test("scheduled handler logs cleanup counts and swallows failures", async () => 
 					"[cron] cleanup expiredInvitations=2 failedDeliveries=1 deletedConversations=3 deletedNotifications=6 expiredPendingUploads=4 supersededMedia=5",
 			),
 		);
-		await handleScheduled(
-			{
+		await handleScheduled([
+			createCleanupScheduledJob({
 				cleanup: async () => {
 					throw new Error("db down");
 				},
-			},
-			recurrencesStub,
-		);
+			}),
+			createRecurrenceScheduledJob(recurrencesStub),
+		]);
 		const failure = errors.find((args) => args[0] === "[cron] cleanup failed:");
 		assert.ok(failure);
 		assert.equal((failure[1] as Error).message, "db down");
@@ -218,22 +220,24 @@ test("scheduled handler forwards the background runner to recurrences", async ()
 	const background: BackgroundFn = () => {};
 	let received: BackgroundFn | undefined;
 	await handleScheduled(
-		{
-			cleanup: async () => ({
-				expiredInvitations: 0,
-				failedDeliveries: 0,
-				deletedConversations: 0,
-				deletedNotifications: 0,
-				expiredPendingUploads: 0,
-				supersededMedia: 0,
+		[
+			createCleanupScheduledJob({
+				cleanup: async () => ({
+					expiredInvitations: 0,
+					failedDeliveries: 0,
+					deletedConversations: 0,
+					deletedNotifications: 0,
+					expiredPendingUploads: 0,
+					supersededMedia: 0,
+				}),
 			}),
-		},
-		{
-			processDue: async (_at?: Date, runner?: BackgroundFn) => {
-				received = runner;
-				return { created: 0, skipped: 0, failed: 0 };
-			},
-		},
+			createRecurrenceScheduledJob({
+				processDue: async (_at?: Date, runner?: BackgroundFn) => {
+					received = runner;
+					return { created: 0, skipped: 0, failed: 0 };
+				},
+			}),
+		],
 		background,
 	);
 	assert.equal(received, background);

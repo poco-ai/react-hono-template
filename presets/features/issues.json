@@ -8,5 +8,6 @@
 		"apps/web/src/features/triage/**",
 		"packages/shared/src/schemas/issue-query.ts",
 		"packages/shared/src/schemas/issue.ts"
-	]
+	],
+	"softDependsOn": ["webhooks", "notifications", "cycles"]
 }

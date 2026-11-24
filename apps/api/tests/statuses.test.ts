@@ -19,6 +19,7 @@ import type { StatusDto } from "../src/features/statuses/dto/status.dto";
 import { createStatusService } from "../src/features/statuses/services/status.service";
 import { createRoutes } from "../src/routes";
 import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 const NOW = "2026-01-01T00:00:00.000Z";
@@ -537,7 +538,14 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return { app: createRoutes({ auth, dependencies }), calls };
+	return {
+		app: createRoutes({
+			auth,
+			dependencies,
+			freezeWriteExempt: fullFreezeWriteExempt,
+		}),
+		calls,
+	};
 };
 
 const expectError = async (

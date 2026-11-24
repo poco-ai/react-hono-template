@@ -10,8 +10,8 @@ import {
 	updateProjectUpdateSchema,
 } from "@workspace/shared";
 import type { Auth } from "../src/core/lib/auth";
+import type { PlanService } from "../src/core/services/plan.service";
 import type { Dependencies } from "../src/dependencies";
-import type { PlanService } from "../src/features/billing/services/plan.service";
 import type { ProjectUpdateDao } from "../src/features/project-updates/dao/project-update.dao";
 import { createProjectUpdateDao } from "../src/features/project-updates/dao/project-update.dao";
 import type { ProjectUpdateDto } from "../src/features/project-updates/dto/project-update.dto";
@@ -21,6 +21,7 @@ import type { ProjectDto } from "../src/features/projects/dto/project.dto";
 import { createProjectService } from "../src/features/projects/services/project.service";
 import { createRoutes } from "../src/routes";
 import { seedProject } from "./helpers/fixtures";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 const ORG = "org";
@@ -408,7 +409,11 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return createRoutes({ auth, dependencies });
+	return createRoutes({
+		auth,
+		dependencies,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 };
 
 test("project update routes are org-scoped and respect the freeze guard", async () => {

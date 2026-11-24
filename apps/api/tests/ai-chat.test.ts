@@ -4,6 +4,7 @@ import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { isToolUIPart, type UIMessage } from "ai";
 import { convertArrayToReadableStream, MockLanguageModelV3 } from "ai/test";
 import { z } from "zod";
+import type { PlanService } from "../src/core/services/plan.service";
 import type { AiMessageDao } from "../src/features/ai/dao/ai-message.dao";
 import type {
 	AiToolCallDao,
@@ -15,7 +16,6 @@ import { createAiChatService } from "../src/features/ai/services/ai-chat.service
 import type { AiConversationService } from "../src/features/ai/services/ai-conversation.service";
 import { createAiUsageService } from "../src/features/ai/services/ai-usage.service";
 import type { OrgAiSettingsService } from "../src/features/ai/services/org-ai-settings.service";
-import type { PlanService } from "../src/features/billing/services/plan.service";
 import {
 	type CapabilityExecutor,
 	createCapabilityExecutor,

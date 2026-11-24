@@ -5,7 +5,7 @@ import {
 	ISSUE_QUERY_LAYOUTS,
 	type UpdateViewInput,
 } from "@workspace/shared";
-import type { PlanService } from "../../billing/services/plan.service";
+import type { PlanService } from "../../../core/services/plan.service";
 import type { ProjectDao } from "../../projects/dao/project.dao";
 import type { ViewDao } from "../dao/view.dao";
 import type { ViewDto } from "../dto/view.dto";

@@ -32,6 +32,7 @@ import {
 	seedProject,
 	seedStatus,
 } from "./helpers/fixtures";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -838,7 +839,11 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return createRoutes({ auth, dependencies });
+	return createRoutes({
+		auth,
+		dependencies,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 };
 
 test("cycle routes are org-scoped and respect the freeze guard", async () => {

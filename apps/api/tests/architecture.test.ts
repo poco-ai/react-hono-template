@@ -48,7 +48,9 @@ const EXEMPT_FILES = new Set([
 	"apps/api/src/app.ts",
 	"apps/api/src/dependencies.ts",
 	"apps/api/src/env.d.ts",
+	"apps/api/src/feature-context.ts",
 	"apps/api/src/index.ts",
+	"apps/api/src/manifest.ts",
 	"apps/api/src/queue.ts",
 	"apps/api/src/routes.ts",
 	"apps/api/src/scheduled.ts",
@@ -298,9 +300,6 @@ function resolveImport(fromRelPath: string, specifier: string): string | null {
  * occur also fail (they must be removed when fixed).
  */
 const KNOWN_VIOLATIONS: Array<[string, string]> = [
-	// ---- Tier 3/4 surfaces reaching across without a declared edge ----
-	["apps/api/src/core/routes/admin.ts", "billing"], // Phase 2b: module composition
-	["apps/api/src/features/mcp/audit.ts", "ai"], // Phase 2b: route through a port
 	// ---- core infrastructure aware of optional features ----
 	["apps/api/src/core/lib/redis/rate-limit.ts", "ai"], // Phase 4: rate-limiter binding templating
 	["apps/api/src/core/lib/redis/webhook-queue.ts", "webhooks"], // Phase 4: queue binding templating
@@ -317,14 +316,9 @@ const KNOWN_VIOLATIONS: Array<[string, string]> = [
 	// ---- web cross-feature data references (docs §9.4) ----
 	["apps/web/src/features/activities/components/issue-activity.tsx", "labels"], // Phase 5: label dto in activity history
 	["apps/web/src/features/cycles/data.ts", "issues"], // Phase 5
-	["apps/web/src/features/issues/components/create-issue-dialog.tsx", "cycles"], // Phase 5
 	[
 		"apps/web/src/features/issues/components/create-issue-dialog.tsx",
 		"templates",
-	], // Phase 5
-	[
-		"apps/web/src/features/issues/components/issue-properties-panel.tsx",
-		"cycles",
 	], // Phase 5
 	[
 		"apps/web/src/features/issues/components/relations-section.tsx",
@@ -528,5 +522,43 @@ test("imports stay within the declared feature boundaries", () => {
 		stale,
 		[],
 		`KNOWN_VIOLATIONS entries whose violation no longer exists (remove them):\n${stale.join("\n")}`,
+	);
+});
+
+/**
+ * Phase 2b: `core/**` must not import `features/**` — the combiner
+ * (`core/compose.ts`) receives feature modules as data, so core stays
+ * reusable under a trimmed manifest. The only remaining reach-ins are the
+ * Phase 4 infrastructure entries above (platform env folding and Redis
+ * queue/rate-limiter bindings), tracked until their templating phase.
+ */
+const CORE_FEATURE_IMPORT_ALLOWLIST = new Set(
+	KNOWN_VIOLATIONS.filter(([file]) =>
+		file.startsWith("apps/api/src/core/"),
+	).map(([file, feature]) => `${file} -> ${feature}`),
+);
+
+test("core never imports features (composition flows through the manifest)", () => {
+	const offenders: string[] = [];
+	const coreFiles = walk(path.join(REPO_ROOT, "apps/api/src/core"));
+	assert.ok(coreFiles.length > 0, "core sources discovered");
+	for (const relPath of coreFiles) {
+		const source = readFileSync(path.join(REPO_ROOT, relPath), "utf8");
+		for (const specifier of extractImportSpecifiers(source)) {
+			if (!specifier.includes("features/")) continue;
+			const target = resolveImport(relPath, specifier);
+			if (!target?.startsWith("apps/api/src/features/")) continue;
+			const owner = ownerOf.get(target);
+			if (!owner) continue;
+			const entry = `${relPath} -> ${owner}`;
+			if (!CORE_FEATURE_IMPORT_ALLOWLIST.has(entry)) {
+				offenders.push(entry);
+			}
+		}
+	}
+	assert.deepEqual(
+		offenders,
+		[],
+		`core files importing features directly (route through the manifest/ports instead):\n${offenders.join("\n")}`,
 	);
 });

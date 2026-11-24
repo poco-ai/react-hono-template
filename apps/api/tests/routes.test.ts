@@ -10,6 +10,7 @@ import type { Auth } from "../src/core/lib/auth";
 import type { SocialProvidersConfig } from "../src/core/lib/social-providers";
 import type { Dependencies } from "../src/dependencies";
 import { createRoutes } from "../src/routes";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 
 // Only methods exercised by these requests are stubbed. Unexpected service calls
 // fail instead of silently hiding missing middleware or validation.
@@ -84,7 +85,12 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return createRoutes({ auth, dependencies, social });
+	return createRoutes({
+		auth,
+		dependencies,
+		social,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 };
 
 const expectError = async (

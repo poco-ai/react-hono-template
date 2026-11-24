@@ -19,6 +19,7 @@ import { createIssueTemplateDao } from "../src/features/templates/dao/issue-temp
 import { createIssueTemplateService } from "../src/features/templates/services/issue-template.service";
 import { createRoutes } from "../src/routes";
 import { seedProject, seedStatus } from "./helpers/fixtures";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -364,7 +365,11 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return createRoutes({ auth, dependencies });
+	return createRoutes({
+		auth,
+		dependencies,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 };
 
 test("template GET is member-readable and scoped to the organization", async () => {

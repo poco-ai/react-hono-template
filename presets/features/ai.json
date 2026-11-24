@@ -1,7 +1,24 @@
 {
 	"id": "ai",
 	"tier": 4,
-	"dependsOn": ["core", "capabilities", "issues", "projects"],
+	"dependsOn": [
+		"core",
+		"capabilities",
+		"issues",
+		"projects",
+		"comments",
+		"labels",
+		"statuses",
+		"activities",
+		"relations",
+		"views",
+		"cycles",
+		"project-updates",
+		"search",
+		"favorites",
+		"templates",
+		"recurrences"
+	],
 	"softDependsOn": ["billing"],
 	"env": {
 		"optional": [

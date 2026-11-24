@@ -1,16 +1,16 @@
 import { env } from "cloudflare:workers";
 import { createApp } from "./app";
 import { platformFromBindings } from "./core/platform/cloudflare";
-import { handleWebhookQueue } from "./queue";
+import { dispatchQueueConsumers } from "./queue";
 
-const { app, dependencies, runScheduled } = createApp(
+const { app, queueConsumers, runScheduled } = createApp(
 	platformFromBindings(env),
 );
 
 export default {
 	fetch: app.fetch,
 	queue: (batch: MessageBatch<{ deliveryId: string }>) =>
-		handleWebhookQueue(batch, dependencies.services.webhookDeliveryService),
+		dispatchQueueConsumers(queueConsumers, batch),
 	scheduled: (
 		_controller: ScheduledController,
 		_env: Env,

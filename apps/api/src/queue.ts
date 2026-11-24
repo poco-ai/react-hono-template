@@ -1,3 +1,4 @@
+import type { QueueConsumer } from "./core/compose";
 import type { WebhookDeliveryService } from "./features/webhooks/services/webhook-delivery.service";
 
 export type WebhookQueueMessage = {
@@ -31,5 +32,19 @@ export const handleWebhookQueue = async (
 			console.error("[webhook] queue delivery failed:", err);
 			message.retry();
 		}
+	}
+};
+
+/**
+ * Worker entry dispatch: runs every contributed queue consumer against the
+ * incoming batch. The webhooks module contributes the WEBHOOK_QUEUE
+ * consumer (its handler closes over the delivery service).
+ */
+export const dispatchQueueConsumers = async (
+	consumers: readonly QueueConsumer[],
+	batch: unknown,
+) => {
+	for (const consumer of consumers) {
+		await consumer.handle(batch as never);
 	}
 };

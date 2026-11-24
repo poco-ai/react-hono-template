@@ -7,7 +7,7 @@ import {
 	PLANS,
 	type PlanLimits,
 } from "@workspace/shared";
-import type { PlanService } from "../src/features/billing/services/plan.service";
+import type { PlanService } from "../src/core/services/plan.service";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,

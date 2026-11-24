@@ -22,6 +22,7 @@ import {
 	seedStatus,
 	seedUser,
 } from "./helpers/fixtures";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -391,7 +392,11 @@ const appFor = ({
 			},
 		},
 	} as unknown as Dependencies;
-	return createRoutes({ auth, dependencies });
+	return createRoutes({
+		auth,
+		dependencies,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 };
 
 test("favorite routes are org-scoped and frozen organizations cannot write", async () => {

@@ -19,6 +19,7 @@ import {
 	createMeMediaRoutes,
 	createOrgLogoRoutes,
 } from "./features/attachments/routes/media";
+import { createAdminQuotaRoutes } from "./features/billing/routes/admin-quota";
 import { createBillingRoutes } from "./features/billing/routes/billing";
 import { createCommentsRoutes } from "./features/comments/routes/comments";
 import { createCyclesRoutes } from "./features/cycles/routes/cycles";
@@ -40,16 +41,36 @@ import { createIssueTemplatesRoutes } from "./features/templates/routes/issue-te
 import { createViewsRoutes } from "./features/views/routes/views";
 import { createWebhooksRoutes } from "./features/webhooks/routes/webhooks";
 
+/**
+ * Route assembly (Phase 2b). This file stays a static Hono chain on purpose:
+ * Hono's client type (`hc<AppType>`) only infers the full route schema from a
+ * literal chain, so a runtime fold over the module list cannot preserve the
+ * typed contract the web app consumes.
+ *
+ * The feature modules still declare `routes` contributions (see
+ * `core/compose.ts`); those are the scaffold's route metadata and are
+ * regenerated into this chain per preset. `tests/route-contributions.test.ts`
+ * pins the two views together so they cannot drift.
+ *
+ * Mount order guarantees:
+ * - `/api/me/*` and `/api/admin/*` gates precede their phase's routes;
+ * - the org wildcard gate precedes every `/api/orgs/:orgId/*` route,
+ *   including MCP, so resource routes are session-authenticated and
+ *   member-checked;
+ * - frozen organizations keep the write paths the features exempt.
+ */
 export const createRoutes = ({
 	auth,
 	dependencies,
 	social,
 	mcp = resolveMcpConfig(),
+	freezeWriteExempt = [],
 }: {
 	auth: Auth;
 	dependencies: Dependencies;
 	social?: SocialProvidersConfig;
 	mcp?: McpConfig;
+	freezeWriteExempt?: string[];
 }) => {
 	return (
 		new Hono()
@@ -68,20 +89,23 @@ export const createRoutes = ({
 					orgs: dependencies.services.adminOrgService,
 					config: dependencies.services.configService,
 					audit: dependencies.services.auditService,
+				}),
+			)
+			// Admin quota endpoints live with the billing feature; they share
+			// the same auth gate mounted above.
+			.route(
+				"/",
+				createAdminQuotaRoutes({
 					quota: dependencies.services.quotaService,
 				}),
 			)
 			// The authenticated org wildcard prefix is mounted before the resource
 			// routes: any new resource path must live under /api/orgs/:orgId.
-			// Frozen organizations keep two write paths: /billing (to manage or
-			// restore the subscription) and /ai/chat (read-only by default — the
-			// capability executor blocks every write tool while frozen).
+			// Frozen organizations keep the write paths the features exempt.
 			.use(
 				"/api/orgs/:orgId/*",
 				requireAuth(auth),
-				requireOrgMember(dependencies.daos.memberDao, {
-					freezeWriteExempt: ["/billing", "/ai/chat"],
-				}),
+				requireOrgMember(dependencies.daos.memberDao, { freezeWriteExempt }),
 			)
 			// Mounted after the org middleware so /api/orgs/:orgId/mcp/* is
 			// session-authenticated; a route registered before `use` bypasses it.

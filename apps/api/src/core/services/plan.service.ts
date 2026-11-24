@@ -5,14 +5,14 @@ import {
 	type PlanLimits,
 	type PlanName,
 } from "@workspace/shared";
-import { createResourceCache } from "../../../core/lib/kv/resource-cache";
-import type { CacheStore } from "../../../core/lib/kv/types";
+import { createResourceCache } from "../lib/kv/resource-cache";
+import type { CacheStore } from "../lib/kv/types";
 import type {
 	PlanAssert,
 	PlanQuotaKind,
 	PlanQuotaOptions,
 	PlanSource,
-} from "../../../core/lib/ports/plan";
+} from "../lib/ports/plan";
 
 const PLAN_CACHE_TTL_MS = 60_000;
 // Billing changes invalidate explicitly; the long TTL is only a fallback that

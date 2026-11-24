@@ -2,6 +2,7 @@ import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import type Stripe from "stripe";
 import type { MemberDao } from "../../../core/dao/member.dao";
 import type { AuditService } from "../../../core/services/audit.service";
+import type { PlanService } from "../../../core/services/plan.service";
 import type { ProjectDao } from "../../projects/dao/project.dao";
 import type { WebhookDao } from "../../webhooks/dao/webhook.dao";
 import type { BillingDao } from "../dao/billing.dao";
@@ -16,7 +17,6 @@ import {
 	type StripeSetup,
 	stripeUnavailableMessage,
 } from "../lib/stripe";
-import type { PlanService } from "./plan.service";
 import type { QuotaService } from "./quota.service";
 import type { StorageUsageService } from "./storage-usage.service";
 

@@ -2,17 +2,15 @@ import { ApiErrorCode } from "@workspace/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { composeModules } from "./core/compose";
 import { createAuth } from "./core/lib/auth";
 import type { BackgroundFn } from "./core/lib/background";
 import { createErrorHandler } from "./core/lib/on-error";
 import { runWithRequestMeta } from "./core/lib/request-context";
 import { fail } from "./core/lib/response";
 import type { AppPlatform } from "./core/platform/types";
-import { createDependencies } from "./dependencies";
 import { createStripeController } from "./features/billing/controllers/stripe.controller";
-import { resolveMcpConfig } from "./features/mcp/config";
-import { createMcpEndpoint } from "./features/mcp/routes";
-import { createV1App } from "./features/public-api/index";
+import { FEATURE_MODULES } from "./manifest";
 import { createRoutes } from "./routes";
 import { handleScheduled } from "./scheduled";
 
@@ -25,21 +23,9 @@ const csvExposeHeaders = [
 
 export const createApp = (platform: AppPlatform) => {
 	const app = new Hono();
-	const dependencies = createDependencies({
-		db: platform.db,
-		storage: platform.storage,
-		cache: platform.cache,
-		stripeSetup: platform.stripeSetup,
-		billingMockEnabled: platform.billingMockEnabled,
-		webhookQueue: platform.webhookQueue,
-		aiConfig: platform.aiConfig,
-		aiRateLimiters: platform.aiRateLimiters,
-		apiRateLimiters: platform.apiRateLimiters,
-		appWebUrl: platform.appWebUrl,
-		resolvePublicApiUrl: platform.resolvePublicApiUrl,
-		allowFirstUserAdmin: platform.allowFirstUserAdmin,
-	});
-	const mcpConfig = resolveMcpConfig(platform.mcpEnv);
+	const composed = composeModules(platform, FEATURE_MODULES);
+	const { dependencies } = composed;
+	const mcpConfig = composed.mcpConfig;
 
 	const buildAuth = () =>
 		createAuth({
@@ -60,8 +46,10 @@ export const createApp = (platform: AppPlatform) => {
 				dcrEnabled: mcpConfig.dcrEnabled,
 				scopes: mcpConfig.oauthScopes,
 			},
+			// Organization-created hooks fold the feature contributions
+			// (statuses seeds the default issue statuses).
 			onOrganizationCreated: (orgId) =>
-				dependencies.services.statusService.ensureDefaultStatuses(orgId),
+				runOrgCreatedHooks(composed.onOrgCreated, orgId),
 			onMemberAudit: (event) =>
 				dependencies.services.auditService.record({
 					orgId: event.orgId,
@@ -158,16 +146,20 @@ export const createApp = (platform: AppPlatform) => {
 			auth,
 			dependencies,
 			social: platform.social,
-			mcp: mcpConfig,
+			freezeWriteExempt: composed.freezeWriteExempt,
 		}),
 	);
-	app.route("/api/v1", createV1App(dependencies));
+	if (composed.v1App) {
+		app.route("/api/v1", composed.v1App);
+	}
 	app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 	// MCP clients follow the resource_metadata challenge to the origin root for
 	// protected-resource metadata, and read authorization-server metadata from
 	// the same place. The better-auth router dispatches these by full pathname.
 	app.on(["GET", "HEAD"], "/.well-known/*", (c) => auth.handler(c.req.raw));
-	app.all("/mcp", createMcpEndpoint({ auth, dependencies, config: mcpConfig }));
+	if (composed.mcpEndpoint) {
+		app.all("/mcp", composed.mcpEndpoint(auth));
+	}
 
 	const stripeController = createStripeController({
 		service: dependencies.services.billingService,
@@ -178,11 +170,22 @@ export const createApp = (platform: AppPlatform) => {
 	app.get("/", (c) => c.text("Hello Hono!"));
 
 	const runScheduled = (background?: BackgroundFn) =>
-		handleScheduled(
-			dependencies.services.cleanupService,
-			dependencies.services.recurrenceService,
-			background,
-		);
+		handleScheduled(composed.scheduledJobs, background);
 
-	return { app, dependencies, getAuth, runScheduled };
+	return {
+		app,
+		dependencies,
+		getAuth,
+		runScheduled,
+		queueConsumers: composed.queueConsumers,
+	};
+};
+
+const runOrgCreatedHooks = async (
+	hooks: readonly ((orgId: string) => Promise<void>)[],
+	orgId: string,
+) => {
+	for (const hook of hooks) {
+		await hook(orgId);
+	}
 };

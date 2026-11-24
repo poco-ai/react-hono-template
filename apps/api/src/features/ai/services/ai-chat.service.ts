@@ -11,7 +11,7 @@ import type { OrganizationDao } from "../../../core/dao/organization.dao";
 import type { BackgroundFn } from "../../../core/lib/background";
 import { sha256Hex } from "../../../core/lib/crypto";
 import type { AiQuotaGuard } from "../../../core/lib/ports/quota";
-import type { PlanService } from "../../billing/services/plan.service";
+import type { PlanService } from "../../../core/services/plan.service";
 import type { CapabilityExecutor } from "../../capabilities/executor";
 import type { CapabilityContext } from "../../capabilities/types";
 import { dropUnverifiedToolParts, verifyApprovalResponses } from "../approvals";

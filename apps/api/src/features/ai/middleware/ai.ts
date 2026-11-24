@@ -2,7 +2,7 @@ import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import { createMiddleware } from "hono/factory";
 import type { SessionEnv } from "../../../core/middleware/auth";
 import type { OrgEnv } from "../../../core/middleware/org";
-import type { PlanService } from "../../billing/services/plan.service";
+import type { PlanService } from "../../../core/services/plan.service";
 import type { AiProviderInfo } from "../provider";
 import type { AiUsageService } from "../services/ai-usage.service";
 import type { OrgAiSettingsService } from "../services/org-ai-settings.service";

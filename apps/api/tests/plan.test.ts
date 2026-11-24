@@ -6,11 +6,11 @@ import type {
 	CacheStore,
 } from "../src/core/lib/kv/types";
 import type { PlanSource } from "../src/core/lib/ports/plan";
-import type { BillingDao } from "../src/features/billing/dao/billing.dao";
 import {
 	createPlanService,
 	planCacheKey,
-} from "../src/features/billing/services/plan.service";
+} from "../src/core/services/plan.service";
+import type { BillingDao } from "../src/features/billing/dao/billing.dao";
 
 const createFakeCache = ({
 	initial = {} as Record<string, unknown>,

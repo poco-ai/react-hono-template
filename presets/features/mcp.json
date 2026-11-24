@@ -1,7 +1,7 @@
 {
 	"id": "mcp",
 	"tier": 4,
-	"dependsOn": ["core", "capabilities"],
+	"dependsOn": ["core", "capabilities", "ai"],
 	"softDependsOn": ["api-keys"],
 	"env": {
 		"optional": [

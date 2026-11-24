@@ -18,6 +18,7 @@ import { createSearchDao } from "../src/features/search/dao/search.dao";
 import { buildSearchTerms } from "../src/features/search/lib/search";
 import { createSearchService } from "../src/features/search/services/search.service";
 import { createRoutes } from "../src/routes";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 import { createTestDb } from "./helpers/test-db";
 
 /**
@@ -595,7 +596,11 @@ test("search route requires membership, allows frozen reads and validates input"
 				},
 			},
 		} as unknown as Dependencies;
-		return createRoutes({ auth, dependencies });
+		return createRoutes({
+			auth,
+			dependencies,
+			freezeWriteExempt: fullFreezeWriteExempt,
+		});
 	};
 
 	const expectError = async (

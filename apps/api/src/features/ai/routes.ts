@@ -11,7 +11,7 @@ import { validate } from "../../core/lib/validation";
 import type { SessionEnv } from "../../core/middleware/auth";
 import type { OrgEnv } from "../../core/middleware/org";
 import { requireOrgRole } from "../../core/middleware/org";
-import type { PlanService } from "../billing/services/plan.service";
+import type { PlanService } from "../../core/services/plan.service";
 import { createAiController } from "./controllers/ai.controller";
 import {
 	aiChatRateLimit,

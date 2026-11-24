@@ -22,6 +22,7 @@ import { createRelationService } from "../src/features/relations/services/relati
 import type { StatusDto } from "../src/features/statuses/dto/status.dto";
 import type { StatusService } from "../src/features/statuses/services/status.service";
 import { createRoutes } from "../src/routes";
+import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 
@@ -706,7 +707,11 @@ test("non-members get a 404 before relation handlers run", async () => {
 		},
 		services: {},
 	} as unknown as Dependencies;
-	const app = createRoutes({ auth, dependencies });
+	const app = createRoutes({
+		auth,
+		dependencies,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 
 	const response = await app.request(
 		"/api/orgs/org/projects/project-1/issues/1/relations",
@@ -747,7 +752,11 @@ test("relation routes validate input and delegate to the service", async () => {
 			},
 		},
 	} as unknown as Dependencies;
-	const app = createRoutes({ auth, dependencies });
+	const app = createRoutes({
+		auth,
+		dependencies,
+		freezeWriteExempt: fullFreezeWriteExempt,
+	});
 	const base = "/api/orgs/org/projects/project-1/issues/1/relations";
 
 	const created = await app.request(base, {

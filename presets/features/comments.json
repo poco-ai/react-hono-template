@@ -2,7 +2,7 @@
 	"id": "comments",
 	"tier": 1,
 	"dependsOn": ["core", "issues", "projects"],
-	"softDependsOn": ["attachments", "notifications", "billing"],
+	"softDependsOn": ["attachments", "notifications", "billing", "webhooks"],
 	"claims": [
 		"apps/api/src/features/comments/**",
 		"apps/web/src/features/comments/**",

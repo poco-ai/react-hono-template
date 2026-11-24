@@ -6,7 +6,7 @@ import type { CacheStore } from "../src/core/lib/kv/types";
 import {
 	createPlanService,
 	createStaticPlanSource,
-} from "../src/features/billing/services/plan.service";
+} from "../src/core/services/plan.service";
 import { createIssueDao } from "../src/features/issues/dao/issue.dao";
 import { createIssueService } from "../src/features/issues/services/issue.service";
 import { createLabelDao } from "../src/features/labels/dao/label.dao";
