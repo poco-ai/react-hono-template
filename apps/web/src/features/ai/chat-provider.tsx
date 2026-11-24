@@ -4,7 +4,7 @@ import type {
 	AiConversationDto,
 	AiConversationListDto,
 	AiUsageSummaryDto,
-} from "@api/dto/ai.dto";
+} from "@api/features/ai/dto/ai.dto";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import {
 	type UseQueryResult,

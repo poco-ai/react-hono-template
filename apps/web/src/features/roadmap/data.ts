@@ -2,7 +2,7 @@ import type {
 	RoadmapCycleDto,
 	RoadmapDto,
 	RoadmapProjectDto,
-} from "@api/dto/roadmap.dto";
+} from "@api/features/roadmap/dto/roadmap.dto";
 import { queryOptions } from "@tanstack/react-query";
 import { roadmapKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";

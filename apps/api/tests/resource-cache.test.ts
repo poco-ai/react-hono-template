@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createResourceCache } from "../src/lib/kv/resource-cache";
+import { createResourceCache } from "../src/core/lib/kv/resource-cache";
 import type {
 	CacheGetOptions,
 	CacheSetOptions,
 	CacheStore,
-} from "../src/lib/kv/types";
+} from "../src/core/lib/kv/types";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

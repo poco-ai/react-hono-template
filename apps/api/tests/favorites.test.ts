@@ -5,17 +5,17 @@ import {
 	ApiErrorCode,
 	createFavoriteSchema,
 } from "@workspace/shared";
+import type { Auth } from "../src/core/lib/auth";
+import type { Dependencies } from "../src/dependencies";
 import {
 	type CapabilityDeps,
 	createCapabilityRegistry,
-} from "../src/capabilities";
-import { createFavoriteDao } from "../src/dao/favorite.dao";
-import { createIssueDao } from "../src/dao/issue.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import type { Dependencies } from "../src/dependencies";
-import type { Auth } from "../src/lib/auth";
+} from "../src/features/capabilities/index";
+import { createFavoriteDao } from "../src/features/favorites/dao/favorite.dao";
+import { createFavoriteService } from "../src/features/favorites/services/favorite.service";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
 import { createRoutes } from "../src/routes";
-import { createFavoriteService } from "../src/services/favorite.service";
 import {
 	seedIssue,
 	seedProject,

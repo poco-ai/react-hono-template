@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode, MEDIA_MAX_SIZE } from "@workspace/shared";
-import type { MediaAssetDao, MediaAssetRow } from "../src/dao/media-asset.dao";
+import type {
+	MediaAssetDao,
+	MediaAssetRow,
+} from "../src/features/attachments/dao/media-asset.dao";
 import type {
 	PendingUploadDao,
 	PendingUploadRow,
-} from "../src/dao/pending-upload.dao";
-import type { StorageAdapter } from "../src/lib/storage/types";
-import { createMediaService } from "../src/services/media.service";
+} from "../src/features/attachments/dao/pending-upload.dao";
+import type { StorageAdapter } from "../src/features/attachments/lib/types";
+import { createMediaService } from "../src/features/attachments/services/media.service";
 
 const harness = ({
 	presignPut,

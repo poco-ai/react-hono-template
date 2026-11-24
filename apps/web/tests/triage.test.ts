@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { StatusDto } from "@api/dto/status.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import {
 	BULK_PARTIAL_FAILURE,
 	bulkPartialFailure,

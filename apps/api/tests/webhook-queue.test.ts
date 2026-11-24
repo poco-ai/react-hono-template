@@ -1,28 +1,28 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { WebhookDao } from "../src/dao/webhook.dao";
+import type { BackgroundFn } from "../src/core/lib/background";
+import type { WebhookDao } from "../src/features/webhooks/dao/webhook.dao";
 import type {
 	WebhookDeliveryAttemptPatch,
 	WebhookDeliveryDao,
 	WebhookDeliveryInsert,
-} from "../src/dao/webhook-delivery.dao";
+} from "../src/features/webhooks/dao/webhook-delivery.dao";
 import type {
 	WebhookDeliveryDto,
 	WebhookWithSecretDto,
-} from "../src/dto/webhook.dto";
-import type { BackgroundFn } from "../src/lib/background";
+} from "../src/features/webhooks/dto/webhook.dto";
 import {
 	signLegacyPayload,
 	verifyStandardWebhook,
-} from "../src/lib/webhook-signature";
-import { handleWebhookQueue } from "../src/queue";
+} from "../src/features/webhooks/lib/webhook-signature";
 import {
 	createWebhookDeliveryService,
 	WEBHOOK_MAX_ATTEMPTS,
 	type WebhookDeliveryService,
 	type WebhookJobQueue,
 	type WebhookTarget,
-} from "../src/services/webhook-delivery.service";
+} from "../src/features/webhooks/services/webhook-delivery.service";
+import { handleWebhookQueue } from "../src/queue";
 
 const hook: WebhookTarget = {
 	id: "hook-1",

@@ -1,4 +1,4 @@
-import type { StatusDto } from "@api/dto/status.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import {
 	DEFAULT_ISSUE_STATUSES,
 	type IssueStatus,

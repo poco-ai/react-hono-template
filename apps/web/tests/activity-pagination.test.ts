@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { OrgActivityDto } from "@api/dto/activity.dto";
+import type { OrgActivityDto } from "@api/core/dto/activity.dto";
 import { QueryClient } from "@tanstack/react-query";
 import {
 	fetchOrgActivities,

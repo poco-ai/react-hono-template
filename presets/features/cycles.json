@@ -3,11 +3,7 @@
 	"tier": 2,
 	"dependsOn": ["core", "projects"],
 	"claims": [
-		"apps/api/src/controllers/cycle.controller.ts",
-		"apps/api/src/dao/cycle.dao.ts",
-		"apps/api/src/dto/cycle.dto.ts",
-		"apps/api/src/routes/cycles.ts",
-		"apps/api/src/services/cycle.service.ts",
+		"apps/api/src/features/cycles/**",
 		"apps/web/src/features/cycles/**",
 		"packages/shared/src/schemas/cycle.ts"
 	]

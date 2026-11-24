@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sql } from "drizzle-orm";
-import { labels } from "../src/db/schema";
 import {
 	isIssueNumberConflict,
 	isUniqueConstraintViolation,
-} from "../src/lib/db-errors";
+} from "../src/core/lib/db-errors";
+import { labels } from "../src/db/schema";
 import { seedOrganization, seedProject, seedStatus } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

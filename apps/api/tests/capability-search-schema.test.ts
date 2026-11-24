@@ -4,7 +4,7 @@ import { test } from "node:test";
 // - strict: capability/MCP output contract (fails on missing fields)
 // - lenient: web command-palette parser (fills defaults, drops bad hits)
 import { searchResultsSchema as lenientSearchResultsSchema } from "@workspace/shared";
-import { searchResultsSchema as strictSearchResultsSchema } from "../src/capabilities/projections";
+import { searchResultsSchema as strictSearchResultsSchema } from "../src/features/capabilities/projections";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 

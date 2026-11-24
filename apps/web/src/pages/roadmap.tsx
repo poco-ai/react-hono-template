@@ -1,4 +1,7 @@
-import type { RoadmapCycleDto, RoadmapProjectDto } from "@api/dto/roadmap.dto";
+import type {
+	RoadmapCycleDto,
+	RoadmapProjectDto,
+} from "@api/features/roadmap/dto/roadmap.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";

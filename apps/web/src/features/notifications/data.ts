@@ -1,9 +1,9 @@
-import type { IssueSubscriptionDto } from "@api/dto/issue-subscription.dto";
+import type { IssueSubscriptionDto } from "@api/features/notifications/dto/issue-subscription.dto";
 import type {
 	NotificationDto,
 	NotificationListDto,
 	NotificationUnreadCountDto,
-} from "@api/dto/notification.dto";
+} from "@api/features/notifications/dto/notification.dto";
 import {
 	type InfiniteData,
 	infiniteQueryOptions,

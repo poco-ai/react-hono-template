@@ -11,23 +11,23 @@ import {
 } from "@workspace/shared";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { createCycleDao } from "../src/dao/cycle.dao";
+import { createMemberDao } from "../src/core/dao/member.dao";
+import type { SessionEnv } from "../src/core/middleware/auth";
+import type { OrgEnv } from "../src/core/middleware/org";
+import { requireOrgMember } from "../src/core/middleware/org";
+import { createCycleDao } from "../src/features/cycles/dao/cycle.dao";
+import { assertCycleAssignable } from "../src/features/cycles/services/cycle.service";
 import {
 	chunkRowsByBudget,
 	createIssueDao,
 	ISSUE_STATEMENT_MAX_BYTES,
-} from "../src/dao/issue.dao";
-import { createLabelDao } from "../src/dao/label.dao";
-import { createMemberDao } from "../src/dao/member.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import { createStatusDao } from "../src/dao/status.dao";
-import type { SessionEnv } from "../src/middleware/auth";
-import type { OrgEnv } from "../src/middleware/org";
-import { requireOrgMember } from "../src/middleware/org";
-import { createIssuesRoutes } from "../src/routes/issues";
-import { assertCycleAssignable } from "../src/services/cycle.service";
-import { createIssueService } from "../src/services/issue.service";
-import { createStatusService } from "../src/services/status.service";
+} from "../src/features/issues/dao/issue.dao";
+import { createIssuesRoutes } from "../src/features/issues/routes/issues";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import { createLabelDao } from "../src/features/labels/dao/label.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import { createStatusDao } from "../src/features/statuses/dao/status.dao";
+import { createStatusService } from "../src/features/statuses/services/status.service";
 import {
 	seedCycle,
 	seedMember,

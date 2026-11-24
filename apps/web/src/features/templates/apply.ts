@@ -1,4 +1,4 @@
-import type { IssueTemplateDto } from "@api/dto/issue-template.dto";
+import type { IssueTemplateDto } from "@api/features/templates/dto/issue-template.dto";
 import type { IssuePriorityName } from "@workspace/shared";
 import { priorityName, priorityValue } from "@workspace/shared";
 import type { CreateIssueFormState } from "@/features/issues/create-issue-input";

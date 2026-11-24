@@ -1,4 +1,4 @@
-import type { AiConversationDto } from "@api/dto/ai.dto";
+import type { AiConversationDto } from "@api/features/ai/dto/ai.dto";
 import { Link } from "@tanstack/react-router";
 import {
 	SidebarMenuButton,

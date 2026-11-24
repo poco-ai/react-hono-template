@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createIssueDao } from "../src/dao/issue.dao";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
 import { seedOrganization, seedProject, seedStatus } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

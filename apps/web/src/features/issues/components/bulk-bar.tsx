@@ -1,5 +1,5 @@
-import type { LabelDto } from "@api/dto/label.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Sheet,

@@ -1,4 +1,4 @@
-import type { ActivityDto, OrgActivityDto } from "@api/dto/activity.dto";
+import type { ActivityDto, OrgActivityDto } from "@api/core/dto/activity.dto";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { issueActivitiesKey, orgActivitiesKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";

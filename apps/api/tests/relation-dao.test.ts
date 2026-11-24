@@ -1,9 +1,9 @@
 import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createIssueDao } from "../src/dao/issue.dao";
-import { createRelationDao } from "../src/dao/relation.dao";
-import { isUniqueConstraintViolation } from "../src/lib/db-errors";
+import { isUniqueConstraintViolation } from "../src/core/lib/db-errors";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createRelationDao } from "../src/features/relations/dao/relation.dao";
 import { seedIssue } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

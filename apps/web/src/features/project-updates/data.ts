@@ -1,7 +1,7 @@
 import type {
 	ListProjectUpdatesDto,
 	ProjectUpdateDto,
-} from "@api/dto/project-update.dto";
+} from "@api/features/project-updates/dto/project-update.dto";
 import { infiniteQueryOptions, type QueryClient } from "@tanstack/react-query";
 import type {
 	CreateProjectUpdateInput,

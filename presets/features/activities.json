@@ -3,9 +3,7 @@
 	"tier": 1,
 	"dependsOn": ["core", "issues"],
 	"claims": [
-		"apps/api/src/controllers/activity.controller.ts",
-		"apps/api/src/routes/activities.ts",
-		"apps/api/src/services/activity.service.ts",
+		"apps/api/src/features/activities/**",
 		"apps/web/src/features/activities/**",
 		"packages/shared/src/schemas/activity.ts"
 	]

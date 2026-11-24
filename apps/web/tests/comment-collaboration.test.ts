@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { CommentDto } from "@api/dto/comment.dto";
+import type { CommentDto } from "@api/features/comments/dto/comment.dto";
 import { COMMENT_REACTION_EMOJIS } from "@workspace/shared";
 import {
 	applyReactionToggle,

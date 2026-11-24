@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
-import { createOrganizationService } from "../src/services/organization.service";
+import { createOrganizationService } from "../src/core/services/organization.service";
 
 const org = {
 	id: "org-1",

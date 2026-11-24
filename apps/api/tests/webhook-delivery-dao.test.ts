@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createWebhookDeliveryDao } from "../src/dao/webhook-delivery.dao";
+import { createWebhookDeliveryDao } from "../src/features/webhooks/dao/webhook-delivery.dao";
 import { createTestDb } from "./helpers/test-db";
 
 /**

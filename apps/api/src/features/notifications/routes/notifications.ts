@@ -1,0 +1,37 @@
+import { notificationListQuerySchema } from "@workspace/shared";
+import { Hono } from "hono";
+import { notificationParams } from "../../../core/lib/params";
+import { validate } from "../../../core/lib/validation";
+import type { SessionEnv } from "../../../core/middleware/auth";
+import type { OrgEnv } from "../../../core/middleware/org";
+import { createNotificationController } from "../controllers/notification.controller";
+import type { NotificationService } from "../services/notification.service";
+
+export const createNotificationsRoutes = (service: NotificationService) => {
+	const controller = createNotificationController(service);
+	return (
+		new Hono<SessionEnv & OrgEnv>()
+			.get(
+				"/api/orgs/:orgId/notifications",
+				validate(notificationListQuerySchema, "query"),
+				(c) => controller.list(c, c.req.valid("query")),
+			)
+			// Static suffixes are registered before the dynamic id route.
+			.get("/api/orgs/:orgId/notifications/unread-count", (c) =>
+				controller.unreadCount(c),
+			)
+			.post("/api/orgs/:orgId/notifications/read-all", (c) =>
+				controller.readAll(c),
+			)
+			.post(
+				"/api/orgs/:orgId/notifications/:notificationId/read",
+				validate(notificationParams, "param"),
+				(c) => controller.read(c),
+			)
+			.delete(
+				"/api/orgs/:orgId/notifications/:notificationId",
+				validate(notificationParams, "param"),
+				(c) => controller.remove(c),
+			)
+	);
+};

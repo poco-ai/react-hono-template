@@ -18,5 +18,5 @@
 		"templates",
 		"recurrences"
 	],
-	"claims": ["apps/api/src/capabilities/**"]
+	"claims": ["apps/api/src/features/capabilities/**"]
 }

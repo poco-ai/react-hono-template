@@ -1,4 +1,4 @@
-import type { LabelDto } from "@api/dto/label.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";

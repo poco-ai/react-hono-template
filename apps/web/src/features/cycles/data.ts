@@ -2,7 +2,7 @@ import type {
 	CycleRolloverDto,
 	CycleWithProgressDto,
 	ListCyclesDto,
-} from "@api/dto/cycle.dto";
+} from "@api/features/cycles/dto/cycle.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	CreateCycleInput,

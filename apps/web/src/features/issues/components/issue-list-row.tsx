@@ -1,6 +1,6 @@
-import type { IssueDetailDto } from "@api/dto/issue.dto";
-import type { LabelDto } from "@api/dto/label.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type { IssueDetailDto } from "@api/features/issues/dto/issue.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ISSUE_PRIORITIES, type UpdateIssueInput } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";

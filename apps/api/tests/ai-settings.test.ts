@@ -3,20 +3,20 @@ import { test } from "node:test";
 import { ApiError } from "@workspace/shared";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { createAiProvider } from "../src/ai/provider";
-import type { AiUsageDao } from "../src/dao/ai-usage.dao";
-import type { OrgAiSettingsDao } from "../src/dao/org-ai-settings.dao";
-import type { OrgAiSettingsDto } from "../src/dto/ai.dto";
-import type { SessionEnv } from "../src/middleware/auth";
-import type { OrgEnv } from "../src/middleware/org";
-import { createAiRoutes } from "../src/routes/ai";
-import type { AiChatService } from "../src/services/ai-chat.service";
-import type { AiConversationService } from "../src/services/ai-conversation.service";
-import { createAiUsageService } from "../src/services/ai-usage.service";
+import type { SessionEnv } from "../src/core/middleware/auth";
+import type { OrgEnv } from "../src/core/middleware/org";
+import type { AiUsageDao } from "../src/features/ai/dao/ai-usage.dao";
+import type { OrgAiSettingsDao } from "../src/features/ai/dao/org-ai-settings.dao";
+import type { OrgAiSettingsDto } from "../src/features/ai/dto/ai.dto";
+import { createAiProvider } from "../src/features/ai/provider";
+import { createAiRoutes } from "../src/features/ai/routes";
+import type { AiChatService } from "../src/features/ai/services/ai-chat.service";
+import type { AiConversationService } from "../src/features/ai/services/ai-conversation.service";
+import { createAiUsageService } from "../src/features/ai/services/ai-usage.service";
 import {
 	createOrgAiSettingsService,
 	DEFAULT_AI_SETTINGS,
-} from "../src/services/org-ai-settings.service";
+} from "../src/features/ai/services/org-ai-settings.service";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

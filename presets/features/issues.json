@@ -3,12 +3,7 @@
 	"tier": 1,
 	"dependsOn": ["core", "projects", "labels", "statuses"],
 	"claims": [
-		"apps/api/src/controllers/issue.controller.ts",
-		"apps/api/src/dao/issue-filter.ts",
-		"apps/api/src/dao/issue.dao.ts",
-		"apps/api/src/dto/issue.dto.ts",
-		"apps/api/src/routes/issues.ts",
-		"apps/api/src/services/issue.service.ts",
+		"apps/api/src/features/issues/**",
 		"apps/web/src/features/issues/**",
 		"apps/web/src/features/triage/**",
 		"packages/shared/src/schemas/issue-query.ts",

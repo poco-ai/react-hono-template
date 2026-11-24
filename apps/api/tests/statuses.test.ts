@@ -5,19 +5,19 @@ import { drizzle } from "drizzle-orm/d1";
 import {
 	type ActivityInsert,
 	statusMigrationActivityStatement,
-} from "../src/dao/activity.dao";
-import type { IssueDao } from "../src/dao/issue.dao";
-import type { ProjectDao } from "../src/dao/project.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import type { StatusDao } from "../src/dao/status.dao";
+} from "../src/core/dao/activity.dao";
+import type { Auth } from "../src/core/lib/auth";
 import type { Database } from "../src/db/types";
 import type { Dependencies } from "../src/dependencies";
-import type { IssueDto } from "../src/dto/issue.dto";
-import type { StatusDto } from "../src/dto/status.dto";
-import type { Auth } from "../src/lib/auth";
+import type { IssueDao } from "../src/features/issues/dao/issue.dao";
+import type { IssueDto } from "../src/features/issues/dto/issue.dto";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import type { ProjectDao } from "../src/features/projects/dao/project.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import type { StatusDao } from "../src/features/statuses/dao/status.dao";
+import type { StatusDto } from "../src/features/statuses/dto/status.dto";
+import { createStatusService } from "../src/features/statuses/services/status.service";
 import { createRoutes } from "../src/routes";
-import { createIssueService } from "../src/services/issue.service";
-import { createStatusService } from "../src/services/status.service";
 import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

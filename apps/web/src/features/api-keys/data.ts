@@ -1,4 +1,4 @@
-import type { ListApiKeysDto } from "@api/dto/api-key.dto";
+import type { ListApiKeysDto } from "@api/features/api-keys/dto/api-key.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { apiKeysKey, apiKeysRootKey } from "@/features/keys";
 import { client, unwrap } from "@/lib/api";

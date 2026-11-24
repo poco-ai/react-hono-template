@@ -14,17 +14,7 @@
 		]
 	},
 	"claims": [
-		"apps/api/src/controllers/attachment.controller.ts",
-		"apps/api/src/controllers/media.controller.ts",
-		"apps/api/src/dao/attachment.dao.ts",
-		"apps/api/src/dao/media-asset.dao.ts",
-		"apps/api/src/dao/pending-upload.dao.ts",
-		"apps/api/src/dto/attachment.dto.ts",
-		"apps/api/src/lib/storage/**",
-		"apps/api/src/routes/attachments.ts",
-		"apps/api/src/routes/media.ts",
-		"apps/api/src/services/attachment.service.ts",
-		"apps/api/src/services/media.service.ts",
+		"apps/api/src/features/attachments/**",
 		"apps/web/src/features/attachments/**",
 		"packages/shared/src/schemas/attachment.ts",
 		"packages/shared/src/schemas/media.ts"

@@ -1,4 +1,4 @@
-import type { StatusDto } from "@api/dto/status.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type { CreateStatusInput, UpdateStatusInput } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";

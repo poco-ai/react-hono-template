@@ -6,18 +6,18 @@ import {
 	createIssueTemplateSchema,
 	updateIssueTemplateSchema,
 } from "@workspace/shared";
+import type { Auth } from "../src/core/lib/auth";
+import type { Dependencies } from "../src/dependencies";
 import {
 	type CapabilityDeps,
 	createCapabilityRegistry,
-} from "../src/capabilities";
-import { createIssueTemplateDao } from "../src/dao/issue-template.dao";
-import { createLabelDao } from "../src/dao/label.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import { createStatusDao } from "../src/dao/status.dao";
-import type { Dependencies } from "../src/dependencies";
-import type { Auth } from "../src/lib/auth";
+} from "../src/features/capabilities/index";
+import { createLabelDao } from "../src/features/labels/dao/label.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import { createStatusDao } from "../src/features/statuses/dao/status.dao";
+import { createIssueTemplateDao } from "../src/features/templates/dao/issue-template.dao";
+import { createIssueTemplateService } from "../src/features/templates/services/issue-template.service";
 import { createRoutes } from "../src/routes";
-import { createIssueTemplateService } from "../src/services/issue-template.service";
 import { seedProject, seedStatus } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

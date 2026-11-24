@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
-import { createIssueDao } from "../src/dao/issue.dao";
-import { createLabelDao } from "../src/dao/label.dao";
-import { createMemberDao } from "../src/dao/member.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import { createStatusDao } from "../src/dao/status.dao";
-import type { CacheStore } from "../src/lib/kv/types";
-import { createIssueService } from "../src/services/issue.service";
+import { createMemberDao } from "../src/core/dao/member.dao";
+import type { CacheStore } from "../src/core/lib/kv/types";
 import {
 	createPlanService,
 	createStaticPlanSource,
-} from "../src/services/plan.service";
-import { createStatusService } from "../src/services/status.service";
+} from "../src/features/billing/services/plan.service";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import { createLabelDao } from "../src/features/labels/dao/label.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import { createStatusDao } from "../src/features/statuses/dao/status.dao";
+import { createStatusService } from "../src/features/statuses/services/status.service";
 import {
 	seedMember,
 	seedOrganization,

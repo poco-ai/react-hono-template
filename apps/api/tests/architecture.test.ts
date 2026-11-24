@@ -289,8 +289,9 @@ function resolveImport(fromRelPath: string, specifier: string): string | null {
 /**
  * Known boundary violations that survive Phase 1 (dependency inversion).
  *
- * Each entry is `[file, imported feature]`. Phase 2 removes the
- * composition-root entries (routes/admin, mcp/audit), Phase 4 the
+ * Each entry is `[file, imported feature]`. Phase 2b removes the
+ * composition-root entries (core/routes/admin, features/mcp/audit), Phase 4
+ * the
  * infrastructure-template entries (platform/*, lib/redis/*) and Phase 5 the
  * web cross-feature entries. Everything here warns instead of failing —
  * anything not listed fails the suite, and listed entries that no longer
@@ -298,21 +299,21 @@ function resolveImport(fromRelPath: string, specifier: string): string | null {
  */
 const KNOWN_VIOLATIONS: Array<[string, string]> = [
 	// ---- Tier 3/4 surfaces reaching across without a declared edge ----
-	["apps/api/src/routes/admin.ts", "billing"], // Phase 2: module composition
-	["apps/api/src/mcp/audit.ts", "ai"], // Phase 2: route through a port
+	["apps/api/src/core/routes/admin.ts", "billing"], // Phase 2b: module composition
+	["apps/api/src/features/mcp/audit.ts", "ai"], // Phase 2b: route through a port
 	// ---- core infrastructure aware of optional features ----
-	["apps/api/src/lib/redis/rate-limit.ts", "ai"], // Phase 4: rate-limiter binding templating
-	["apps/api/src/lib/redis/webhook-queue.ts", "webhooks"], // Phase 4: queue binding templating
-	["apps/api/src/platform/cloudflare.ts", "webhooks"], // Phase 4: wrangler templating
-	["apps/api/src/platform/shared.ts", "ai"], // Phase 4: env contract folding
-	["apps/api/src/platform/shared.ts", "attachments"], // Phase 4: env contract folding
-	["apps/api/src/platform/shared.ts", "billing"], // Phase 4: env contract folding
-	["apps/api/src/platform/shared.ts", "mcp"], // Phase 4: env contract folding
-	["apps/api/src/platform/types.ts", "ai"], // Phase 4: env contract folding
-	["apps/api/src/platform/types.ts", "attachments"], // Phase 4: env contract folding
-	["apps/api/src/platform/types.ts", "billing"], // Phase 4: env contract folding
-	["apps/api/src/platform/types.ts", "mcp"], // Phase 4: env contract folding
-	["apps/api/src/platform/types.ts", "webhooks"], // Phase 4: env contract folding
+	["apps/api/src/core/lib/redis/rate-limit.ts", "ai"], // Phase 4: rate-limiter binding templating
+	["apps/api/src/core/lib/redis/webhook-queue.ts", "webhooks"], // Phase 4: queue binding templating
+	["apps/api/src/core/platform/cloudflare.ts", "webhooks"], // Phase 4: wrangler templating
+	["apps/api/src/core/platform/shared.ts", "ai"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/shared.ts", "attachments"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/shared.ts", "billing"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/shared.ts", "mcp"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/types.ts", "ai"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/types.ts", "attachments"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/types.ts", "billing"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/types.ts", "mcp"], // Phase 4: env contract folding
+	["apps/api/src/core/platform/types.ts", "webhooks"], // Phase 4: env contract folding
 	// ---- web cross-feature data references (docs §9.4) ----
 	["apps/web/src/features/activities/components/issue-activity.tsx", "labels"], // Phase 5: label dto in activity history
 	["apps/web/src/features/cycles/data.ts", "issues"], // Phase 5

@@ -1,25 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { MediaAssetDao } from "../src/dao/media-asset.dao";
-import type { MemberDao } from "../src/dao/member.dao";
-import type { PendingUploadDao } from "../src/dao/pending-upload.dao";
-import type { WebhookDeliveryDao } from "../src/dao/webhook-delivery.dao";
-import type { BackgroundFn } from "../src/lib/background";
-import type { StorageAdapter } from "../src/lib/storage/types";
-import { handleScheduled } from "../src/scheduled";
-import { createStorageCleanupHandler } from "../src/services/attachment.service";
-import { createCleanupService } from "../src/services/cleanup.service";
+import type { MemberDao } from "../src/core/dao/member.dao";
+import type { BackgroundFn } from "../src/core/lib/background";
+import { createCleanupService } from "../src/core/services/cleanup.service";
+import type { MediaAssetDao } from "../src/features/attachments/dao/media-asset.dao";
+import type { PendingUploadDao } from "../src/features/attachments/dao/pending-upload.dao";
+import type { StorageAdapter } from "../src/features/attachments/lib/types";
+import { createStorageCleanupHandler } from "../src/features/attachments/services/attachment.service";
 import {
 	createNotificationCleanupHandler,
 	NOTIFICATION_CLEANUP_LIMIT,
 	READ_NOTIFICATION_TTL_MS,
 	UNREAD_NOTIFICATION_TTL_MS,
-} from "../src/services/notification.service";
+} from "../src/features/notifications/services/notification.service";
+import type { WebhookDeliveryDao } from "../src/features/webhooks/dao/webhook-delivery.dao";
 import {
 	ABANDONED_DELIVERY_AGE_MS,
 	ABANDONED_DELIVERY_ERROR,
 	createWebhookCleanupHandler,
-} from "../src/services/webhook-delivery.service";
+} from "../src/features/webhooks/services/webhook-delivery.service";
+import { handleScheduled } from "../src/scheduled";
 
 type InvitationRow = {
 	id: string;

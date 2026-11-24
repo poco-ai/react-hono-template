@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
-import type { ActivityInsert } from "../src/dao/activity.dao";
-import type { CommentDao } from "../src/dao/comment.dao";
-import type { IssueDao } from "../src/dao/issue.dao";
-import type { ProjectDao } from "../src/dao/project.dao";
-import type { CommentDto } from "../src/dto/comment.dto";
-import type { IssueDto } from "../src/dto/issue.dto";
-import { createCommentService } from "../src/services/comment.service";
+import type { ActivityInsert } from "../src/core/dao/activity.dao";
+import type { CommentDao } from "../src/features/comments/dao/comment.dao";
+import type { CommentDto } from "../src/features/comments/dto/comment.dto";
+import { createCommentService } from "../src/features/comments/services/comment.service";
+import type { IssueDao } from "../src/features/issues/dao/issue.dao";
+import type { IssueDto } from "../src/features/issues/dto/issue.dto";
+import type { ProjectDao } from "../src/features/projects/dao/project.dao";
 
 const issueDto = (overrides: Partial<IssueDto> = {}): IssueDto => ({
 	id: "issue-1",

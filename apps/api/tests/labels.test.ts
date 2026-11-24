@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
-import type { LabelDao } from "../src/dao/label.dao";
-import type { LabelDto } from "../src/dto/label.dto";
 import type {
 	CacheGetOptions,
 	CacheSetOptions,
 	CacheStore,
-} from "../src/lib/kv/types";
+} from "../src/core/lib/kv/types";
+import type { LabelDao } from "../src/features/labels/dao/label.dao";
+import type { LabelDto } from "../src/features/labels/dto/label.dto";
 import {
 	createLabelService,
 	labelsCacheKey,
-} from "../src/services/label.service";
+} from "../src/features/labels/services/label.service";
 
 const labelDto = (id: string, name: string): LabelDto => ({
 	id,

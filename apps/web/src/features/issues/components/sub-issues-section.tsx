@@ -1,4 +1,4 @@
-import type { StatusDto } from "@api/dto/status.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import {

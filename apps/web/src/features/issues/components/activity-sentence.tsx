@@ -1,5 +1,5 @@
-import type { ActivityDto } from "@api/dto/activity.dto";
-import type { LabelDto } from "@api/dto/label.dto";
+import type { ActivityDto } from "@api/core/dto/activity.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
 import {
 	ISSUE_STATUSES,
 	type IssueStatus,

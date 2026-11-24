@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { eq } from "drizzle-orm";
-import { createAiConversationDao } from "../src/dao/ai-conversation.dao";
 import { aiConversations } from "../src/db/schema";
+import { createAiConversationDao } from "../src/features/ai/dao/ai-conversation.dao";
 import { seedOrganization, seedUser } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

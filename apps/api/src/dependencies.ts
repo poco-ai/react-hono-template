@@ -1,111 +1,111 @@
+import { createActivityDao } from "./core/dao/activity.dao";
+import { createAdminUserDao } from "./core/dao/admin-user.dao";
+import { createAuditDao } from "./core/dao/audit.dao";
+import { createMemberDao } from "./core/dao/member.dao";
+import { createOrganizationDao } from "./core/dao/organization.dao";
+import type { CacheStore } from "./core/lib/kv/types";
+import type { CycleGuard } from "./core/lib/ports/cycle-guard";
+import type { QuotaUsageSink } from "./core/lib/ports/quota";
+import type { PlanRateLimiters } from "./core/lib/rate-limit";
+import { createAdminOrgService } from "./core/services/admin-org.service";
+import { createAdminUserService } from "./core/services/admin-user.service";
+import { createAuditService } from "./core/services/audit.service";
+import { createAuthPolicyService } from "./core/services/auth-policy.service";
+import { createBootstrapService } from "./core/services/bootstrap.service";
+import { createCleanupService } from "./core/services/cleanup.service";
+import { createConfigService } from "./core/services/config.service";
+import { createOrganizationService } from "./core/services/organization.service";
+import type { Database } from "./db/types";
+import { createActivityService } from "./features/activities/services/activity.service";
+import { createAiConversationDao } from "./features/ai/dao/ai-conversation.dao";
+import { createAiMessageDao } from "./features/ai/dao/ai-message.dao";
+import { createAiToolCallDao } from "./features/ai/dao/ai-tool-call.dao";
+import { createAiUsageDao } from "./features/ai/dao/ai-usage.dao";
+import { createOrgAiSettingsDao } from "./features/ai/dao/org-ai-settings.dao";
 import {
 	type AiProviderConfig,
 	createAiProvider,
 	getAiProviderInfo,
-} from "./ai/provider";
-import { createCapabilityLayer } from "./capabilities";
-import { createActivityDao } from "./dao/activity.dao";
-import { createAdminUserDao } from "./dao/admin-user.dao";
-import { createAiConversationDao } from "./dao/ai-conversation.dao";
-import { createAiMessageDao } from "./dao/ai-message.dao";
-import { createAiToolCallDao } from "./dao/ai-tool-call.dao";
-import { createAiUsageDao } from "./dao/ai-usage.dao";
-import { createApiKeyDao } from "./dao/api-key.dao";
-import { createAttachmentDao } from "./dao/attachment.dao";
-import { createAuditDao } from "./dao/audit.dao";
-import { createBillingDao } from "./dao/billing.dao";
-import { createCommentDao } from "./dao/comment.dao";
-import { createCommentMentionDao } from "./dao/comment-mention.dao";
-import { createCommentReactionDao } from "./dao/comment-reaction.dao";
-import { createCycleDao } from "./dao/cycle.dao";
-import { createFavoriteDao } from "./dao/favorite.dao";
-import { createIssueDao } from "./dao/issue.dao";
-import { createIssueSubscriptionDao } from "./dao/issue-subscription.dao";
-import { createIssueTemplateDao } from "./dao/issue-template.dao";
-import { createLabelDao } from "./dao/label.dao";
-import { createMediaAssetDao } from "./dao/media-asset.dao";
-import { createMemberDao } from "./dao/member.dao";
-import { createNotificationDao } from "./dao/notification.dao";
-import { createOrgAiSettingsDao } from "./dao/org-ai-settings.dao";
-import { createOrganizationDao } from "./dao/organization.dao";
-import { createPendingUploadDao } from "./dao/pending-upload.dao";
-import { createProjectDao } from "./dao/project.dao";
-import { createProjectUpdateDao } from "./dao/project-update.dao";
-import { createQuotaDao } from "./dao/quota.dao";
-import { createRecurrenceDao } from "./dao/recurrence.dao";
-import { createRelationDao } from "./dao/relation.dao";
-import { createRoadmapDao } from "./dao/roadmap.dao";
-import { createSearchDao } from "./dao/search.dao";
-import { createStatusDao } from "./dao/status.dao";
-import { createViewDao } from "./dao/view.dao";
-import { createWebhookDao } from "./dao/webhook.dao";
-import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
-import type { Database } from "./db/types";
-import type { CacheStore } from "./lib/kv/types";
-import type { CycleGuard } from "./lib/ports/cycle-guard";
-import type { QuotaUsageSink } from "./lib/ports/quota";
-import type { PlanRateLimiters } from "./lib/rate-limit";
-import type { StorageAdapter } from "./lib/storage/types";
-import type { StripeSetup } from "./lib/stripe";
-import { createActivityService } from "./services/activity.service";
-import { createAdminOrgService } from "./services/admin-org.service";
-import { createAdminUserService } from "./services/admin-user.service";
-import { createAiChatService } from "./services/ai-chat.service";
+} from "./features/ai/provider";
+import { createAiChatService } from "./features/ai/services/ai-chat.service";
 import {
 	createAiConversationCleanupHandler,
 	createAiConversationService,
-} from "./services/ai-conversation.service";
+} from "./features/ai/services/ai-conversation.service";
 import {
 	type AiRateLimiters,
 	createAiUsageService,
-} from "./services/ai-usage.service";
-import { createApiKeyService } from "./services/api-key.service";
+} from "./features/ai/services/ai-usage.service";
+import { createOrgAiSettingsService } from "./features/ai/services/org-ai-settings.service";
+import { createApiKeyDao } from "./features/api-keys/dao/api-key.dao";
+import { createApiKeyService } from "./features/api-keys/services/api-key.service";
+import { createAttachmentDao } from "./features/attachments/dao/attachment.dao";
+import { createMediaAssetDao } from "./features/attachments/dao/media-asset.dao";
+import { createPendingUploadDao } from "./features/attachments/dao/pending-upload.dao";
+import type { StorageAdapter } from "./features/attachments/lib/types";
 import {
 	createAttachmentService,
 	createStorageCleanupHandler,
-} from "./services/attachment.service";
-import { createAuditService } from "./services/audit.service";
-import { createAuthPolicyService } from "./services/auth-policy.service";
-import { createBillingService } from "./services/billing.service";
-import { createBootstrapService } from "./services/bootstrap.service";
-import { createCleanupService } from "./services/cleanup.service";
-import { createCommentService } from "./services/comment.service";
-import { createConfigService } from "./services/config.service";
+} from "./features/attachments/services/attachment.service";
+import { createMediaService } from "./features/attachments/services/media.service";
+import { createBillingDao } from "./features/billing/dao/billing.dao";
+import { createQuotaDao } from "./features/billing/dao/quota.dao";
+import type { StripeSetup } from "./features/billing/lib/stripe";
+import { createBillingService } from "./features/billing/services/billing.service";
+import { createPlanService } from "./features/billing/services/plan.service";
+import { createQuotaService } from "./features/billing/services/quota.service";
+import { createStorageUsageService } from "./features/billing/services/storage-usage.service";
+import { createCapabilityLayer } from "./features/capabilities/index";
+import { createCommentDao } from "./features/comments/dao/comment.dao";
+import { createCommentMentionDao } from "./features/comments/dao/comment-mention.dao";
+import { createCommentReactionDao } from "./features/comments/dao/comment-reaction.dao";
+import { createCommentService } from "./features/comments/services/comment.service";
+import { createCycleDao } from "./features/cycles/dao/cycle.dao";
 import {
 	assertCycleAssignable,
 	createCycleService,
-} from "./services/cycle.service";
-import { createFavoriteService } from "./services/favorite.service";
-import { createIssueService } from "./services/issue.service";
-import { createIssueSubscriptionService } from "./services/issue-subscription.service";
-import { createIssueTemplateService } from "./services/issue-template.service";
-import { createLabelService } from "./services/label.service";
-import { createMediaService } from "./services/media.service";
+} from "./features/cycles/services/cycle.service";
+import { createFavoriteDao } from "./features/favorites/dao/favorite.dao";
+import { createFavoriteService } from "./features/favorites/services/favorite.service";
+import { createIssueDao } from "./features/issues/dao/issue.dao";
+import { createIssueService } from "./features/issues/services/issue.service";
+import { createLabelDao } from "./features/labels/dao/label.dao";
+import { createLabelService } from "./features/labels/services/label.service";
+import { createIssueSubscriptionDao } from "./features/notifications/dao/issue-subscription.dao";
+import { createNotificationDao } from "./features/notifications/dao/notification.dao";
+import { createIssueSubscriptionService } from "./features/notifications/services/issue-subscription.service";
 import {
 	createNotificationCleanupHandler,
 	createNotificationService,
-} from "./services/notification.service";
-import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
-import { createOrganizationService } from "./services/organization.service";
-import { createPlanService } from "./services/plan.service";
-import { createProjectService } from "./services/project.service";
-import { createProjectUpdateService } from "./services/project-update.service";
-import { createQuotaService } from "./services/quota.service";
-import { createRecurrenceService } from "./services/recurrence.service";
-import { createRelationService } from "./services/relation.service";
-import { createRoadmapService } from "./services/roadmap.service";
-import { createSearchService } from "./services/search.service";
-import { createStatusService } from "./services/status.service";
-import { createStorageUsageService } from "./services/storage-usage.service";
-import { createViewService } from "./services/view.service";
-import { createWebhookService } from "./services/webhook.service";
+} from "./features/notifications/services/notification.service";
+import { createProjectUpdateDao } from "./features/project-updates/dao/project-update.dao";
+import { createProjectUpdateService } from "./features/project-updates/services/project-update.service";
+import { createProjectDao } from "./features/projects/dao/project.dao";
+import { createProjectService } from "./features/projects/services/project.service";
+import { createRecurrenceDao } from "./features/recurrences/dao/recurrence.dao";
+import { createRecurrenceService } from "./features/recurrences/services/recurrence.service";
+import { createRelationDao } from "./features/relations/dao/relation.dao";
+import { createRelationService } from "./features/relations/services/relation.service";
+import { createRoadmapDao } from "./features/roadmap/dao/roadmap.dao";
+import { createRoadmapService } from "./features/roadmap/services/roadmap.service";
+import { createSearchDao } from "./features/search/dao/search.dao";
+import { createSearchService } from "./features/search/services/search.service";
+import { createStatusDao } from "./features/statuses/dao/status.dao";
+import { createStatusService } from "./features/statuses/services/status.service";
+import { createIssueTemplateDao } from "./features/templates/dao/issue-template.dao";
+import { createIssueTemplateService } from "./features/templates/services/issue-template.service";
+import { createViewDao } from "./features/views/dao/view.dao";
+import { createViewService } from "./features/views/services/view.service";
+import { createWebhookDao } from "./features/webhooks/dao/webhook.dao";
+import { createWebhookDeliveryDao } from "./features/webhooks/dao/webhook-delivery.dao";
+import { createWebhookService } from "./features/webhooks/services/webhook.service";
 import {
 	createWebhookCleanupHandler,
 	createWebhookDeliveryService,
 	type WebhookJobQueue,
-} from "./services/webhook-delivery.service";
+} from "./features/webhooks/services/webhook-delivery.service";
 
-export type { PlanRateLimiters, RateLimiter } from "./lib/rate-limit";
+export type { PlanRateLimiters, RateLimiter } from "./core/lib/rate-limit";
 
 export const createDependencies = ({
 	db,

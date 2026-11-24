@@ -1,5 +1,5 @@
-import type { AiConversationDto } from "@api/dto/ai.dto";
-import type { ProjectDto } from "@api/dto/project.dto";
+import type { AiConversationDto } from "@api/features/ai/dto/ai.dto";
+import type { ProjectDto } from "@api/features/projects/dto/project.dto";
 import { Link } from "@tanstack/react-router";
 import {
 	SidebarGroup,

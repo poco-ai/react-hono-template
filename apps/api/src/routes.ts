@@ -1,44 +1,44 @@
 import { Hono } from "hono";
+import type { Auth } from "./core/lib/auth";
+import { createErrorHandler } from "./core/lib/on-error";
+import type { SocialProvidersConfig } from "./core/lib/social-providers";
+import { requireAuth } from "./core/middleware/auth";
+import { requireOrgMember } from "./core/middleware/org";
+import { createAdminRoutes } from "./core/routes/admin";
+import { createAuditRoutes } from "./core/routes/audit";
+import { createBootstrapRoutes } from "./core/routes/bootstrap";
+import { createConfigRoutes } from "./core/routes/config";
+import { createOAuthRoutes } from "./core/routes/oauth";
 import type { Dependencies } from "./dependencies";
-import type { Auth } from "./lib/auth";
-import { createErrorHandler } from "./lib/on-error";
-import type { SocialProvidersConfig } from "./lib/social-providers";
-import { type McpConfig, resolveMcpConfig } from "./mcp/config";
-import { createMcpRoutes } from "./mcp/routes";
-import { requireAuth } from "./middleware/auth";
-import { requireOrgMember } from "./middleware/org";
-import { createActivitiesRoutes } from "./routes/activities";
-import { createAdminRoutes } from "./routes/admin";
-import { createAiRoutes } from "./routes/ai";
-import { createApiKeysRoutes } from "./routes/api-keys";
-import { createAttachmentsRoutes } from "./routes/attachments";
-import { createAuditRoutes } from "./routes/audit";
-import { createBillingRoutes } from "./routes/billing";
-import { createBootstrapRoutes } from "./routes/bootstrap";
-import { createCommentsRoutes } from "./routes/comments";
-import { createConfigRoutes } from "./routes/config";
-import { createCyclesRoutes } from "./routes/cycles";
-import { createFavoritesRoutes } from "./routes/favorites";
-import { createIssueSubscriptionsRoutes } from "./routes/issue-subscriptions";
-import { createIssueTemplatesRoutes } from "./routes/issue-templates";
-import { createIssuesRoutes } from "./routes/issues";
-import { createLabelsRoutes } from "./routes/labels";
+import { createActivitiesRoutes } from "./features/activities/routes/activities";
+import { createAiRoutes } from "./features/ai/routes";
+import { createApiKeysRoutes } from "./features/api-keys/routes/api-keys";
+import { createAttachmentsRoutes } from "./features/attachments/routes/attachments";
 import {
 	createMediaRoutes,
 	createMeMediaRoutes,
 	createOrgLogoRoutes,
-} from "./routes/media";
-import { createNotificationsRoutes } from "./routes/notifications";
-import { createOAuthRoutes } from "./routes/oauth";
-import { createProjectUpdatesRoutes } from "./routes/project-updates";
-import { createProjectsRoutes } from "./routes/projects";
-import { createRecurrencesRoutes } from "./routes/recurrences";
-import { createRelationsRoutes } from "./routes/relations";
-import { createRoadmapRoutes } from "./routes/roadmap";
-import { createSearchRoutes } from "./routes/search";
-import { createStatusesRoutes } from "./routes/statuses";
-import { createViewsRoutes } from "./routes/views";
-import { createWebhooksRoutes } from "./routes/webhooks";
+} from "./features/attachments/routes/media";
+import { createBillingRoutes } from "./features/billing/routes/billing";
+import { createCommentsRoutes } from "./features/comments/routes/comments";
+import { createCyclesRoutes } from "./features/cycles/routes/cycles";
+import { createFavoritesRoutes } from "./features/favorites/routes/favorites";
+import { createIssuesRoutes } from "./features/issues/routes/issues";
+import { createLabelsRoutes } from "./features/labels/routes/labels";
+import { type McpConfig, resolveMcpConfig } from "./features/mcp/config";
+import { createMcpRoutes } from "./features/mcp/routes";
+import { createIssueSubscriptionsRoutes } from "./features/notifications/routes/issue-subscriptions";
+import { createNotificationsRoutes } from "./features/notifications/routes/notifications";
+import { createProjectUpdatesRoutes } from "./features/project-updates/routes/project-updates";
+import { createProjectsRoutes } from "./features/projects/routes/projects";
+import { createRecurrencesRoutes } from "./features/recurrences/routes/recurrences";
+import { createRelationsRoutes } from "./features/relations/routes/relations";
+import { createRoadmapRoutes } from "./features/roadmap/routes/roadmap";
+import { createSearchRoutes } from "./features/search/routes/search";
+import { createStatusesRoutes } from "./features/statuses/routes/statuses";
+import { createIssueTemplatesRoutes } from "./features/templates/routes/issue-templates";
+import { createViewsRoutes } from "./features/views/routes/views";
+import { createWebhooksRoutes } from "./features/webhooks/routes/webhooks";
 
 export const createRoutes = ({
 	auth,

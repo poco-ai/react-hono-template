@@ -1,4 +1,4 @@
-import type { RecurrenceDto } from "@api/dto/recurrence.dto";
+import type { RecurrenceDto } from "@api/features/recurrences/dto/recurrence.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import {
 	type CreateRecurrenceInput,

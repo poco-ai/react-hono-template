@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createKvCache } from "../src/lib/kv/cache";
+import { createKvCache } from "../src/core/lib/kv/cache";
 
 type GetCall = { key: string; options?: { type?: string; cacheTtl?: number } };
 type PutCall = {

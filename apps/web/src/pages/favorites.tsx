@@ -1,4 +1,4 @@
-import type { FavoriteItemDto } from "@api/dto/favorite.dto";
+import type { FavoriteItemDto } from "@api/features/favorites/dto/favorite.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { StatusCategory } from "@workspace/shared";

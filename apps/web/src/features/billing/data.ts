@@ -1,4 +1,4 @@
-import type { BillingDto } from "@api/dto/billing.dto";
+import type { BillingDto } from "@api/features/billing/dto/billing.dto";
 import {
 	type BillingAdapter,
 	type BillingScope,

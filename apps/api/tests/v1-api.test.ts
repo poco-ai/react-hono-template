@@ -6,11 +6,11 @@ import {
 	PLANS,
 	type PlanName,
 } from "@workspace/shared";
+import { sha256Hex } from "../src/core/lib/crypto";
+import type { PlanRateLimiters } from "../src/core/lib/rate-limit";
 import type { Dependencies } from "../src/dependencies";
-import type { ProjectDto } from "../src/dto/project.dto";
-import { sha256Hex } from "../src/lib/crypto";
-import type { PlanRateLimiters } from "../src/lib/rate-limit";
-import { createV1App } from "../src/v1/index";
+import type { ProjectDto } from "../src/features/projects/dto/project.dto";
+import { createV1App } from "../src/features/public-api/index";
 
 let limiterAllows = true;
 const limiters: PlanRateLimiters = {

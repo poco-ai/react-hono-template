@@ -1,4 +1,7 @@
-import type { RoadmapCycleDto, RoadmapProjectDto } from "@api/dto/roadmap.dto";
+import type {
+	RoadmapCycleDto,
+	RoadmapProjectDto,
+} from "@api/features/roadmap/dto/roadmap.dto";
 import { Badge } from "@workspace/ui/components/badge";
 import { Folder } from "lucide-react";
 import { useTranslation } from "react-i18next";

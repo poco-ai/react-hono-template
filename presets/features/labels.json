@@ -3,11 +3,7 @@
 	"tier": 1,
 	"dependsOn": ["core"],
 	"claims": [
-		"apps/api/src/controllers/label.controller.ts",
-		"apps/api/src/dao/label.dao.ts",
-		"apps/api/src/routes/labels.ts",
-		"apps/api/src/dto/label.dto.ts",
-		"apps/api/src/services/label.service.ts",
+		"apps/api/src/features/labels/**",
 		"apps/web/src/features/labels/**",
 		"packages/shared/src/schemas/label.ts"
 	]

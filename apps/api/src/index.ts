@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { createApp } from "./app";
-import { platformFromBindings } from "./platform/cloudflare";
+import { platformFromBindings } from "./core/platform/cloudflare";
 import { handleWebhookQueue } from "./queue";
 
 const { app, dependencies, runScheduled } = createApp(

@@ -1,6 +1,9 @@
-import type { IssueDetailDto, ListIssuesDto } from "@api/dto/issue.dto";
-import type { LabelDto } from "@api/dto/label.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type {
+	IssueDetailDto,
+	ListIssuesDto,
+} from "@api/features/issues/dto/issue.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { IssueQueryGroupBy } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";

@@ -1,4 +1,7 @@
-import type { AdminOrgDto, ListAdminOrgsDto } from "@api/dto/admin-org.dto";
+import type {
+	AdminOrgDto,
+	ListAdminOrgsDto,
+} from "@api/core/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";

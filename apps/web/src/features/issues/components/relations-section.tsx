@@ -1,4 +1,4 @@
-import type { IssueRelationsDto } from "@api/dto/relation.dto";
+import type { IssueRelationsDto } from "@api/features/relations/dto/relation.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {

@@ -1,4 +1,4 @@
-import type { ProjectDto } from "@api/dto/project.dto";
+import type { ProjectDto } from "@api/features/projects/dto/project.dto";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";

@@ -4,22 +4,22 @@ import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { isToolUIPart, type UIMessage } from "ai";
 import { convertArrayToReadableStream, MockLanguageModelV3 } from "ai/test";
 import { z } from "zod";
-import { type AiProvider, createAiProvider } from "../src/ai/provider";
-import {
-	type CapabilityExecutor,
-	createCapabilityExecutor,
-} from "../src/capabilities/executor";
-import type { AiMessageDao } from "../src/dao/ai-message.dao";
+import type { AiMessageDao } from "../src/features/ai/dao/ai-message.dao";
 import type {
 	AiToolCallDao,
 	AiToolCallUpsert,
-} from "../src/dao/ai-tool-call.dao";
-import type { AiUsageDao } from "../src/dao/ai-usage.dao";
-import { createAiChatService } from "../src/services/ai-chat.service";
-import type { AiConversationService } from "../src/services/ai-conversation.service";
-import { createAiUsageService } from "../src/services/ai-usage.service";
-import type { OrgAiSettingsService } from "../src/services/org-ai-settings.service";
-import type { PlanService } from "../src/services/plan.service";
+} from "../src/features/ai/dao/ai-tool-call.dao";
+import type { AiUsageDao } from "../src/features/ai/dao/ai-usage.dao";
+import { type AiProvider, createAiProvider } from "../src/features/ai/provider";
+import { createAiChatService } from "../src/features/ai/services/ai-chat.service";
+import type { AiConversationService } from "../src/features/ai/services/ai-conversation.service";
+import { createAiUsageService } from "../src/features/ai/services/ai-usage.service";
+import type { OrgAiSettingsService } from "../src/features/ai/services/org-ai-settings.service";
+import type { PlanService } from "../src/features/billing/services/plan.service";
+import {
+	type CapabilityExecutor,
+	createCapabilityExecutor,
+} from "../src/features/capabilities/executor";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

@@ -9,17 +9,17 @@ import {
 	updateProjectSchema,
 	updateProjectUpdateSchema,
 } from "@workspace/shared";
-import type { ProjectDao } from "../src/dao/project.dao";
-import type { ProjectUpdateDao } from "../src/dao/project-update.dao";
-import { createProjectUpdateDao } from "../src/dao/project-update.dao";
+import type { Auth } from "../src/core/lib/auth";
 import type { Dependencies } from "../src/dependencies";
-import type { ProjectDto } from "../src/dto/project.dto";
-import type { ProjectUpdateDto } from "../src/dto/project-update.dto";
-import type { Auth } from "../src/lib/auth";
+import type { PlanService } from "../src/features/billing/services/plan.service";
+import type { ProjectUpdateDao } from "../src/features/project-updates/dao/project-update.dao";
+import { createProjectUpdateDao } from "../src/features/project-updates/dao/project-update.dao";
+import type { ProjectUpdateDto } from "../src/features/project-updates/dto/project-update.dto";
+import { createProjectUpdateService } from "../src/features/project-updates/services/project-update.service";
+import type { ProjectDao } from "../src/features/projects/dao/project.dao";
+import type { ProjectDto } from "../src/features/projects/dto/project.dto";
+import { createProjectService } from "../src/features/projects/services/project.service";
 import { createRoutes } from "../src/routes";
-import type { PlanService } from "../src/services/plan.service";
-import { createProjectService } from "../src/services/project.service";
-import { createProjectUpdateService } from "../src/services/project-update.service";
 import { seedProject } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

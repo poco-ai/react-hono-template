@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError } from "@workspace/shared";
-import { createCycleDao } from "../src/dao/cycle.dao";
-import { createIssueDao } from "../src/dao/issue.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import { createSearchDao } from "../src/dao/search.dao";
+import type { Auth } from "../src/core/lib/auth";
 import type { Dependencies } from "../src/dependencies";
-import type { Auth } from "../src/lib/auth";
-import { buildSearchTerms } from "../src/lib/search";
+import { createCycleDao } from "../src/features/cycles/dao/cycle.dao";
+import { assertCycleAssignable } from "../src/features/cycles/services/cycle.service";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import { createSearchDao } from "../src/features/search/dao/search.dao";
+import { buildSearchTerms } from "../src/features/search/lib/search";
 import { createRoutes } from "../src/routes";
-import { assertCycleAssignable } from "../src/services/cycle.service";
-import { createIssueService } from "../src/services/issue.service";
 import {
 	seedCycle,
 	seedIssue,

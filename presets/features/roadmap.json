@@ -3,11 +3,7 @@
 	"tier": 2,
 	"dependsOn": ["core", "projects", "cycles"],
 	"claims": [
-		"apps/api/src/controllers/roadmap.controller.ts",
-		"apps/api/src/dao/roadmap.dao.ts",
-		"apps/api/src/dto/roadmap.dto.ts",
-		"apps/api/src/routes/roadmap.ts",
-		"apps/api/src/services/roadmap.service.ts",
+		"apps/api/src/features/roadmap/**",
 		"apps/web/src/features/roadmap/**",
 		"packages/shared/src/schemas/roadmap.ts"
 	]

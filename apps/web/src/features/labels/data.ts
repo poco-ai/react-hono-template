@@ -1,4 +1,4 @@
-import type { LabelDto } from "@api/dto/label.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { invalidateIssueQueries } from "@/features/issues/data";
 import { labelsKey } from "@/features/keys";

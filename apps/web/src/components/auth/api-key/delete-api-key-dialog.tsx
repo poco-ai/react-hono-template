@@ -1,5 +1,5 @@
 // Adapted from Better Auth UI base-nova registry; revocation retains our audit history.
-import type { ApiKeyDto } from "@api/dto/api-key.dto";
+import type { ApiKeyDto } from "@api/features/api-keys/dto/api-key.dto";
 import {
 	AlertDialog,
 	AlertDialogCancel,

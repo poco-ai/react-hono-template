@@ -4,11 +4,7 @@
 	"dependsOn": ["core", "issues", "projects"],
 	"softDependsOn": ["webhooks"],
 	"claims": [
-		"apps/api/src/controllers/relation.controller.ts",
-		"apps/api/src/dao/relation.dao.ts",
-		"apps/api/src/dto/relation.dto.ts",
-		"apps/api/src/routes/relations.ts",
-		"apps/api/src/services/relation.service.ts",
+		"apps/api/src/features/relations/**",
 		"packages/shared/src/schemas/relation.ts"
 	]
 }

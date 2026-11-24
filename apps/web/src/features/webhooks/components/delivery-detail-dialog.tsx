@@ -1,4 +1,4 @@
-import type { WebhookDeliveryDto } from "@api/dto/webhook.dto";
+import type { WebhookDeliveryDto } from "@api/features/webhooks/dto/webhook.dto";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Dialog,

@@ -1,4 +1,4 @@
-import type { WebhookDeliveryService } from "./services/webhook-delivery.service";
+import type { WebhookDeliveryService } from "./features/webhooks/services/webhook-delivery.service";
 
 export type WebhookQueueMessage = {
 	body: { deliveryId: string };

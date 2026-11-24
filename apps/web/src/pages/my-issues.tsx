@@ -1,5 +1,5 @@
-import type { IssueDetailDto } from "@api/dto/issue.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type { IssueDetailDto } from "@api/features/issues/dto/issue.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";

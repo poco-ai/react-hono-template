@@ -8,7 +8,7 @@ import {
 	sendOtpEmail,
 	sendPasswordResetEmail,
 	sendVerificationEmail,
-} from "../src/lib/email";
+} from "../src/core/lib/email";
 
 test("sign-in OTP emails contain the code and expiry", () => {
 	const email = buildOtpEmail({

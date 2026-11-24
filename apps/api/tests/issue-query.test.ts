@@ -8,11 +8,11 @@ import {
 	issueFilterNodeSchema,
 	issueListQuerySchema,
 } from "@workspace/shared";
-import { createIssueDao } from "../src/dao/issue.dao";
-import type { LabelDao } from "../src/dao/label.dao";
-import type { MemberDao } from "../src/dao/member.dao";
-import type { ProjectDao } from "../src/dao/project.dao";
-import { createIssueService } from "../src/services/issue.service";
+import type { MemberDao } from "../src/core/dao/member.dao";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import type { LabelDao } from "../src/features/labels/dao/label.dao";
+import type { ProjectDao } from "../src/features/projects/dao/project.dao";
 import { seedIssue, seedProject, seedStatus } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

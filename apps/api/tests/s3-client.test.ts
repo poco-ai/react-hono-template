@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import { s3ClientFromConfig } from "../src/lib/storage/s3-client";
+import { s3ClientFromConfig } from "../src/features/attachments/lib/s3-client";
 
 test("S3 signs the browser endpoint but uses the internal endpoint for HEAD", async () => {
 	const requests: { method?: string; url?: string }[] = [];

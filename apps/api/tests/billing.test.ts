@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
 import type Stripe from "stripe";
-import { createBillingService } from "../src/services/billing.service";
+import { createBillingService } from "../src/features/billing/services/billing.service";
 
 type BillingDependencies = Parameters<typeof createBillingService>[0];
 

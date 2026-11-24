@@ -1,4 +1,7 @@
-import type { WebhookDeliveryDto, WebhookDto } from "@api/dto/webhook.dto";
+import type {
+	WebhookDeliveryDto,
+	WebhookDto,
+} from "@api/features/webhooks/dto/webhook.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
 import {

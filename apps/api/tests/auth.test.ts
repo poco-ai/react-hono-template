@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Database } from "../src/db/types";
-import { createAuth, createResetPasswordSender } from "../src/lib/auth";
+import { createAuth, createResetPasswordSender } from "../src/core/lib/auth";
 import {
 	enabledSocialProviders,
 	type SocialProvidersConfig,
-} from "../src/lib/social-providers";
-import type { AuthPolicyService } from "../src/services/auth-policy.service";
+} from "../src/core/lib/social-providers";
+import type { AuthPolicyService } from "../src/core/services/auth-policy.service";
+import type { Database } from "../src/db/types";
 
 const authFor = (extra?: {
 	baseURL?: string;

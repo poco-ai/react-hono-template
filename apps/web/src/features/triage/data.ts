@@ -1,5 +1,8 @@
-import type { TriageIssueDto, TriageListDto } from "@api/dto/issue.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type {
+	TriageIssueDto,
+	TriageListDto,
+} from "@api/features/issues/dto/issue.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import {
 	type QueryClient,
 	queryOptions,

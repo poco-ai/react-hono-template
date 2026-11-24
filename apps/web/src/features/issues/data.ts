@@ -1,5 +1,8 @@
-import type { IssueDetailDto, ListIssuesDto } from "@api/dto/issue.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type {
+	IssueDetailDto,
+	ListIssuesDto,
+} from "@api/features/issues/dto/issue.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import {
 	hashKey,
 	type QueryClient,

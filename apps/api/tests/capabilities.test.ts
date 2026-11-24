@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { generateText, streamText } from "ai";
-import { createAiProvider } from "../src/ai/provider";
+import { createAiProvider } from "../src/features/ai/provider";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
 	createCapabilityLayer,
 	createCapabilityRegistry,
-} from "../src/capabilities";
-import type { IssueDetailDto } from "../src/dto/issue.dto";
-import type { ProjectDto } from "../src/dto/project.dto";
+} from "../src/features/capabilities/index";
+import type { IssueDetailDto } from "../src/features/issues/dto/issue.dto";
+import type { ProjectDto } from "../src/features/projects/dto/project.dto";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

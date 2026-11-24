@@ -1,4 +1,4 @@
-import type { ProjectUpdateDto } from "@api/dto/project-update.dto";
+import type { ProjectUpdateDto } from "@api/features/project-updates/dto/project-update.dto";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { PROJECT_UPDATE_BODY_MAX, type ProjectHealth } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";

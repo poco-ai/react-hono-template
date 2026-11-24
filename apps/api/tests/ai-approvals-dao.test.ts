@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createAiToolCallDao } from "../src/dao/ai-tool-call.dao";
+import { createAiToolCallDao } from "../src/features/ai/dao/ai-tool-call.dao";
 import { createTestDb } from "./helpers/test-db";
 
 test("claimProposedStatus is a compare-and-set claim", async () => {

@@ -2,19 +2,19 @@ import { ApiErrorCode } from "@workspace/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { createStripeController } from "./controllers/stripe.controller";
+import { createAuth } from "./core/lib/auth";
+import type { BackgroundFn } from "./core/lib/background";
+import { createErrorHandler } from "./core/lib/on-error";
+import { runWithRequestMeta } from "./core/lib/request-context";
+import { fail } from "./core/lib/response";
+import type { AppPlatform } from "./core/platform/types";
 import { createDependencies } from "./dependencies";
-import { createAuth } from "./lib/auth";
-import type { BackgroundFn } from "./lib/background";
-import { createErrorHandler } from "./lib/on-error";
-import { runWithRequestMeta } from "./lib/request-context";
-import { fail } from "./lib/response";
-import { resolveMcpConfig } from "./mcp/config";
-import { createMcpEndpoint } from "./mcp/routes";
-import type { AppPlatform } from "./platform/types";
+import { createStripeController } from "./features/billing/controllers/stripe.controller";
+import { resolveMcpConfig } from "./features/mcp/config";
+import { createMcpEndpoint } from "./features/mcp/routes";
+import { createV1App } from "./features/public-api/index";
 import { createRoutes } from "./routes";
 import { handleScheduled } from "./scheduled";
-import { createV1App } from "./v1";
 
 const csvExposeHeaders = [
 	"Content-Disposition",

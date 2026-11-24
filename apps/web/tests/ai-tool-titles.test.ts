@@ -15,7 +15,7 @@ import zh from "../src/i18n/locales/zh";
 
 const capabilitiesRoot = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
-	"../../api/src/capabilities",
+	"../../api/src/features/capabilities",
 );
 
 /** Capability ids registered by the API read/write adapters. */

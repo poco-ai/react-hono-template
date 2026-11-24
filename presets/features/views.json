@@ -4,11 +4,7 @@
 	"dependsOn": ["core", "projects", "issues"],
 	"softDependsOn": ["billing"],
 	"claims": [
-		"apps/api/src/controllers/view.controller.ts",
-		"apps/api/src/dao/view.dao.ts",
-		"apps/api/src/dto/view.dto.ts",
-		"apps/api/src/routes/views.ts",
-		"apps/api/src/services/view.service.ts",
+		"apps/api/src/features/views/**",
 		"apps/web/src/features/views/**",
 		"packages/shared/src/schemas/view.ts"
 	]

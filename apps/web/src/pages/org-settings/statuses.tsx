@@ -1,4 +1,4 @@
-import type { StatusDto } from "@api/dto/status.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { useQuery } from "@tanstack/react-query";
 import {
 	createStatusSchema,

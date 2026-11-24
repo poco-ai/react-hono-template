@@ -5,23 +5,23 @@ import {
 	ApiErrorCode,
 	type CreateIssueRelationInput,
 } from "@workspace/shared";
-import { createCapabilityLayer } from "../src/capabilities";
-import type { CapabilityDeps } from "../src/capabilities/types";
-import type { ActivityInsert } from "../src/dao/activity.dao";
-import type { IssueDao } from "../src/dao/issue.dao";
-import type { LabelDao } from "../src/dao/label.dao";
-import type { MemberDao } from "../src/dao/member.dao";
-import type { ProjectDao } from "../src/dao/project.dao";
-import type { RelationDao } from "../src/dao/relation.dao";
+import type { ActivityInsert } from "../src/core/dao/activity.dao";
+import type { MemberDao } from "../src/core/dao/member.dao";
+import type { Auth } from "../src/core/lib/auth";
 import type { Dependencies } from "../src/dependencies";
-import type { IssueDto } from "../src/dto/issue.dto";
-import type { IssueRelationDto } from "../src/dto/relation.dto";
-import type { StatusDto } from "../src/dto/status.dto";
-import type { Auth } from "../src/lib/auth";
+import { createCapabilityLayer } from "../src/features/capabilities/index";
+import type { CapabilityDeps } from "../src/features/capabilities/types";
+import type { IssueDao } from "../src/features/issues/dao/issue.dao";
+import type { IssueDto } from "../src/features/issues/dto/issue.dto";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import type { LabelDao } from "../src/features/labels/dao/label.dao";
+import type { ProjectDao } from "../src/features/projects/dao/project.dao";
+import type { RelationDao } from "../src/features/relations/dao/relation.dao";
+import type { IssueRelationDto } from "../src/features/relations/dto/relation.dto";
+import { createRelationService } from "../src/features/relations/services/relation.service";
+import type { StatusDto } from "../src/features/statuses/dto/status.dto";
+import type { StatusService } from "../src/features/statuses/services/status.service";
 import { createRoutes } from "../src/routes";
-import { createIssueService } from "../src/services/issue.service";
-import { createRelationService } from "../src/services/relation.service";
-import type { StatusService } from "../src/services/status.service";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 

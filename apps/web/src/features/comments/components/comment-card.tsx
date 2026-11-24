@@ -1,5 +1,5 @@
-import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
-import type { CommentDto } from "@api/dto/comment.dto";
+import type { AttachmentWithUrlDto } from "@api/features/attachments/dto/attachment.dto";
+import type { CommentDto } from "@api/features/comments/dto/comment.dto";
 import type { CommentReactionEmoji } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";

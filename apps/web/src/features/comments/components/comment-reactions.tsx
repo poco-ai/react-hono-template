@@ -1,4 +1,4 @@
-import type { CommentReactionSummaryDto } from "@api/dto/comment.dto";
+import type { CommentReactionSummaryDto } from "@api/features/comments/dto/comment.dto";
 import type { CommentReactionEmoji } from "@workspace/shared";
 import { COMMENT_REACTION_EMOJIS } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";

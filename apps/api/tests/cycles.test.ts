@@ -9,23 +9,23 @@ import {
 	issueFilterNodeSchema,
 	updateCycleSchema,
 } from "@workspace/shared";
+import type { Auth } from "../src/core/lib/auth";
+import type { Dependencies } from "../src/dependencies";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
 	createCapabilityLayer,
 	createCapabilityRegistry,
-} from "../src/capabilities";
-import { createCycleDao } from "../src/dao/cycle.dao";
-import { createIssueDao } from "../src/dao/issue.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import type { Dependencies } from "../src/dependencies";
-import type { Auth } from "../src/lib/auth";
-import { createRoutes } from "../src/routes";
+} from "../src/features/capabilities/index";
+import { createCycleDao } from "../src/features/cycles/dao/cycle.dao";
 import {
 	assertCycleAssignable,
 	createCycleService,
 	cycleStatus,
-} from "../src/services/cycle.service";
+} from "../src/features/cycles/services/cycle.service";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import { createRoutes } from "../src/routes";
 import {
 	seedCycle,
 	seedIssue,

@@ -1,4 +1,4 @@
-import type { LabelDto } from "@api/dto/label.dto";
+import type { LabelDto } from "@api/features/labels/dto/label.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";

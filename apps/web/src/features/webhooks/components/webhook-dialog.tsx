@@ -1,4 +1,4 @@
-import type { WebhookDto } from "@api/dto/webhook.dto";
+import type { WebhookDto } from "@api/features/webhooks/dto/webhook.dto";
 import {
 	type CreateWebhookInput,
 	createWebhookSchema,

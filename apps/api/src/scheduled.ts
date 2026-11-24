@@ -1,6 +1,6 @@
-import type { BackgroundFn } from "./lib/background";
-import type { CleanupService } from "./services/cleanup.service";
-import type { RecurrenceService } from "./services/recurrence.service";
+import type { BackgroundFn } from "./core/lib/background";
+import type { CleanupService } from "./core/services/cleanup.service";
+import type { RecurrenceService } from "./features/recurrences/services/recurrence.service";
 
 export const handleScheduled = async (
 	cleanup: Pick<CleanupService, "cleanup">,

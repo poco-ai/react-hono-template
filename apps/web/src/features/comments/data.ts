@@ -2,7 +2,7 @@ import type {
 	CommentDto,
 	CommentReactionSummaryDto,
 	ListCommentsDto,
-} from "@api/dto/comment.dto";
+} from "@api/features/comments/dto/comment.dto";
 import {
 	type InfiniteData,
 	infiniteQueryOptions,

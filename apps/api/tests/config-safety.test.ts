@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { PLANS } from "@workspace/shared";
-import { RATE_LIMIT_WINDOW_MS } from "../src/lib/rate-limit";
-import { SCHEDULED_INTERVAL_MS } from "../src/lib/redis/scheduler";
+import { RATE_LIMIT_WINDOW_MS } from "../src/core/lib/rate-limit";
+import { SCHEDULED_INTERVAL_MS } from "../src/core/lib/redis/scheduler";
 import {
 	WEBHOOK_MAX_ATTEMPTS,
 	WEBHOOK_RETRY_DELAY_MS,
-} from "../src/services/webhook-delivery.service";
+} from "../src/features/webhooks/services/webhook-delivery.service";
 
 const wranglerConfig = readFileSync(
 	fileURLToPath(new URL("../wrangler.jsonc", import.meta.url).href),

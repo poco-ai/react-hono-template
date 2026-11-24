@@ -1,5 +1,5 @@
-import type { ProjectDto } from "@api/dto/project.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type { ProjectDto } from "@api/features/projects/dto/project.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import {
 	ISSUE_FILTER_OPERATORS_BY_FIELD,
 	ISSUE_PRIORITIES,

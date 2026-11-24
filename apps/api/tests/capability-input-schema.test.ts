@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { issueFilterShape, issueListQuerySchema } from "@workspace/shared";
-import { listIssuesInputSchema } from "../src/capabilities/projections";
+import { listIssuesInputSchema } from "../src/features/capabilities/projections";
 
 const filters = {
 	projectId: "project-1",

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
-import { assertProjectWritable } from "../src/services/project-access";
+import { assertProjectWritable } from "../src/features/projects/services/project-access";
 
 test("missing projects are NOT_FOUND and archived projects are read-only", () => {
 	assert.throws(

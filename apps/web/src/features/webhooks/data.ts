@@ -1,7 +1,7 @@
 import type {
 	ListWebhookDeliveriesDto,
 	WebhookDto,
-} from "@api/dto/webhook.dto";
+} from "@api/features/webhooks/dto/webhook.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type { WebhookEventName } from "@workspace/shared";
 import { webhookDeliveriesKey, webhooksKey } from "@/features/keys";

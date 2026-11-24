@@ -5,7 +5,7 @@ import {
 	ACTIVITY_OFFSET_MAX,
 	activityListQuerySchema,
 } from "@workspace/shared";
-import { createActivityDao } from "../src/dao/activity.dao";
+import { createActivityDao } from "../src/core/dao/activity.dao";
 import { seedIssue } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

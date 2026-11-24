@@ -1,4 +1,4 @@
-import type { AdminStatsDto } from "@api/dto/admin-org.dto";
+import type { AdminStatsDto } from "@api/core/dto/admin-org.dto";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";

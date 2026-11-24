@@ -6,10 +6,10 @@ import {
 	PLANS,
 	redactAuditValue,
 } from "@workspace/shared";
-import { createAuditDao } from "../src/dao/audit.dao";
-import { createQuotaDao } from "../src/dao/quota.dao";
-import { createAuditService } from "../src/services/audit.service";
-import { createQuotaService } from "../src/services/quota.service";
+import { createAuditDao } from "../src/core/dao/audit.dao";
+import { createAuditService } from "../src/core/services/audit.service";
+import { createQuotaDao } from "../src/features/billing/dao/quota.dao";
+import { createQuotaService } from "../src/features/billing/services/quota.service";
 import { createTestDb } from "./helpers/test-db";
 
 const NOW = new Date("2026-11-15T00:00:00.000Z");

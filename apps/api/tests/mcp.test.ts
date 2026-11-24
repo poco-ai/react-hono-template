@@ -9,21 +9,21 @@ import {
 } from "@modelcontextprotocol/server";
 import { ApiError, ApiErrorCode, type ApiKeyScope } from "@workspace/shared";
 import { z } from "zod";
+import type { Auth } from "../src/core/lib/auth";
+import { sha256Hex } from "../src/core/lib/crypto";
+import type { ApiKeyDao } from "../src/features/api-keys/dao/api-key.dao";
 import type {
 	CapabilityEntry,
 	CapabilityResult,
-} from "../src/capabilities/types";
-import type { ApiKeyDao } from "../src/dao/api-key.dao";
-import type { Auth } from "../src/lib/auth";
-import { sha256Hex } from "../src/lib/crypto";
+} from "../src/features/capabilities/types";
 import {
 	type McpAuthResult,
 	type McpPrincipal,
 	normalizeOAuthScopes,
 	resolveMcpAuth,
-} from "../src/mcp/auth";
-import { createMcpServerFactory } from "../src/mcp/server";
-import type { McpToolRuntime } from "../src/mcp/tools";
+} from "../src/features/mcp/auth";
+import { createMcpServerFactory } from "../src/features/mcp/server";
+import type { McpToolRuntime } from "../src/features/mcp/tools";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

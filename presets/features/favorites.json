@@ -3,11 +3,7 @@
 	"tier": 2,
 	"dependsOn": ["core", "issues", "projects"],
 	"claims": [
-		"apps/api/src/controllers/favorite.controller.ts",
-		"apps/api/src/dao/favorite.dao.ts",
-		"apps/api/src/dto/favorite.dto.ts",
-		"apps/api/src/routes/favorites.ts",
-		"apps/api/src/services/favorite.service.ts",
+		"apps/api/src/features/favorites/**",
 		"apps/web/src/features/favorites/**",
 		"packages/shared/src/schemas/favorite.ts"
 	]

@@ -6,13 +6,13 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { createApp } from "../src/app";
-import { createRedisRateLimiter } from "../src/lib/redis/rate-limit";
+import { createRedisRateLimiter } from "../src/core/lib/redis/rate-limit";
 import {
 	createRedisWebhookQueue,
 	drainWebhookQueue,
-} from "../src/lib/redis/webhook-queue";
-import { platformFromProcess } from "../src/platform/server";
-import type { WebhookDeliveryService } from "../src/services/webhook-delivery.service";
+} from "../src/core/lib/redis/webhook-queue";
+import { platformFromProcess } from "../src/core/platform/server";
+import type { WebhookDeliveryService } from "../src/features/webhooks/services/webhook-delivery.service";
 
 const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 

@@ -6,18 +6,18 @@ import {
 	DEFAULT_RUNTIME_CONFIG,
 	searchQuerySchema,
 } from "@workspace/shared";
+import type { Auth } from "../src/core/lib/auth";
+import type { Dependencies } from "../src/dependencies";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
 	createCapabilityLayer,
-} from "../src/capabilities";
-import { searchResultsSchema as capabilitySearchResultsSchema } from "../src/capabilities/projections";
-import { createSearchDao } from "../src/dao/search.dao";
-import type { Dependencies } from "../src/dependencies";
-import type { Auth } from "../src/lib/auth";
-import { buildSearchTerms } from "../src/lib/search";
+} from "../src/features/capabilities/index";
+import { searchResultsSchema as capabilitySearchResultsSchema } from "../src/features/capabilities/projections";
+import { createSearchDao } from "../src/features/search/dao/search.dao";
+import { buildSearchTerms } from "../src/features/search/lib/search";
+import { createSearchService } from "../src/features/search/services/search.service";
 import { createRoutes } from "../src/routes";
-import { createSearchService } from "../src/services/search.service";
 import { createTestDb } from "./helpers/test-db";
 
 /**

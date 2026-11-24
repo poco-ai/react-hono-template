@@ -1,0 +1,216 @@
+import {
+	ApiError,
+	ApiErrorCode,
+	type CreateWebhookInput,
+	isAllowedWebhookUrl,
+	type UpdateWebhookInput,
+	WEBHOOK_EVENTS,
+} from "@workspace/shared";
+import type { BackgroundFn } from "../../../core/lib/background";
+import { randomHex } from "../../../core/lib/crypto";
+import type { PlanAssert } from "../../../core/lib/ports/plan";
+import type { AuditService } from "../../../core/services/audit.service";
+import type { WebhookDao } from "../dao/webhook.dao";
+import type { WebhookDeliveryDao } from "../dao/webhook-delivery.dao";
+import type {
+	ListWebhookDeliveriesDto,
+	WebhookDeliveryDto,
+	WebhookDto,
+	WebhookWithSecretDto,
+} from "../dto/webhook.dto";
+import type { WebhookDeliveryService } from "./webhook-delivery.service";
+
+const stripSecret = (hook: WebhookWithSecretDto): WebhookDto => {
+	const { secret: _secret, ...rest } = hook;
+	return rest;
+};
+
+export const createWebhookService = ({
+	webhookDao,
+	deliveryDao,
+	plans,
+	deliveries,
+	audit,
+}: {
+	webhookDao: WebhookDao;
+	deliveryDao: WebhookDeliveryDao;
+	plans: { assertQuota: PlanAssert };
+	deliveries: WebhookDeliveryService;
+	audit?: Pick<AuditService, "record">;
+}) => {
+	const assertEventsValid = (events: string[]) => {
+		const invalid = events.filter(
+			(event) => !(WEBHOOK_EVENTS as readonly string[]).includes(event),
+		);
+		if (invalid.length > 0) {
+			throw new ApiError(
+				ApiErrorCode.WEBHOOK_EVENT_INVALID,
+				`Unknown webhook events: ${invalid.join(", ")}`,
+			);
+		}
+	};
+
+	const assertUrlAllowed = (url: string) => {
+		if (!isAllowedWebhookUrl(url)) {
+			throw new ApiError(
+				ApiErrorCode.VALIDATION,
+				"Webhook URL must be https (http is only allowed for localhost)",
+			);
+		}
+	};
+
+	const requireWebhook = async (
+		orgId: string,
+		webhookId: string,
+	): Promise<WebhookWithSecretDto> => {
+		const webhook = await webhookDao.findById(orgId, webhookId);
+		if (!webhook) {
+			throw new ApiError(
+				ApiErrorCode.WEBHOOK_NOT_FOUND,
+				`Webhook ${webhookId} not found`,
+			);
+		}
+		return webhook;
+	};
+
+	return {
+		createWebhook: async (
+			orgId: string,
+			createdById: string | null,
+			input: CreateWebhookInput,
+		): Promise<WebhookWithSecretDto> => {
+			await plans.assertQuota(
+				orgId,
+				"webhooks",
+				() => webhookDao.countByOrg(orgId),
+				{
+					zeroLimitMessage: "Webhooks require the Pro plan",
+				},
+			);
+			assertUrlAllowed(input.url);
+			assertEventsValid(input.events);
+			const created = await webhookDao.create({
+				id: crypto.randomUUID(),
+				orgId,
+				url: input.url,
+				secret: randomHex(32),
+				events: input.events,
+				createdById,
+			});
+			await audit?.record({
+				orgId,
+				actorType: "user",
+				actorId: createdById,
+				action: "webhook.created",
+				targetType: "webhook",
+				targetId: created.id,
+				after: { url: created.url, events: created.events },
+			});
+			return created;
+		},
+
+		updateWebhook: async (
+			orgId: string,
+			webhookId: string,
+			input: UpdateWebhookInput,
+		): Promise<WebhookDto> => {
+			await requireWebhook(orgId, webhookId);
+			if (input.url !== undefined) {
+				assertUrlAllowed(input.url);
+			}
+			if (input.events !== undefined) {
+				assertEventsValid(input.events);
+			}
+			const updated = await webhookDao.update(orgId, webhookId, {
+				url: input.url,
+				events: input.events,
+				active: input.active,
+			});
+			if (!updated) {
+				throw new ApiError(
+					ApiErrorCode.WEBHOOK_NOT_FOUND,
+					`Webhook ${webhookId} not found`,
+				);
+			}
+			return stripSecret(updated);
+		},
+
+		deleteWebhook: async (
+			orgId: string,
+			webhookId: string,
+			actorId?: string | null,
+		) => {
+			const existing = await webhookDao.findById(orgId, webhookId);
+			const deleted = await webhookDao.delete(orgId, webhookId);
+			if (!deleted || !existing) {
+				throw new ApiError(
+					ApiErrorCode.WEBHOOK_NOT_FOUND,
+					`Webhook ${webhookId} not found`,
+				);
+			}
+			await audit?.record({
+				orgId,
+				actorType: "user",
+				actorId: actorId ?? existing.createdById,
+				action: "webhook.deleted",
+				targetType: "webhook",
+				targetId: existing.id,
+				before: { url: existing.url, events: existing.events },
+			});
+			return { deleted: true };
+		},
+
+		listWebhooks: async (orgId: string): Promise<WebhookDto[]> =>
+			(await webhookDao.listByOrg(orgId)).map(stripSecret),
+
+		listDeliveries: (
+			orgId: string,
+			webhookId: string,
+			page: number,
+			pageSize: number,
+		): Promise<ListWebhookDeliveriesDto> =>
+			deliveryDao.listByWebhook(orgId, webhookId, page, pageSize),
+
+		listOrgDeliveries: (
+			orgId: string,
+			page: number,
+			pageSize: number,
+		): Promise<ListWebhookDeliveriesDto> =>
+			deliveryDao.listByOrg(orgId, page, pageSize),
+
+		ping: async (
+			orgId: string,
+			webhookId: string,
+			background?: BackgroundFn,
+		) => {
+			const hook = await requireWebhook(orgId, webhookId);
+			await deliveries.enqueue(
+				hook,
+				orgId,
+				"ping",
+				{ ping: true, webhookId },
+				background,
+			);
+			return { pinged: true };
+		},
+
+		redeliver: async (
+			orgId: string,
+			deliveryId: string,
+			background?: BackgroundFn,
+		): Promise<WebhookDeliveryDto> => {
+			const delivery = await deliveryDao.findById(orgId, deliveryId);
+			if (!delivery) {
+				throw new ApiError(
+					ApiErrorCode.NOT_FOUND,
+					`Webhook delivery ${deliveryId} not found`,
+				);
+			}
+			const hook = await requireWebhook(orgId, delivery.webhookId);
+			await deliveries.redeliver(orgId, delivery, hook, background);
+			return { ...delivery, status: "pending", attempts: 0 };
+		},
+	};
+};
+
+export type WebhookService = ReturnType<typeof createWebhookService>;

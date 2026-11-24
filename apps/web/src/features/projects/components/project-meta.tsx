@@ -1,4 +1,4 @@
-import type { ProjectDto } from "@api/dto/project.dto";
+import type { ProjectDto } from "@api/features/projects/dto/project.dto";
 import { cn } from "@workspace/ui/lib/utils";
 import { CalendarDays, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";

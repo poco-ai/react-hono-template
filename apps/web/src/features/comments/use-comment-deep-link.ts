@@ -1,4 +1,7 @@
-import type { CommentDto, ListCommentsDto } from "@api/dto/comment.dto";
+import type {
+	CommentDto,
+	ListCommentsDto,
+} from "@api/features/comments/dto/comment.dto";
 import type {
 	InfiniteData,
 	UseInfiniteQueryResult,

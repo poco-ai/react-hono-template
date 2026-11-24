@@ -4,14 +4,17 @@ import { ApiError, ApiErrorCode } from "@workspace/shared";
 import { stepCountIs, streamText, type UIMessage } from "ai";
 import { convertArrayToReadableStream, MockLanguageModelV3 } from "ai/test";
 import { z } from "zod";
-import { verifyApprovalResponses } from "../src/ai/approvals";
-import { buildChatTools, filterChatCapabilities } from "../src/ai/tools";
+import { sha256Hex } from "../src/core/lib/crypto";
+import { verifyApprovalResponses } from "../src/features/ai/approvals";
+import {
+	buildChatTools,
+	filterChatCapabilities,
+} from "../src/features/ai/tools";
 import type {
 	CapabilityContext,
 	CapabilityEntry,
 	CapabilityResult,
-} from "../src/capabilities/types";
-import { sha256Hex } from "../src/lib/crypto";
+} from "../src/features/capabilities/types";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

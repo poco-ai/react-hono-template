@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
-import type { AttachmentDao } from "../src/dao/attachment.dao";
+import type { AttachmentDao } from "../src/features/attachments/dao/attachment.dao";
 import type {
 	PendingUploadDao,
 	PendingUploadRow,
-} from "../src/dao/pending-upload.dao";
-import type { AttachmentDto } from "../src/dto/attachment.dto";
-import type { StorageAdapter } from "../src/lib/storage/types";
-import { createAttachmentService } from "../src/services/attachment.service";
-import { createStorageUsageService } from "../src/services/storage-usage.service";
+} from "../src/features/attachments/dao/pending-upload.dao";
+import type { AttachmentDto } from "../src/features/attachments/dto/attachment.dto";
+import type { StorageAdapter } from "../src/features/attachments/lib/types";
+import { createAttachmentService } from "../src/features/attachments/services/attachment.service";
+import { createStorageUsageService } from "../src/features/billing/services/storage-usage.service";
 
 const issue = {
 	id: "issue-1",

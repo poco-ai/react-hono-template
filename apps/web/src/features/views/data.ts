@@ -1,4 +1,4 @@
-import type { ViewDto } from "@api/dto/view.dto";
+import type { ViewDto } from "@api/features/views/dto/view.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type { CreateViewInput, UpdateViewInput } from "@workspace/shared";
 import { invalidateIssueQueries } from "@/features/issues/data";

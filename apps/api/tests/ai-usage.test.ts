@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
-import type { AiUsageDao, AiUsageTotals } from "../src/dao/ai-usage.dao";
+import type {
+	AiUsageDao,
+	AiUsageTotals,
+} from "../src/features/ai/dao/ai-usage.dao";
 import {
 	createAiUsageService,
 	estimateTokens,
 	monthRange,
-} from "../src/services/ai-usage.service";
+} from "../src/features/ai/services/ai-usage.service";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

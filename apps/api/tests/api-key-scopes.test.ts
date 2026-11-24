@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { ApiKeyDao, ApiKeyInsert } from "../src/dao/api-key.dao";
-import type { ApiKeyDto } from "../src/dto/api-key.dto";
-import { createApiKeyService } from "../src/services/api-key.service";
+import type {
+	ApiKeyDao,
+	ApiKeyInsert,
+} from "../src/features/api-keys/dao/api-key.dao";
+import type { ApiKeyDto } from "../src/features/api-keys/dto/api-key.dto";
+import { createApiKeyService } from "../src/features/api-keys/services/api-key.service";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

@@ -1,5 +1,5 @@
-import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
-import type { CommentDto } from "@api/dto/comment.dto";
+import type { AttachmentWithUrlDto } from "@api/features/attachments/dto/attachment.dto";
+import type { CommentDto } from "@api/features/comments/dto/comment.dto";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ATTACHMENT_MAX_SIZE } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";

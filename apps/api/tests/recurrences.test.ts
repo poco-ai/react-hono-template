@@ -6,22 +6,22 @@ import {
 	createRecurrenceSchema,
 	updateRecurrenceSchema,
 } from "@workspace/shared";
+import { createMemberDao } from "../src/core/dao/member.dao";
+import type { BackgroundFn } from "../src/core/lib/background";
+import type { RecurrenceNotifications } from "../src/core/lib/ports/notifications";
+import type { WebhookDispatcher } from "../src/core/lib/ports/webhook-dispatcher";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
 	createCapabilityRegistry,
-} from "../src/capabilities";
-import { createIssueDao } from "../src/dao/issue.dao";
-import { createMemberDao } from "../src/dao/member.dao";
-import { createProjectDao } from "../src/dao/project.dao";
-import { createRecurrenceDao } from "../src/dao/recurrence.dao";
-import type { BackgroundFn } from "../src/lib/background";
-import type { RecurrenceNotifications } from "../src/lib/ports/notifications";
-import type { WebhookDispatcher } from "../src/lib/ports/webhook-dispatcher";
+} from "../src/features/capabilities/index";
+import { createIssueDao } from "../src/features/issues/dao/issue.dao";
+import { createProjectDao } from "../src/features/projects/dao/project.dao";
+import { createRecurrenceDao } from "../src/features/recurrences/dao/recurrence.dao";
 import {
 	advanceNextRunAt,
 	createRecurrenceService,
-} from "../src/services/recurrence.service";
+} from "../src/features/recurrences/services/recurrence.service";
 import {
 	seedIssue,
 	seedOrganization,

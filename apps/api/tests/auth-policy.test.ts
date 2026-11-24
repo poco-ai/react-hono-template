@@ -6,8 +6,11 @@ import {
 	PLANS,
 	type PlanName,
 } from "@workspace/shared";
-import { createAuthPolicyService } from "../src/services/auth-policy.service";
-import { type QuotaAssert, quotaAssertFor } from "../src/services/plan.service";
+import { createAuthPolicyService } from "../src/core/services/auth-policy.service";
+import {
+	type QuotaAssert,
+	quotaAssertFor,
+} from "../src/features/billing/services/plan.service";
 
 const policyFor = ({
 	orgPlans = [] as string[],
@@ -26,7 +29,7 @@ const policyFor = ({
 				adminRole && id === "admin"
 					? ({ role: adminRole } as Awaited<
 							ReturnType<
-								import("../src/dao/admin-user.dao").AdminUserDao["findById"]
+								import("../src/core/dao/admin-user.dao").AdminUserDao["findById"]
 							>
 						>)
 					: null,
@@ -47,7 +50,7 @@ const policyFor = ({
 					frozen,
 				}) as Awaited<
 					ReturnType<
-						import("../src/dao/organization.dao").OrganizationDao["findById"]
+						import("../src/core/dao/organization.dao").OrganizationDao["findById"]
 					>
 				>,
 		},

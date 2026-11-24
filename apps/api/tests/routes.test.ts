@@ -6,9 +6,9 @@ import {
 	DEFAULT_RUNTIME_CONFIG,
 	type UpdateRuntimeConfigInput,
 } from "@workspace/shared";
+import type { Auth } from "../src/core/lib/auth";
+import type { SocialProvidersConfig } from "../src/core/lib/social-providers";
 import type { Dependencies } from "../src/dependencies";
-import type { Auth } from "../src/lib/auth";
-import type { SocialProvidersConfig } from "../src/lib/social-providers";
 import { createRoutes } from "../src/routes";
 
 // Only methods exercised by these requests are stubbed. Unexpected service calls

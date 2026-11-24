@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode } from "@workspace/shared";
-import type { AiConversationDao } from "../src/dao/ai-conversation.dao";
-import type { AiMessageDao } from "../src/dao/ai-message.dao";
-import type { AiToolCallDao } from "../src/dao/ai-tool-call.dao";
-import type { AiConversationDto } from "../src/dto/ai.dto";
-import { createAiConversationService } from "../src/services/ai-conversation.service";
+import type { AiConversationDao } from "../src/features/ai/dao/ai-conversation.dao";
+import type { AiMessageDao } from "../src/features/ai/dao/ai-message.dao";
+import type { AiToolCallDao } from "../src/features/ai/dao/ai-tool-call.dao";
+import type { AiConversationDto } from "../src/features/ai/dto/ai.dto";
+import { createAiConversationService } from "../src/features/ai/services/ai-conversation.service";
 
 const ORG_ID = "org-1";
 const USER_ID = "user-1";

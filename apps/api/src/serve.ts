@@ -1,8 +1,8 @@
 import { createApp } from "./app";
-import { detachBackground } from "./lib/background";
-import { startScheduledLoop } from "./lib/redis/scheduler";
-import { startWebhookLoop } from "./lib/redis/webhook-queue";
-import { platformFromProcess } from "./platform/server";
+import { detachBackground } from "./core/lib/background";
+import { startScheduledLoop } from "./core/lib/redis/scheduler";
+import { startWebhookLoop } from "./core/lib/redis/webhook-queue";
+import { platformFromProcess } from "./core/platform/server";
 
 export const listen = async () => {
 	const runtime = platformFromProcess(process.env);

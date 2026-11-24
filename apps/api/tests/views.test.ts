@@ -7,18 +7,18 @@ import {
 	PLANS,
 	type PlanLimits,
 } from "@workspace/shared";
+import type { PlanService } from "../src/features/billing/services/plan.service";
 import {
 	type CapabilityContext,
 	type CapabilityDeps,
 	createCapabilityLayer,
 	createCapabilityRegistry,
-} from "../src/capabilities";
-import { createViewDao } from "../src/dao/view.dao";
-import type { PlanService } from "../src/services/plan.service";
+} from "../src/features/capabilities/index";
+import { createViewDao } from "../src/features/views/dao/view.dao";
 import {
 	createViewService,
 	type ViewService,
-} from "../src/services/view.service";
+} from "../src/features/views/services/view.service";
 import { seedOrganization, seedProject, seedUser } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

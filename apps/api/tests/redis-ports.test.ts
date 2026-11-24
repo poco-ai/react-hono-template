@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { createRedisCache } from "../src/lib/redis/cache";
-import type { RedisLike } from "../src/lib/redis/client";
-import { createRedisRateLimiter } from "../src/lib/redis/rate-limit";
-import { withRedisLock } from "../src/lib/redis/scheduler";
+import { createRedisCache } from "../src/core/lib/redis/cache";
+import type { RedisLike } from "../src/core/lib/redis/client";
+import { createRedisRateLimiter } from "../src/core/lib/redis/rate-limit";
+import { withRedisLock } from "../src/core/lib/redis/scheduler";
 import {
 	createRedisWebhookQueue,
 	drainWebhookQueue,
 	startWebhookLoop,
-} from "../src/lib/redis/webhook-queue";
-import type { WebhookDeliveryService } from "../src/services/webhook-delivery.service";
+} from "../src/core/lib/redis/webhook-queue";
+import type { WebhookDeliveryService } from "../src/features/webhooks/services/webhook-delivery.service";
 
 class MemoryRedis implements RedisLike {
 	private strings = new Map<string, { value: string; expiresAt?: number }>();

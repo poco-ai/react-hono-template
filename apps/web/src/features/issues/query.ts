@@ -1,4 +1,4 @@
-import type { StatusDto } from "@api/dto/status.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import {
 	ISSUE_PRIORITIES,
 	ISSUE_QUERY_GROUP_BY,

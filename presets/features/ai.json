@@ -17,20 +17,7 @@
 		"mockFlag": "AI_PROVIDER=mock"
 	},
 	"claims": [
-		"apps/api/src/ai/**",
-		"apps/api/src/controllers/ai.controller.ts",
-		"apps/api/src/dao/ai-conversation.dao.ts",
-		"apps/api/src/dao/ai-message.dao.ts",
-		"apps/api/src/dao/ai-tool-call.dao.ts",
-		"apps/api/src/dao/ai-usage.dao.ts",
-		"apps/api/src/dao/org-ai-settings.dao.ts",
-		"apps/api/src/dto/ai.dto.ts",
-		"apps/api/src/middleware/ai.ts",
-		"apps/api/src/routes/ai.ts",
-		"apps/api/src/services/ai-chat.service.ts",
-		"apps/api/src/services/ai-conversation.service.ts",
-		"apps/api/src/services/ai-usage.service.ts",
-		"apps/api/src/services/org-ai-settings.service.ts",
+		"apps/api/src/features/ai/**",
 		"apps/web/src/features/ai/**",
 		"packages/shared/src/schemas/ai.ts"
 	]

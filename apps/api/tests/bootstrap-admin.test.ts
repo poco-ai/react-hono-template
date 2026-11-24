@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createAdminUserDao } from "../src/dao/admin-user.dao";
+import { createAdminUserDao } from "../src/core/dao/admin-user.dao";
 import { createTestDb } from "./helpers/test-db";
 
 const insertUser = (sqlite: Database, id: string, role = "user") => {

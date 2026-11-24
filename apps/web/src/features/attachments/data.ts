@@ -1,4 +1,4 @@
-import type { AttachmentWithUrlDto } from "@api/dto/attachment.dto";
+import type { AttachmentWithUrlDto } from "@api/features/attachments/dto/attachment.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import {
 	attachmentsQueryKey,

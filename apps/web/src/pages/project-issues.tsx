@@ -1,4 +1,4 @@
-import type { ListIssuesDto } from "@api/dto/issue.dto";
+import type { ListIssuesDto } from "@api/features/issues/dto/issue.dto";
 import { useHotkeys } from "@tanstack/react-hotkeys";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";

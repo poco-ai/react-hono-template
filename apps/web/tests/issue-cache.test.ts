@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { IssueDetailDto } from "@api/dto/issue.dto";
-import type { StatusDto } from "@api/dto/status.dto";
+import type { IssueDetailDto } from "@api/features/issues/dto/issue.dto";
+import type { StatusDto } from "@api/features/statuses/dto/status.dto";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import {
 	applyIssueUpdate,

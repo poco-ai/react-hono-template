@@ -1,4 +1,4 @@
-import type { OrgActivityDto } from "@api/dto/activity.dto";
+import type { OrgActivityDto } from "@api/core/dto/activity.dto";
 import type { TFunction } from "i18next";
 import { dayKey, formatDate } from "@/lib/format";
 

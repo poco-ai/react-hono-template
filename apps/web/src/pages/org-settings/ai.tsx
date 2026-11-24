@@ -1,4 +1,4 @@
-import type { OrgAiSettingsDto } from "@api/dto/ai.dto";
+import type { OrgAiSettingsDto } from "@api/features/ai/dto/ai.dto";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Alert,

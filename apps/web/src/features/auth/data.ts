@@ -1,4 +1,4 @@
-import type { BootstrapDto } from "@api/dto/bootstrap.dto";
+import type { BootstrapDto } from "@api/core/dto/bootstrap.dto";
 import { authMutationKeys } from "@better-auth-ui/core";
 import { useRevokeSessions as useAuthRevokeSessions } from "@better-auth-ui/react";
 import {

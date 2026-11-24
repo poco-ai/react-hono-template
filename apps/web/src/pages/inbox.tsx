@@ -1,4 +1,4 @@
-import type { NotificationDto } from "@api/dto/notification.dto";
+import type { NotificationDto } from "@api/features/notifications/dto/notification.dto";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { NotificationFilter } from "@workspace/shared";

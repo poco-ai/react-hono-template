@@ -4,7 +4,7 @@ import {
 	signLegacyPayload,
 	signStandardWebhook,
 	verifyStandardWebhook,
-} from "../src/lib/webhook-signature";
+} from "../src/features/webhooks/lib/webhook-signature";
 
 const secret = "shh";
 const payload = '{"a":1}';

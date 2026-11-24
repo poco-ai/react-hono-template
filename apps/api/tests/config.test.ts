@@ -6,11 +6,11 @@ import {
 	DEFAULT_RUNTIME_CONFIG,
 	type RuntimeConfig,
 } from "@workspace/shared";
-import type { CacheStore } from "../src/lib/kv/types";
+import type { CacheStore } from "../src/core/lib/kv/types";
 import {
 	CONFIG_KEY,
 	createConfigService,
-} from "../src/services/config.service";
+} from "../src/core/services/config.service";
 
 const cacheFor = ({ stored = null as unknown, setSucceeds = true } = {}) => {
 	const gets: string[] = [];

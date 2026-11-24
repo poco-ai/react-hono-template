@@ -1,0 +1,300 @@
+import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
+import {
+	type ActivityInsert,
+	activityInsertStatement,
+} from "../../../core/dao/activity.dao";
+import { user } from "../../../db/auth-schema";
+import { runBatch } from "../../../db/run-batch";
+import { attachments, comments, pendingUploads } from "../../../db/schema";
+import type { Database } from "../../../db/types";
+import type { AttachmentDto } from "../dto/attachment.dto";
+
+const ATTACHMENT_SELECT = {
+	id: attachments.id,
+	orgId: attachments.orgId,
+	issueId: attachments.issueId,
+	commentId: attachments.commentId,
+	key: attachments.key,
+	filename: attachments.filename,
+	contentType: attachments.contentType,
+	size: attachments.size,
+	createdAt: attachments.createdAt,
+	// Joined columns need unique SQL names — see drizzle-orm#6038.
+	uploader: {
+		id: user.id.as("uploader_user_id"),
+		name: user.name.as("uploader_user_name"),
+		email: user.email.as("uploader_user_email"),
+		image: user.image.as("uploader_user_image"),
+	},
+};
+
+type AttachmentJoinRow = {
+	id: string;
+	orgId: string;
+	issueId: string;
+	commentId: string | null;
+	key: string;
+	filename: string;
+	contentType: string;
+	size: number;
+	createdAt: Date;
+	uploader: {
+		id: string;
+		name: string;
+		email: string;
+		image: string | null;
+	} | null;
+};
+
+const toAttachmentDto = (row: AttachmentJoinRow): AttachmentDto => ({
+	...row,
+	createdAt: row.createdAt.toISOString(),
+});
+
+export const createAttachmentDao = (db: Database) => ({
+	listByIssue: async (
+		orgId: string,
+		issueId: string,
+	): Promise<AttachmentDto[]> => {
+		const rows = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					eq(attachments.issueId, issueId),
+					isNull(attachments.commentId),
+				),
+			)
+			.orderBy(desc(attachments.createdAt), desc(attachments.id));
+		return rows.map(toAttachmentDto);
+	},
+
+	findById: async (
+		orgId: string,
+		id: string,
+	): Promise<AttachmentDto | null> => {
+		const [row] = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(and(eq(attachments.orgId, orgId), eq(attachments.id, id)))
+			.limit(1);
+		return row ? toAttachmentDto(row) : null;
+	},
+
+	create: async (
+		data: {
+			id: string;
+			orgId: string;
+			issueId: string;
+			commentId?: string | null;
+			uploaderId: string | null;
+			key: string;
+			filename: string;
+			contentType: string;
+			size: number;
+		},
+		activity?: ActivityInsert,
+		pendingKey?: string,
+	): Promise<AttachmentDto> => {
+		await runBatch(db, (tx) => {
+			const statements = [
+				tx.insert(attachments).values({
+					...data,
+					commentId: data.commentId ?? null,
+				}),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			if (pendingKey) {
+				// Same batch as the insert: a successful register cannot leave the
+				// reservation behind for cleanup to delete the live object.
+				statements.push(
+					tx.delete(pendingUploads).where(eq(pendingUploads.key, pendingKey)),
+				);
+			}
+			if (activity) {
+				statements.push(activityInsertStatement(tx, [activity]));
+			}
+			return statements;
+		});
+		const [row] = await db
+			.select()
+			.from(attachments)
+			.where(
+				and(eq(attachments.orgId, data.orgId), eq(attachments.id, data.id)),
+			)
+			.limit(1);
+		if (!row) {
+			throw new Error(`Attachment ${data.id} not found after insert`);
+		}
+		let uploader: AttachmentJoinRow["uploader"] = null;
+		if (row.uploaderId) {
+			const [uploaderRow] = await db
+				.select({
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					image: user.image,
+				})
+				.from(user)
+				.where(eq(user.id, row.uploaderId))
+				.limit(1);
+			uploader = uploaderRow ?? null;
+		}
+		return {
+			id: row.id,
+			orgId: row.orgId,
+			issueId: row.issueId,
+			commentId: row.commentId,
+			key: row.key,
+			filename: row.filename,
+			contentType: row.contentType,
+			size: row.size,
+			uploader,
+			createdAt: row.createdAt.toISOString(),
+		};
+	},
+
+	delete: async (
+		orgId: string,
+		id: string,
+		activity?: ActivityInsert,
+	): Promise<boolean> => {
+		const [rows] = await runBatch(db, (tx) => {
+			const statements = [
+				tx
+					.delete(attachments)
+					.where(and(eq(attachments.orgId, orgId), eq(attachments.id, id)))
+					.returning({ id: attachments.id }),
+			] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]];
+			if (activity) {
+				statements.push(activityInsertStatement(tx, [activity]));
+			}
+			return statements;
+		});
+		return rows.length > 0;
+	},
+
+	listByComment: async (
+		orgId: string,
+		commentId: string,
+	): Promise<AttachmentDto[]> => {
+		const rows = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(
+				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
+			)
+			.orderBy(desc(attachments.createdAt), desc(attachments.id));
+		return rows.map(toAttachmentDto);
+	},
+
+	listByCommentIds: async (
+		orgId: string,
+		commentIds: string[],
+	): Promise<AttachmentDto[]> => {
+		if (commentIds.length === 0) return [];
+		const rows = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					inArray(attachments.commentId, commentIds),
+				),
+			)
+			.orderBy(desc(attachments.createdAt), desc(attachments.id));
+		return rows.map(toAttachmentDto);
+	},
+
+	sumSizeByOrg: async (orgId: string): Promise<number> => {
+		const [row] = await db
+			.select({
+				value: sql<number>`coalesce(sum(${attachments.size}), 0)`,
+			})
+			.from(attachments)
+			.where(eq(attachments.orgId, orgId))
+			.limit(1);
+		return Number(row?.value ?? 0);
+	},
+
+	countByIssue: async (orgId: string, issueId: string): Promise<number> => {
+		const [row] = await db
+			.select({ value: count() })
+			.from(attachments)
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					eq(attachments.issueId, issueId),
+					isNull(attachments.commentId),
+				),
+			)
+			.limit(1);
+		return row?.value ?? 0;
+	},
+
+	countByComment: async (orgId: string, commentId: string): Promise<number> => {
+		const [row] = await db
+			.select({ value: count() })
+			.from(attachments)
+			.where(
+				and(eq(attachments.orgId, orgId), eq(attachments.commentId, commentId)),
+			)
+			.limit(1);
+		return row?.value ?? 0;
+	},
+
+	/**
+	 * Storage keys attached to a comment and its direct replies (threads are
+	 * one level deep). Callers read this BEFORE deleting the rows, then remove
+	 * the objects once the database commit has succeeded — deleting the
+	 * objects first would leave visible rows pointing at gone objects.
+	 */
+	listKeysForCommentThread: async (
+		orgId: string,
+		commentId: string,
+	): Promise<string[]> => {
+		const replyIds = db
+			.select({ id: comments.id })
+			.from(comments)
+			.where(and(eq(comments.orgId, orgId), eq(comments.parentId, commentId)));
+		const rows = await db
+			.select({ key: attachments.key })
+			.from(attachments)
+			.where(
+				and(
+					eq(attachments.orgId, orgId),
+					or(
+						eq(attachments.commentId, commentId),
+						inArray(attachments.commentId, replyIds),
+					),
+				),
+			);
+		return rows.map((row) => row.key);
+	},
+
+	findByKey: async (key: string): Promise<AttachmentDto | null> => {
+		const [row] = await db
+			.select(ATTACHMENT_SELECT)
+			.from(attachments)
+			.leftJoin(user, eq(user.id, attachments.uploaderId))
+			.where(eq(attachments.key, key))
+			.limit(1);
+		return row ? toAttachmentDto(row) : null;
+	},
+
+	existsByKey: async (key: string): Promise<boolean> => {
+		const [row] = await db
+			.select({ id: attachments.id })
+			.from(attachments)
+			.where(eq(attachments.key, key))
+			.limit(1);
+		return !!row;
+	},
+});
+
+export type AttachmentDao = ReturnType<typeof createAttachmentDao>;

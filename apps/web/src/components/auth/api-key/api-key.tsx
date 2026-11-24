@@ -1,5 +1,5 @@
 // Adapted from Better Auth UI base-nova registry; uses organization key DTOs.
-import type { ApiKeyDto } from "@api/dto/api-key.dto";
+import type { ApiKeyDto } from "@api/features/api-keys/dto/api-key.dto";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {

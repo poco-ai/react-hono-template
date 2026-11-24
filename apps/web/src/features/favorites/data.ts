@@ -1,4 +1,4 @@
-import type { FavoriteItemDto } from "@api/dto/favorite.dto";
+import type { FavoriteItemDto } from "@api/features/favorites/dto/favorite.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	CreateFavoriteInput,

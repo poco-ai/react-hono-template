@@ -12,8 +12,8 @@ import {
 	ISSUE_NUMBER_MESSAGE,
 	issueNumberParam,
 	issueParams,
-} from "../src/lib/params";
-import { validate } from "../src/lib/validation";
+} from "../src/core/lib/params";
+import { validate } from "../src/core/lib/validation";
 
 const app = () => {
 	const hono = new Hono();

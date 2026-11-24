@@ -1,4 +1,4 @@
-import type { IssueTemplateDto } from "@api/dto/issue-template.dto";
+import type { IssueTemplateDto } from "@api/features/templates/dto/issue-template.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	CreateIssueTemplateInput,

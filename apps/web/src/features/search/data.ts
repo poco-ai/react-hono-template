@@ -3,7 +3,7 @@ import type {
 	SearchIssueHitDto,
 	SearchProjectHitDto,
 	SearchResultsDto,
-} from "@api/dto/search.dto";
+} from "@api/features/search/dto/search.dto";
 import { queryOptions } from "@tanstack/react-query";
 import {
 	SEARCH_DEFAULT_LIMIT,
@@ -34,7 +34,7 @@ export type {
 	SearchIssueHitDto,
 	SearchMemberHitDto,
 	SearchProjectHitDto,
-} from "@api/dto/search.dto";
+} from "@api/features/search/dto/search.dto";
 
 export { emptySearchResults } from "@workspace/shared";
 

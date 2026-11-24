@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { BillingDao } from "../src/dao/billing.dao";
 import type {
 	CacheGetOptions,
 	CacheSetOptions,
 	CacheStore,
-} from "../src/lib/kv/types";
-import type { PlanSource } from "../src/lib/ports/plan";
-import { createPlanService, planCacheKey } from "../src/services/plan.service";
+} from "../src/core/lib/kv/types";
+import type { PlanSource } from "../src/core/lib/ports/plan";
+import type { BillingDao } from "../src/features/billing/dao/billing.dao";
+import {
+	createPlanService,
+	planCacheKey,
+} from "../src/features/billing/services/plan.service";
 
 const createFakeCache = ({
 	initial = {} as Record<string, unknown>,

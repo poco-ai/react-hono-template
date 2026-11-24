@@ -6,7 +6,7 @@ import type {
 	AiUsageSummaryDto,
 	OrgAiSettingsDto,
 	OrgAiSettingsViewDto,
-} from "@api/dto/ai.dto";
+} from "@api/features/ai/dto/ai.dto";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import type {
 	AiContextType,

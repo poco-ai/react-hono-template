@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ApiError, ApiErrorCode, roadmapQuerySchema } from "@workspace/shared";
-import { createRoadmapDao } from "../src/dao/roadmap.dao";
+import { createRoadmapDao } from "../src/features/roadmap/dao/roadmap.dao";
 import {
 	createRoadmapService,
 	resolveRoadmapWindow,
-} from "../src/services/roadmap.service";
+} from "../src/features/roadmap/services/roadmap.service";
 import {
 	seedCycle,
 	seedIssue,

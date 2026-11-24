@@ -8,23 +8,23 @@ import {
 	MAX_COMMENT_MENTIONS,
 	parseMentionUserIds,
 } from "@workspace/shared";
-import { createCommentDao } from "../src/dao/comment.dao";
+import { commentExcerpt } from "../src/core/lib/excerpt";
+import type { Database as AppDatabase } from "../src/db/types";
+import { createCommentDao } from "../src/features/comments/dao/comment.dao";
 import {
 	commentMentionInsertStatements,
 	createCommentMentionDao,
-} from "../src/dao/comment-mention.dao";
-import { createCommentReactionDao } from "../src/dao/comment-reaction.dao";
-import type { IssueDao } from "../src/dao/issue.dao";
-import { createIssueSubscriptionDao } from "../src/dao/issue-subscription.dao";
-import { createNotificationDao } from "../src/dao/notification.dao";
-import type { ProjectDao } from "../src/dao/project.dao";
-import type { Database as AppDatabase } from "../src/db/types";
-import type { IssueDto } from "../src/dto/issue.dto";
-import { commentExcerpt } from "../src/lib/excerpt";
-import { createCommentService } from "../src/services/comment.service";
-import { createIssueService } from "../src/services/issue.service";
-import { createIssueSubscriptionService } from "../src/services/issue-subscription.service";
-import { createNotificationService } from "../src/services/notification.service";
+} from "../src/features/comments/dao/comment-mention.dao";
+import { createCommentReactionDao } from "../src/features/comments/dao/comment-reaction.dao";
+import { createCommentService } from "../src/features/comments/services/comment.service";
+import type { IssueDao } from "../src/features/issues/dao/issue.dao";
+import type { IssueDto } from "../src/features/issues/dto/issue.dto";
+import { createIssueService } from "../src/features/issues/services/issue.service";
+import { createIssueSubscriptionDao } from "../src/features/notifications/dao/issue-subscription.dao";
+import { createNotificationDao } from "../src/features/notifications/dao/notification.dao";
+import { createIssueSubscriptionService } from "../src/features/notifications/services/issue-subscription.service";
+import { createNotificationService } from "../src/features/notifications/services/notification.service";
+import type { ProjectDao } from "../src/features/projects/dao/project.dao";
 import { seedIssue, seedProject, seedUser } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 

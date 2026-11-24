@@ -12,5 +12,5 @@
 			"MCP_DCR_ENABLED"
 		]
 	},
-	"claims": ["apps/api/src/mcp/**", "apps/web/src/features/mcp/**"]
+	"claims": ["apps/api/src/features/mcp/**", "apps/web/src/features/mcp/**"]
 }
