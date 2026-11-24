@@ -178,7 +178,15 @@ export function OrgActivityPage({
 		if (!hasRows) {
 			return;
 		}
-		const measure = () => setScrollMargin(listRef.current?.offsetTop ?? 0);
+		const measure = () => {
+			const el = listRef.current;
+			if (!el) {
+				return;
+			}
+			// Document offset, not offsetTop: offsetTop is relative to the nearest
+			// positioned ancestor, which breaks as soon as a wrapper gets `relative`.
+			setScrollMargin(el.getBoundingClientRect().top + window.scrollY);
+		};
 		measure();
 		window.addEventListener("resize", measure);
 		return () => window.removeEventListener("resize", measure);
@@ -269,7 +277,10 @@ export function OrgActivityPage({
 						ref={listRef}
 						className="relative"
 						style={{
-							height: Math.max(virtualizer.getTotalSize() - scrollMargin, 0),
+							// getTotalSize() already excludes scrollMargin: subtracting it again
+							// shortens the list by the header offset and lets whatever follows
+							// (the "load more" button) overlap the absolutely positioned rows.
+							height: virtualizer.getTotalSize(),
 						}}
 					>
 						{virtualizer.getVirtualItems().map((item) => {
