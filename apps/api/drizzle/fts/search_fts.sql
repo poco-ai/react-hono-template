@@ -2,9 +2,10 @@
 --
 -- This file is NOT a migration (wrangler only applies
 -- `drizzle/*/migration.sql`). It mirrors
--- `drizzle/20261104143000_search_fts/migration.sql` and can be executed any
--- number of times: every object uses IF NOT EXISTS and the file ends with a
--- rebuild that re-syncs the external-content tables from `issues`/`comments`.
+-- `drizzle/20261124084722_search_fts/migration.sql` (the second migration,
+-- applied right after the baseline) and can be executed any number of times:
+-- every object uses IF NOT EXISTS and the file ends with a rebuild that
+-- re-syncs the external-content tables from `issues`/`comments`.
 --
 -- !! NEEDED AFTER EVERY TABLE REBUILD !!
 -- Drizzle-kit/D1 implement "alter table" as create/copy/drop/rename, which

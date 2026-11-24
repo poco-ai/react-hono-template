@@ -1,0 +1,56 @@
+const cycles = {
+	title: "Cycles",
+	description:
+		"Plan focused windows of work and track how much of each cycle is done.",
+	newCycle: "New cycle",
+	createTitle: "New cycle",
+	createDescription: "Plan a focused window of work for this project.",
+	editTitle: "Edit cycle",
+	editDescription: "Update the cycle name or its date range.",
+	name: "Name",
+	namePlaceholder: "e.g. Sprint 12",
+	nameRequired: "Give the cycle a name.",
+	startsAt: "Start date",
+	endsAt: "End date",
+	rangeInvalid: "The end date must be after the start date.",
+	dateRange: "{{start}} – {{end}}",
+	status: {
+		current: "Current",
+		upcoming: "Upcoming",
+		past: "Past",
+	},
+	viewIssues: "View issues",
+	manage: "Manage cycles",
+	progress: "{{terminal}} of {{total}} done",
+	daysLeft_one: "{{count}} day left",
+	daysLeft_other: "{{count}} days left",
+	endsToday: "Ends today",
+	ended: "Ended",
+	issueCount_one: "{{count}} issue",
+	issueCount_other: "{{count}} issues",
+	empty: {
+		current: "No cycle is running right now.",
+		upcoming: "No upcoming cycles yet.",
+		past: "No past cycles yet.",
+	},
+	edit: "Edit cycle",
+	delete: "Delete cycle",
+	deleteTitle: "Delete cycle?",
+	deleteDescription:
+		"“{{name}}” will be deleted. Its issues are kept but removed from the cycle.",
+	rollover: "Roll over",
+	rolloverTitle: "Roll over cycle",
+	rolloverDescription:
+		"Move unfinished issues from “{{name}}” into another cycle.",
+	rolloverTarget: "Target cycle",
+	rolloverNoTargets:
+		"Create an upcoming cycle first to roll unfinished issues into.",
+	rolloverMoves_one: "{{count}} issue will be moved.",
+	rolloverMoves_other: "{{count}} issues will be moved.",
+	rolloverHint: "Completed and canceled issues stay in the current cycle.",
+	rolloverSubmit: "Roll over",
+	filterChip: "Cycle: {{name}}",
+	clearFilter: "Clear cycle filter",
+};
+
+export default cycles;

@@ -7,9 +7,9 @@ import {
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-	ORG_SIDEBAR_NAV,
 	type OrgSidebarNavContext,
 	type OrgSidebarNavTo,
+	orgSidebarNav,
 } from "./org-sidebar-nav";
 
 export const ACTIVE_ITEM_CLASS =
@@ -68,8 +68,9 @@ export function OrgSidebarNavList({
 
 	return (
 		<>
-			{ORG_SIDEBAR_NAV.filter((item) => item.when?.(context) ?? true).map(
-				(item) => {
+			{orgSidebarNav()
+				.filter((item) => item.when?.(context) ?? true)
+				.map((item) => {
 					const Icon = item.icon;
 					return (
 						<OrgSidebarLink
@@ -91,8 +92,7 @@ export function OrgSidebarNavList({
 							<span>{t(item.labelKey)}</span>
 						</OrgSidebarLink>
 					);
-				},
-			)}
+				})}
 		</>
 	);
 }

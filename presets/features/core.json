@@ -34,6 +34,11 @@
 		"packages/shared/src/index.ts",
 		"packages/shared/src/schemas/admin-user.ts",
 		"packages/shared/src/schemas/config.ts",
-		"packages/shared/src/schemas/pagination.ts"
+		"packages/shared/src/schemas/pagination.ts",
+		"apps/web/src/features/registry.ts",
+		"apps/web/src/features/web-types.ts",
+		"apps/web/src/i18n/index.ts",
+		"apps/web/src/i18n/locales/en.ts",
+		"apps/web/src/i18n/locales/zh.ts"
 	]
 }

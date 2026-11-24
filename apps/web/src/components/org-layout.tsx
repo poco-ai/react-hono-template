@@ -15,26 +15,21 @@ import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
 	SidebarProvider,
 	SidebarRail,
 	SidebarTrigger,
 	useSidebar,
 } from "@workspace/ui/components/sidebar";
-import { Search, Snowflake, SquarePen } from "lucide-react";
-import { type CSSProperties, useState } from "react";
+import { Search, Snowflake } from "lucide-react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
-import { ConversationRow } from "@/components/org-conversation-row";
 import { OrgSidebarHeader } from "@/components/org-sidebar-header";
 import { OrgSidebarNavList } from "@/components/org-sidebar-link";
 import { OrgSidebarProjects } from "@/components/org-sidebar-projects";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserDropdown } from "@/components/user-dropdown";
-import { AiChatProvider, useAiChat } from "@/features/ai/chat-provider";
-import { AiChatPanel } from "@/features/ai/components/chat-panel";
 import { useSession } from "@/features/auth/data";
 import type { OrgRole } from "@/features/members/data";
 import { unreadCountQuery } from "@/features/notifications/data";
@@ -43,12 +38,16 @@ import { orgsQuery } from "@/features/organizations/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { projectsQuery } from "@/features/projects/data";
+import {
+	webPanels,
+	webProviders,
+	webSidebarSections,
+} from "@/features/registry";
 import { APP_HOTKEYS, isHotkeyBlocked } from "@/lib/hotkeys";
 
 function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const { t } = useTranslation();
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
-	const navigate = useNavigate();
 	const { data: session } = useSession();
 	const orgs = useQuery(orgsQuery());
 	const projects = useQuery(projectsQuery(orgId));
@@ -61,17 +60,12 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const unreadCount = unread.data?.unread ?? 0;
 	const { role } = useOrgRole(orgId);
 	const { isMobile, setOpenMobile, state } = useSidebar();
-	const { newChat, conversations } = useAiChat();
 	// `state` tracks the desktop rail; the mobile Sheet always renders full content.
 	const collapsed = state === "collapsed" && !isMobile;
+	const sidebarSections = webSidebarSections();
 
 	const onNavigate = () => {
 		if (isMobile) setOpenMobile(false);
-	};
-	const onNewChat = () => {
-		newChat();
-		void navigate({ to: "/orgs/$orgId/ai", params: { orgId } });
-		onNavigate();
 	};
 
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
@@ -85,27 +79,6 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	const currentProject = projectMatch
 		? activeProjects.find((project) => project.id === projectMatch.projectId)
 		: undefined;
-	const conversationItems = conversations.data?.items ?? [];
-	const pinnedConversations = conversationItems
-		.filter((conversation) => conversation.pinned)
-		.slice(0, 3);
-	const recentConversations = conversationItems
-		.filter(
-			(conversation) =>
-				!conversation.pinned &&
-				!(conversation.contextType === "project" && conversation.contextId),
-		)
-		.slice(0, 3);
-	const projectConversations = currentProject
-		? conversationItems
-				.filter(
-					(conversation) =>
-						!conversation.pinned &&
-						conversation.contextType === "project" &&
-						conversation.contextId === currentProject.id,
-				)
-				.slice(0, 3)
-		: [];
 
 	return (
 		<>
@@ -117,45 +90,15 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 				onNavigate={onNavigate}
 			/>
 			<SidebarContent>
-				<SidebarGroup>
-					<SidebarMenu>
-						<SidebarMenuItem>
-							<SidebarMenuButton onClick={onNewChat} tooltip={t("ai.newChat")}>
-								<SquarePen />
-								<span className="flex-1 text-left">{t("ai.newChat")}</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					</SidebarMenu>
-					{!collapsed && pinnedConversations.length > 0 ? (
-						<>
-							<SidebarGroupLabel>
-								{t("ai.conversations.pinned")}
-							</SidebarGroupLabel>
-							<SidebarMenu>
-								{pinnedConversations.map((conversation) => (
-									<ConversationRow
-										key={conversation.id}
-										orgId={orgId}
-										conversation={conversation}
-										onNavigate={onNavigate}
-									/>
-								))}
-							</SidebarMenu>
-						</>
-					) : null}
-					{!collapsed && recentConversations.length > 0 ? (
-						<SidebarMenu>
-							{recentConversations.map((conversation) => (
-								<ConversationRow
-									key={conversation.id}
-									orgId={orgId}
-									conversation={conversation}
-									onNavigate={onNavigate}
-								/>
-							))}
-						</SidebarMenu>
-					) : null}
-				</SidebarGroup>
+				{sidebarSections.map((SidebarSection) => (
+					<SidebarSection
+						key={SidebarSection.displayName ?? SidebarSection.name}
+						orgId={orgId}
+						collapsed={collapsed}
+						currentProjectId={currentProject?.id}
+						onNavigate={onNavigate}
+					/>
+				))}
 				<SidebarGroup>
 					{!collapsed ? (
 						<SidebarGroupLabel>{t("nav.workspace")}</SidebarGroupLabel>
@@ -175,7 +118,6 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 						projects={activeProjects}
 						pending={projects.isPending}
 						currentProjectId={currentProject?.id}
-						projectConversations={projectConversations}
 						onNavigate={onNavigate}
 					/>
 				) : null}
@@ -195,13 +137,31 @@ function OrgSidebarContent({ onOpenCommand }: { onOpenCommand?: () => void }) {
 	);
 }
 
+/**
+ * Mounts every provider contributed by an enabled feature, outermost first.
+ * Only `ai` contributes one today; a trimmed registry returns an empty list
+ * and the layout renders with zero wrappers.
+ */
+function OrgFeatureProviders({
+	orgId,
+	children,
+}: {
+	orgId: string;
+	children: ReactNode;
+}) {
+	return webProviders().reduceRight<ReactNode>((child, provide) => {
+		const Provider = provide(orgId);
+		return <Provider key={orgId}>{child}</Provider>;
+	}, children);
+}
+
 export function OrgLayout() {
 	const { orgId } = useParams({ from: "/_auth/orgs/$orgId" });
 
 	return (
-		<AiChatProvider key={orgId} orgId={orgId}>
+		<OrgFeatureProviders orgId={orgId}>
 			<OrgLayoutContent orgId={orgId} />
-		</AiChatProvider>
+		</OrgFeatureProviders>
 	);
 }
 
@@ -302,7 +262,9 @@ function OrgLayoutContent({ orgId }: { orgId: string }) {
 					</main>
 				</ActiveOrganizationSync>
 			</div>
-			<AiChatPanel />
+			{webPanels().map((Panel) => (
+				<Panel key={Panel.displayName ?? Panel.name} />
+			))}
 			<MobileTabBar />
 			<CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 		</SidebarProvider>

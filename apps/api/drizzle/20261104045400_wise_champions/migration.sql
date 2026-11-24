@@ -1,1 +1,0 @@
-CREATE INDEX `issue_labels_labelId_idx` ON `issue_labels` (`label_id`);

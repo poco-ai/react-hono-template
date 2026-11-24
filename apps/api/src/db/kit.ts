@@ -10,6 +10,7 @@ import {
 	uniqueIndex as pgUniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
+	type AnySQLiteColumn,
 	index as sqliteIndex,
 	integer as sqliteInteger,
 	primaryKey as sqlitePrimaryKey,
@@ -59,6 +60,21 @@ export type SchemaKit = {
 	primaryKey: typeof sqlitePrimaryKey;
 	timestampDefault: SQL;
 	trueLiteral: SQL;
+	/**
+	 * Deferred foreign-key target for a table owned by another schema slice.
+	 * Every table built through the kit's `sqliteTable`/`pgTable` is registered
+	 * under its SQL name, so a slice (or `core`) can reference a column without
+	 * importing the other slice's module — the reference resolves lazily, when
+	 * Drizzle introspects the foreign keys, exactly like a self-`references(() => x.id)`.
+	 *
+	 * Constraint: only tables created through this kit are registered. A slice
+	 * that imports `sqliteTable` directly would be invisible to `ref`, so every
+	 * `features/<id>/schema.ts` must build its tables from the kit. The return
+	 * type is `AnySQLiteColumn` for both dialects (the shared schema is typed
+	 * against sqlite; PostgreSQL columns are real `pg-core` objects at runtime,
+	 * the cast is compile-time only).
+	 */
+	ref: (table: string, column: string) => () => AnySQLiteColumn;
 };
 
 /**
@@ -67,9 +83,41 @@ export type SchemaKit = {
  * at runtime; the casts are compile-time only.
  */
 export const createSchemaKit = (dialect: SchemaDialect): SchemaKit => {
+	const registry = new Map<string, Record<string, AnySQLiteColumn>>();
+
+	const ref = (table: string, column: string) => {
+		return (): AnySQLiteColumn => {
+			const target = registry.get(table);
+			const found = target?.[column];
+			if (!found) {
+				throw new Error(
+					`schema kit: foreign key target ${table}.${column} is not defined`,
+				);
+			}
+			return found;
+		};
+	};
+
+	const track = <T>(name: string, table: T): T => {
+		registry.set(name, table as unknown as Record<string, AnySQLiteColumn>);
+		return table;
+	};
+
+	/** Registers every table the kit builds so `ref` can resolve it by name. */
+	const withRegistry = (
+		create: (name: string, columns: never, extra?: never) => unknown,
+	) =>
+		((name: string, columns: never, extra?: never) => {
+			const table =
+				extra === undefined
+					? create(name, columns)
+					: create(name, columns, extra);
+			return track(name, table);
+		}) as unknown as typeof sqliteTable;
+
 	if (dialect === "sqlite") {
 		return {
-			sqliteTable,
+			sqliteTable: withRegistry(sqliteTable),
 			text: sqliteText,
 			integer: sqliteInteger,
 			index: sqliteIndex,
@@ -77,6 +125,7 @@ export const createSchemaKit = (dialect: SchemaDialect): SchemaKit => {
 			primaryKey: sqlitePrimaryKey,
 			timestampDefault: SQLITE_NOW,
 			trueLiteral: sql`1`,
+			ref,
 		};
 	}
 
@@ -103,7 +152,7 @@ export const createSchemaKit = (dialect: SchemaDialect): SchemaKit => {
 	}) as unknown as typeof sqliteText;
 
 	return {
-		sqliteTable: pgTable as unknown as typeof sqliteTable,
+		sqliteTable: withRegistry(pgTable),
 		text,
 		integer,
 		index: pgIndex as unknown as typeof sqliteIndex,
@@ -111,5 +160,6 @@ export const createSchemaKit = (dialect: SchemaDialect): SchemaKit => {
 		primaryKey: pgPrimaryKey as unknown as typeof sqlitePrimaryKey,
 		timestampDefault: POSTGRES_NOW,
 		trueLiteral: sql`true`,
+		ref,
 	};
 };

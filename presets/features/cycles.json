@@ -1,10 +1,14 @@
 {
 	"id": "cycles",
 	"tier": 2,
-	"dependsOn": ["core", "projects"],
+	"dependsOn": ["core", "projects", "statuses"],
 	"claims": [
 		"apps/api/src/features/cycles/**",
 		"apps/web/src/features/cycles/**",
-		"packages/shared/src/schemas/cycle.ts"
+		"packages/shared/src/schemas/cycle.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/projects/$projectId/cycles.tsx",
+		"apps/web/src/pages/project-cycles.tsx",
+		"apps/web/src/i18n/locales/en/cycles.ts",
+		"apps/web/src/i18n/locales/zh/cycles.ts"
 	]
 }

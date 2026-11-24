@@ -7,7 +7,18 @@
 		"apps/web/src/features/issues/**",
 		"apps/web/src/features/triage/**",
 		"packages/shared/src/schemas/issue-query.ts",
-		"packages/shared/src/schemas/issue.ts"
+		"packages/shared/src/schemas/issue.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/my-issues.tsx",
+		"apps/web/src/routes/_auth/orgs/$orgId/triage.tsx",
+		"apps/web/src/routes/_auth/orgs/$orgId/projects/$projectId/$issueNumber.tsx",
+		"apps/web/src/pages/my-issues.tsx",
+		"apps/web/src/pages/triage.tsx",
+		"apps/web/src/pages/issue-detail.tsx",
+		"apps/web/src/pages/project-issues.tsx",
+		"apps/web/src/i18n/locales/en/issues.ts",
+		"apps/web/src/i18n/locales/zh/issues.ts",
+		"apps/web/src/i18n/locales/en/triage.ts",
+		"apps/web/src/i18n/locales/zh/triage.ts"
 	],
 	"softDependsOn": ["webhooks", "notifications", "cycles"]
 }

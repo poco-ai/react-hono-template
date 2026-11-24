@@ -5,6 +5,10 @@
 	"claims": [
 		"apps/api/src/features/roadmap/**",
 		"apps/web/src/features/roadmap/**",
-		"packages/shared/src/schemas/roadmap.ts"
+		"packages/shared/src/schemas/roadmap.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/roadmap.tsx",
+		"apps/web/src/pages/roadmap.tsx",
+		"apps/web/src/i18n/locales/en/roadmap.ts",
+		"apps/web/src/i18n/locales/zh/roadmap.ts"
 	]
 }

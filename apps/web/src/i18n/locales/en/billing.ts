@@ -1,0 +1,42 @@
+const billing = {
+	choosePlan: "Choose plan",
+	usage: "Usage",
+	used: "{{used}} used",
+	currentPlan: "Current plan",
+	planFree: "Free",
+	planPro: "Pro",
+	usageOf: "{{current}} / {{cap}}",
+	webhooksNotInPlan: "Webhooks aren't included in Free.",
+	upgradeToUnlock: "Upgrade to unlock",
+	recommended: "Recommended",
+	renewsOn: "Renews on {{date}}",
+	limits: {
+		members: "Members",
+		projects: "Projects",
+		webhooks: "Webhooks",
+		storage: "Storage",
+	},
+	attachmentSize: "Attachment size",
+	apiRateLimit: "API rate limit",
+	megabytes: "{{value}} MB",
+	perMinute: "{{value}} / min",
+	compareTitle: "Compare plans",
+	compareDescription: "What you get on each plan.",
+	feature: "Feature",
+	price: "Price",
+	pricePerMember: "{{price}} per member / mo",
+	upgrade: "Upgrade to Pro",
+	manageBilling: "Manage billing",
+	readOnly: "Only owners and admins can change the plan.",
+	downgrade: "Downgrade to Free",
+	mockUpgradeTitle: "Upgrade to Pro?",
+	mockUpgradeDescription:
+		"Pro is {{price}} per member / mo. This instance has no Stripe configured, so the upgrade is simulated. Your organization switches to Pro immediately.",
+	mockDowngradeTitle: "Downgrade to Free?",
+	mockDowngradeDescription:
+		"This instance has no Stripe configured, so the downgrade is simulated. If your organization is over the Free plan limits, you will lose access to members, projects and webhooks above those limits.",
+	checkoutCanceled: "Checkout was canceled.",
+	dismiss: "Dismiss",
+};
+
+export default billing;

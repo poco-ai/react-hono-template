@@ -63,9 +63,14 @@ const EXEMPT_PREFIXES = ["apps/api/src/db/"];
 /**
  * Files that are claimed (for coverage) but act as composition roots for
  * boundary purposes: the shared barrel re-exports every feature schema by
- * design in the full-form template repo and is split per feature in Phase 2.
+ * design in the full-form template repo and is split per feature in Phase 2,
+ * and the web feature registry is the web mirror of `apps/api/src/manifest.ts`
+ * (the scaffold rewrites it per preset, so it must import every `web.ts`).
  */
-const BOUNDARY_EXEMPT_FILES = new Set(["packages/shared/src/index.ts"]);
+const BOUNDARY_EXEMPT_FILES = new Set([
+	"packages/shared/src/index.ts",
+	"apps/web/src/features/registry.ts",
+]);
 
 function isExempt(relPath: string): boolean {
 	return (
@@ -214,16 +219,40 @@ const allMatchableFiles = [
 	...walk(path.join(REPO_ROOT, "packages/shared/src")),
 ];
 
+/**
+ * Coverage is enforced on the scan roots above. Claims additionally cover
+ * scaffold-only surfaces (web routes/pages/components/i18n namespaces) that
+ * Phase 6 deletes per preset; those are checked for existence here so a typo
+ * cannot silently orphan a feature path. They stay out of `ownerOf` until the
+ * preset matrix adds them to the scanned roots.
+ */
+const CLAIM_EXISTENCE_ROOTS = [
+	...SCAN_ROOTS,
+	"apps/web/src/i18n",
+	"apps/web/src/pages",
+	"apps/web/src/routes",
+	"apps/web/src/components",
+];
+
+const allClaimFiles = CLAIM_EXISTENCE_ROOTS.flatMap((root) =>
+	walk(path.join(REPO_ROOT, root)),
+);
+const allClaimMatchers = [...claimMatchers.values()].flat();
+
 const ownerOf = new Map<string, string>();
 const claimHits = new Map<string, number>();
+for (const relPath of allClaimFiles) {
+	for (const { glob, pattern } of allClaimMatchers) {
+		if (pattern.test(relPath)) {
+			claimHits.set(glob, (claimHits.get(glob) ?? 0) + 1);
+		}
+	}
+}
 for (const relPath of allMatchableFiles) {
 	const owners = [...claimMatchers.values()]
 		.flat()
 		.filter(({ pattern }) => pattern.test(relPath))
-		.map(({ feature, glob }) => {
-			claimHits.set(glob, (claimHits.get(glob) ?? 0) + 1);
-			return feature;
-		});
+		.map(({ feature }) => feature);
 	if (owners.length === 1) {
 		ownerOf.set(relPath, owners[0]);
 	}

@@ -5,6 +5,12 @@
 	"claims": [
 		"apps/api/src/features/projects/**",
 		"apps/web/src/features/projects/**",
-		"packages/shared/src/schemas/project.ts"
+		"packages/shared/src/schemas/project.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/projects.index.tsx",
+		"apps/web/src/routes/_auth/orgs/$orgId/projects/$projectId.index.tsx",
+		"apps/web/src/pages/projects.tsx",
+		"apps/web/src/components/org-sidebar-projects.tsx",
+		"apps/web/src/i18n/locales/en/projects.ts",
+		"apps/web/src/i18n/locales/zh/projects.ts"
 	]
 }

@@ -17,6 +17,8 @@
 		"apps/api/src/features/attachments/**",
 		"apps/web/src/features/attachments/**",
 		"packages/shared/src/schemas/attachment.ts",
-		"packages/shared/src/schemas/media.ts"
+		"packages/shared/src/schemas/media.ts",
+		"apps/web/src/i18n/locales/en/attachments.ts",
+		"apps/web/src/i18n/locales/zh/attachments.ts"
 	]
 }

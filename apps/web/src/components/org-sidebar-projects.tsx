@@ -1,4 +1,3 @@
-import type { AiConversationDto } from "@api/features/ai/dto/ai.dto";
 import type { ProjectDto } from "@api/features/projects/dto/project.dto";
 import { Link } from "@tanstack/react-router";
 import {
@@ -12,7 +11,7 @@ import {
 import { Folder } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
-import { ConversationRow } from "./org-conversation-row";
+import { webProjectExtras } from "@/features/registry";
 import { ACTIVE_ITEM_CLASS } from "./org-sidebar-link";
 
 export function OrgSidebarProjects({
@@ -20,17 +19,16 @@ export function OrgSidebarProjects({
 	projects,
 	pending,
 	currentProjectId,
-	projectConversations,
 	onNavigate,
 }: {
 	orgId: string;
 	projects: ProjectDto[];
 	pending: boolean;
 	currentProjectId?: string;
-	projectConversations: AiConversationDto[];
 	onNavigate: () => void;
 }) {
 	const { t } = useTranslation();
+	const projectExtras = webProjectExtras();
 
 	return (
 		<SidebarGroup>
@@ -69,12 +67,11 @@ export function OrgSidebarProjects({
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 								{currentProjectId === project.id
-									? projectConversations.map((conversation) => (
-											<ConversationRow
-												key={conversation.id}
+									? projectExtras.map((ProjectExtras) => (
+											<ProjectExtras
+												key={ProjectExtras.displayName ?? ProjectExtras.name}
 												orgId={orgId}
-												conversation={conversation}
-												indented
+												projectId={project.id}
 												onNavigate={onNavigate}
 											/>
 										))

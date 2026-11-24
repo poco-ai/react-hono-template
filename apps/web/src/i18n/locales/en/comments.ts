@@ -1,0 +1,30 @@
+const comments = {
+	title: "Comments",
+	count_one: "{{count}} comment",
+	count_other: "{{count}} comments",
+	empty: "No comments yet. Start the conversation.",
+	placeholder: "Leave a comment…",
+	post: "Comment",
+	previewEmpty: "Nothing to preview.",
+	charCount: "{{count}} / {{max}}",
+	edited: "edited",
+	deleteTitle: "Delete comment?",
+	deleteDescription: "This comment will be permanently deleted.",
+	attach: "Attach files",
+	removeFile: "Remove {{filename}}",
+	reply: "Reply",
+	replyingTo: "Replying to {{name}}",
+	replyPlaceholder: "Reply to {{name}}…",
+	cancelReply: "Cancel reply",
+	resolve: "Resolve",
+	reopen: "Reopen",
+	resolved: "Resolved",
+	addReaction: "Add reaction",
+	reactionToggle: "Toggle {{emoji}} reaction ({{count}})",
+	mentionEmpty: "No matching members",
+	orphanReply: "Original comment not loaded or deleted",
+	deepLinkMissing:
+		"The linked comment is no longer available. It may have been deleted.",
+};
+
+export default comments;

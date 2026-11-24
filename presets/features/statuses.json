@@ -5,6 +5,10 @@
 	"claims": [
 		"apps/api/src/features/statuses/**",
 		"apps/web/src/features/statuses/**",
-		"packages/shared/src/schemas/status.ts"
+		"packages/shared/src/schemas/status.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/settings/statuses.tsx",
+		"apps/web/src/pages/org-settings/statuses.tsx",
+		"apps/web/src/i18n/locales/en/statuses.ts",
+		"apps/web/src/i18n/locales/zh/statuses.ts"
 	]
 }

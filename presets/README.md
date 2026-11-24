@@ -46,7 +46,26 @@ They are workspace infrastructure, not feature logic:
   cycle/roadmap progress aggregation, referenced by both the cycles and
   roadmap features; same rationale as search-sql.
 
-When Phase 3 splits `db/schema` per feature, the `activities` table follows
-these claims for consistency: if the activities feature is trimmed from a
-preset, core still needs to record audit-style activity rows, so the table
-and its dao stay with core unless the claims are revisited first.
+The `activities` table follows these claims for consistency: if the activities
+feature is trimmed from a preset, core still needs to record audit-style
+activity rows, so the table (defined in `apps/api/src/core/schema.ts`, next to
+`auditEvents`) and its dao stay with core unless the claims are revisited
+first.
+
+## Schema-level dependencies
+
+`dependsOn` drives *module* registration and preset closure, but some slices
+also read tables owned by another slice through SQL joins or deferred foreign
+keys. Supported presets always keep those slices together; a hand-trimmed
+preset must honour these implicit edges:
+
+- `core/schema.ts` (`activities`) has deferred FKs to `projects.id` and
+  `issues.id`; a core-only preset would make `db:generate` fail at
+  `kit.ref("projects", "id")`.
+- `features/labels/dao/label.dao.ts` joins `issues` (issue counts per label);
+  `labels` never ships without `issues` (`issues` hard-depends on `labels`).
+- `features/cycles/dao/cycle.dao.ts` joins `issue_statuses`; `cycles` declares
+  `statuses` in `dependsOn` for that reason.
+- The MCP OAuth tables are registered through `db/auth-schema.ts` and the
+  better-auth factory in `core/lib/auth.ts`; trimming `mcp` requires handling
+  that auth wiring (the scaffold applies a preset patch).

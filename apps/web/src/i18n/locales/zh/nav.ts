@@ -1,0 +1,33 @@
+import type en from "../en";
+
+const nav: typeof en.nav = {
+	openMenu: "打开菜单",
+	backToApp: "返回应用",
+	users: "用户",
+	orgs: "组织",
+	signOut: "退出登录",
+	projects: "项目",
+	myIssues: "我的事项",
+	inbox: "收件箱",
+	favorites: "收藏",
+	roadmap: "路线图",
+	triage: "待分诊",
+	activity: "动态",
+	settings: "设置",
+	apiDocs: "API",
+	search: "搜索",
+	account: "账号",
+	admin: "管理后台",
+	ai: "AI",
+	aiAssistant: "AI 助手",
+	orgSettings: "组织设置",
+	collapseSidebar: "收起侧栏",
+	expandSidebar: "展开侧栏",
+	toggleSidebar: "切换侧栏",
+	mobileNav: "移动端导航",
+	workspace: "工作区",
+	signOutTitle: "退出登录？",
+	signOutDescription: "退出后需要重新登录才能进入应用。",
+};
+
+export default nav;

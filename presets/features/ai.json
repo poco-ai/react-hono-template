@@ -36,6 +36,12 @@
 	"claims": [
 		"apps/api/src/features/ai/**",
 		"apps/web/src/features/ai/**",
-		"packages/shared/src/schemas/ai.ts"
+		"packages/shared/src/schemas/ai.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/ai.*",
+		"apps/web/src/routes/_auth/orgs/$orgId/settings/ai.tsx",
+		"apps/web/src/pages/org-settings/ai.tsx",
+		"apps/web/src/i18n/locales/en/ai.ts",
+		"apps/web/src/i18n/locales/zh/ai.ts",
+		"apps/web/src/components/org-conversation-row.tsx"
 	]
 }

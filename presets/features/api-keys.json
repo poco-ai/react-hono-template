@@ -6,6 +6,10 @@
 		"apps/api/src/features/api-keys/**",
 		"apps/web/src/features/api-keys/**",
 		"packages/shared/src/api-key-scopes.ts",
-		"packages/shared/src/schemas/api-key.ts"
+		"packages/shared/src/schemas/api-key.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/settings/api-keys.tsx",
+		"apps/web/src/pages/org-settings/api-keys.tsx",
+		"apps/web/src/i18n/locales/en/apiKeys.ts",
+		"apps/web/src/i18n/locales/zh/apiKeys.ts"
 	]
 }

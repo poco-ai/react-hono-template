@@ -12,5 +12,14 @@
 			"MCP_DCR_ENABLED"
 		]
 	},
-	"claims": ["apps/api/src/features/mcp/**", "apps/web/src/features/mcp/**"]
+	"claims": [
+		"apps/api/src/features/mcp/**",
+		"apps/web/src/features/mcp/**",
+		"apps/web/src/routes/consent.tsx",
+		"apps/web/src/routes/_auth/orgs/$orgId/settings/mcp.tsx",
+		"apps/web/src/pages/consent.tsx",
+		"apps/web/src/pages/org-settings/mcp.tsx",
+		"apps/web/src/i18n/locales/en/mcp.ts",
+		"apps/web/src/i18n/locales/zh/mcp.ts"
+	]
 }

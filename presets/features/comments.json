@@ -6,6 +6,8 @@
 	"claims": [
 		"apps/api/src/features/comments/**",
 		"apps/web/src/features/comments/**",
-		"packages/shared/src/schemas/comment.ts"
+		"packages/shared/src/schemas/comment.ts",
+		"apps/web/src/i18n/locales/en/comments.ts",
+		"apps/web/src/i18n/locales/zh/comments.ts"
 	]
 }

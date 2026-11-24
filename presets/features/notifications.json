@@ -6,6 +6,10 @@
 		"apps/api/src/features/notifications/**",
 		"apps/web/src/features/notifications/**",
 		"packages/shared/src/notifications.ts",
-		"packages/shared/src/schemas/notification.ts"
+		"packages/shared/src/schemas/notification.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/inbox.tsx",
+		"apps/web/src/pages/inbox.tsx",
+		"apps/web/src/i18n/locales/en/notifications.ts",
+		"apps/web/src/i18n/locales/zh/notifications.ts"
 	]
 }

@@ -5,6 +5,10 @@
 	"claims": [
 		"apps/api/src/features/favorites/**",
 		"apps/web/src/features/favorites/**",
-		"packages/shared/src/schemas/favorite.ts"
+		"packages/shared/src/schemas/favorite.ts",
+		"apps/web/src/routes/_auth/orgs/$orgId/favorites.tsx",
+		"apps/web/src/pages/favorites.tsx",
+		"apps/web/src/i18n/locales/en/favorites.ts",
+		"apps/web/src/i18n/locales/zh/favorites.ts"
 	]
 }

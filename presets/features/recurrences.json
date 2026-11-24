@@ -14,6 +14,8 @@
 	"claims": [
 		"apps/api/src/features/recurrences/**",
 		"apps/web/src/features/recurrences/**",
-		"packages/shared/src/schemas/recurrence.ts"
+		"packages/shared/src/schemas/recurrence.ts",
+		"apps/web/src/i18n/locales/en/recurrences.ts",
+		"apps/web/src/i18n/locales/zh/recurrences.ts"
 	]
 }

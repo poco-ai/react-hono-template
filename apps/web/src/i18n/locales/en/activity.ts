@@ -1,0 +1,45 @@
+const activity = {
+	title: "Activity",
+	empty: "No activity yet.",
+	emptyValue: "none",
+	unknownUser: "Unknown user",
+	unknownAction: "{{action}}",
+	issue: {
+		created: "{{name}} created this issue",
+		deleted: "{{name}} deleted this issue",
+		updated: "{{name}} changed {{field}} from {{from}} to {{to}}",
+		descriptionChanged: "{{name}} changed the description",
+		commentResolved: "{{name}} resolved a comment",
+		archived: "{{name}} archived this issue",
+		restored: "{{name}} restored this issue",
+		relationAdded: "{{name}} added a {{type}} relation to {{issue}}",
+		relationRemoved: "{{name}} removed the {{type}} relation to {{issue}}",
+	},
+	fields: {
+		title: "title",
+		description: "description",
+		status: "status",
+		priority: "priority",
+		assignee: "assignee",
+		labels: "labels",
+		dueDate: "due date",
+		estimate: "estimate",
+		parent: "parent",
+		cycle: "cycle",
+		archived: "archive state",
+		commentResolved: "comment resolution",
+		relationBlocks: "blocking relation",
+		relationBlockedBy: "blocked-by relation",
+		relationRelated: "related relation",
+		relationDuplicates: "duplicate relation",
+	},
+	comment: {
+		created: "{{name}} commented",
+	},
+	attachment: {
+		added: "{{name}} attached {{filename}}",
+		removed: "{{name}} removed {{filename}}",
+	},
+};
+
+export default activity;

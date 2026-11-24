@@ -1,0 +1,42 @@
+import type en from "../en";
+
+const orgUi: typeof en.orgUi = {
+	organization: "组织",
+	accept: "接受",
+	reject: "拒绝",
+	changeRole: "更改角色",
+	changeRoleDescription: "选择该成员在组织中的角色。",
+	selectAtLeastOneRole: "至少选择一个角色。",
+	selectRoles: "选择角色",
+	invitedAt: "邀请时间",
+	accepted: "已接受",
+	rejected: "已拒绝",
+	canceled: "已撤销",
+	columns: "列",
+	rowsPerPage: "每页行数",
+	pageOf: "第 {{page}} / {{pages}} 页",
+	range: "{{from}}–{{to}} / {{total}}",
+	nextPage: "下一页",
+	previousPage: "上一页",
+	firstPage: "第一页",
+	lastPage: "最后一页",
+	selectedCount: "已选 {{count}} 项",
+	selectRow: "选择此行",
+	selectAllRows: "选择本页全部行",
+	cancelSelectedInvitations: "撤销所选邀请",
+	cancelSelectedInvitationsDescription: "撤销所选的待处理邀请？",
+	invitationsCanceled: "已撤销 {{count}} 个邀请",
+	removeSelectedMembers: "移除所选成员",
+	removeSelectedMembersDescription:
+		"将所选成员移出该组织？他们会立即失去访问权限。",
+	membersRemoved: "已移除 {{count}} 名成员",
+	noInvitationsDescription: "邀请队友后，把邀请链接分享给他们。",
+	userInvitationsEmpty: "加入组织的邀请会显示在这里。",
+	verifyEmail: "验证邮箱后才能查看邀请",
+	verifyEmailDescription: "验证邮箱地址后即可查看邀请。",
+	leftOrganization: "你已退出该组织。",
+	organizationDeleted: "组织已删除。",
+	slugTaken: "该 slug 已被占用。",
+};
+
+export default orgUi;

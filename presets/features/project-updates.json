@@ -5,6 +5,8 @@
 	"claims": [
 		"apps/api/src/features/project-updates/**",
 		"apps/web/src/features/project-updates/**",
-		"packages/shared/src/schemas/project-update.ts"
+		"packages/shared/src/schemas/project-update.ts",
+		"apps/web/src/i18n/locales/en/projectUpdates.ts",
+		"apps/web/src/i18n/locales/zh/projectUpdates.ts"
 	]
 }
