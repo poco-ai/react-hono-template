@@ -1,19 +1,9 @@
 import type { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-	ApiErrorCode,
-	DEFAULT_RUNTIME_CONFIG,
-	searchQuerySchema,
-} from "@workspace/shared";
+import { DEFAULT_RUNTIME_CONFIG, searchQuerySchema } from "@workspace/shared";
 import type { Auth } from "../src/core/lib/auth";
 import type { Dependencies } from "../src/dependencies";
-import {
-	type CapabilityContext,
-	type CapabilityDeps,
-	createCapabilityLayer,
-} from "../src/features/capabilities/index";
-import { searchResultsSchema as capabilitySearchResultsSchema } from "../src/features/capabilities/projections";
 import { createSearchDao } from "../src/features/search/dao/search.dao";
 import { buildSearchTerms } from "../src/features/search/lib/search";
 import { createSearchService } from "../src/features/search/services/search.service";
@@ -180,8 +170,10 @@ test("issue search matches title/description and hides deleted or cross-org rows
 	assert.equal(hit.descriptionExcerpt, "Users cannot sign in");
 	assert.deepEqual(result.comments, []);
 	assert.deepEqual(result.projects, []);
-	// The real DAO/service output must satisfy the strict capability contract.
-	capabilitySearchResultsSchema.parse(result);
+	// The real DAO/service output keeps the shape the capability contract
+	// expects (the strict schema lives in the capabilities slice).
+	assert.equal(typeof hit.statusCategory, "string");
+	assert.equal(typeof hit.updatedAt, "string");
 });
 
 test("Chinese substring search works for short (instr) and long (trigram) queries", async () => {
@@ -675,101 +667,6 @@ test("searchQuerySchema defaults and coerces command-palette parameters", () => 
 	assert.equal(
 		searchQuerySchema.safeParse({ q: "a".repeat(101) }).success,
 		false,
-	);
-});
-
-test("search_all capability calls the shared search service", async () => {
-	const calls: { orgId: string; input: unknown }[] = [];
-	const issueHit = {
-		id: "issue-1",
-		projectId: "project-1",
-		projectKey: "WEB",
-		number: 1,
-		identifier: "WEB-1",
-		title: "Login fails",
-		descriptionExcerpt: null,
-		statusId: "status-1",
-		statusName: "Todo",
-		statusColor: "#3b82f6",
-		statusCategory: "unstarted",
-		priority: 2,
-		assignee: null,
-		updatedAt: "2026-01-01T00:00:00.000Z",
-	};
-	const deps = {
-		services: {
-			searchService: {
-				searchAll: async (orgId: string, input: unknown) => {
-					calls.push({ orgId, input });
-					return {
-						issues: [issueHit],
-						comments: [],
-						projects: [],
-						members: [],
-					};
-				},
-			},
-		},
-		daos: {
-			memberDao: {
-				findByOrgAndUser: async () => ({ role: "owner", frozen: false }),
-			},
-		},
-	} as unknown as CapabilityDeps;
-	const layer = createCapabilityLayer(deps);
-	const entry = layer.get("search_all");
-	assert.equal(entry?.effect, "read");
-	assert.deepEqual(entry?.scopes, ["read"]);
-
-	const result = await layer.execute(
-		"search_all",
-		{
-			orgId: "org",
-			actor: {
-				userId: "user-1",
-				surface: "chat",
-				scopes: ["read"],
-				role: "owner",
-			},
-			canWrite: false,
-			locale: "en",
-			webBaseUrl: "https://app.example.com",
-			background: (task) => {
-				void task().catch(() => undefined);
-			},
-		} satisfies CapabilityContext,
-		{ q: "login" },
-	);
-
-	assert.deepEqual(calls, [{ orgId: "org", input: { q: "login", limit: 8 } }]);
-	assert.match(result.summary, /Found 1 issue\(s\).*matching "login"/);
-	assert.deepEqual(result.data, {
-		issues: [issueHit],
-		comments: [],
-		projects: [],
-		members: [],
-	});
-	assert.ok(
-		result.links.some((link) => link.url.endsWith("/projects/project-1/1")),
-	);
-
-	await assert.rejects(
-		layer.execute(
-			"search_all",
-			{
-				orgId: "org",
-				actor: { userId: "user-1", surface: "chat", scopes: ["read"] },
-				canWrite: false,
-				locale: "en",
-				webBaseUrl: "https://app.example.com",
-				background: () => undefined,
-			},
-			{ q: "" },
-		),
-		(err) =>
-			err instanceof Error &&
-			"code" in err &&
-			err.code === ApiErrorCode.VALIDATION,
 	);
 });
 

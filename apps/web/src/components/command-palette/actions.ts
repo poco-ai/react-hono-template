@@ -1,10 +1,4 @@
-import {
-	BookOpenIcon,
-	SettingsIcon,
-	ShieldIcon,
-	TagIcon,
-	UsersIcon,
-} from "lucide-react";
+import { SettingsIcon, ShieldIcon, TagIcon, UsersIcon } from "lucide-react";
 import { mergePaletteActions } from "@/features/registry";
 import type { PaletteAction, PaletteActionContext } from "@/features/web-types";
 
@@ -45,12 +39,6 @@ export const CORE_PALETTE_ACTIONS: readonly PaletteAction[] = [
 				to: "/orgs/$orgId/settings/labels",
 				params: { orgId: ctx.orgId },
 			}),
-	},
-	{
-		id: "api-docs",
-		labelKey: "command.goToApiDocs",
-		icon: BookOpenIcon,
-		run: (ctx) => ctx.navigate({ to: "/api-docs" }),
 	},
 	{
 		id: "admin",

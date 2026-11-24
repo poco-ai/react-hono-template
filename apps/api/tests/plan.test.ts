@@ -10,7 +10,11 @@ import {
 	createPlanService,
 	planCacheKey,
 } from "../src/core/services/plan.service";
-import type { BillingDao } from "../src/features/billing/dao/billing.dao";
+
+/** Structural stand-in for the billing dao (the slice may be trimmed). */
+type BillingDaoLike = {
+	findByOrg: (orgId: string) => Promise<{ plan: string }>;
+};
 
 const createFakeCache = ({
 	initial = {} as Record<string, unknown>,
@@ -50,7 +54,7 @@ const createFakeBillingDao = (initialPlan = "free") => {
 			calls.findByOrg += 1;
 			return { plan: state.plan };
 		},
-	} as unknown as BillingDao;
+	} as unknown as BillingDaoLike;
 	// Mirrors the DB-backed source assembled in dependencies.ts.
 	const source: PlanSource = {
 		load: async (orgId) => {

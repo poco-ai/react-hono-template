@@ -2,5 +2,10 @@
 	"id": "public-api",
 	"tier": 3,
 	"dependsOn": ["core", "api-keys", "issues", "labels", "projects", "statuses"],
-	"claims": ["apps/api/src/features/public-api/**"]
+	"claims": [
+		"apps/api/src/features/public-api/**",
+		"apps/web/src/pages/api-docs.tsx",
+		"apps/web/src/routes/_auth/api-docs.tsx",
+		"apps/web/src/features/public-api/**"
+	]
 }

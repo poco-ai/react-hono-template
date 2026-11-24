@@ -832,8 +832,8 @@ function rewriteApiTsconfig(outDir: string): void {
 }
 
 const TEST_REQUIREMENTS: Record<string, string[]> = {
-	"apps/api/tests/routes.test.ts": ["mcp"],
-	"apps/api/tests/config-safety.test.ts": ["webhooks"],
+	"apps/api/tests/search-capabilities.test.ts": ["capabilities"],
+	"apps/api/tests/routes.test.ts": ["attachments"],
 	"apps/api/tests/cleanup.test.ts": ["attachments", "webhooks", "recurrences"],
 	"apps/api/tests/redis-ports.test.ts": ["webhooks"],
 	"apps/api/tests/postgres-smoke.test.ts": ["attachments", "ai", "webhooks"],

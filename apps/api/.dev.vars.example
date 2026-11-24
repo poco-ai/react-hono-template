@@ -5,8 +5,6 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 # Local social OAuth: BETTER_AUTH_URL=http://localhost:5173
 # Callbacks: http://localhost:5173/api/auth/callback/github
 #            http://localhost:5173/api/auth/callback/google
-# When MCP OAuth is enabled, use the API origin instead (http://localhost:8787)
-# so the issuer, JWKS and MCP resource audience agree.
 # Production BETTER_AUTH_URL is the API origin instead.
 BETTER_AUTH_URL=http://localhost:5173
 APP_WEB_URL=http://localhost:5173
@@ -77,6 +75,8 @@ AI_PROVIDER=mock
 # @feature:ai:end
 
 # @feature:mcp:start
+# When MCP OAuth is enabled, BETTER_AUTH_URL should be the API origin
+# (http://localhost:8787) so the issuer, JWKS and MCP audience agree.
 # Remote MCP server (opt-in). The endpoint is POST <API origin>/mcp and accepts
 # either an API key (Authorization: Bearer sk_...) or better-auth MCP OAuth.
 # MCP_RESOURCE is the canonical protected-resource URL and OAuth audience; it

@@ -120,7 +120,6 @@ export function deleteTemplateOnlyFiles(
 	const always = [
 		"docs/模板化重构方案.md",
 		".github/workflows/preset-matrix.yml",
-		".github/workflows/configure-ai.yml",
 		"apps/api/tests/architecture.test.ts",
 		"apps/api/tests/compose-order.test.ts",
 		"apps/api/tests/route-contributions.test.ts",
@@ -132,6 +131,12 @@ export function deleteTemplateOnlyFiles(
 		const absolute = path.join(outDir, relativePath);
 		if (existsSync(absolute)) {
 			rmSync(absolute, { force: true });
+			deleted++;
+		}
+	}
+	if (!preset.enabled.has("ai")) {
+		for (const relativePath of [".github/workflows/configure-ai.yml"]) {
+			rmSync(path.join(outDir, relativePath), { force: true });
 			deleted++;
 		}
 	}

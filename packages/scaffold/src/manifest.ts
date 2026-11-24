@@ -100,6 +100,17 @@ function expandPreset(name: string, lineage: string[] = []): string[] {
 	return merged;
 }
 
+/** Docs lists inherit through `extends` (a child's list replaces the parent's). */
+function effectiveDocs(name: string, lineage: string[] = []): string[] {
+	const preset = presetDecls.get(name);
+	if (!preset) return [];
+	if (lineage.includes(name)) return [];
+	const inherited = preset.extends
+		? effectiveDocs(preset.extends, [...lineage, name])
+		: [];
+	return preset.docs ?? inherited;
+}
+
 export function resolvePreset(name: string): ResolvedPreset {
 	const decl = presetDecls.get(name);
 	if (!decl) {
@@ -128,7 +139,7 @@ export function resolvePreset(name: string): ResolvedPreset {
 	}
 	return {
 		name,
-		decl,
+		decl: { ...decl, docs: effectiveDocs(name) },
 		features: order.map((id) => getFeature(id)),
 		allFeatures: listFeatures(),
 		enabled,

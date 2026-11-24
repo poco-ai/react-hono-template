@@ -36,6 +36,10 @@ web contributions.
   files are the core shell and survive every preset. (There is no
   `components/**` catch-all because glob syntax has no exclusions — a broad
   glob would overlap feature claims.)
+- Soft dependencies (`softDependsOn`) are compiled through structural ports in
+  `apps/api/src/core/lib/ports/` and resolved with `ctx.features.find(...)`
+  (undefined ⇒ the integration degrades). Hard dependencies use
+  `ctx.features.get(...)` and are guaranteed present by preset closure.
 - `presets/features/*.json` also drives the scaffold's regeneration list:
   `apps/api/src/manifest.ts`, `apps/api/src/routes.ts`,
   `apps/web/src/features/registry.ts`, the i18n aggregators,
@@ -81,5 +85,7 @@ preset must honour these implicit edges:
 - `features/cycles/dao/cycle.dao.ts` joins `issue_statuses`; `cycles` declares
   `statuses` in `dependsOn` for that reason.
 - The MCP OAuth tables are registered through `db/auth-schema.ts` and the
-  better-auth factory in `core/lib/auth.ts`; trimming `mcp` requires handling
-  that auth wiring (the scaffold applies a preset patch).
+  better-auth factory in `core/lib/auth.ts`. `core/lib/auth.ts` imports the
+  plugin from `@better-auth/mcp` and gates it on `mcp.enabled`, so trimming
+  `mcp` only needs the generated `db/auth-schema.ts` exports rewritten (the
+  scaffold does this; no source patch).

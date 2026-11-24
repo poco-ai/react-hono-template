@@ -9,6 +9,7 @@ import {
 import type { Auth } from "../src/core/lib/auth";
 import type { SocialProvidersConfig } from "../src/core/lib/social-providers";
 import type { Dependencies } from "../src/dependencies";
+import { ENABLED_FEATURES } from "../src/manifest";
 import { createRoutes } from "../src/routes";
 import { fullFreezeWriteExempt } from "./helpers/route-contributions";
 
@@ -105,11 +106,11 @@ const expectError = async (
 
 test("composed admin and organization routes require a session", async () => {
 	const app = appFor({ loggedIn: false });
-	for (const path of [
-		"/api/admin/users",
-		"/api/orgs/org/projects",
-		"/api/orgs/org/mcp/info",
-	]) {
+	const paths = ["/api/admin/users", "/api/orgs/org/projects"];
+	if ((ENABLED_FEATURES as readonly string[]).includes("mcp")) {
+		paths.push("/api/orgs/org/mcp/info");
+	}
+	for (const path of paths) {
 		await expectError(await app.request(path), 401, "UNAUTHORIZED");
 	}
 	assert.equal((await app.request("/api/bootstrap")).status, 200);
@@ -224,11 +225,13 @@ test("freeze checks still allow reads and billing while blocking writes", async 
 		403,
 		"ORG_FROZEN",
 	);
-	assert.equal(
-		(await app.request("/api/orgs/org/billing/checkout", { method: "POST" }))
-			.status,
-		200,
-	);
+	if ((ENABLED_FEATURES as readonly string[]).includes("billing")) {
+		assert.equal(
+			(await app.request("/api/orgs/org/billing/checkout", { method: "POST" }))
+				.status,
+			200,
+		);
+	}
 	// New collaboration writes are covered by the same org freeze guard.
 	for (const [path, method] of [
 		["/api/orgs/org/projects/p/issues/1/subscription", "PUT"],

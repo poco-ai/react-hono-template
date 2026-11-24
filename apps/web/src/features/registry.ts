@@ -13,6 +13,7 @@ import { mcpWeb } from "./mcp/web";
 import { notificationsWeb } from "./notifications/web";
 import { projectUpdatesWeb } from "./project-updates/web";
 import { projectsWeb } from "./projects/web";
+import { publicApiWeb } from "./public-api/web";
 import { recurrencesWeb } from "./recurrences/web";
 import { relationsWeb } from "./relations/web";
 import { roadmapWeb } from "./roadmap/web";
@@ -65,6 +66,7 @@ export const WEB_FEATURES: readonly WebFeatureDecl[] = [
 	webhooksWeb,
 	attachmentsWeb,
 	projectsWeb,
+	publicApiWeb,
 	projectUpdatesWeb,
 	cyclesWeb,
 	roadmapWeb,
