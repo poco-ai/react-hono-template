@@ -11,6 +11,7 @@ import type {
 	NotificationInsert,
 } from "../dao/notification.dao";
 import type { NotificationListDto } from "../dto/notification.dto";
+import type { CleanupHandler } from "../lib/ports/cleanup";
 
 /** Minimal issue view the fan-out needs; avoids importing the full DTO. */
 export type NotificationIssue = {
@@ -20,10 +21,41 @@ export type NotificationIssue = {
 	assigneeId: string | null;
 };
 
+// Re-exported for compatibility; the implementation moved to the core port
+// so issue/comment/recurrence services can use it without importing this
+// feature module.
+export { bestEffortNotification } from "../lib/ports/notifications";
+
 type RecipientPriority = {
 	type: NotificationType;
 	priority: number;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Read notifications are kept 30 days, unread ones 90 days. */
+export const READ_NOTIFICATION_TTL_MS = 30 * DAY_MS;
+export const UNREAD_NOTIFICATION_TTL_MS = 90 * DAY_MS;
+/**
+ * Each cron tick deletes at most this many read and this many unread rows, so
+ * a large backlog is drained in bounded batches instead of one long delete.
+ */
+export const NOTIFICATION_CLEANUP_LIMIT = 500;
+
+/**
+ * Periodic cleanup contribution of the notifications feature: retention
+ * deletes in bounded batches.
+ */
+export const createNotificationCleanupHandler =
+	(notificationDao: Pick<NotificationDao, "deleteOlderThan">): CleanupHandler =>
+	async (now) => {
+		const deletedNotifications = await notificationDao.deleteOlderThan({
+			readBefore: new Date(now.getTime() - READ_NOTIFICATION_TTL_MS),
+			unreadBefore: new Date(now.getTime() - UNREAD_NOTIFICATION_TTL_MS),
+			limit: NOTIFICATION_CLEANUP_LIMIT,
+		});
+		return { deletedNotifications };
+	};
 
 const PRIORITY: Record<NotificationType, number> = {
 	issue_assigned: 1,
@@ -34,22 +66,6 @@ const PRIORITY: Record<NotificationType, number> = {
 	comment_resolved: 1,
 	// Same level as assignment: a recurring issue is created *and* assigned.
 	recurring_issue_created: 1,
-};
-
-/**
- * Notification fan-out is best-effort: a failure here must never fail the
- * write that triggered it (same contract as webhook dispatch). Errors are
- * logged instead of propagated.
- */
-export const bestEffortNotification = async (
-	label: string,
-	run: () => Promise<void> | undefined,
-): Promise<void> => {
-	try {
-		await run();
-	} catch (error) {
-		console.error(`[notifications] ${label} failed`, error);
-	}
 };
 
 /**

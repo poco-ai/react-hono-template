@@ -16,12 +16,12 @@ import { createMemberDao } from "../src/dao/member.dao";
 import { createProjectDao } from "../src/dao/project.dao";
 import { createRecurrenceDao } from "../src/dao/recurrence.dao";
 import type { BackgroundFn } from "../src/lib/background";
-import type { NotificationService } from "../src/services/notification.service";
+import type { RecurrenceNotifications } from "../src/lib/ports/notifications";
+import type { WebhookDispatcher } from "../src/lib/ports/webhook-dispatcher";
 import {
 	advanceNextRunAt,
 	createRecurrenceService,
 } from "../src/services/recurrence.service";
-import type { WebhookDispatcher } from "../src/services/webhook-delivery.service";
 import {
 	seedIssue,
 	seedOrganization,
@@ -49,7 +49,7 @@ const setup = (
 	options: {
 		archived?: boolean;
 		frozen?: boolean;
-		notifications?: Pick<NotificationService, "onRecurrenceCreated">;
+		notifications?: RecurrenceNotifications;
 		webhooks?: WebhookDispatcher;
 	} = {},
 ) => {

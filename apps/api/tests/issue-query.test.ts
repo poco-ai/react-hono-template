@@ -433,7 +433,8 @@ test("legacy flat params and the structured filter merge with AND", async () => 
 		labelDao: {} as LabelDao,
 		projectDao: {} as ProjectDao,
 		memberDao: {} as MemberDao,
-		cycleDao: {
+		cycleGuard: {
+			assertCycleAssignable: async () => {},
 			findById: async () => null,
 			listAllByProject: async () => [],
 		},

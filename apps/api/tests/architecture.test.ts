@@ -21,11 +21,11 @@ import {
  * 3. Feature boundaries: every import between two owned files must stay
  *    within `{self} ∪ dependsOn ∪ softDependsOn`.
  *
- * Import specifiers are resolved for relative paths plus the two workspace
- * aliases that reach claimed code: `@/` (apps/web/src) and
- * `@workspace/shared` (packages/shared/src). Everything else (bare package
- * imports, `@workspace/ui`, web `lib/`...) is outside the scanned roots and
- * ignored.
+ * Import specifiers are resolved for relative paths plus the workspace
+ * aliases that reach claimed code: `@/` (apps/web/src), `@api/` (apps/api/src)
+ * and `@workspace/shared` (packages/shared/src). Everything else (bare
+ * package imports, `@workspace/ui`, web `lib/`...) is outside the scanned
+ * roots and ignored.
  */
 
 const REPO_ROOT = path.resolve(
@@ -33,6 +33,7 @@ const REPO_ROOT = path.resolve(
 	"../../..",
 );
 const PRESETS_ROOT = path.join(REPO_ROOT, "presets");
+const API_SRC = path.join(REPO_ROOT, "apps/api/src");
 const WEB_SRC = path.join(REPO_ROOT, "apps/web/src");
 const SHARED_SRC = path.join(REPO_ROOT, "packages/shared/src");
 
@@ -176,7 +177,16 @@ function expandPreset(name: string, lineage: string[] = []): string[] {
 	const additions = preset.features.map((entry) =>
 		entry.startsWith("+") ? entry.slice(1) : entry,
 	);
-	return [...base, ...additions];
+	const merged = [...base, ...additions];
+	const seen = new Set<string>();
+	for (const feature of merged) {
+		assert.ok(
+			!seen.has(feature),
+			`preset "${name}" lists feature "${feature}" more than once (already provided by "${preset.extends}" or repeated in "features")`,
+		);
+		seen.add(feature);
+	}
+	return merged;
 }
 
 // Precompute claim matchers and the file → feature owner map once.
@@ -248,6 +258,8 @@ function resolveImport(fromRelPath: string, specifier: string): string | null {
 		base = SHARED_SRC;
 	} else if (specifier.startsWith("@workspace/shared/")) {
 		base = path.join(SHARED_SRC, specifier.slice("@workspace/shared/".length));
+	} else if (specifier.startsWith("@api/")) {
+		base = path.join(API_SRC, specifier.slice("@api/".length));
 	} else if (specifier.startsWith("@/")) {
 		base = path.join(WEB_SRC, specifier.slice(2));
 	} else if (specifier.startsWith(".")) {
@@ -275,60 +287,22 @@ function resolveImport(fromRelPath: string, specifier: string): string | null {
 }
 
 /**
- * Known boundary violations that exist before Phase 1 (dependency inversion).
+ * Known boundary violations that survive Phase 1 (dependency inversion).
  *
- * Each entry is `[file, imported feature]`. Phase 1 removes the API entries
- * (ports + registries); Phase 5 removes the web entries (feature registries /
- * variant patches). Everything here warns instead of failing — anything not
- * listed fails the suite.
+ * Each entry is `[file, imported feature]`. Phase 2 removes the
+ * composition-root entries (routes/admin, mcp/audit), Phase 4 the
+ * infrastructure-template entries (platform/*, lib/redis/*) and Phase 5 the
+ * web cross-feature entries. Everything here warns instead of failing —
+ * anything not listed fails the suite, and listed entries that no longer
+ * occur also fail (they must be removed when fixed).
  */
 const KNOWN_VIOLATIONS: Array<[string, string]> = [
-	// ---- core / billing low layers reaching up into optional features ----
-	["apps/api/src/services/quota.service.ts", "ai"], // Phase 1: QuotaUsageSink port
-	["apps/api/src/services/cleanup.service.ts", "ai"], // Phase 1: CleanupHandler registry
-	["apps/api/src/services/cleanup.service.ts", "attachments"], // Phase 1: CleanupHandler registry
-	["apps/api/src/services/cleanup.service.ts", "billing"], // Phase 1: CleanupHandler registry
-	["apps/api/src/services/cleanup.service.ts", "notifications"], // Phase 1: CleanupHandler registry
-	["apps/api/src/services/cleanup.service.ts", "webhooks"], // Phase 1: CleanupHandler registry
-	["apps/api/src/services/billing.service.ts", "webhooks"], // Phase 1: event port
-	["apps/api/src/services/storage-usage.service.ts", "attachments"], // Phase 1: StorageQuota port
-	// ---- Tier 1/2 write paths reaching optional features ----
-	["apps/api/src/services/issue.service.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/services/issue.service.ts", "cycles"], // Phase 1: port
-	["apps/api/src/services/issue.service.ts", "notifications"], // Phase 1: NotificationSink port
-	["apps/api/src/services/issue.service.ts", "webhooks"], // Phase 1: IssueEventDispatcher port
-	["apps/api/src/services/comment.service.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/services/comment.service.ts", "projects"], // Phase 1: port or dep declaration
-	["apps/api/src/services/comment.service.ts", "webhooks"], // Phase 1: event port
-	["apps/api/src/services/relation.service.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/services/relation.service.ts", "projects"], // Phase 1: port or dep declaration
-	["apps/api/src/services/recurrence.service.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/services/recurrence.service.ts", "projects"], // Phase 1: port or dep declaration
-	["apps/api/src/services/attachment.service.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/services/attachment.service.ts", "comments"], // Phase 1: port or dep declaration
-	["apps/api/src/services/attachment.service.ts", "projects"], // Phase 1: port or dep declaration
-	["apps/api/src/services/notification.service.ts", "issue-subscriptions"], // Phase 1: port
-	// ---- dao/dto layers reaching across features ----
-	["apps/api/src/dao/attachment.dao.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/dao/comment.dao.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/dao/cycle.dao.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/dao/issue.dao.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/dao/issue.dao.ts", "relations"], // Phase 1: port
-	["apps/api/src/dao/issue.dao.ts", "search"], // Phase 1: FTS port
-	["apps/api/src/dao/issue-filter.ts", "search"], // Phase 1: FTS port
-	["apps/api/src/dao/notification.dao.ts", "issue-subscriptions"], // Phase 1: port
-	["apps/api/src/dao/relation.dao.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/dao/status.dao.ts", "activities"], // Phase 1: ActivitySink port
-	["apps/api/src/dto/notification.dto.ts", "comments"], // Phase 1: type extraction
-	// ---- Tier 3/4 surfaces ----
-	["apps/api/src/v1/schemas.ts", "statuses"], // Phase 2: declare dependency
-	["apps/api/src/mcp/audit.ts", "ai"], // Phase 1: audit port
-	["apps/api/src/ai/context.ts", "issues"], // Phase 2: route through capabilities layer
-	["apps/api/src/ai/context.ts", "projects"], // Phase 2: route through capabilities layer
+	// ---- Tier 3/4 surfaces reaching across without a declared edge ----
+	["apps/api/src/routes/admin.ts", "billing"], // Phase 2: module composition
+	["apps/api/src/mcp/audit.ts", "ai"], // Phase 2: route through a port
 	// ---- core infrastructure aware of optional features ----
 	["apps/api/src/lib/redis/rate-limit.ts", "ai"], // Phase 4: rate-limiter binding templating
 	["apps/api/src/lib/redis/webhook-queue.ts", "webhooks"], // Phase 4: queue binding templating
-	["apps/api/src/middleware/api-key.ts", "billing"], // Phase 1: PlanSource port
 	["apps/api/src/platform/cloudflare.ts", "webhooks"], // Phase 4: wrangler templating
 	["apps/api/src/platform/shared.ts", "ai"], // Phase 4: env contract folding
 	["apps/api/src/platform/shared.ts", "attachments"], // Phase 4: env contract folding
@@ -339,16 +313,8 @@ const KNOWN_VIOLATIONS: Array<[string, string]> = [
 	["apps/api/src/platform/types.ts", "billing"], // Phase 4: env contract folding
 	["apps/api/src/platform/types.ts", "mcp"], // Phase 4: env contract folding
 	["apps/api/src/platform/types.ts", "webhooks"], // Phase 4: env contract folding
-	["apps/api/src/routes/admin.ts", "billing"], // Phase 2: module composition
-	["apps/api/src/services/auth-policy.service.ts", "billing"], // Phase 1: PlanSource port
-	["apps/api/src/services/project.service.ts", "billing"], // Phase 1: PlanSource port
-	["apps/api/src/services/webhook.service.ts", "billing"], // Phase 1: PlanSource port
-	["apps/api/src/services/billing.service.ts", "projects"], // Phase 1: port or dependency declaration
-	["packages/shared/src/schemas/view.ts", "issues"], // Phase 2: extract shared query types
 	// ---- web cross-feature data references (docs §9.4) ----
-	["apps/web/src/features/ai/chat-provider.tsx", "issues"], // Phase 5
-	["apps/web/src/features/ai/chat-provider.tsx", "projects"], // Phase 5
-	["apps/web/src/features/ai/data.ts", "issues"], // Phase 5
+	["apps/web/src/features/activities/components/issue-activity.tsx", "labels"], // Phase 5: label dto in activity history
 	["apps/web/src/features/cycles/data.ts", "issues"], // Phase 5
 	["apps/web/src/features/issues/components/create-issue-dialog.tsx", "cycles"], // Phase 5
 	[
@@ -359,11 +325,14 @@ const KNOWN_VIOLATIONS: Array<[string, string]> = [
 		"apps/web/src/features/issues/components/issue-properties-panel.tsx",
 		"cycles",
 	], // Phase 5
+	[
+		"apps/web/src/features/issues/components/relations-section.tsx",
+		"relations",
+	], // Phase 5: relation dto types (cannot be declared: relations → issues)
 	["apps/web/src/features/issues/data.ts", "favorites"], // Phase 5
 	["apps/web/src/features/issues/use-view-detach.ts", "views"], // Phase 5
 	["apps/web/src/features/labels/data.ts", "issues"], // Phase 5
 	["apps/web/src/features/statuses/data.ts", "issues"], // Phase 5
-	["apps/web/src/features/views/data.ts", "issues"], // Phase 5
 ];
 
 function collectViolations(): Array<[string, string]> {
@@ -390,8 +359,8 @@ function collectViolations(): Array<[string, string]> {
 
 test("feature and preset declarations validate against the manifest schema", () => {
 	assert.ok(
-		features.size >= 26,
-		`expected 26 features, found ${features.size}`,
+		features.size >= 25,
+		`expected 25 features (issue-subscriptions merged into notifications), found ${features.size}`,
 	);
 	assert.ok(presets.size >= 6, `expected 6 presets, found ${presets.size}`);
 
@@ -414,7 +383,13 @@ test("feature and preset declarations validate against the manifest schema", () 
 		}
 	}
 
-	// Dependency graph (hard + soft edges) must be acyclic.
+	// The hard-dependency graph must be acyclic: it drives the generation
+	// topological order. Soft edges are deliberately excluded — a soft
+	// back-edge is the declared way two features integrate optionally in
+	// both directions (e.g. comments ~> attachments for DTO decoration while
+	// attachments hard-depends on comments for its dao; comments ~>
+	// notifications for the shared reaction constants while notifications ~>
+	// comments for the author DTO). Hard closure stays a DAG either way.
 	const visited = new Set<string>();
 	const stack = new Set<string>();
 	function visit(id: string) {
@@ -425,7 +400,7 @@ test("feature and preset declarations validate against the manifest schema", () 
 		stack.add(id);
 		const decl = features.get(id);
 		assert.ok(decl, `unknown feature "${id}"`);
-		for (const dep of [...decl.dependsOn, ...(decl.softDependsOn ?? [])]) {
+		for (const dep of decl.dependsOn) {
 			visit(dep);
 		}
 		stack.delete(id);
@@ -444,6 +419,27 @@ test("feature and preset declarations validate against the manifest schema", () 
 				`preset "${name}" references unknown feature "${featureId}"`,
 			);
 		}
+	}
+});
+
+test("every preset contains the hard-dependency closure of its members", () => {
+	for (const name of presets.keys()) {
+		const enabled = new Set(expandPreset(name));
+		const missing: string[] = [];
+		for (const featureId of enabled) {
+			const decl = features.get(featureId);
+			assert.ok(decl, `unknown feature "${featureId}"`);
+			for (const dep of decl.dependsOn) {
+				if (!enabled.has(dep)) {
+					missing.push(`${dep} (required by ${featureId})`);
+				}
+			}
+		}
+		assert.deepEqual(
+			missing,
+			[],
+			`preset "${name}" is missing hard dependencies:\n${missing.join("\n")}`,
+		);
 	}
 });
 
@@ -512,18 +508,24 @@ test("imports stay within the declared feature boundaries", () => {
 
 	for (const [file, feature] of violations) {
 		console.warn(
-			`[architecture] known violation (Phase 1/5 removal): ${file} -> ${feature}`,
+			`[architecture] known violation (tracked for a later phase): ${file} -> ${feature}`,
 		);
 	}
 
+	// Stale entries fail: a warning-only check would let the list silently
+	// drift away from reality. Remove entries whose violations are fixed.
 	const observed = new Set(
 		violations.map(([file, feature]) => `${file} -> ${feature}`),
 	);
+	const stale: string[] = [];
 	for (const [file, feature] of KNOWN_VIOLATIONS) {
 		if (!observed.has(`${file} -> ${feature}`)) {
-			console.warn(
-				`[architecture] stale KNOWN_VIOLATIONS entry (violation no longer present): ${file} -> ${feature}`,
-			);
+			stale.push(`${file} -> ${feature}`);
 		}
 	}
+	assert.deepEqual(
+		stale,
+		[],
+		`KNOWN_VIOLATIONS entries whose violation no longer exists (remove them):\n${stale.join("\n")}`,
+	);
 });

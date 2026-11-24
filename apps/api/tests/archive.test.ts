@@ -9,6 +9,7 @@ import type { Dependencies } from "../src/dependencies";
 import type { Auth } from "../src/lib/auth";
 import { buildSearchTerms } from "../src/lib/search";
 import { createRoutes } from "../src/routes";
+import { assertCycleAssignable } from "../src/services/cycle.service";
 import { createIssueService } from "../src/services/issue.service";
 import {
 	seedCycle,
@@ -163,7 +164,13 @@ const setup = () => {
 		memberDao: {
 			findByOrgAndUser: async () => null,
 		} as never,
-		cycleDao,
+		cycleGuard: {
+			assertCycleAssignable: (orgId, projectId, cycleId) =>
+				assertCycleAssignable(cycleDao, orgId, projectId, cycleId),
+			findById: (orgId, cycleId) => cycleDao.findById(orgId, cycleId),
+			listAllByProject: (orgId, projectId) =>
+				cycleDao.listAllByProject(orgId, projectId),
+		},
 		statusService: {
 			resolveStatus: async () => {
 				throw new Error("not used");

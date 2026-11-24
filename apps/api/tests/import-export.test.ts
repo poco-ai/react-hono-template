@@ -25,6 +25,7 @@ import type { SessionEnv } from "../src/middleware/auth";
 import type { OrgEnv } from "../src/middleware/org";
 import { requireOrgMember } from "../src/middleware/org";
 import { createIssuesRoutes } from "../src/routes/issues";
+import { assertCycleAssignable } from "../src/services/cycle.service";
 import { createIssueService } from "../src/services/issue.service";
 import { createStatusService } from "../src/services/status.service";
 import {
@@ -184,7 +185,13 @@ const setup = () => {
 		labelDao,
 		projectDao,
 		memberDao,
-		cycleDao,
+		cycleGuard: {
+			assertCycleAssignable: (orgId, projectId, cycleId) =>
+				assertCycleAssignable(cycleDao, orgId, projectId, cycleId),
+			findById: (orgId, cycleId) => cycleDao.findById(orgId, cycleId),
+			listAllByProject: (orgId, projectId) =>
+				cycleDao.listAllByProject(orgId, projectId),
+		},
 		statusService,
 	});
 	return { sqlite, service, memberDao, issueDao, labelDao };

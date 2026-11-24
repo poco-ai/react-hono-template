@@ -1,6 +1,13 @@
 {
 	"name": "planning",
 	"extends": "minimal",
-	"features": ["+cycles", "+roadmap", "+recurrences", "+views", "+templates"],
+	"features": [
+		"+cycles",
+		"+roadmap",
+		"+recurrences",
+		"+notifications",
+		"+views",
+		"+templates"
+	],
 	"platform": ["cloudflare", "bun-selfhost"]
 }

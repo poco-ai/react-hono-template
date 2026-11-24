@@ -8,7 +8,7 @@ import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type { ProjectDto, ProjectWithStatsDto } from "../dto/project.dto";
 import { isUniqueConstraintViolation } from "../lib/db-errors";
-import type { PlanService } from "./plan.service";
+import type { PlanAssert } from "../lib/ports/plan";
 
 export const createProjectService = ({
 	projectDao,
@@ -16,7 +16,7 @@ export const createProjectService = ({
 	memberDao,
 }: {
 	projectDao: ProjectDao;
-	plans: PlanService;
+	plans: { assertQuota: PlanAssert };
 	memberDao: Pick<MemberDao, "findByOrgAndUser">;
 }) => ({
 	listProjects: async (

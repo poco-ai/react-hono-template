@@ -1,20 +1,15 @@
 import { ApiError, ApiErrorCode } from "@workspace/shared";
-import type { AttachmentDao } from "../dao/attachment.dao";
-import type { MediaAssetDao } from "../dao/media-asset.dao";
-import type { PendingUploadDao } from "../dao/pending-upload.dao";
-import type { PlanService } from "./plan.service";
-import type { QuotaService } from "./quota.service";
+import type { PlanLimitsSource } from "../lib/ports/plan";
+import type { StorageQuota } from "../lib/ports/quota";
+import type {
+	AttachmentUsageDao,
+	MediaAssetUsageDao,
+	OrgStorageUsage,
+	PendingUploadUsageDao,
+	UploadQuotaTarget,
+} from "../lib/ports/storage-usage";
 
-export type UploadQuotaTarget =
-	| { kind: "issue_attachment"; issueId: string }
-	| { kind: "comment_attachment"; commentId: string };
-
-export type OrgStorageUsage = {
-	attachments: number;
-	pending: number;
-	media: number;
-	total: number;
-};
+export type { OrgStorageUsage, UploadQuotaTarget };
 
 export const createStorageUsageService = ({
 	attachmentDao,
@@ -23,20 +18,11 @@ export const createStorageUsageService = ({
 	plans,
 	quota,
 }: {
-	attachmentDao: Pick<
-		AttachmentDao,
-		"sumSizeByOrg" | "countByIssue" | "countByComment"
-	>;
-	pendingUploadDao: Pick<
-		PendingUploadDao,
-		"sumDeclaredSizeByOrg" | "countByTarget"
-	>;
-	mediaAssetDao: Pick<MediaAssetDao, "sumActiveSizeByOrg">;
-	plans: Pick<PlanService, "getLimitsForOrg">;
-	quota?: Pick<
-		QuotaService,
-		"authorizeStorage" | "settle" | "release" | "reconcileGauge"
-	>;
+	attachmentDao: AttachmentUsageDao;
+	pendingUploadDao: PendingUploadUsageDao;
+	mediaAssetDao: MediaAssetUsageDao;
+	plans: PlanLimitsSource;
+	quota?: StorageQuota;
 }) => {
 	return {
 		getOrgUsage: async (

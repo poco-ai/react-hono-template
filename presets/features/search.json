@@ -4,7 +4,6 @@
 	"dependsOn": ["core", "issues", "comments"],
 	"claims": [
 		"apps/api/src/controllers/search.controller.ts",
-		"apps/api/src/dao/search-sql.ts",
 		"apps/api/src/dao/search.dao.ts",
 		"apps/api/src/dto/search.dto.ts",
 		"apps/api/src/lib/search.ts",

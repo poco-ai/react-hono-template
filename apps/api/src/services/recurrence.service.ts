@@ -15,11 +15,11 @@ import type { RecurrenceDto } from "../dto/recurrence.dto";
 import type { BackgroundFn } from "../lib/background";
 import {
 	bestEffortNotification,
-	type NotificationService,
-} from "./notification.service";
+	type RecurrenceNotifications,
+} from "../lib/ports/notifications";
+import type { WebhookDispatcher } from "../lib/ports/webhook-dispatcher";
 import { assertProjectWritable } from "./project-access";
 import type { StatusService } from "./status.service";
-import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -104,7 +104,7 @@ export const createRecurrenceService = ({
 	labelDao: Pick<LabelDao, "findByIds">;
 	memberDao: Pick<MemberDao, "findByOrgAndUser" | "isOrgFrozen">;
 	statusService: Pick<StatusService, "resolveStatus">;
-	notifications?: Pick<NotificationService, "onRecurrenceCreated">;
+	notifications?: RecurrenceNotifications;
 	webhooks?: WebhookDispatcher;
 	now?: () => Date;
 }) => {

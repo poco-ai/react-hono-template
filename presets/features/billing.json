@@ -1,7 +1,7 @@
 {
 	"id": "billing",
 	"tier": 3,
-	"dependsOn": ["core"],
+	"dependsOn": ["core", "webhooks", "projects"],
 	"env": {
 		"optional": [
 			"STRIPE_SECRET_KEY",

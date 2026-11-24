@@ -6,6 +6,7 @@ import type {
 	CacheSetOptions,
 	CacheStore,
 } from "../src/lib/kv/types";
+import type { PlanSource } from "../src/lib/ports/plan";
 import { createPlanService, planCacheKey } from "../src/services/plan.service";
 
 const createFakeCache = ({
@@ -47,13 +48,20 @@ const createFakeBillingDao = (initialPlan = "free") => {
 			return { plan: state.plan };
 		},
 	} as unknown as BillingDao;
-	return { dao, calls, state };
+	// Mirrors the DB-backed source assembled in dependencies.ts.
+	const source: PlanSource = {
+		load: async (orgId) => {
+			const subscription = await dao.findByOrg(orgId);
+			return subscription.plan === "pro" ? "pro" : "free";
+		},
+	};
+	return { dao, source, calls, state };
 };
 
 test("a D1 miss caches the normalized plan in KV and L1", async () => {
-	const { dao, calls } = createFakeBillingDao("pro");
+	const { source, calls } = createFakeBillingDao("pro");
 	const cache = createFakeCache();
-	const service = createPlanService(dao, cache.store);
+	const service = createPlanService(source, cache.store);
 
 	assert.equal(await service.getPlanForOrg("org"), "pro");
 	assert.equal(calls.findByOrg, 1);
@@ -70,11 +78,11 @@ test("a D1 miss caches the normalized plan in KV and L1", async () => {
 });
 
 test("a valid KV hit is served without calling the DAO", async () => {
-	const { dao, calls } = createFakeBillingDao("free");
+	const { source, calls } = createFakeBillingDao("free");
 	const cache = createFakeCache({
 		initial: { [planCacheKey("org")]: "pro" },
 	});
-	const service = createPlanService(dao, cache.store);
+	const service = createPlanService(source, cache.store);
 
 	assert.equal(await service.getPlanForOrg("org"), "pro");
 	assert.equal(calls.findByOrg, 0);
@@ -86,11 +94,11 @@ test("a valid KV hit is served without calling the DAO", async () => {
 
 test("invalid KV values fall through to D1", async () => {
 	for (const value of ["enterprise", "PRO", 42, { plan: "pro" }]) {
-		const { dao, calls } = createFakeBillingDao("free");
+		const { source, calls } = createFakeBillingDao("free");
 		const cache = createFakeCache({
 			initial: { [planCacheKey("org")]: value },
 		});
-		const service = createPlanService(dao, cache.store);
+		const service = createPlanService(source, cache.store);
 
 		assert.equal(await service.getPlanForOrg("org"), "free");
 		assert.equal(calls.findByOrg, 1);
@@ -101,10 +109,10 @@ test("invalid KV values fall through to D1", async () => {
 });
 
 test("invalidation clears L1 and the KV key so the next read hits D1", async () => {
-	const { dao, calls, state } = createFakeBillingDao("pro");
+	const { source, calls, state } = createFakeBillingDao("pro");
 	const key = planCacheKey("org");
 	const cache = createFakeCache({ initial: { [key]: "pro" } });
-	const service = createPlanService(dao, cache.store);
+	const service = createPlanService(source, cache.store);
 
 	assert.equal(await service.getPlanForOrg("org"), "pro");
 	assert.equal(calls.findByOrg, 0);
@@ -119,9 +127,9 @@ test("invalidation clears L1 and the KV key so the next read hits D1", async () 
 });
 
 test("a failed KV write still returns the plan", async () => {
-	const { dao, calls } = createFakeBillingDao("pro");
+	const { source, calls } = createFakeBillingDao("pro");
 	const cache = createFakeCache({ setResult: false });
-	const service = createPlanService(dao, cache.store);
+	const service = createPlanService(source, cache.store);
 
 	assert.equal(await service.getPlanForOrg("org"), "pro");
 	assert.equal(cache.calls.sets.length, 1);
@@ -130,9 +138,9 @@ test("a failed KV write still returns the plan", async () => {
 });
 
 test("org ids containing slashes are encoded in the cache key", async () => {
-	const { dao } = createFakeBillingDao("pro");
+	const { source } = createFakeBillingDao("pro");
 	const cache = createFakeCache();
-	const service = createPlanService(dao, cache.store);
+	const service = createPlanService(source, cache.store);
 
 	assert.equal(planCacheKey("org/one"), "cache:v1:plan:org%2Fone");
 	assert.equal(await service.getPlanForOrg("org/one"), "pro");

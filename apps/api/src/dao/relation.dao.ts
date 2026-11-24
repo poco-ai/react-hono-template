@@ -19,24 +19,6 @@ const toRelationDto = (row: RelationRow): IssueRelationDto => ({
 	createdAt: row.createdAt.toISOString(),
 });
 
-/** Batch statement used when an issue is soft-deleted (either side). */
-export const deleteRelationsForIssueStatement = (
-	db: Database,
-	orgId: string,
-	issueId: string,
-): BatchItem<"sqlite"> =>
-	db
-		.delete(issueRelations)
-		.where(
-			and(
-				eq(issueRelations.orgId, orgId),
-				or(
-					eq(issueRelations.issueId, issueId),
-					eq(issueRelations.relatedIssueId, issueId),
-				),
-			),
-		);
-
 export const createRelationDao = (db: Database) => ({
 	create: async (
 		data: {

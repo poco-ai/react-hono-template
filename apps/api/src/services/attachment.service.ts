@@ -9,6 +9,7 @@ import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
 import type { AttachmentDao } from "../dao/attachment.dao";
 import type { CommentDao } from "../dao/comment.dao";
 import type { IssueDao } from "../dao/issue.dao";
+import type { MediaAssetDao } from "../dao/media-asset.dao";
 import type { PendingUploadDao } from "../dao/pending-upload.dao";
 import type { ProjectDao } from "../dao/project.dao";
 import type {
@@ -18,6 +19,11 @@ import type {
 } from "../dto/attachment.dto";
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
+import type { CleanupHandler } from "../lib/ports/cleanup";
+import type { PlanLimitsSource } from "../lib/ports/plan";
+import type { StorageQuota } from "../lib/ports/quota";
+import type { StorageUsage } from "../lib/ports/storage-usage";
+import type { WebhookDispatcher } from "../lib/ports/webhook-dispatcher";
 import type { StorageAdapter } from "../lib/storage/types";
 import {
 	assertStoredContentType,
@@ -25,10 +31,11 @@ import {
 	loadPendingUpload,
 	reserveUpload,
 } from "../lib/storage/upload-flow";
-import type { PlanService } from "./plan.service";
+import {
+	PENDING_CLEANUP_LIMIT,
+	SUPERSEDED_MEDIA_TTL_MS,
+} from "../lib/storage/uploads";
 import { assertProjectWritable } from "./project-access";
-import type { StorageUsageService } from "./storage-usage.service";
-import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 export const ATTACHMENT_UPLOAD_URL_EXPIRES_IN = 600;
 export const ATTACHMENT_DOWNLOAD_URL_EXPIRES_IN = 300;
@@ -59,6 +66,91 @@ const assertContentTypeAllowed = (contentType: string) => {
 	}
 };
 
+/**
+ * Periodic cleanup contribution of the attachments feature: reclaims expired
+ * pending-upload reservations (and their objects, when never registered) and
+ * superseded media after their grace period.
+ */
+export const createStorageCleanupHandler =
+	({
+		pendingUploadDao,
+		attachmentDao,
+		mediaAssetDao,
+		storage,
+		quota,
+	}: {
+		pendingUploadDao: Pick<
+			PendingUploadDao,
+			"findExpired" | "deleteByKeyIfExpired"
+		>;
+		attachmentDao?: Pick<AttachmentDao, "existsByKey">;
+		mediaAssetDao: Pick<
+			MediaAssetDao,
+			"findSupersededBefore" | "deleteById" | "existsByKey"
+		>;
+		storage?: StorageAdapter | null;
+		quota?: Pick<StorageQuota, "release">;
+	}): CleanupHandler =>
+	async (now) => {
+		let expiredPendingUploads = 0;
+		const expired = await pendingUploadDao.findExpired(
+			now,
+			PENDING_CLEANUP_LIMIT,
+		);
+		for (const row of expired) {
+			try {
+				// Delete the reservation first: if register already consumed
+				// it, this is a no-op and the object must survive.
+				const deleted = await pendingUploadDao.deleteByKeyIfExpired(
+					row.key,
+					now,
+				);
+				if (!deleted) continue;
+				const registered =
+					(await attachmentDao?.existsByKey(row.key)) ||
+					(await mediaAssetDao.existsByKey(row.key));
+				if (storage && !registered) {
+					await storage.remove(row.key);
+				}
+				if (row.orgId) {
+					await quota?.release({
+						orgId: row.orgId,
+						idempotencyKey: `storage:${row.key}`,
+					});
+				}
+				expiredPendingUploads += 1;
+			} catch (error) {
+				console.error(
+					"[cleanup] pending upload delete failed:",
+					row.key,
+					error,
+				);
+			}
+		}
+		let supersededMedia = 0;
+		const cutoff = new Date(now.getTime() - SUPERSEDED_MEDIA_TTL_MS);
+		const stale = await mediaAssetDao.findSupersededBefore(
+			cutoff,
+			PENDING_CLEANUP_LIMIT,
+		);
+		for (const asset of stale) {
+			try {
+				if (storage) {
+					await storage.remove(asset.key);
+				}
+				await mediaAssetDao.deleteById(asset.id);
+				supersededMedia += 1;
+			} catch (error) {
+				console.error(
+					"[cleanup] superseded media delete failed:",
+					asset.key,
+					error,
+				);
+			}
+		}
+		return { expiredPendingUploads, supersededMedia };
+	};
+
 export const createAttachmentService = ({
 	attachmentDao,
 	issueDao,
@@ -77,8 +169,8 @@ export const createAttachmentService = ({
 	pendingUploadDao: PendingUploadDao;
 	storage: StorageAdapter | null;
 	webhooks?: WebhookDispatcher;
-	plans: Pick<PlanService, "getLimitsForOrg">;
-	storageUsage: StorageUsageService;
+	plans: PlanLimitsSource;
+	storageUsage: StorageUsage;
 }) => {
 	const assertSizeAllowed = (size: number, maxSize: number) => {
 		if (!Number.isSafeInteger(size) || size < 1 || size > maxSize) {

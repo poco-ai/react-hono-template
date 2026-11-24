@@ -16,8 +16,8 @@ import type {
 } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
 import { randomHex } from "../lib/crypto";
+import type { PlanAssert } from "../lib/ports/plan";
 import type { AuditService } from "./audit.service";
-import type { PlanService } from "./plan.service";
 import type { WebhookDeliveryService } from "./webhook-delivery.service";
 
 const stripSecret = (hook: WebhookWithSecretDto): WebhookDto => {
@@ -34,7 +34,7 @@ export const createWebhookService = ({
 }: {
 	webhookDao: WebhookDao;
 	deliveryDao: WebhookDeliveryDao;
-	plans: PlanService;
+	plans: { assertQuota: PlanAssert };
 	deliveries: WebhookDeliveryService;
 	audit?: Pick<AuditService, "record">;
 }) => {

@@ -1,7 +1,7 @@
 {
 	"id": "comments",
 	"tier": 1,
-	"dependsOn": ["core", "issues"],
+	"dependsOn": ["core", "issues", "projects"],
 	"softDependsOn": ["attachments", "notifications", "billing"],
 	"claims": [
 		"apps/api/src/controllers/comment.controller.ts",

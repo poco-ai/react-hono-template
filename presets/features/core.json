@@ -80,6 +80,10 @@
 		"packages/shared/src/index.ts",
 		"packages/shared/src/schemas/admin-user.ts",
 		"packages/shared/src/schemas/config.ts",
-		"packages/shared/src/schemas/pagination.ts"
+		"packages/shared/src/schemas/pagination.ts",
+		"apps/api/src/lib/ports/**",
+		"apps/api/src/dao/activity.dao.ts",
+		"apps/api/src/dto/activity.dto.ts",
+		"apps/api/src/dao/search-sql.ts"
 	]
 }

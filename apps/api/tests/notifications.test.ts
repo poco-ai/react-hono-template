@@ -1016,7 +1016,8 @@ test("notification fan-out failures never fail the issue or comment write", asyn
 				findById: async () => ({ id: "project-1", archived: false }),
 			} as unknown as ProjectDao,
 			memberDao: { findByOrgAndUser: async () => null } as unknown as never,
-			cycleDao: {
+			cycleGuard: {
+				assertCycleAssignable: async () => {},
 				findById: async () => null,
 				listAllByProject: async () => [],
 			},

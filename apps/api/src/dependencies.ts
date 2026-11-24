@@ -42,6 +42,8 @@ import { createWebhookDao } from "./dao/webhook.dao";
 import { createWebhookDeliveryDao } from "./dao/webhook-delivery.dao";
 import type { Database } from "./db/types";
 import type { CacheStore } from "./lib/kv/types";
+import type { CycleGuard } from "./lib/ports/cycle-guard";
+import type { QuotaUsageSink } from "./lib/ports/quota";
 import type { PlanRateLimiters } from "./lib/rate-limit";
 import type { StorageAdapter } from "./lib/storage/types";
 import type { StripeSetup } from "./lib/stripe";
@@ -49,13 +51,19 @@ import { createActivityService } from "./services/activity.service";
 import { createAdminOrgService } from "./services/admin-org.service";
 import { createAdminUserService } from "./services/admin-user.service";
 import { createAiChatService } from "./services/ai-chat.service";
-import { createAiConversationService } from "./services/ai-conversation.service";
+import {
+	createAiConversationCleanupHandler,
+	createAiConversationService,
+} from "./services/ai-conversation.service";
 import {
 	type AiRateLimiters,
 	createAiUsageService,
 } from "./services/ai-usage.service";
 import { createApiKeyService } from "./services/api-key.service";
-import { createAttachmentService } from "./services/attachment.service";
+import {
+	createAttachmentService,
+	createStorageCleanupHandler,
+} from "./services/attachment.service";
 import { createAuditService } from "./services/audit.service";
 import { createAuthPolicyService } from "./services/auth-policy.service";
 import { createBillingService } from "./services/billing.service";
@@ -63,14 +71,20 @@ import { createBootstrapService } from "./services/bootstrap.service";
 import { createCleanupService } from "./services/cleanup.service";
 import { createCommentService } from "./services/comment.service";
 import { createConfigService } from "./services/config.service";
-import { createCycleService } from "./services/cycle.service";
+import {
+	assertCycleAssignable,
+	createCycleService,
+} from "./services/cycle.service";
 import { createFavoriteService } from "./services/favorite.service";
 import { createIssueService } from "./services/issue.service";
 import { createIssueSubscriptionService } from "./services/issue-subscription.service";
 import { createIssueTemplateService } from "./services/issue-template.service";
 import { createLabelService } from "./services/label.service";
 import { createMediaService } from "./services/media.service";
-import { createNotificationService } from "./services/notification.service";
+import {
+	createNotificationCleanupHandler,
+	createNotificationService,
+} from "./services/notification.service";
 import { createOrgAiSettingsService } from "./services/org-ai-settings.service";
 import { createOrganizationService } from "./services/organization.service";
 import { createPlanService } from "./services/plan.service";
@@ -86,6 +100,7 @@ import { createStorageUsageService } from "./services/storage-usage.service";
 import { createViewService } from "./services/view.service";
 import { createWebhookService } from "./services/webhook.service";
 import {
+	createWebhookCleanupHandler,
 	createWebhookDeliveryService,
 	type WebhookJobQueue,
 } from "./services/webhook-delivery.service";
@@ -160,13 +175,36 @@ export const createDependencies = ({
 	const aiToolCallDao = createAiToolCallDao(db);
 	const aiUsageDao = createAiUsageDao(db);
 	const orgAiSettingsDao = createOrgAiSettingsDao(db);
-	const planService = createPlanService(billingDao, cache);
+	// DB-backed plan source: the subscription row is billing's only input to
+	// plan resolution (a trimmed preset wires createStaticPlanSource instead).
+	const planService = createPlanService(
+		{
+			load: async (orgId) => {
+				const subscription = await billingDao.findByOrg(orgId);
+				return subscription.plan === "pro" ? "pro" : "free";
+			},
+		},
+		cache,
+	);
 	const auditService = createAuditService(createAuditDao(db));
+	// The ai feature's usage sink: records daily chat usage after a quota
+	// settle wins its finalize (exactly once per reservation).
+	const aiUsageSink: QuotaUsageSink = async (orgId, usage) => {
+		await aiUsageDao.record({
+			orgId,
+			userId: usage.userId,
+			day: new Date().toISOString().slice(0, 10),
+			requests: 1,
+			inputTokens: usage.inputTokens,
+			outputTokens: usage.outputTokens,
+			toolCalls: usage.toolCalls,
+		});
+	};
 	const quotaService = createQuotaService({
 		dao: createQuotaDao(db),
 		plans: planService,
 		audit: auditService,
-		usageDao: aiUsageDao,
+		usageSinks: [aiUsageSink],
 	});
 
 	const searchService = createSearchService(createSearchDao(db));
@@ -191,14 +229,20 @@ export const createDependencies = ({
 	});
 	const cleanupService = createCleanupService({
 		memberDao,
-		deliveryDao: webhookDeliveryDao,
-		conversationDao: aiConversationDao,
-		pendingUploadDao,
-		attachmentDao,
-		mediaAssetDao,
-		notificationDao,
-		storage,
-		quota: quotaService,
+		// Feature cleanup contributions in the historical count order, so the
+		// cron log key layout is unchanged.
+		handlers: [
+			createWebhookCleanupHandler(webhookDeliveryDao),
+			createAiConversationCleanupHandler(aiConversationDao),
+			createNotificationCleanupHandler(notificationDao),
+			createStorageCleanupHandler({
+				pendingUploadDao,
+				attachmentDao,
+				mediaAssetDao,
+				storage,
+				quota: quotaService,
+			}),
+		],
 	});
 	const webhookService = createWebhookService({
 		webhookDao,
@@ -229,12 +273,21 @@ export const createDependencies = ({
 		notificationDao,
 		subscriptionDao: issueSubscriptionDao,
 	});
+	// Cycle guard adapter: the planning feature's validation wrapped for the
+	// issue service port (absent in presets without cycles).
+	const cycleGuard: CycleGuard = {
+		assertCycleAssignable: (orgId, projectId, cycleId) =>
+			assertCycleAssignable(cycleDao, orgId, projectId, cycleId),
+		findById: (orgId, cycleId) => cycleDao.findById(orgId, cycleId),
+		listAllByProject: (orgId, projectId) =>
+			cycleDao.listAllByProject(orgId, projectId),
+	};
 	const issueService = createIssueService({
 		issueDao,
 		labelDao,
 		projectDao,
 		memberDao,
-		cycleDao,
+		cycleGuard,
 		statusService,
 		webhooks: webhookDeliveryService,
 		notifications: notificationService,

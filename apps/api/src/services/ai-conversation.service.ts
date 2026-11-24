@@ -21,6 +21,7 @@ import type {
 	AiConversationDto,
 	AiConversationListDto,
 } from "../dto/ai.dto";
+import type { CleanupHandler } from "../lib/ports/cleanup";
 
 const TITLE_MAX_LENGTH = 60;
 
@@ -69,6 +70,17 @@ const decodeCursor = (raw: string): AiConversationCursor => {
 };
 
 const DETAIL_MESSAGE_LIMIT = 200;
+
+/**
+ * Periodic cleanup contribution of the ai feature: deletes conversations
+ * whose retention window has expired.
+ */
+export const createAiConversationCleanupHandler =
+	(conversationDao: Pick<AiConversationDao, "deleteExpired">): CleanupHandler =>
+	async (now) => {
+		const deletedConversations = await conversationDao.deleteExpired(now);
+		return { deletedConversations };
+	};
 
 export const createAiConversationService = ({
 	conversationDao,

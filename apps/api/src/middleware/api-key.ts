@@ -11,9 +11,9 @@ import type { ApiKeyDao } from "../dao/api-key.dao";
 import type { MemberDao } from "../dao/member.dao";
 import { backgroundFromContext } from "../lib/background";
 import { sha256Hex } from "../lib/crypto";
+import type { PlanNameSource } from "../lib/ports/plan";
 import type { PlanRateLimiters } from "../lib/rate-limit";
 import { fail } from "../lib/response";
-import type { PlanService } from "../services/plan.service";
 
 const TOUCH_THROTTLE_MS = 60_000;
 
@@ -85,7 +85,7 @@ export const requireApiKey = (apiKeyDao: ApiKeyDao) =>
 	});
 
 export const rateLimit = (
-	plans: PlanService,
+	plans: PlanNameSource,
 	limiters: PlanRateLimiters | undefined,
 ) =>
 	createMiddleware<ApiKeyEnv>(async (c, next) => {

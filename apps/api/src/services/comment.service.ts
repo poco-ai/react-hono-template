@@ -15,7 +15,6 @@ import type { CommentReactionDao } from "../dao/comment-reaction.dao";
 import type { IssueDao } from "../dao/issue.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { ProjectDao } from "../dao/project.dao";
-import type { AttachmentWithUrlDto } from "../dto/attachment.dto";
 import type {
 	CommentDto,
 	CommentReactionSummaryDto,
@@ -25,12 +24,13 @@ import type {
 import type { IssueDto } from "../dto/issue.dto";
 import type { BackgroundFn } from "../lib/background";
 import { excerptOf } from "../lib/excerpt";
+import type { AttachmentFileLookup } from "../lib/ports/attachments";
 import {
 	bestEffortNotification,
-	type NotificationService,
-} from "./notification.service";
+	type CommentNotifications,
+} from "../lib/ports/notifications";
+import type { WebhookDispatcher } from "../lib/ports/webhook-dispatcher";
 import { assertProjectWritable } from "./project-access";
-import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const assertIssueCommentable = async (
 	issueDao: IssueDao,
@@ -93,18 +93,8 @@ export const createCommentService = ({
 	issueDao: IssueDao;
 	projectDao: ProjectDao;
 	webhooks?: WebhookDispatcher;
-	files?: {
-		forComments: (
-			orgId: string,
-			commentIds: string[],
-		) => Promise<Map<string, AttachmentWithUrlDto[]>>;
-		keysForComment: (orgId: string, commentId: string) => Promise<string[]>;
-		removeObjects: (keys: string[]) => Promise<void>;
-	};
-	notifications?: Pick<
-		NotificationService,
-		"onCommentCreated" | "onCommentResolved"
-	>;
+	files?: AttachmentFileLookup;
+	notifications?: CommentNotifications;
 	memberDao?: Pick<MemberDao, "filterMemberIds">;
 	reactionDao?: CommentReactionDao;
 	mentionDao?: CommentMentionDao;

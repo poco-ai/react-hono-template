@@ -7,14 +7,19 @@ import type { WebhookDeliveryDao } from "../src/dao/webhook-delivery.dao";
 import type { BackgroundFn } from "../src/lib/background";
 import type { StorageAdapter } from "../src/lib/storage/types";
 import { handleScheduled } from "../src/scheduled";
+import { createStorageCleanupHandler } from "../src/services/attachment.service";
+import { createCleanupService } from "../src/services/cleanup.service";
 import {
-	ABANDONED_DELIVERY_AGE_MS,
-	ABANDONED_DELIVERY_ERROR,
-	createCleanupService,
+	createNotificationCleanupHandler,
 	NOTIFICATION_CLEANUP_LIMIT,
 	READ_NOTIFICATION_TTL_MS,
 	UNREAD_NOTIFICATION_TTL_MS,
-} from "../src/services/cleanup.service";
+} from "../src/services/notification.service";
+import {
+	ABANDONED_DELIVERY_AGE_MS,
+	ABANDONED_DELIVERY_ERROR,
+	createWebhookCleanupHandler,
+} from "../src/services/webhook-delivery.service";
 
 type InvitationRow = {
 	id: string;
@@ -128,7 +133,7 @@ test("cleanup deletes expired pending invitations and fails never-attempted stal
 
 	const counts = await createCleanupService({
 		memberDao,
-		deliveryDao,
+		handlers: [createWebhookCleanupHandler(deliveryDao)],
 	}).cleanup(now);
 
 	assert.equal(counts.expiredInvitations, 1);
@@ -244,15 +249,17 @@ test("cleanup applies 30/90-day notification retention in bounded batches", asyn
 		memberDao: {
 			deleteExpiredPending: async () => 0,
 		} as unknown as MemberDao,
-		deliveryDao: {
-			failAbandoned: async () => 0,
-		} as unknown as WebhookDeliveryDao,
-		notificationDao: {
-			deleteOlderThan: async (args) => {
-				received = args;
-				return 7;
-			},
-		},
+		handlers: [
+			createWebhookCleanupHandler({
+				failAbandoned: async () => 0,
+			} as unknown as WebhookDeliveryDao),
+			createNotificationCleanupHandler({
+				deleteOlderThan: async (args) => {
+					received = args;
+					return 7;
+				},
+			}),
+		],
 	}).cleanup(now);
 
 	assert.equal(READ_NOTIFICATION_TTL_MS, 30 * day);
@@ -285,40 +292,42 @@ test("cleanup removes expired pending objects but keeps registered ones", async 
 		memberDao: {
 			deleteExpiredPending: async () => 0,
 		} as unknown as MemberDao,
-		deliveryDao: {
-			failAbandoned: async () => 0,
-		} as unknown as WebhookDeliveryDao,
-		pendingUploadDao: {
-			findExpired: async (asOf: Date) =>
-				rows.filter((row) => row.expiresAt.getTime() < asOf.getTime()),
-			deleteByKeyIfExpired: async (key: string, asOf: Date) => {
-				const index = rows.findIndex(
-					(row) => row.key === key && row.expiresAt.getTime() < asOf.getTime(),
-				);
-				if (index < 0) return false;
-				rows.splice(index, 1);
-				return true;
-			},
-		} as unknown as Pick<
-			PendingUploadDao,
-			"findExpired" | "deleteByKeyIfExpired"
-		>,
-		attachmentDao: {
-			existsByKey: async (key: string) => key === "registered-key",
-		} as unknown as { existsByKey: (key: string) => Promise<boolean> },
-		mediaAssetDao: {
-			findSupersededBefore: async () => [],
-			deleteById: async () => {},
-			existsByKey: async () => false,
-		} as unknown as Pick<
-			MediaAssetDao,
-			"findSupersededBefore" | "deleteById" | "existsByKey"
-		>,
-		storage: {
-			remove: async (key: string) => {
-				removed.push(key);
-			},
-		} as StorageAdapter,
+		handlers: [
+			createWebhookCleanupHandler({
+				failAbandoned: async () => 0,
+			} as unknown as WebhookDeliveryDao),
+			createStorageCleanupHandler({
+				pendingUploadDao: {
+					findExpired: async (asOf: Date) =>
+						rows.filter((row) => row.expiresAt.getTime() < asOf.getTime()),
+					deleteByKeyIfExpired: async (key: string, asOf: Date) => {
+						const index = rows.findIndex(
+							(row) =>
+								row.key === key && row.expiresAt.getTime() < asOf.getTime(),
+						);
+						if (index < 0) return false;
+						rows.splice(index, 1);
+						return true;
+					},
+				} as unknown as Pick<
+					PendingUploadDao,
+					"findExpired" | "deleteByKeyIfExpired"
+				>,
+				attachmentDao: {
+					existsByKey: async (key: string) => key === "registered-key",
+				},
+				mediaAssetDao: {
+					findSupersededBefore: async () => [],
+					deleteById: async () => {},
+					existsByKey: async () => false,
+				},
+				storage: {
+					remove: async (key: string) => {
+						removed.push(key);
+					},
+				} as StorageAdapter,
+			}),
+		],
 	}).cleanup(now);
 
 	assert.equal(counts.expiredPendingUploads, 2);
@@ -350,28 +359,36 @@ test("superseded avatars and logos are deleted after the one-day grace period", 
 		memberDao: {
 			deleteExpiredPending: async () => 0,
 		} as unknown as MemberDao,
-		deliveryDao: {
-			failAbandoned: async () => 0,
-		} as unknown as WebhookDeliveryDao,
-		mediaAssetDao: {
-			findSupersededBefore: async (before: Date) =>
-				assets.filter(
-					(asset) => asset.supersededAt.getTime() < before.getTime(),
-				),
-			deleteById: async (id: string) => {
-				const index = assets.findIndex((asset) => asset.id === id);
-				if (index >= 0) assets.splice(index, 1);
-			},
-			existsByKey: async () => false,
-		} as unknown as Pick<
-			MediaAssetDao,
-			"findSupersededBefore" | "deleteById" | "existsByKey"
-		>,
-		storage: {
-			remove: async (key: string) => {
-				removed.push(key);
-			},
-		} as StorageAdapter,
+		handlers: [
+			createStorageCleanupHandler({
+				pendingUploadDao: {
+					findExpired: async () => [],
+					deleteByKeyIfExpired: async () => false,
+				} as unknown as Pick<
+					PendingUploadDao,
+					"findExpired" | "deleteByKeyIfExpired"
+				>,
+				mediaAssetDao: {
+					findSupersededBefore: async (before: Date) =>
+						assets.filter(
+							(asset) => asset.supersededAt.getTime() < before.getTime(),
+						),
+					deleteById: async (id: string) => {
+						const index = assets.findIndex((asset) => asset.id === id);
+						if (index >= 0) assets.splice(index, 1);
+					},
+					existsByKey: async () => false,
+				} as unknown as Pick<
+					MediaAssetDao,
+					"findSupersededBefore" | "deleteById" | "existsByKey"
+				>,
+				storage: {
+					remove: async (key: string) => {
+						removed.push(key);
+					},
+				} as StorageAdapter,
+			}),
+		],
 	}).cleanup(now);
 
 	assert.equal(counts.supersededMedia, 1);

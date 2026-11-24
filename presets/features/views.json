@@ -1,7 +1,7 @@
 {
 	"id": "views",
 	"tier": 2,
-	"dependsOn": ["core", "projects"],
+	"dependsOn": ["core", "projects", "issues"],
 	"softDependsOn": ["billing"],
 	"claims": [
 		"apps/api/src/controllers/view.controller.ts",

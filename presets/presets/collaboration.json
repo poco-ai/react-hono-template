@@ -8,7 +8,6 @@
 		"+search",
 		"+favorites",
 		"+relations",
-		"+issue-subscriptions",
 		"+project-updates"
 	],
 	"platform": ["cloudflare", "bun-selfhost"]

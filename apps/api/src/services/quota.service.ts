@@ -13,21 +13,25 @@ import {
 	periodKeyFor,
 	planDraw,
 } from "@workspace/shared";
-import type { AiUsageDao } from "../dao/ai-usage.dao";
 import type {
 	QuotaDao,
 	QuotaReservationRow,
 	ReservationInsert,
 } from "../dao/quota.dao";
+import type { PlanNameSource } from "../lib/ports/plan";
+import type {
+	QuotaDimensionsPort,
+	QuotaUsageRecord,
+	QuotaUsageSink,
+} from "../lib/ports/quota";
 import type { AuditService } from "./audit.service";
-import type { PlanService } from "./plan.service";
 
 export type QuotaActor = {
 	actorType: AuditActorType;
 	actorId?: string | null;
 };
 
-export type QuotaDimensions = Record<string, string | number | boolean | null>;
+export type QuotaDimensions = QuotaDimensionsPort;
 
 const storageQuota = () =>
 	new ApiError(
@@ -64,13 +68,17 @@ export const createQuotaService = ({
 	dao,
 	plans,
 	audit,
-	usageDao,
+	usageSinks = [],
 	now = () => new Date(),
 }: {
 	dao: QuotaDao;
-	plans: Pick<PlanService, "getPlanForOrg">;
+	plans: PlanNameSource;
 	audit?: Pick<AuditService, "prepare" | "record">;
-	usageDao?: Pick<AiUsageDao, "record">;
+	/**
+	 * Usage sinks run after a settle wins its finalize (exactly once per
+	 * reservation). The ai feature registers one that records daily usage.
+	 */
+	usageSinks?: QuotaUsageSink[];
 	now?: () => Date;
 }) => {
 	const resolvePolicy = async (
@@ -400,16 +408,18 @@ export const createQuotaService = ({
 				quantity: split.actual,
 				creditsDelta: -split.creditsUsed,
 			});
-			if (!won || !input.aiUsage || !usageDao) return;
-			await usageDao.record({
-				orgId: input.orgId,
+			// Usage is recorded only when this call won the finalize, so a
+			// replayed settle never double-counts.
+			if (!won || !input.aiUsage || usageSinks.length === 0) return;
+			const usage: QuotaUsageRecord = {
 				userId: input.aiUsage.userId,
-				day: now().toISOString().slice(0, 10),
-				requests: 1,
 				inputTokens: input.aiUsage.inputTokens,
 				outputTokens: input.aiUsage.outputTokens,
 				toolCalls: input.aiUsage.toolCalls,
-			});
+			};
+			for (const sink of usageSinks) {
+				await sink(input.orgId, usage);
+			}
 		},
 
 		release: async (input: {

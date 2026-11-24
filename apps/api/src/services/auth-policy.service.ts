@@ -2,7 +2,7 @@ import { ApiError, ApiErrorCode, PLANS } from "@workspace/shared";
 import type { AdminUserDao } from "../dao/admin-user.dao";
 import type { MemberDao } from "../dao/member.dao";
 import type { OrganizationDao } from "../dao/organization.dao";
-import type { PlanService } from "./plan.service";
+import type { PlanAssert, PlanNameSource } from "../lib/ports/plan";
 
 export const createAuthPolicyService = ({
 	adminUserDao,
@@ -20,7 +20,7 @@ export const createAuthPolicyService = ({
 		| "countPendingInvitationsByOrg"
 	>;
 	organizationDao: Pick<OrganizationDao, "findById">;
-	plans: Pick<PlanService, "getPlanForOrg" | "assertQuota">;
+	plans: PlanNameSource & { assertQuota: PlanAssert };
 	/** Explicit opt-in for self-serve deployments; off by default. */
 	allowFirstUserAdmin?: boolean;
 }) => ({

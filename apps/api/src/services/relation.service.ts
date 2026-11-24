@@ -16,9 +16,9 @@ import type {
 } from "../dto/relation.dto";
 import type { BackgroundFn } from "../lib/background";
 import { isUniqueConstraintViolation } from "../lib/db-errors";
+import type { WebhookDispatcher } from "../lib/ports/webhook-dispatcher";
 import { issueKey } from "./issue.service";
 import { assertProjectWritable } from "./project-access";
-import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const toLink = (
 	relation: IssueRelationDto,

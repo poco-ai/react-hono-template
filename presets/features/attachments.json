@@ -1,7 +1,7 @@
 {
 	"id": "attachments",
 	"tier": 2,
-	"dependsOn": ["core", "issues"],
+	"dependsOn": ["core", "issues", "comments", "projects"],
 	"softDependsOn": ["billing", "webhooks"],
 	"env": {
 		"optional": [

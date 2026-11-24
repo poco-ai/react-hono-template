@@ -2,6 +2,7 @@ import type { WebhookDao } from "../dao/webhook.dao";
 import type { WebhookDeliveryDao } from "../dao/webhook-delivery.dao";
 import type { WebhookDeliveryDto } from "../dto/webhook.dto";
 import type { BackgroundFn } from "../lib/background";
+import type { CleanupHandler } from "../lib/ports/cleanup";
 import {
 	signLegacyPayload,
 	signStandardWebhook,
@@ -14,6 +15,25 @@ const WEBHOOK_TIMEOUT_MS = 5_000;
 export const WEBHOOK_MAX_ATTEMPTS = 3;
 /** Matches the Queues `retry_delay` of 5 seconds. */
 export const WEBHOOK_RETRY_DELAY_MS = 5_000;
+
+/** Pending deliveries that stopped making progress are failed after this long. */
+export const ABANDONED_DELIVERY_AGE_MS = 15 * 60 * 1000;
+export const ABANDONED_DELIVERY_ERROR = "delivery timed out";
+
+/**
+ * Periodic cleanup contribution of the webhooks feature: fails abandoned
+ * deliveries so queue retries cannot resurrect them later.
+ */
+export const createWebhookCleanupHandler =
+	(deliveryDao: Pick<WebhookDeliveryDao, "failAbandoned">): CleanupHandler =>
+	async (now) => {
+		const failedDeliveries = await deliveryDao.failAbandoned(
+			new Date(now.getTime() - ABANDONED_DELIVERY_AGE_MS),
+			now,
+			ABANDONED_DELIVERY_ERROR,
+		);
+		return { failedDeliveries };
+	};
 
 export type WebhookJobQueue = {
 	send(message: { deliveryId: string }): Promise<void>;
@@ -79,14 +99,7 @@ const postWebhook = async (
 	return { success, responseStatus, lastError };
 };
 
-export type WebhookDispatcher = {
-	dispatch: (
-		orgId: string,
-		event: string,
-		data: unknown,
-		background?: BackgroundFn,
-	) => Promise<void>;
-};
+export type { WebhookDispatcher } from "../lib/ports/webhook-dispatcher";
 
 export const createWebhookDeliveryService = ({
 	webhookDao,

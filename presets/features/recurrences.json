@@ -7,7 +7,8 @@
 		"cycles",
 		"notifications",
 		"labels",
-		"statuses"
+		"statuses",
+		"projects"
 	],
 	"softDependsOn": ["webhooks"],
 	"claims": [

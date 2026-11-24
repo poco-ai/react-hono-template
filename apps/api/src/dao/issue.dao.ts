@@ -8,12 +8,19 @@ import {
 	inArray,
 	isNull,
 	lt,
+	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { runBatch } from "../db/run-batch";
-import { issueLabels, issueStatuses, issues, projects } from "../db/schema";
+import {
+	issueLabels,
+	issueRelations,
+	issueStatuses,
+	issues,
+	projects,
+} from "../db/schema";
 import type { Database } from "../db/types";
 import type {
 	IssueDto,
@@ -25,11 +32,33 @@ import type { StatusDto } from "../dto/status.dto";
 import { isIssueNumberConflict } from "../lib/db-errors";
 import { type ActivityInsert, activityInsertStatement } from "./activity.dao";
 import { compileIssueFilter, issueSortOrderBy } from "./issue-filter";
-import { deleteRelationsForIssueStatement } from "./relation.dao";
 import { instrMatch } from "./search-sql";
 import { toStatusDto } from "./status.dao";
 
 type IssueRow = typeof issues.$inferSelect;
+
+/**
+ * Batch statement used when an issue is soft-deleted (either side): every
+ * relation involving the issue is removed from the `issue_relations` table.
+ * Cascading relation cleanup is part of the issue's own delete semantics, so
+ * the statement lives here rather than in the relations dao.
+ */
+export const deleteRelationsForIssueStatement = (
+	db: Database,
+	orgId: string,
+	issueId: string,
+): BatchItem<"sqlite"> =>
+	db
+		.delete(issueRelations)
+		.where(
+			and(
+				eq(issueRelations.orgId, orgId),
+				or(
+					eq(issueRelations.issueId, issueId),
+					eq(issueRelations.relatedIssueId, issueId),
+				),
+			),
+		);
 
 /**
  * Upper bound for the sub-issue list returned with an issue. Sub-issues are a

@@ -24,11 +24,11 @@ import type { OrganizationDao } from "../dao/organization.dao";
 import type { AiContextType, AiToolCallStatus } from "../dto/ai.dto";
 import type { BackgroundFn } from "../lib/background";
 import { sha256Hex } from "../lib/crypto";
+import type { AiQuotaGuard } from "../lib/ports/quota";
 import type { AiConversationService } from "./ai-conversation.service";
 import { type AiUsageService, estimateTokens } from "./ai-usage.service";
 import type { OrgAiSettingsService } from "./org-ai-settings.service";
 import type { PlanService } from "./plan.service";
-import type { QuotaService } from "./quota.service";
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 1024;
 const INPUT_SUMMARY_LENGTH = 300;
@@ -108,7 +108,7 @@ export const createAiChatService = ({
 	messageDao: AiMessageDao;
 	toolCallDao: AiToolCallDao;
 	usageService: AiUsageService;
-	quota?: Pick<QuotaService, "authorize" | "settle" | "release">;
+	quota?: AiQuotaGuard;
 	settingsService: OrgAiSettingsService;
 	capabilityLayer: CapabilityExecutor;
 	plans: PlanService;

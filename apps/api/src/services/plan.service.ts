@@ -5,9 +5,14 @@ import {
 	type PlanLimits,
 	type PlanName,
 } from "@workspace/shared";
-import type { BillingDao } from "../dao/billing.dao";
 import { createResourceCache } from "../lib/kv/resource-cache";
 import type { CacheStore } from "../lib/kv/types";
+import type {
+	PlanAssert,
+	PlanQuotaKind,
+	PlanQuotaOptions,
+	PlanSource,
+} from "../lib/ports/plan";
 
 const PLAN_CACHE_TTL_MS = 60_000;
 // Billing changes invalidate explicitly; the long TTL is only a fallback that
@@ -17,12 +22,7 @@ const PLAN_KV_CACHE_TTL_SECONDS = 30;
 const PLAN_KEY_PREFIX = "cache:v1:plan:";
 
 /** Count quotas mirrored from `PLANS`; a `-1` limit means unlimited. */
-export type QuotaKind =
-	| "orgs"
-	| "members"
-	| "projects"
-	| "webhooks"
-	| "savedViews";
+export type QuotaKind = PlanQuotaKind;
 
 const limitsFor = (plan: PlanName): PlanLimits => PLANS[plan];
 
@@ -44,29 +44,14 @@ export type PlanService = {
 	 * unmetered plans skip the counting query entirely. `message` may be a
 	 * string or a `(plan, limit)` function when the copy needs the numbers.
 	 */
-	assertQuota: (
-		orgId: string,
-		kind: QuotaKind,
-		count: number | (() => Promise<number>),
-		options?: {
-			code?: ApiErrorCode;
-			message?: string | ((plan: PlanName, limit: number) => string);
-			/** Copy used when the limit is 0 (the feature is Pro-only). */
-			zeroLimitMessage?: string;
-		},
-	) => Promise<void>;
+	assertQuota: PlanAssert;
 	invalidatePlanCache: (orgId: string) => Promise<void>;
 };
 
 export type QuotaAssert = (
 	kind: QuotaKind,
 	count: number | (() => Promise<number>),
-	options?: {
-		code?: ApiErrorCode;
-		message?: string | ((plan: PlanName, limit: number) => string);
-		/** Copy used when the limit is 0 (the feature is Pro-only). */
-		zeroLimitMessage?: string;
-	},
+	options?: PlanQuotaOptions,
 ) => Promise<void>;
 
 /**
@@ -97,8 +82,19 @@ export const quotaAssertFor =
 		);
 	};
 
+/**
+ * Plan source without a subscription store: every organization resolves to
+ * the same plan. Trimmed presets (no billing) wire this so count quotas keep
+ * enforcing `PLANS.free` limits.
+ */
+export const createStaticPlanSource = (
+	plan: PlanName = "free",
+): PlanSource => ({
+	load: async () => plan,
+});
+
 export const createPlanService = (
-	billingDao: BillingDao,
+	source: PlanSource,
 	cache: CacheStore,
 ): PlanService => {
 	// The resource cache owns the short-lived L1 map; billing changes must be
@@ -110,8 +106,8 @@ export const createPlanService = (
 		cacheTtlSeconds: PLAN_KV_CACHE_TTL_SECONDS,
 		parse: (stored) => (isPlanName(stored) ? stored : null),
 		load: async (key) => {
-			const subscription = await billingDao.findByOrg(orgIdFromPlanKey(key));
-			return subscription.plan === "pro" ? "pro" : "free";
+			const plan = await source.load(orgIdFromPlanKey(key));
+			return plan === "pro" ? "pro" : "free";
 		},
 	});
 

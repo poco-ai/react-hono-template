@@ -19,7 +19,6 @@ import {
 	unescapeCsvCell,
 } from "@workspace/shared";
 import { type ActivityInsert, createActivityRow } from "../dao/activity.dao";
-import type { CycleDao } from "../dao/cycle.dao";
 import type { IssueDao, IssueInsertData } from "../dao/issue.dao";
 import type { LabelDao } from "../dao/label.dao";
 import type { MemberDao } from "../dao/member.dao";
@@ -36,14 +35,14 @@ import type {
 } from "../dto/issue.dto";
 import type { StatusDto } from "../dto/status.dto";
 import type { BackgroundFn } from "../lib/background";
-import { assertCycleAssignable } from "./cycle.service";
+import type { CycleGuard } from "../lib/ports/cycle-guard";
 import {
 	bestEffortNotification,
-	type NotificationService,
-} from "./notification.service";
+	type IssueNotifications,
+} from "../lib/ports/notifications";
+import type { WebhookDispatcher } from "../lib/ports/webhook-dispatcher";
 import { assertProjectWritable } from "./project-access";
 import type { StatusService } from "./status.service";
-import type { WebhookDispatcher } from "./webhook-delivery.service";
 
 const toDueDate = (
 	value: string | null | undefined,
@@ -273,7 +272,7 @@ export const createIssueService = ({
 	labelDao,
 	projectDao,
 	memberDao,
-	cycleDao,
+	cycleGuard,
 	statusService,
 	webhooks,
 	notifications,
@@ -282,16 +281,17 @@ export const createIssueService = ({
 	labelDao: LabelDao;
 	projectDao: ProjectDao;
 	memberDao: MemberDao;
-	cycleDao: Pick<CycleDao, "findById" | "listAllByProject">;
+	/**
+	 * Cycle assignment guard (planning add-on). Absent guard skips cycle
+	 * validation and treats cycle lookups as empty.
+	 */
+	cycleGuard?: CycleGuard;
 	statusService: Pick<
 		StatusService,
 		"resolveStatus" | "resolveStatusIds" | "listStatuses"
 	>;
 	webhooks?: WebhookDispatcher;
-	notifications?: Pick<
-		NotificationService,
-		"onIssueCreated" | "onIssueUpdated"
-	>;
+	notifications?: IssueNotifications;
 }) => {
 	const service = {
 		listIssues: async (
@@ -555,7 +555,11 @@ export const createIssueService = ({
 					})
 				: null;
 			if (input.cycleId) {
-				await assertCycleAssignable(cycleDao, orgId, projectId, input.cycleId);
+				await cycleGuard?.assertCycleAssignable(
+					orgId,
+					projectId,
+					input.cycleId,
+				);
 			}
 			const id = crypto.randomUUID();
 			const status = await statusService.resolveStatus(orgId, {
@@ -624,7 +628,7 @@ export const createIssueService = ({
 				statusService.listStatuses(orgId),
 				labelDao.listByOrg(orgId),
 				memberDao.listByOrg(orgId),
-				cycleDao.listAllByProject(orgId, projectId),
+				cycleGuard ? cycleGuard.listAllByProject(orgId, projectId) : [],
 				issueDao.listForExport(orgId, projectId, ISSUE_CSV_MAX_EXPORT_ROWS),
 			]);
 			const statusById = new Map(statuses.map((status) => [status.id, status]));
@@ -706,7 +710,7 @@ export const createIssueService = ({
 				statusService.listStatuses(orgId),
 				labelDao.listByOrg(orgId),
 				memberDao.listByOrg(orgId),
-				cycleDao.listAllByProject(orgId, projectId),
+				cycleGuard ? cycleGuard.listAllByProject(orgId, projectId) : [],
 			]);
 			const statusByKey = new Map(
 				statuses.map((status) => [nameKey(status.name), status]),
@@ -919,8 +923,7 @@ export const createIssueService = ({
 			const currentLabelIds = await issueDao.findLabelIds(issue.id);
 			const current: IssueDetailDto = { ...issue, labelIds: currentLabelIds };
 			if (input.cycleId) {
-				await assertCycleAssignable(
-					cycleDao,
+				await cycleGuard?.assertCycleAssignable(
 					orgId,
 					issue.projectId,
 					input.cycleId,
@@ -970,10 +973,10 @@ export const createIssueService = ({
 			if (cycleChanged) {
 				// Activities store cycle *names* so history survives cycle deletion.
 				const oldCycle = issue.cycleId
-					? await cycleDao.findById(orgId, issue.cycleId)
+					? ((await cycleGuard?.findById(orgId, issue.cycleId)) ?? null)
 					: null;
 				const newCycle = input.cycleId
-					? await cycleDao.findById(orgId, input.cycleId)
+					? ((await cycleGuard?.findById(orgId, input.cycleId)) ?? null)
 					: null;
 				diffs.push({
 					field: "cycle",
