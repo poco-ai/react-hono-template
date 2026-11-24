@@ -65,11 +65,6 @@ export function SubIssuesSection({
 					<h2 className="font-heading text-base font-medium">
 						{t("issues.subIssues.title")}
 					</h2>
-					<p className="text-muted-foreground text-sm">
-						{isSubIssue
-							? t("issues.subIssues.nestedDescription")
-							: t("issues.subIssues.description")}
-					</p>
 				</div>
 				<Button
 					variant="outline"

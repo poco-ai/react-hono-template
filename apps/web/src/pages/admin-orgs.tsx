@@ -9,7 +9,6 @@ import { Button } from "@workspace/ui/components/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
@@ -107,7 +106,6 @@ export function AdminOrgsPage() {
 		<Card>
 			<CardHeader>
 				<CardTitle>{t("adminOrgs.title")}</CardTitle>
-				<CardDescription>{t("adminOrgs.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				<InputGroup className="max-w-xs">

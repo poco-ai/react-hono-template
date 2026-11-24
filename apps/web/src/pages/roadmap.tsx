@@ -75,9 +75,6 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 						<h1 className="text-2xl font-semibold tracking-tight">
 							{t("roadmap.title")}
 						</h1>
-						<p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-							{t("roadmap.description")}
-						</p>
 					</div>
 					{roadmap.data?.truncated ? (
 						<Badge variant="outline" className="shrink-0">

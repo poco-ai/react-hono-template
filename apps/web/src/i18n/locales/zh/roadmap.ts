@@ -2,8 +2,6 @@ import type en from "../en";
 
 const roadmap: typeof en.roadmap = {
 	title: "路线图",
-	description:
-		"在一条时间线上查看项目及其周期。仅显示活跃项目；点击周期条可打开对应事项列表。",
 	projectsColumn: "项目",
 	issueCount: "{{open}} 未完成 / 共 {{total}}",
 	target: "目标 {{date}}",

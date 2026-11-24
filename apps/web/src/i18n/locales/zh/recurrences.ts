@@ -2,7 +2,6 @@ import type en from "../en";
 
 const recurrences: typeof en.recurrences = {
 	title: "周期任务",
-	description: "按计划自动创建事项。暂停后的周期任务不会再创建事项，直到恢复。",
 	makeRecurring: "设为周期任务",
 	makeRecurringDescription:
 		"按重复计划从 {{key}} 自动创建新事项。周期任务会保存此事项字段的快照。",

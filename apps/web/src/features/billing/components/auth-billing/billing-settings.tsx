@@ -45,7 +45,6 @@ function useBillingLocalization() {
 	const { t } = useTranslation();
 	return {
 		billing: t("settings.billing"),
-		billingDescription: t("billing.compareDescription"),
 		currentPlan: t("billing.currentPlan"),
 		choosePlan: t("billing.choosePlan"),
 		perMonth: t("billing.pricePerMember", { price: "" }).trim(),
@@ -53,7 +52,6 @@ function useBillingLocalization() {
 		oneTime: "",
 		popular: t("billing.recommended"),
 		subscription: t("billing.currentPlan"),
-		noSubscriptionDescription: t("billing.compareDescription"),
 		noSubscription: t("billing.planFree"),
 		renewsOn: t("billing.renewsOn", { date: "{{date}}" }),
 		manageBilling: t("billing.manageBilling"),
@@ -209,9 +207,6 @@ export function BillingSettings({
 			)}
 			<div className="flex flex-col gap-1">
 				<h2 className="text-base font-semibold">{localization.billing}</h2>
-				<p className="text-sm text-muted-foreground">
-					{localization.billingDescription}
-				</p>
 			</div>
 
 			<Card>
@@ -219,11 +214,11 @@ export function BillingSettings({
 					<div className="flex items-start justify-between gap-3">
 						<div>
 							<CardTitle>{localization.subscription}</CardTitle>
-							<CardDescription>
-								{subscription
-									? (subscription.planName ?? subscription.planId)
-									: localization.noSubscriptionDescription}
-							</CardDescription>
+							{subscription && (
+								<CardDescription>
+									{subscription.planName ?? subscription.planId}
+								</CardDescription>
+							)}
 						</div>
 					</div>
 				</CardHeader>

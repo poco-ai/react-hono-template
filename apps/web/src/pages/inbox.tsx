@@ -94,9 +94,6 @@ export function InboxPage({
 					<h1 className="text-2xl font-semibold tracking-tight">
 						{t("notifications.title")}
 					</h1>
-					<p className="text-muted-foreground mt-1 text-sm">
-						{t("notifications.description")}
-					</p>
 				</div>
 				<Button
 					variant="outline"

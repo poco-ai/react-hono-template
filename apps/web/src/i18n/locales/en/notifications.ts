@@ -1,7 +1,5 @@
 const notifications = {
 	title: "Inbox",
-	description:
-		"Assignments, mentions, replies and status changes on issues you follow.",
 	filterLabel: "Notification filter",
 	tabs: {
 		all: "All",

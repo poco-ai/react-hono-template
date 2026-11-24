@@ -1,7 +1,6 @@
 import type en from "../en";
 
 const statuses: typeof en.statuses = {
-	description: "工作流状态由组织内所有项目共享，用于看板列、筛选和事项进度。",
 	create: "新建状态",
 	createTitle: "创建状态",
 	editTitle: "编辑状态",

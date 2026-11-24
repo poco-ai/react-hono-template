@@ -239,7 +239,6 @@ const issues: typeof en.issues = {
 	subIssues: {
 		title: "子事项",
 		description: "将此事拆解为更小的工作项。",
-		nestedDescription: "子事项只能挂在父事项下，当前事项本身已是子事项。",
 		empty: "还没有子事项。",
 		add: "添加子事项",
 		progress: "已完成 {{done}} / {{total}}",

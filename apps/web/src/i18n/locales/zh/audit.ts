@@ -2,7 +2,6 @@ import type en from "../en";
 
 const audit: typeof en.audit = {
 	title: "审计日志",
-	description: "这个组织里的敏感变更。密钥和消息正文不会被记录。",
 	action: "动作",
 	actor: "操作者",
 	target: "对象",

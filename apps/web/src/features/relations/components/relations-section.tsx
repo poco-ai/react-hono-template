@@ -141,9 +141,6 @@ export function RelationsSection({
 					<h2 className="font-heading text-base font-medium">
 						{t("issues.relations.title")}
 					</h2>
-					<p className="text-muted-foreground text-sm">
-						{t("issues.relations.description")}
-					</p>
 				</div>
 				<Button variant="outline" size="sm" disabled={frozen} onClick={openAdd}>
 					<Plus className="size-4" />

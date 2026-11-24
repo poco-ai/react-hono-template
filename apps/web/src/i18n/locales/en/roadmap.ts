@@ -1,7 +1,5 @@
 const roadmap = {
 	title: "Roadmap",
-	description:
-		"Projects and their cycles on one timeline. Active projects only; click a cycle to open its issues.",
 	projectsColumn: "Project",
 	issueCount: "{{open}} open / {{total}} total",
 	target: "Target {{date}}",

@@ -1,8 +1,6 @@
 import type en from "../en";
 
 const templates: typeof en.templates = {
-	description:
-		"新建事项的预填内容。项目模板出现在该项目的创建对话框中，组织级模板在所有项目中可用。",
 	create: "新建模板",
 	createTitle: "创建模板",
 	editTitle: "编辑模板",

@@ -103,9 +103,6 @@ export function ProjectCyclesPage({
 								</Badge>
 							)}
 						</div>
-						<p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-							{t("cycles.description")}
-						</p>
 					</div>
 					{canManage && (
 						<Button onClick={() => setCreateOpen(true)} disabled={frozen}>

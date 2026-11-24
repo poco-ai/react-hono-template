@@ -1,6 +1,4 @@
 const templates = {
-	description:
-		"Prefills for new issues. Project templates appear in that project's create dialog; organization-wide templates appear everywhere.",
 	create: "New template",
 	createTitle: "Create template",
 	editTitle: "Edit template",

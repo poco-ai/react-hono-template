@@ -124,9 +124,6 @@ export function McpSettingsPage({ orgId }: { orgId: string }) {
 						<Terminal />
 						{t("settings.mcp")}
 					</h2>
-					<p className="text-muted-foreground mt-1 text-sm">
-						{t("mcp.description")}
-					</p>
 				</div>
 				<Badge variant={data.enabled ? "default" : "secondary"}>
 					{data.enabled ? t("mcp.enabled") : t("mcp.disabled")}

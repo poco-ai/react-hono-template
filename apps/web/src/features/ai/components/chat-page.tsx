@@ -131,7 +131,6 @@ export function AiChatPage({ conversationId }: { conversationId?: string }) {
 						activeConversation?.title ??
 						(conversationId ? t("ai.untitled") : t("ai.newChatTitle"))
 					}
-					subtitle={providerLabel ?? t("ai.pageDescription")}
 					contextLabel={contextLabel}
 					providerLabel={providerLabel}
 					onOpenConversations={() => setListOpen(true)}

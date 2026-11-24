@@ -2,10 +2,6 @@ import type en from "../en";
 
 const triage: typeof en.triage = {
 	title: "待分诊",
-	description:
-		"等待负责人的新事项。接受会指派给你并开始处理，拒绝会将事项取消。",
-	rules:
-		"展示活跃项目中无负责人、状态为待办（backlog）的事项，按创建时间倒序，最多 100 条。",
 	allProjects: "全部项目",
 	clearFilter: "清除筛选",
 	queueCount: "队列中 {{count}} 条",

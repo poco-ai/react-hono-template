@@ -2,7 +2,6 @@ import type en from "../en";
 
 const adminOrgs: typeof en.adminOrgs = {
 	title: "组织管理",
-	description: "管理实例中的所有组织；冻结后成员无法写入，数据仍可查看。",
 	searchPlaceholder: "按名称或 Slug 搜索…",
 	org: "组织",
 	plan: "方案",

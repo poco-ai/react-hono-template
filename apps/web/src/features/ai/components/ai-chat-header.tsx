@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 /** Page header of the full-page chat: title, context/provider badges, actions. */
 export function AiChatHeader({
 	title,
-	subtitle,
 	contextLabel,
 	providerLabel,
 	onOpenConversations,
@@ -14,7 +13,6 @@ export function AiChatHeader({
 	onNewChat,
 }: {
 	title: string;
-	subtitle: string;
 	contextLabel: string | null;
 	providerLabel: string | null;
 	onOpenConversations: () => void;
@@ -37,7 +35,6 @@ export function AiChatHeader({
 			</Button>
 			<div className="min-w-0 flex-1">
 				<h1 className="truncate text-sm font-semibold">{title}</h1>
-				<p className="text-muted-foreground truncate text-xs">{subtitle}</p>
 			</div>
 			{contextLabel ? (
 				<Badge variant="outline" className="hidden max-w-48 sm:flex">

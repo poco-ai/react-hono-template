@@ -165,9 +165,6 @@ export function StatusesSettingsPage({ orgId }: { orgId: string }) {
 			<div className="flex items-center justify-between gap-4">
 				<div>
 					<h2 className="text-lg font-medium">{t("settings.statuses")}</h2>
-					<p className="text-muted-foreground mt-1 text-sm">
-						{t("statuses.description")}
-					</p>
 				</div>
 				{canManage && (
 					<Button

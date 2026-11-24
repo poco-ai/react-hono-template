@@ -2,7 +2,6 @@ import type en from "../en";
 
 const notifications: typeof en.notifications = {
 	title: "收件箱",
-	description: "你关注的事项上的指派、提及、回复与状态变更。",
 	filterLabel: "通知筛选",
 	tabs: {
 		all: "全部",

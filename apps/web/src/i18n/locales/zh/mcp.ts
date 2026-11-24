@@ -1,8 +1,6 @@
 import type en from "../en";
 
 const mcp: typeof en.mcp = {
-	description:
-		"通过 Model Context Protocol 将 Claude、Cursor、ChatGPT 或自建 Agent 连接到工作区。",
 	enabled: "已启用",
 	disabled: "已禁用",
 	disabledTitle: "MCP 已禁用",

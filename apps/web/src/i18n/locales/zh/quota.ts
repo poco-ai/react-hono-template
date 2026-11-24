@@ -3,8 +3,6 @@ import type en from "../en";
 const quota: typeof en.quota = {
 	upgrade: "升级",
 	title: "用量与积分",
-	description:
-		"每只表计先用自己的包含量。共享积分只补足共享或混合模式下超出的部分。",
 	credits: "共享积分",
 	available: "可用 {{available}}",
 	reserved: "预占 {{reserved}}",

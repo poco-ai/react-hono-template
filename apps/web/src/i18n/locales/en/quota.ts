@@ -1,8 +1,6 @@
 const quota = {
 	upgrade: "Upgrade",
 	title: "Usage and credits",
-	description:
-		"Included amounts stay with each meter. Shared credits cover whatever a pooled or hybrid meter cannot fit.",
 	credits: "Shared credits",
 	available: "{{available}} available",
 	reserved: "{{reserved}} reserved",

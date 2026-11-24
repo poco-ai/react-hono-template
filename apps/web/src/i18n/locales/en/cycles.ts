@@ -1,7 +1,5 @@
 const cycles = {
 	title: "Cycles",
-	description:
-		"Plan focused windows of work and track how much of each cycle is done.",
 	newCycle: "New cycle",
 	createTitle: "New cycle",
 	createDescription: "Plan a focused window of work for this project.",

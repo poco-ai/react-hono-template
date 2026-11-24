@@ -6,7 +6,6 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
@@ -52,7 +51,6 @@ export function OnboardingPage() {
 				<CardHeader>
 					<Logo className="pb-2" />
 					<CardTitle>{t("onboarding.title")}</CardTitle>
-					<CardDescription>{t("onboarding.description")}</CardDescription>
 				</CardHeader>
 				<CardContent className="flex flex-col gap-4">
 					{hasInvitations && (

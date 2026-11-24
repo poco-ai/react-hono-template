@@ -56,9 +56,6 @@ export function AuditSettingsPage({ orgId }: { orgId: string }) {
 			<div className="flex items-start justify-between gap-4">
 				<div>
 					<h1 className="text-xl font-semibold">{t("audit.title")}</h1>
-					<p className="text-muted-foreground text-sm">
-						{t("audit.description")}
-					</p>
 				</div>
 				<Button
 					variant="outline"

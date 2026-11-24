@@ -1,7 +1,5 @@
 const audit = {
 	title: "Audit log",
-	description:
-		"Sensitive changes in this organization. Secrets and message bodies are not stored.",
 	action: "Action",
 	actor: "Actor",
 	target: "Target",

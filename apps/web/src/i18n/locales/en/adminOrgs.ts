@@ -1,7 +1,5 @@
 const adminOrgs = {
 	title: "Organizations",
-	description:
-		"Manage all organizations on this instance; freezing blocks member writes while data stays viewable.",
 	searchPlaceholder: "Search by name or slug...",
 	org: "Organization",
 	plan: "Plan",

@@ -2,7 +2,6 @@ import type en from "../en";
 
 const projectUpdates: typeof en.projectUpdates = {
 	title: "项目更新",
-	description: "向团队同步进展、风险和健康度。",
 	composerLabel: "发布更新",
 	placeholder: "上次更新之后有什么变化？支持 Markdown。",
 	post: "发布更新",

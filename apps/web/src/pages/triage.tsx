@@ -195,12 +195,6 @@ export function TriagePage({
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("triage.title")}
 				</h1>
-				<p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-					{t("triage.description")}
-				</p>
-				<p className="text-muted-foreground mt-2 max-w-2xl text-xs">
-					{t("triage.rules")}
-				</p>
 			</header>
 
 			<div className="mt-5 flex flex-wrap items-center gap-2">

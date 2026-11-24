@@ -2,7 +2,6 @@ import type en from "../en";
 
 const account: typeof en.account = {
 	title: "账号",
-	description: "管理你的个人资料与密码。",
 	profileTitle: "个人资料",
 	profileDescription: "该姓名会展示给你的团队成员。",
 	nameUpdated: "姓名已更新。",

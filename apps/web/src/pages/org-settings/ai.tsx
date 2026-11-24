@@ -113,9 +113,6 @@ export function AiSettingsPage({ orgId }: { orgId: string }) {
 						<Sparkles />
 						{t("settings.ai")}
 					</h2>
-					<p className="text-muted-foreground mt-1 text-sm">
-						{t("ai.settings.description")}
-					</p>
 				</div>
 				<Badge variant={provider.mock ? "secondary" : "outline"}>
 					{provider.mock

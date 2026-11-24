@@ -21,7 +21,6 @@ const billing = {
 	megabytes: "{{value}} MB",
 	perMinute: "{{value}} / min",
 	compareTitle: "Compare plans",
-	compareDescription: "What you get on each plan.",
 	feature: "Feature",
 	price: "Price",
 	pricePerMember: "{{price}} per member / mo",

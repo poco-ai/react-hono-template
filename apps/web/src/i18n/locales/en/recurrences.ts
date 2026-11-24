@@ -1,7 +1,5 @@
 const recurrences = {
 	title: "Recurring issues",
-	description:
-		"Issues created automatically on a schedule. Paused recurrences stop creating issues until resumed.",
 	makeRecurring: "Make recurring",
 	makeRecurringDescription:
 		"Create a new issue from {{key}} on a repeating schedule. The recurrence keeps a snapshot of this issue's fields.",

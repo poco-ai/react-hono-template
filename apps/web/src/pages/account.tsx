@@ -12,9 +12,6 @@ export function AccountPage() {
 		<div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
 			<div>
 				<h1 className="text-lg font-medium">{t("account.title")}</h1>
-				<p className="text-muted-foreground text-sm">
-					{t("account.description")}
-				</p>
 			</div>
 			<UserProfile />
 			<SecuritySettings />

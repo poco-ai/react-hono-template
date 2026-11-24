@@ -193,8 +193,6 @@ const ai = {
 		statuses: "Open statuses",
 	},
 	settings: {
-		description:
-			"Control the assistant, model selection, retention and MCP write policy for this organization.",
 		model: "Default model",
 		providerDefault: "Provider default",
 		modelDescription: "Only models exposed by this deployment can be selected.",

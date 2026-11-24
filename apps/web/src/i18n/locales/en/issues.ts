@@ -241,8 +241,6 @@ const issues = {
 	subIssues: {
 		title: "Sub-issues",
 		description: "Break this issue down into smaller pieces of work.",
-		nestedDescription:
-			"Sub-issues are nested under their parent; this issue is already a sub-issue.",
 		empty: "No sub-issues yet.",
 		add: "Add sub-issue",
 		progress: "{{done}} of {{total}} done",

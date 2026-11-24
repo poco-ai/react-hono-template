@@ -1,6 +1,5 @@
 const projectUpdates = {
 	title: "Project updates",
-	description: "Share progress, risks and health with your team.",
 	composerLabel: "New update",
 	placeholder: "What changed since the last update? Markdown supported.",
 	post: "Post update",

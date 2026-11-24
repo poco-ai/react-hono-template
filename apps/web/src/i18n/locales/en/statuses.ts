@@ -1,6 +1,4 @@
 const statuses = {
-	description:
-		"Workflow statuses are shared by every project in this organization. They drive board columns, filters and issue progress.",
 	create: "New status",
 	createTitle: "Create status",
 	editTitle: "Edit status",

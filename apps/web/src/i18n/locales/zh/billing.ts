@@ -23,7 +23,6 @@ const billing: typeof en.billing = {
 	megabytes: "{{value}} MB",
 	perMinute: "{{value}} / 分钟",
 	compareTitle: "方案对比",
-	compareDescription: "各方案包含的额度。",
 	feature: "功能",
 	price: "价格",
 	pricePerMember: "每成员每月 {{price}}",

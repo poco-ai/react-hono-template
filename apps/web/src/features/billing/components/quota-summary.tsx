@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@workspace/ui/components/card";
@@ -29,7 +28,6 @@ export function QuotaSummary({ orgId }: { orgId: string }) {
 		<Card>
 			<CardHeader>
 				<CardTitle>{t("quota.title")}</CardTitle>
-				<CardDescription>{t("quota.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				{credits && (

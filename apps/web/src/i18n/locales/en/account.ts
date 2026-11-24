@@ -1,6 +1,5 @@
 const account = {
 	title: "Account",
-	description: "Manage your profile and password.",
 	profileTitle: "Profile",
 	profileDescription: "This name is shown to your teammates.",
 	nameUpdated: "Name updated.",

@@ -53,9 +53,6 @@ export function AdminHomePage() {
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("adminHome.title")}
 				</h1>
-				<p className="text-muted-foreground text-sm">
-					{t("adminHome.description")}
-				</p>
 			</div>
 
 			{statsQuery.isPending && (

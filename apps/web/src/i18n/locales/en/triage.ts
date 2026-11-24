@@ -1,9 +1,5 @@
 const triage = {
 	title: "Triage",
-	description:
-		"New issues waiting for an owner. Accept to assign yourself and start work, or decline to cancel.",
-	rules:
-		"Shows backlog issues with no assignee from active projects, newest first (up to 100).",
 	allProjects: "All projects",
 	clearFilter: "Clear filter",
 	queueCount: "{{count}} in queue",

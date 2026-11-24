@@ -441,9 +441,6 @@ export function AdminUsers({
 						<h1 className="text-xl font-semibold tracking-tight">
 							{localization.users}
 						</h1>
-						<p className="text-sm text-muted-foreground">
-							{localization.usersDescription}
-						</p>
 					</div>
 					{canCreate.isPending ? (
 						<Skeleton className="h-8 w-28" />

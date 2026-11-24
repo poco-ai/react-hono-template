@@ -20,7 +20,6 @@ import {
 import {
 	Sheet,
 	SheetContent,
-	SheetDescription,
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
@@ -148,9 +147,6 @@ export function ProjectUpdatesSheet({
 				<SheetContent className="flex w-full flex-col gap-0 sm:max-w-xl">
 					<SheetHeader className="border-b">
 						<SheetTitle>{t("projectUpdates.title")}</SheetTitle>
-						<SheetDescription>
-							{t("projectUpdates.description")}
-						</SheetDescription>
 					</SheetHeader>
 
 					<div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">

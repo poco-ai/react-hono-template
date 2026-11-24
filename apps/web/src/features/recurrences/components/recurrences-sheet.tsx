@@ -27,7 +27,6 @@ import {
 import {
 	Sheet,
 	SheetContent,
-	SheetDescription,
 	SheetHeader,
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
@@ -92,7 +91,6 @@ export function RecurrencesSheet({
 						<CalendarClock className="size-4" />
 						{t("recurrences.title")}
 					</SheetTitle>
-					<SheetDescription>{t("recurrences.description")}</SheetDescription>
 				</SheetHeader>
 				<div className="flex flex-col gap-2 overflow-y-auto p-4">
 					{frozen && (

@@ -2,7 +2,6 @@ import type en from "../en";
 
 const cycles: typeof en.cycles = {
 	title: "周期",
-	description: "规划聚焦的工作窗口，并跟踪每个周期的完成进度。",
 	newCycle: "新建周期",
 	createTitle: "新建周期",
 	createDescription: "为这个项目规划一段聚焦的工作时间。",

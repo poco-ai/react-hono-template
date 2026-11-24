@@ -210,9 +210,6 @@ export function OrgActivityPage({
 					<h1 className="text-2xl font-semibold tracking-tight">
 						{t("activityFeed.title")}
 					</h1>
-					<p className="text-muted-foreground mt-1 text-sm">
-						{t("activityFeed.description")}
-					</p>
 				</div>
 				<Select
 					value={projectId ?? ALL_PROJECTS}

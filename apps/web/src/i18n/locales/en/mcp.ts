@@ -1,6 +1,4 @@
 const mcp = {
-	description:
-		"Connect Claude, Cursor, ChatGPT or your own agent to this workspace through the Model Context Protocol.",
 	enabled: "Enabled",
 	disabled: "Disabled",
 	disabledTitle: "MCP is disabled",

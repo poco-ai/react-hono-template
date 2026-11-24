@@ -154,9 +154,6 @@ export function TemplatesSettingsPage({ orgId }: { orgId: string }) {
 			<div className="flex items-start justify-between gap-4">
 				<div>
 					<h2 className="text-lg font-medium">{t("settings.templates")}</h2>
-					<p className="text-muted-foreground mt-1 text-sm">
-						{t("templates.description")}
-					</p>
 				</div>
 				{canManage && (
 					<Button

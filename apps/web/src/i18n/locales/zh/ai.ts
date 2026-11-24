@@ -184,7 +184,6 @@ const ai: typeof en.ai = {
 		statuses: "打开状态设置",
 	},
 	settings: {
-		description: "管理此组织的助手、模型选择、保留期和 MCP 写入策略。",
 		model: "默认模型",
 		providerDefault: "使用服务商默认值",
 		modelDescription: "只能选择当前部署开放的模型。",

@@ -114,9 +114,6 @@ export function FavoritesPage({ orgId }: { orgId: string }) {
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("favorites.title")}
 				</h1>
-				<p className="text-muted-foreground mt-1 text-sm">
-					{t("favorites.description")}
-				</p>
 			</div>
 
 			{favorites.isError ? (
