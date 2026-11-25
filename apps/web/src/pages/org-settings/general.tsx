@@ -3,6 +3,7 @@ import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { OrganizationDangerZone } from "@/components/auth/organization/organization-danger-zone";
 import { OrganizationProfile } from "@/components/auth/organization/organization-profile";
+import { PageHeader } from "@/components/page-header";
 import { useActiveOrganizationReady } from "@/features/organizations/active-organization";
 import { OrgWriteLockProvider } from "@/features/organizations/org-write-lock";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
@@ -23,7 +24,8 @@ export function GeneralSettingsPage({
 	const { canManage } = useOrgRole(orgId);
 
 	return (
-		<div className="flex flex-col gap-8">
+		<div className="flex flex-col gap-6">
+			<PageHeader title={t("settings.general")} />
 			{denied && (
 				<Alert>
 					<CircleAlert />

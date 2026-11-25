@@ -15,15 +15,10 @@ import {
 	CardTitle,
 } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import {
-	CircleAlert,
-	Copy,
-	KeyRound,
-	ShieldCheck,
-	Terminal,
-} from "lucide-react";
+import { CircleAlert, Copy, KeyRound, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
 import { mcpInfoQuery } from "@/features/mcp/data";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import { apiErrorMessage } from "@/lib/errors";
@@ -118,17 +113,14 @@ export function McpSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h2 className="flex items-center gap-2 text-lg font-medium">
-						<Terminal />
-						{t("settings.mcp")}
-					</h2>
-				</div>
-				<Badge variant={data.enabled ? "default" : "secondary"}>
-					{data.enabled ? t("mcp.enabled") : t("mcp.disabled")}
-				</Badge>
-			</div>
+			<PageHeader
+				title={t("settings.mcp")}
+				badge={
+					<Badge variant={data.enabled ? "default" : "secondary"}>
+						{data.enabled ? t("mcp.enabled") : t("mcp.disabled")}
+					</Badge>
+				}
+			/>
 
 			{!data.enabled ? (
 				<Alert>

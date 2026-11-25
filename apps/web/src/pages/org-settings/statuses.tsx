@@ -66,6 +66,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
+import { PageHeader } from "@/components/page-header";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
 import {
@@ -162,23 +163,23 @@ export function StatusesSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-center justify-between gap-4">
-				<div>
-					<h2 className="text-lg font-medium">{t("settings.statuses")}</h2>
-				</div>
-				{canManage && (
-					<Button
-						onClick={() => {
-							setEditing(null);
-							setDialogOpen(true);
-						}}
-						disabled={frozen}
-					>
-						<Plus />
-						{t("statuses.create")}
-					</Button>
-				)}
-			</div>
+			<PageHeader
+				title={t("settings.statuses")}
+				actions={
+					canManage && (
+						<Button
+							onClick={() => {
+								setEditing(null);
+								setDialogOpen(true);
+							}}
+							disabled={frozen}
+						>
+							<Plus />
+							{t("statuses.create")}
+						</Button>
+					)
+				}
+			/>
 
 			{statuses.isPending && (
 				<div className="flex flex-col gap-2" aria-busy="true">

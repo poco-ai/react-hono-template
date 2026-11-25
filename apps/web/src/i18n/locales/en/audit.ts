@@ -1,5 +1,4 @@
 const audit = {
-	title: "Audit log",
 	action: "Action",
 	actor: "Actor",
 	target: "Target",

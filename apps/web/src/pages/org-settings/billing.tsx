@@ -3,6 +3,7 @@ import { Button } from "@workspace/ui/components/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
 import { BillingSettings } from "@/features/billing/components/auth-billing/billing-settings";
 import { DowngradeDialog } from "@/features/billing/components/downgrade-dialog";
 import { QuotaSummary } from "@/features/billing/components/quota-summary";
@@ -54,6 +55,7 @@ export function BillingSettingsPage({ orgId }: { orgId: string }) {
 	const adapter = useAppBillingAdapter(orgId, canManage, confirm);
 	return (
 		<div className="flex flex-col gap-6">
+			<PageHeader title={t("settings.billing")} />
 			{checkout === "canceled" && !bannerDismissed && (
 				<div className="flex items-center justify-between rounded-md border px-4 py-3 text-sm text-muted-foreground">
 					<span>{t("billing.checkoutCanceled")}</span>

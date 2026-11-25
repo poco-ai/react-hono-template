@@ -2,13 +2,14 @@
 // features/api-keys/data.ts to preserve existing keys, revocation history and auth.
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent } from "@workspace/ui/components/card";
 import { ItemGroup, ItemSeparator } from "@workspace/ui/components/item";
 import { ExternalLink } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { apiKeysQuery } from "@/features/api-keys/data";
 import { membersQuery } from "@/features/members/data";
@@ -41,28 +42,24 @@ export function ApiKeys({
 		if (keys.isSuccess && page > totalPages) onPageChange(totalPages);
 	}, [keys.isSuccess, page, totalPages, onPageChange]);
 	return (
-		<div className="flex flex-col gap-3">
-			<div className="flex items-end justify-between gap-3">
-				<h2 className="truncate text-sm font-semibold">
-					{t("settings.apiKeys")}
-				</h2>
-				<div className="flex items-center gap-2">
-					<Link
-						to="/api-docs"
-						className={buttonVariants({ variant: "outline", size: "sm" })}
-					>
-						<ExternalLink />
-						{t("apiKeys.viewDocs")}
-					</Link>
-					<Button
-						size="sm"
-						disabled={locked || keys.isPending}
-						onClick={() => setCreateOpen(true)}
-					>
-						{t("apiKeys.create")}
-					</Button>
-				</div>
-			</div>
+		<div className="flex flex-col gap-6">
+			<PageHeader
+				title={t("settings.apiKeys")}
+				actions={
+					<>
+						<Button variant="outline" render={<Link to="/api-docs" />}>
+							<ExternalLink />
+							{t("apiKeys.viewDocs")}
+						</Button>
+						<Button
+							disabled={locked || keys.isPending}
+							onClick={() => setCreateOpen(true)}
+						>
+							{t("apiKeys.create")}
+						</Button>
+					</>
+				}
+			/>
 			<Card className="p-0">
 				<CardContent className="p-0">
 					{keys.isPending ? (

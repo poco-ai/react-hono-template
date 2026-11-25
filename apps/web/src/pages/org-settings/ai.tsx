@@ -34,6 +34,7 @@ import { CircleAlert, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
 import { aiSettingsQuery, useUpdateAiSettings } from "@/features/ai/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
@@ -107,19 +108,16 @@ export function AiSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h2 className="flex items-center gap-2 text-lg font-medium">
-						<Sparkles />
-						{t("settings.ai")}
-					</h2>
-				</div>
-				<Badge variant={provider.mock ? "secondary" : "outline"}>
-					{provider.mock
-						? t("ai.settings.mock")
-						: (provider.modelId ?? t("ai.settings.noModel"))}
-				</Badge>
-			</div>
+			<PageHeader
+				title={t("settings.ai")}
+				badge={
+					<Badge variant={provider.mock ? "secondary" : "outline"}>
+						{provider.mock
+							? t("ai.settings.mock")
+							: (provider.modelId ?? t("ai.settings.noModel"))}
+					</Badge>
+				}
+			/>
 
 			{!provider.configured ? (
 				<Alert variant="destructive">

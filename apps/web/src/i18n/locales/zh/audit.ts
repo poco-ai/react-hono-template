@@ -1,7 +1,6 @@
 import type en from "../en";
 
 const audit: typeof en.audit = {
-	title: "审计日志",
 	action: "动作",
 	actor: "操作者",
 	target: "对象",

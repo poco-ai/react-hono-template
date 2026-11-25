@@ -33,6 +33,7 @@ import { z } from "zod";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
+import { PageHeader } from "@/components/page-header";
 import { LabelBadge } from "@/features/labels/components/label-badge";
 import {
 	labelsQuery,
@@ -90,21 +91,23 @@ export function LabelsSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-center justify-between">
-				<h2 className="text-lg font-medium">{t("settings.labels")}</h2>
-				{canManage && (
-					<Button
-						onClick={() => {
-							setEditing(null);
-							setDialogOpen(true);
-						}}
-						disabled={frozen}
-					>
-						<Plus />
-						{t("labels.create")}
-					</Button>
-				)}
-			</div>
+			<PageHeader
+				title={t("settings.labels")}
+				actions={
+					canManage && (
+						<Button
+							onClick={() => {
+								setEditing(null);
+								setDialogOpen(true);
+							}}
+							disabled={frozen}
+						>
+							<Plus />
+							{t("labels.create")}
+						</Button>
+					)
+				}
+			/>
 
 			{labels.isPending && (
 				<p className="text-muted-foreground py-8 text-center text-sm">

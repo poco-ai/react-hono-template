@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { MutationError } from "@/components/mutation-error";
+import { PageHeader } from "@/components/page-header";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { DeliveriesDialog } from "@/features/webhooks/components/deliveries-dialog";
 import { EventBadge } from "@/features/webhooks/components/delivery-badges";
@@ -68,19 +69,21 @@ export function WebhooksSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-center justify-between">
-				<h2 className="text-lg font-medium">{t("settings.webhooks")}</h2>
-				<Button
-					onClick={() => {
-						setEditing(null);
-						setDialogOpen(true);
-					}}
-					disabled={frozen}
-				>
-					<Plus />
-					{t("webhooks.create")}
-				</Button>
-			</div>
+			<PageHeader
+				title={t("settings.webhooks")}
+				actions={
+					<Button
+						onClick={() => {
+							setEditing(null);
+							setDialogOpen(true);
+						}}
+						disabled={frozen}
+					>
+						<Plus />
+						{t("webhooks.create")}
+					</Button>
+				}
+			/>
 
 			{pingMutation.isError && <MutationError error={pingMutation.error} />}
 

@@ -22,6 +22,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { TablePagination } from "@/components/table-pagination";
 import { auditQuery, exportAuditCsv } from "@/features/audit/data";
 import { apiErrorMessage } from "@/lib/errors";
@@ -31,7 +32,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 
 export function AuditSettingsPage({ orgId }: { orgId: string }) {
 	const { t } = useTranslation();
-	useDocumentTitle(t("audit.title"));
+	useDocumentTitle(t("settings.audit"));
 	const search = useSearch({ from: "/_auth/orgs/$orgId/settings/audit" });
 	const navigate = useNavigate({ from: "/orgs/$orgId/settings/audit" });
 	const page = search.page ?? 1;
@@ -53,27 +54,27 @@ export function AuditSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h1 className="text-xl font-semibold">{t("audit.title")}</h1>
-				</div>
-				<Button
-					variant="outline"
-					disabled={exporting}
-					onClick={() => {
-						setExporting(true);
-						void exportAuditCsv(orgId, {
-							page: 1,
-							action: search.action,
-							actorId: search.actorId,
-							from: search.from,
-							to: search.to,
-						}).finally(() => setExporting(false));
-					}}
-				>
-					{t("audit.export")}
-				</Button>
-			</div>
+			<PageHeader
+				title={t("settings.audit")}
+				actions={
+					<Button
+						variant="outline"
+						disabled={exporting}
+						onClick={() => {
+							setExporting(true);
+							void exportAuditCsv(orgId, {
+								page: 1,
+								action: search.action,
+								actorId: search.actorId,
+								from: search.from,
+								to: search.to,
+							}).finally(() => setExporting(false));
+						}}
+					>
+						{t("audit.export")}
+					</Button>
+				}
+			/>
 			<div className="grid gap-3 sm:grid-cols-4">
 				<Field>
 					<FieldLabel>{t("audit.action")}</FieldLabel>

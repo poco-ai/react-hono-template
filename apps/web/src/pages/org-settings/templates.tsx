@@ -61,6 +61,7 @@ import { EmptyState } from "@/components/empty-state";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { MultiSelect } from "@/components/multi-select";
 import { MutationError } from "@/components/mutation-error";
+import { PageHeader } from "@/components/page-header";
 import { PriorityBadge } from "@/features/issues/components/priority-badge";
 import { StatusBadge } from "@/features/issues/components/status-badge";
 import { labelsQuery } from "@/features/labels/data";
@@ -151,23 +152,23 @@ export function TemplatesSettingsPage({ orgId }: { orgId: string }) {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h2 className="text-lg font-medium">{t("settings.templates")}</h2>
-				</div>
-				{canManage && (
-					<Button
-						onClick={() => {
-							setEditing(null);
-							setDialogOpen(true);
-						}}
-						disabled={frozen}
-					>
-						<Plus />
-						{t("templates.create")}
-					</Button>
-				)}
-			</div>
+			<PageHeader
+				title={t("settings.templates")}
+				actions={
+					canManage && (
+						<Button
+							onClick={() => {
+								setEditing(null);
+								setDialogOpen(true);
+							}}
+							disabled={frozen}
+						>
+							<Plus />
+							{t("templates.create")}
+						</Button>
+					)
+				}
+			/>
 
 			{templates.isPending && (
 				<ItemGroup className="gap-2" aria-busy="true" aria-hidden="true">
