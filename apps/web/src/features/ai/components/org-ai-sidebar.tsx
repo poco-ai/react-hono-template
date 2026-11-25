@@ -1,7 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import {
 	SidebarGroup,
-	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -14,11 +13,10 @@ import { useAiChat } from "@/features/ai/chat-provider";
 import type { OrgSidebarSectionContext } from "@/features/web-types";
 
 /**
- * AI sidebar section (chat entry point + recent/pinned/project conversations).
+ * AI sidebar section (chat entry point + up to three recent conversations).
  *
- * Contributed through `aiWeb.sidebarSections` so the org layout no longer
- * imports the AI feature directly — trimming `ai` from a preset removes the
- * section with the rest of the feature.
+ * The full history lives in the page header switcher; the workspace sidebar
+ * keeps just the quick "new chat" action and a short recent list.
  */
 export const OrgAiSidebar: ComponentType<OrgSidebarSectionContext> = ({
 	orgId,
@@ -31,8 +29,12 @@ export const OrgAiSidebar: ComponentType<OrgSidebarSectionContext> = ({
 
 	const items = conversations.data?.items ?? [];
 	const pinned = items
-		.filter((conversation) => conversation.pinned)
-		.slice(0, 3);
+		.filter(
+			(conversation) =>
+				conversation.pinned &&
+				!(conversation.contextType === "project" && conversation.contextId),
+		)
+		.slice(0, 2);
 	const recent = items
 		.filter(
 			(conversation) =>
@@ -40,6 +42,7 @@ export const OrgAiSidebar: ComponentType<OrgSidebarSectionContext> = ({
 				!(conversation.contextType === "project" && conversation.contextId),
 		)
 		.slice(0, 3);
+	const rows = [...pinned, ...recent].slice(0, 3);
 
 	const onNewChat = () => {
 		newChat();
@@ -57,24 +60,9 @@ export const OrgAiSidebar: ComponentType<OrgSidebarSectionContext> = ({
 					</SidebarMenuButton>
 				</SidebarMenuItem>
 			</SidebarMenu>
-			{!collapsed && pinned.length > 0 ? (
-				<>
-					<SidebarGroupLabel>{t("ai.conversations.pinned")}</SidebarGroupLabel>
-					<SidebarMenu>
-						{pinned.map((conversation) => (
-							<ConversationRow
-								key={conversation.id}
-								orgId={orgId}
-								conversation={conversation}
-								onNavigate={onNavigate}
-							/>
-						))}
-					</SidebarMenu>
-				</>
-			) : null}
-			{!collapsed && recent.length > 0 ? (
+			{!collapsed && rows.length > 0 ? (
 				<SidebarMenu>
-					{recent.map((conversation) => (
+					{rows.map((conversation) => (
 						<ConversationRow
 							key={conversation.id}
 							orgId={orgId}

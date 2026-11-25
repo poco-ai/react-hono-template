@@ -39,7 +39,7 @@ import { useInvalidatingMutation } from "@/lib/feature-mutation";
 
 import type { MutationCallbacks } from "@/lib/mutation-callbacks";
 
-/** Conversations fetched for the panel and the `/ai` list column. */
+/** Conversations fetched for the panel and the header switcher. */
 export const AI_CONVERSATION_PAGE_SIZE = 20;
 
 /** Hard cap accepted by the conversations endpoint. */

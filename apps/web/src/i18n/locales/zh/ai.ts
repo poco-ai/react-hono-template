@@ -103,6 +103,7 @@ const ai: typeof en.ai = {
 	},
 	conversations: {
 		title: "对话",
+		switchLabel: "切换对话",
 		searchPlaceholder: "搜索对话…",
 		empty: "还没有对话",
 		emptyDescription: "开始对话后，会显示在这里。",
@@ -113,6 +114,10 @@ const ai: typeof en.ai = {
 		delete: "删除",
 		actions: "对话操作",
 		pinned: "已置顶",
+		unpinned: "已取消置顶",
+		pin: "置顶对话",
+		unpin: "取消置顶",
+		recent: "最近",
 		renameTitle: "重命名对话",
 		renameDescription: "为此对话选择一个简短标题。",
 		titleLabel: "标题",
@@ -126,14 +131,6 @@ const ai: typeof en.ai = {
 		expand: "打开完整页面",
 		close: "关闭 AI 面板",
 		shortcut: "⌘J",
-	},
-	page: {
-		contextTitle: "上下文",
-		noContext:
-			"未关联工作区上下文。打开事项或项目后使用侧边面板，即可带上下文提问。",
-		capabilitiesTitle: "能力",
-		capabilitiesDescription: "读取类工具会自动运行；写入和删除需要你的批准。",
-		suggestionsTitle: "试试这样问",
 	},
 	capabilities: {
 		list_orgs: { title: "列出组织" },

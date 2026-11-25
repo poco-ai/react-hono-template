@@ -110,6 +110,7 @@ const ai = {
 	},
 	conversations: {
 		title: "Conversations",
+		switchLabel: "Switch conversation",
 		searchPlaceholder: "Search conversations…",
 		empty: "No conversations yet",
 		emptyDescription: "Start a chat and it will show up here.",
@@ -120,6 +121,10 @@ const ai = {
 		delete: "Delete",
 		actions: "Conversation actions",
 		pinned: "Pinned",
+		unpinned: "Unpinned",
+		pin: "Pin conversation",
+		unpin: "Unpin conversation",
+		recent: "Recent",
 		renameTitle: "Rename conversation",
 		renameDescription: "Choose a short title for this conversation.",
 		titleLabel: "Title",
@@ -134,15 +139,6 @@ const ai = {
 		expand: "Open full page",
 		close: "Close AI panel",
 		shortcut: "⌘J",
-	},
-	page: {
-		contextTitle: "Context",
-		noContext:
-			"No workspace context is attached. Open an issue or project and use the panel to ask with context.",
-		capabilitiesTitle: "Capabilities",
-		capabilitiesDescription:
-			"Read tools run automatically. Writes and deletions require your approval.",
-		suggestionsTitle: "Try asking",
 	},
 	capabilities: {
 		list_orgs: { title: "List organizations" },

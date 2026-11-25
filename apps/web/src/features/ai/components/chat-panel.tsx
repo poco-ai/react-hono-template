@@ -1,5 +1,4 @@
 import { useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import {
 	Sheet,
@@ -9,7 +8,7 @@ import {
 	SheetTitle,
 } from "@workspace/ui/components/sheet";
 import { Spinner } from "@workspace/ui/components/spinner";
-import { Hash, Maximize2, Plus, Sparkles, X } from "lucide-react";
+import { Maximize2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAiChat } from "@/features/ai/chat-provider";
 import { AiErrorAlert } from "@/features/ai/components/ai-error-alert";
@@ -18,6 +17,7 @@ import {
 	AiUnavailable,
 } from "@/features/ai/components/chat-empty";
 import { AiComposer } from "@/features/ai/components/composer";
+import { AiConversationSwitcher } from "@/features/ai/components/conversation-switcher";
 import { AiMessageList } from "@/features/ai/components/message-list";
 
 /** Global right-side AI sheet, mounted once per organization layout. */
@@ -30,6 +30,7 @@ export function AiChatPanel() {
 		panelOpen,
 		setPanelOpen,
 		activeConversationId,
+		setActiveConversation,
 		newChat,
 		messages,
 		streaming,
@@ -76,58 +77,42 @@ export function AiChatPanel() {
 				side="right"
 				showCloseButton={false}
 				showOverlay={false}
-				className="w-full max-w-full gap-0 p-0 pb-[env(safe-area-inset-bottom)] sm:max-w-md"
+				className="w-full max-w-full gap-0 p-0 pb-[env(safe-area-inset-bottom)] data-[side=right]:sm:max-w-lg"
 			>
-				<SheetHeader className="flex-row items-center gap-1 border-b p-2 pl-3">
-					<SheetTitle className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-						<Sparkles className="size-4 shrink-0" />
-						<span className="truncate">{t("ai.panelTitle")}</span>
-					</SheetTitle>
+				<SheetHeader className="flex-row items-center gap-1 border-b p-2">
+					<SheetTitle className="sr-only">{t("ai.panelTitle")}</SheetTitle>
 					<SheetDescription className="sr-only">
 						{t("ai.pageDescription")}
 					</SheetDescription>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						aria-label={t("ai.newChat")}
-						title={t("ai.newChat")}
-						onClick={newChat}
-					>
-						<Plus />
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						aria-label={t("ai.panel.expand")}
-						title={t("ai.panel.expand")}
-						onClick={expand}
-					>
-						<Maximize2 />
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						aria-label={t("ai.panel.close")}
-						title={t("ai.panel.close")}
-						onClick={() => setPanelOpen(false)}
-					>
-						<X />
-					</Button>
+					<AiConversationSwitcher
+						onSelect={setActiveConversation}
+						onNewChat={newChat}
+						onActiveDeleted={newChat}
+						triggerClassName="max-w-[calc(100%-4.5rem)]"
+					/>
+					<div className="ml-auto flex shrink-0 items-center">
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							aria-label={t("ai.panel.expand")}
+							title={t("ai.panel.expand")}
+							onClick={expand}
+						>
+							<Maximize2 />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							aria-label={t("ai.panel.close")}
+							title={t("ai.panel.close")}
+							onClick={() => setPanelOpen(false)}
+						>
+							<X />
+						</Button>
+					</div>
 				</SheetHeader>
 
 				<div className="flex min-h-0 flex-1 flex-col">
-					<div className="flex items-center gap-2 border-b px-3 py-2">
-						<Badge
-							variant={ambientContextLabel ? "outline" : "ghost"}
-							className="max-w-full"
-						>
-							<Hash />
-							<span className="truncate">
-								{ambientContextLabel ?? t("ai.context.none")}
-							</span>
-						</Badge>
-					</div>
-
 					{error ? <AiErrorAlert error={error} className="mx-3 mt-3" /> : null}
 
 					{unavailable ? (
@@ -151,7 +136,11 @@ export function AiChatPanel() {
 						<AiMessageList messages={messages} streaming={streaming} />
 					)}
 
-					<AiComposer compact disabled={conversationLoading} />
+					<AiComposer
+						compact
+						contextLabel={ambientContextLabel}
+						disabled={conversationLoading}
+					/>
 				</div>
 			</SheetContent>
 		</Sheet>

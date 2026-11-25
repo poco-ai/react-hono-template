@@ -39,7 +39,7 @@ export function AiMessageList({
 		<MessageScrollerProvider autoScroll>
 			<MessageScroller className={cn("min-h-0 flex-1", className)}>
 				<MessageScrollerViewport aria-label={t("ai.messagesLabel")}>
-					<MessageScrollerContent className="px-4 py-5">
+					<MessageScrollerContent className="mx-auto w-full max-w-3xl px-4 py-5">
 						{messages.map((message, messageIndex) => (
 							<MessageScrollerItem
 								key={message.id}
