@@ -21,7 +21,7 @@ import {
 	useSidebar,
 } from "@workspace/ui/components/sidebar";
 import { Search, Snowflake } from "lucide-react";
-import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
@@ -217,10 +217,7 @@ function OrgLayoutContent({ orgId }: { orgId: string }) {
 	const currentOrg = orgs.data?.find((org) => org.id === orgId);
 
 	return (
-		<SidebarProvider
-			defaultOpen={defaultSidebarOpen}
-			style={{ "--sidebar-width": "15rem" } as CSSProperties}
-		>
+		<SidebarProvider defaultOpen={defaultSidebarOpen} defaultWidth={240}>
 			<a
 				href="#main-content"
 				className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-md focus:border focus:bg-background focus:p-3 focus:shadow-md"
@@ -230,7 +227,7 @@ function OrgLayoutContent({ orgId }: { orgId: string }) {
 			<Sidebar collapsible="icon">
 				<OrgSidebarContent onOpenCommand={() => setPaletteOpen(true)} />
 				<SidebarRail
-					title={t("nav.toggleSidebar")}
+					title={t("nav.sidebarRailHint")}
 					aria-label={t("nav.toggleSidebar")}
 					className="max-md:hidden"
 				/>
