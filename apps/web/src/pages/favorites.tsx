@@ -89,7 +89,7 @@ export function FavoritesPage({ orgId }: { orgId: string }) {
 
 	if (favorites.isPending) {
 		return (
-			<div className="mx-auto w-full max-w-3xl px-6 py-8">
+			<div className="mx-auto w-full max-w-6xl px-4 py-8 lg:px-6">
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("favorites.title")}
 				</h1>
@@ -109,7 +109,7 @@ export function FavoritesPage({ orgId }: { orgId: string }) {
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-3xl px-6 py-8">
+		<div className="mx-auto w-full max-w-6xl px-4 py-8 lg:px-6">
 			<div>
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("favorites.title")}

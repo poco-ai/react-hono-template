@@ -190,7 +190,7 @@ export function TriagePage({
 	});
 
 	return (
-		<div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-8 lg:px-6">
+		<div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-8 lg:px-6">
 			<header>
 				<h1 className="text-2xl font-semibold tracking-tight">
 					{t("triage.title")}

@@ -68,46 +68,36 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 	};
 
 	return (
-		<div className="flex min-h-svh flex-col">
-			<header className="border-b px-4 py-6 lg:px-6">
-				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div>
-						<h1 className="text-2xl font-semibold tracking-tight">
-							{t("roadmap.title")}
-						</h1>
-					</div>
-					{roadmap.data?.truncated ? (
-						<Badge variant="outline" className="shrink-0">
-							{t("roadmap.truncated")}
-						</Badge>
-					) : null}
-				</div>
-			</header>
+		<div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-4 py-8 lg:px-6">
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<h1 className="text-2xl font-semibold tracking-tight">
+					{t("roadmap.title")}
+				</h1>
+				{roadmap.data?.truncated ? (
+					<Badge variant="outline" className="shrink-0">
+						{t("roadmap.truncated")}
+					</Badge>
+				) : null}
+			</div>
 
 			{roadmap.isError ? (
-				<div className="px-4 py-6 lg:px-6">
-					<Alert variant="destructive">
-						<CircleAlert />
-						<AlertDescription className="flex flex-col items-start gap-2">
-							{apiErrorMessage(t, roadmap.error)}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => void roadmap.refetch()}
-							>
-								{t("common.retry")}
-							</Button>
-						</AlertDescription>
-					</Alert>
-				</div>
+				<Alert variant="destructive" className="mt-6">
+					<CircleAlert />
+					<AlertDescription className="flex flex-col items-start gap-2">
+						{apiErrorMessage(t, roadmap.error)}
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => void roadmap.refetch()}
+						>
+							{t("common.retry")}
+						</Button>
+					</AlertDescription>
+				</Alert>
 			) : null}
 
 			{roadmap.isPending ? (
-				<div
-					className="space-y-3 px-4 py-6 lg:px-6"
-					aria-busy="true"
-					aria-hidden="true"
-				>
+				<div className="mt-6 space-y-3" aria-busy="true" aria-hidden="true">
 					<Skeleton className="h-8 w-full" />
 					{SKELETON_ROWS.map((key) => (
 						<Skeleton key={key} className="h-16 w-full" />
@@ -124,7 +114,7 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 			) : null}
 
 			{roadmap.data && roadmap.data.projects.length > 0 && isMobile ? (
-				<div className="min-h-0 flex-1 pb-6">
+				<div className="mt-6 min-h-0 flex-1 pb-6">
 					<RoadmapStackedList
 						projects={roadmap.data.projects}
 						onOpenCycle={openCycle}
@@ -137,7 +127,7 @@ export function RoadmapPage({ orgId }: { orgId: string }) {
 			roadmap.data &&
 			roadmap.data.projects.length > 0 &&
 			!isMobile ? (
-				<div className="min-h-0 flex-1 overflow-auto">
+				<div className="mt-6 min-h-0 flex-1 overflow-auto">
 					<div className="min-w-[54rem]">
 						<div
 							className="bg-background sticky top-0 z-20 grid border-b"

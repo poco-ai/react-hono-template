@@ -122,7 +122,7 @@ export function MyIssuesPage({
 		!issues.isPending && !issues.isError && issues.data?.items.length === 0;
 
 	return (
-		<div className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6">
+		<div className="mx-auto w-full max-w-6xl px-4 py-8 lg:px-6">
 			<h1 className="text-2xl font-semibold tracking-tight">
 				{t("issues.myIssuesTitle")}
 			</h1>
