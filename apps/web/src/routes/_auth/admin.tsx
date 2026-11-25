@@ -2,8 +2,8 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { ShieldOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { AppLayout } from "@/components/app-layout";
 import { NotFoundState } from "@/components/not-found-state";
+import { PlatformLayout } from "@/components/platform-layout";
 
 function AccessDenied() {
 	const { t } = useTranslation();
@@ -28,9 +28,9 @@ export const Route = createFileRoute("/_auth/admin")({
 	component: () => {
 		const { session } = Route.useRouteContext();
 		return (
-			<AppLayout>
+			<PlatformLayout>
 				{session.user.role === "admin" ? <Outlet /> : <AccessDenied />}
-			</AppLayout>
+			</PlatformLayout>
 		);
 	},
 });
