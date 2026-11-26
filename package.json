@@ -7,7 +7,7 @@
 		"dev": "turbo dev",
 		"lint": "biome lint .",
 		"check": "biome ci .",
-		"test": "bun test apps/api/tests && bun run --cwd apps/web test",
+		"test": "bun test packages/create-app/tests && bun test apps/api/tests && bun run --cwd apps/web test",
 		"format": "biome format --write .",
 		"typecheck": "turbo typecheck",
 		"create-app": "bun packages/create-app/src/index.ts",

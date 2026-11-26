@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, rmdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { globToRegExp } from "./glob";
-import type { ResolvedPreset } from "./manifest";
+import type { ResolvedSelection } from "./manifest";
 import { featureMeta } from "./meta";
 
 /** Skeleton directories that survive even when every claim below them is gone. */
@@ -35,7 +35,7 @@ function walkFiles(root: string, relativeDir = ""): string[] {
 	return files;
 }
 
-export function disabledClaimPatterns(preset: ResolvedPreset): RegExp[] {
+export function disabledClaimPatterns(preset: ResolvedSelection): RegExp[] {
 	const patterns: RegExp[] = [];
 	for (const feature of preset.allFeatures) {
 		if (preset.enabled.has(feature.id)) continue;
@@ -65,7 +65,10 @@ export type TrimResult = {
 	deleted: number;
 };
 
-export function trimClaims(outDir: string, preset: ResolvedPreset): TrimResult {
+export function trimClaims(
+	outDir: string,
+	preset: ResolvedSelection,
+): TrimResult {
 	const patterns = disabledClaimPatterns(preset);
 	// Enabled claims must never overlap a disabled claim: that would delete a
 	// file an enabled feature still needs (compile failure at best, silently
@@ -115,7 +118,7 @@ export function trimClaims(outDir: string, preset: ResolvedPreset): TrimResult {
  */
 export function deleteTemplateOnlyFiles(
 	outDir: string,
-	preset: ResolvedPreset,
+	preset: ResolvedSelection,
 ): number {
 	const always = [
 		"docs/模板化重构方案.md",

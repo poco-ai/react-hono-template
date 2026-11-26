@@ -479,6 +479,19 @@ test("every business source file is claimed by exactly one feature", () => {
 	const staleClaims: string[] = [];
 	for (const { glob } of [...claimMatchers.values()].flat()) {
 		if ((claimHits.get(glob) ?? 0) === 0) {
+			// Docs are claimed outside the TS scan roots (ai claims
+			// docs/AI与MCP.md); literal paths outside the scan roots are
+			// checked on disk instead. Inside the roots a literal claim must
+			// still match the scan, otherwise the disk check would silently
+			// exempt files the coverage rules keep unclaimed by design
+			// (composition roots, db infrastructure).
+			if (
+				!/[*?]/.test(glob) &&
+				!SCAN_ROOTS.some((root) => glob.startsWith(root)) &&
+				existsSync(path.join(REPO_ROOT, glob))
+			) {
+				continue;
+			}
 			staleClaims.push(glob);
 		}
 	}

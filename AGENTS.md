@@ -8,13 +8,13 @@ Package manager is **bun** (`packageManager: bun@1.4.2`, `bun.lock`). Do not use
 
 - `bun install`
 - `bun run dev` — turbo dev: runs web (Vite on :5173) and api (`wrangler dev` on :8787) together. Web proxies `/api` → :8787, so both must be running for local API calls.
-- `bun run test` — API auth/quotas/routing and web feature-data/cache/URL/architecture regression tests; web tests preload a minimal language-detection environment
+- `bun run test` — create-app selection-resolution, API auth/quotas/routing and web feature-data/cache/URL/architecture regression tests; web tests preload a minimal language-detection environment
 - `bun run check` — `biome ci .` (format + lint + assist, read-only; the CI gate)
 - `bun run lint` — `biome lint .` (Biome, not ESLint)
 - `bun run format` — `biome format --write .`
 - `bun run typecheck` — turbo typecheck across all packages (web uses `tsc -b` project references and includes `tests` via `tsconfig.test.json`; others `tsc --noEmit`)
 - `bun run build` — turbo build (builds `web` only; api deploys from source, wrangler bundles it)
-- `bun run create-app --preset <name> --out <dir> [--verify]` — generate a trimmed project from `presets/` (`minimal`/`collaboration`/`planning`/`saas`/`ai`/`full`); `--verify` runs install + check + typecheck + build + test inside the output
+- `bun run create-app [dir] --preset <name> | --features <a,b,...> [--out <dir>] [--verify] [--force]` — generate a trimmed project from `presets/`, either from a named preset (`minimal`/`collaboration`/`planning`/`saas`/`ai`/`full`) or from a custom feature list (minimal base + listed features, hard dependencies auto-included); `--verify` runs install + check + typecheck + build + test inside the output
 
 Single workspace: run the script from inside the app/package dir, or `bunx turbo dev --filter=api`.
 

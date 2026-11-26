@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { globToRegExp } from "./glob";
-import type { ResolvedPreset } from "./manifest";
+import type { ResolvedSelection } from "./manifest";
 import { featureMeta, registryOrder } from "./meta";
 
 type ImportStatement = {
@@ -185,7 +185,7 @@ const writeOut = (
 	writeFileSync(path.join(outDir, relativePath), content);
 };
 
-function disabledFeatureIds(preset: ResolvedPreset): string[] {
+function disabledFeatureIds(preset: ResolvedSelection): string[] {
 	return preset.allFeatures
 		.filter((feature) => !preset.enabled.has(feature.id))
 		.map((feature) => feature.id);
@@ -202,7 +202,7 @@ function removeArrayEntries(
 		.join("\n");
 }
 
-function rewriteApiManifest(outDir: string, preset: ResolvedPreset): void {
+function rewriteApiManifest(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "apps/api/src/manifest.ts";
 	let source = readOut(outDir, relativePath);
 	const disabled = disabledFeatureIds(preset);
@@ -223,7 +223,7 @@ function rewriteApiManifest(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, source);
 }
 
-function rewriteApiRoutes(outDir: string, preset: ResolvedPreset): void {
+function rewriteApiRoutes(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "apps/api/src/routes.ts";
 	let source = readOut(outDir, relativePath);
 	const disabled = disabledFeatureIds(preset);
@@ -243,7 +243,7 @@ function rewriteApiRoutes(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, source);
 }
 
-function rewriteWebRegistry(outDir: string, preset: ResolvedPreset): void {
+function rewriteWebRegistry(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "apps/web/src/features/registry.ts";
 	let source = readOut(outDir, relativePath);
 	const disabled = disabledFeatureIds(preset);
@@ -259,7 +259,10 @@ function rewriteWebRegistry(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, removeArrayEntries(source, entries));
 }
 
-function rewriteI18nAggregators(outDir: string, preset: ResolvedPreset): void {
+function rewriteI18nAggregators(
+	outDir: string,
+	preset: ResolvedSelection,
+): void {
 	const namespaces = new Set<string>();
 	for (const id of disabledFeatureIds(preset)) {
 		for (const namespace of featureMeta(id).i18nNamespaces) {
@@ -286,7 +289,7 @@ function rewriteI18nAggregators(outDir: string, preset: ResolvedPreset): void {
 	}
 }
 
-function rewriteSharedIndex(outDir: string, preset: ResolvedPreset): void {
+function rewriteSharedIndex(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "packages/shared/src/index.ts";
 	let source = readOut(outDir, relativePath);
 	const patterns = disabledClaimPatternsFor(preset);
@@ -300,7 +303,7 @@ function rewriteSharedIndex(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, source);
 }
 
-function disabledClaimPatternsFor(preset: ResolvedPreset): RegExp[] {
+function disabledClaimPatternsFor(preset: ResolvedSelection): RegExp[] {
 	const patterns: RegExp[] = [];
 	for (const id of disabledFeatureIds(preset)) {
 		const feature = preset.allFeatures.find((entry) => entry.id === id);
@@ -310,7 +313,7 @@ function disabledClaimPatternsFor(preset: ResolvedPreset): RegExp[] {
 	return patterns;
 }
 
-function rewriteApiSchema(outDir: string, preset: ResolvedPreset): void {
+function rewriteApiSchema(outDir: string, preset: ResolvedSelection): void {
 	const disabled = disabledFeatureIds(preset);
 	const factories: string[] = [];
 	const tableKeys: string[] = [];
@@ -424,7 +427,7 @@ function replaceUnion(
 	);
 }
 
-function rewriteWebTypes(outDir: string, preset: ResolvedPreset): void {
+function rewriteWebTypes(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "apps/web/src/features/web-types.ts";
 	let source = readOut(outDir, relativePath);
 
@@ -527,7 +530,7 @@ function assertMarkerPairs(source: string, commentPrefix: string): void {
 function stripFeatureMarkers(
 	source: string,
 	commentPrefix: string,
-	preset: ResolvedPreset,
+	preset: ResolvedSelection,
 ): string {
 	const lines = source.split("\n");
 	const output: string[] = [];
@@ -648,7 +651,7 @@ export function stripJsonComments(source: string): string {
 	return result;
 }
 
-function rewriteWrangler(outDir: string, preset: ResolvedPreset): void {
+function rewriteWrangler(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "apps/api/wrangler.jsonc";
 	let source = readOut(outDir, relativePath);
 	assertMarkerPairs(source, "//");
@@ -690,7 +693,7 @@ function rewriteWrangler(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, source);
 }
 
-function rewriteDevVars(outDir: string, preset: ResolvedPreset): void {
+function rewriteDevVars(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "apps/api/.dev.vars.example";
 	let source = readOut(outDir, relativePath);
 	assertMarkerPairs(source, "#");
@@ -700,10 +703,13 @@ function rewriteDevVars(outDir: string, preset: ResolvedPreset): void {
 	writeOut(outDir, relativePath, source);
 }
 
-function rewriteReadme(outDir: string, preset: ResolvedPreset): void {
+function rewriteReadme(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "README.md";
 	const source = readOut(outDir, relativePath);
-	const header = `> 本项目由 [react-hono-template](https://github.com/poco-ai/react-hono-template) 的 \`${preset.name}\` preset 生成。模板仓库后续的改动不会自动同步，需要按上游 diff 自行合并。\n\n`;
+	const header =
+		preset.mode === "custom"
+			? `> 本项目由 [react-hono-template](https://github.com/poco-ai/react-hono-template) 自定义选择生成（${preset.features.length} 个特性，minimal 基座）。模板仓库后续的改动不会自动同步，需要按上游 diff 自行合并。\n\n`
+			: `> 本项目由 [react-hono-template](https://github.com/poco-ai/react-hono-template) 的 \`${preset.name}\` preset 生成。模板仓库后续的改动不会自动同步，需要按上游 diff 自行合并。\n\n`;
 	const allowedDocs = new Set(preset.decl.docs ?? []);
 	const lines = source.split("\n").filter((line) => {
 		if (line.includes("线上示例：")) return false;
@@ -743,7 +749,7 @@ function rewriteReadme(outDir: string, preset: ResolvedPreset): void {
 }
 
 /** Markdown docs that describe template-only workflows or trimmed features. */
-function rewriteAgentsDoc(outDir: string, preset: ResolvedPreset): void {
+function rewriteAgentsDoc(outDir: string, preset: ResolvedSelection): void {
 	const relativePath = "AGENTS.md";
 	let source = readOut(outDir, relativePath);
 	source = removeMarkdownSection(
@@ -751,6 +757,9 @@ function rewriteAgentsDoc(outDir: string, preset: ResolvedPreset): void {
 		"## AI & MCP",
 		!preset.enabled.has("ai"),
 	);
+	// The generated project has no packages/create-app: the template's test
+	// description mentions its selection tests, which do not exist there.
+	source = source.replaceAll("create-app selection-resolution, ", "");
 	const lines = source.split("\n").filter((line) => {
 		if (line.includes("presets/") || line.includes("packages/create-app")) {
 			return false;
@@ -783,7 +792,10 @@ function rewriteAgentsDoc(outDir: string, preset: ResolvedPreset): void {
 		}
 		return true;
 	});
-	const header = `> 本项目由 react-hono-template 的 \`${preset.name}\` preset 生成（已裁剪未启用特性）。\n\n`;
+	const header =
+		preset.mode === "custom"
+			? `> 本项目由 react-hono-template 自定义选择生成（${preset.features.length} 个特性，minimal 基座，已裁剪未启用特性）。\n\n`
+			: `> 本项目由 react-hono-template 的 \`${preset.name}\` preset 生成（已裁剪未启用特性）。\n\n`;
 	writeOut(outDir, relativePath, `${header}${lines.join("\n")}`);
 }
 
@@ -809,7 +821,21 @@ function rewriteRootPackage(outDir: string): void {
 		scripts?: Record<string, string>;
 		workspaces?: string[];
 	};
-	if (parsed.scripts) delete parsed.scripts["create-app"];
+	if (parsed.scripts) {
+		delete parsed.scripts["create-app"];
+		// The generated project has no packages/create-app: drop the
+		// selection-resolution tests from its test script.
+		if (parsed.scripts.test) {
+			const segments = parsed.scripts.test
+				.split("&&")
+				.map((segment) => segment.trim())
+				.filter(
+					(segment) =>
+						segment !== "" && !segment.includes("packages/create-app"),
+				);
+			if (segments.length > 0) parsed.scripts.test = segments.join(" && ");
+		}
+	}
 	if (parsed.workspaces) {
 		parsed.workspaces = parsed.workspaces.filter(
 			(entry) => entry !== "presets",
@@ -850,7 +876,7 @@ const TEST_REQUIREMENTS: Record<string, string[]> = {
 	"apps/web/tests/issue-route-state.test.ts": ["cycles"],
 };
 
-function rewriteTests(outDir: string, preset: ResolvedPreset): number {
+function rewriteTests(outDir: string, preset: ResolvedSelection): number {
 	const disabled = disabledFeatureIds(preset);
 	const needles: string[] = [];
 	for (const id of disabled) {
@@ -880,7 +906,7 @@ function rewriteTests(outDir: string, preset: ResolvedPreset): number {
 
 export function rewriteAggregators(
 	outDir: string,
-	preset: ResolvedPreset,
+	preset: ResolvedSelection,
 ): void {
 	rewriteApiManifest(outDir, preset);
 	rewriteApiRoutes(outDir, preset);

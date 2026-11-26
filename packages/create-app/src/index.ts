@@ -1,68 +1,58 @@
 import { existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { type CliOptions, parseCli } from "./cli";
 import { copyTemplate, prepareOutDir } from "./copy";
 import { generateBaselines, runOrThrow } from "./db-baseline";
 import { log } from "./log";
-import { listPresets, REPO_ROOT, resolvePreset } from "./manifest";
+import {
+	customBaseFeatures,
+	REPO_ROOT,
+	resolveSelection,
+	type SelectionInput,
+} from "./manifest";
 import { rewriteAggregators } from "./rewrite";
 import { deleteTemplateOnlyFiles, trimClaims } from "./trim";
 import { verifyOutput } from "./verify";
 
-type Options = {
-	preset?: string;
-	out?: string;
-	verify: boolean;
-	force: boolean;
-	help: boolean;
-};
-
-function parseArgs(argv: string[]): Options {
-	const options: Options = { verify: false, force: false, help: false };
-	for (let i = 0; i < argv.length; i++) {
-		const arg = argv[i];
-		if (arg === "--help" || arg === "-h") {
-			options.help = true;
-		} else if (arg === "--verify") {
-			options.verify = true;
-		} else if (arg === "--force") {
-			options.force = true;
-		} else if (arg === "--preset" || arg === "-p") {
-			options.preset = argv[++i];
-		} else if (arg.startsWith("--preset=")) {
-			options.preset = arg.slice("--preset=".length);
-		} else if (arg === "--out" || arg === "-o") {
-			options.out = argv[++i];
-		} else if (arg.startsWith("--out=")) {
-			options.out = arg.slice("--out=".length);
-		} else {
-			throw new Error(`unknown argument "${arg}"`);
+/** `[dir]` and `--out` are alternative spellings; only one may be given. */
+function resolveOutDir(options: CliOptions): string {
+	if (options.dir !== undefined && options.out !== undefined) {
+		if (path.resolve(options.dir) !== path.resolve(options.out)) {
+			throw new Error(
+				`conflicting output directories: "${options.dir}" (positional) and "${options.out}" (--out) — pass only one`,
+			);
 		}
 	}
-	return options;
+	const target = options.out ?? options.dir;
+	if (target === undefined) {
+		throw new Error(
+			"no output directory given — pass a positional [dir] or --out <dir> (an interactive directory prompt arrives in Phase 3)",
+		);
+	}
+	return path.resolve(target);
 }
 
-function usage(): string {
-	return `Usage: bun run create-app --preset <${listPresets().join("|")}> --out <dir> [--verify] [--force]
-
-  --preset, -p   preset name (${listPresets().join(", ")})
-  --out, -o      output directory (empty or missing unless --force)
-  --verify       run install + check + typecheck + build + test in the output
-  --force        replace the contents of a non-empty output directory
-`;
+/** `--preset` and `--features` are mutually exclusive selection inputs. */
+function resolveSelectionInput(options: CliOptions): SelectionInput {
+	if (options.preset !== undefined && options.features !== undefined) {
+		throw new Error(
+			"--preset and --features are mutually exclusive — pass exactly one",
+		);
+	}
+	if (options.preset !== undefined) return { preset: options.preset };
+	if (options.features !== undefined) return { features: options.features };
+	throw new Error(
+		"no selection given — pass --preset <name> or --features <ids> (an interactive selection prompt arrives in Phase 3)",
+	);
 }
 
 function main(): void {
-	const options = parseArgs(process.argv.slice(2));
-	if (options.help) {
-		console.log(usage());
-		return;
-	}
-	if (!options.preset) throw new Error(`--preset is required\n\n${usage()}`);
-	if (!options.out) throw new Error(`--out is required\n\n${usage()}`);
+	const options = parseCli(process.argv);
+	if (!options) return; // --help / --version: cac already printed the output.
 
-	const preset = resolvePreset(options.preset);
-	const outDir = path.resolve(options.out);
+	const selection = resolveSelection(resolveSelectionInput(options));
+	const outDir = resolveOutDir(options);
 	const realOutDir = existsSync(outDir) ? realpathSync(outDir) : outDir;
 	const realRepo = realpathSync(REPO_ROOT);
 	if (
@@ -80,10 +70,20 @@ function main(): void {
 		);
 	}
 
-	log.step(
-		`preset "${preset.name}" expands to ${preset.features.length} features`,
-	);
-	log.info(preset.features.map((feature) => feature.id).join(", "));
+	if (selection.mode === "custom") {
+		const base = new Set(customBaseFeatures());
+		const added = selection.features.filter(
+			(feature) => !base.has(feature.id),
+		).length;
+		log.step(
+			`custom selection: minimal 基座 + ${added} 附加 → ${selection.features.length} features`,
+		);
+	} else {
+		log.step(
+			`preset "${selection.name}" expands to ${selection.features.length} features`,
+		);
+	}
+	log.info(selection.features.map((feature) => feature.id).join(", "));
 
 	log.step(`prepare ${outDir}`);
 	prepareOutDir(outDir, options.force);
@@ -95,15 +95,15 @@ function main(): void {
 	);
 
 	log.step("trim claims of disabled features");
-	const trimmed = trimClaims(outDir, preset);
+	const trimmed = trimClaims(outDir, selection);
 	log.info(`${trimmed.deleted} files removed`);
 
 	log.step("remove template-only files");
-	const templateOnly = deleteTemplateOnlyFiles(outDir, preset);
+	const templateOnly = deleteTemplateOnlyFiles(outDir, selection);
 	log.info(`${templateOnly} files removed`);
 
 	log.step("rewrite aggregation files");
-	rewriteAggregators(outDir, preset);
+	rewriteAggregators(outDir, selection);
 	log.info(
 		"manifest.ts, routes.ts, registry.ts, i18n, shared index, schema exports, web-types, wrangler, .dev.vars.example, README, tests",
 	);
@@ -122,7 +122,7 @@ function main(): void {
 	);
 
 	log.step("regenerate database baselines");
-	const baselines = generateBaselines(outDir, preset.enabled.has("search"));
+	const baselines = generateBaselines(outDir, selection.enabled.has("search"));
 	log.info(`sqlite: ${baselines.sqlite.join(", ")}`);
 	log.info(`postgres: ${baselines.postgres.join(", ")}`);
 
@@ -142,7 +142,13 @@ function main(): void {
 
 	log.step("done");
 	log.info(`output: ${outDir}`);
-	log.info(`preset: ${preset.name} (${preset.features.length} features)`);
+	if (selection.mode === "custom") {
+		log.info(`selection: custom (${selection.features.length} features)`);
+	} else {
+		log.info(
+			`preset: ${selection.name} (${selection.features.length} features)`,
+		);
+	}
 	if (!options.verify) {
 		log.warn("run with --verify to execute the full quality gate");
 	}
