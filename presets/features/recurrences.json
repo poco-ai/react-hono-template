@@ -1,5 +1,7 @@
 {
 	"id": "recurrences",
+	"label": "Recurrences",
+	"description": "Recurring issue scheduling",
 	"tier": 2,
 	"dependsOn": [
 		"core",

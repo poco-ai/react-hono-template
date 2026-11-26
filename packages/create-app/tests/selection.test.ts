@@ -3,6 +3,9 @@ import { test } from "node:test";
 import {
 	customBaseFeatures,
 	deriveDocs,
+	getPreset,
+	listFeatures,
+	listPresets,
 	resolveSelection,
 } from "../src/manifest";
 
@@ -132,4 +135,19 @@ test("deriveDocs: feature docs follow the enabled set", () => {
 	const withoutAi = new Set(MINIMAL);
 	assert.ok(!deriveDocs(withoutAi).includes("docs/AI与MCP.md"));
 	assert.deepEqual(deriveDocs(withoutAi), BASE_DOCS);
+});
+
+test("display metadata: every feature and preset declares label and description", () => {
+	for (const feature of listFeatures()) {
+		assert.ok(feature.label, `feature "${feature.id}" needs a label`);
+		assert.ok(
+			feature.description,
+			`feature "${feature.id}" needs a description`,
+		);
+	}
+	for (const name of listPresets()) {
+		const decl = getPreset(name);
+		assert.ok(decl.label, `preset "${name}" needs a label`);
+		assert.ok(decl.description, `preset "${name}" needs a description`);
+	}
 });

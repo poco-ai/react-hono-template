@@ -1,5 +1,7 @@
 {
 	"id": "roadmap",
+	"label": "Roadmap",
+	"description": "Roadmap timeline grouped by cycles",
 	"tier": 2,
 	"dependsOn": ["core", "projects", "cycles"],
 	"claims": [

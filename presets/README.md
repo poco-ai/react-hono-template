@@ -5,7 +5,20 @@ source of truth for template features and presets (Phase 0 of the refactor in
 `docs/模板化重构方案.md`). `presets/schema.ts` defines the zod contracts;
 `apps/api/tests/architecture.test.ts` enforces claims coverage, dependency
 boundaries and preset closure; `apps/web/tests/web-registry.test.ts` pins the
-web contributions.
+web contributions. The create-app CLI (`packages/create-app`) resolves both
+named presets and custom `--features` selections from these files before
+trimming the template.
+
+## Display metadata
+
+Every feature and preset declares `label` (display name) and `description`
+(one-liner) — the create-app interactive picker renders them, and
+`packages/create-app/tests/selection.test.ts` fails when either is missing.
+
+Custom selections (`--features`) always keep the minimal base plus
+`BASE_DOCS` (see `packages/create-app/src/manifest.ts` — a deliberate
+superset of the minimal preset's `docs`) and the `.md` files claimed by
+enabled features; preset `docs` arrays continue to drive preset generation.
 
 ## Claims ownership conventions
 

@@ -13,8 +13,8 @@ export type CliOptions = {
 	force: boolean;
 };
 
-/** The create-app package version, printed by `--version`. */
-function packageVersion(): string {
+/** The create-app package version, printed by `--version` and `.create-app.json`. */
+export function packageVersion(): string {
 	const manifest = JSON.parse(
 		readFileSync(
 			path.join(REPO_ROOT, "packages/create-app/package.json"),
@@ -25,9 +25,8 @@ function packageVersion(): string {
 }
 
 /**
- * The cac CLI definition. Phase 2 stays non-interactive: the output
- * directory and the preset/custom selection must arrive as flags. Phase 3
- * reuses this definition to drive the interactive prompts.
+ * The cac CLI definition. Flags drive the headless path (CI, scripts);
+ * the interactive prompt layer fills in whatever the flags left open.
  */
 export function createCli(): CAC {
 	const cli = cac("create-app");

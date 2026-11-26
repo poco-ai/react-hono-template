@@ -100,6 +100,13 @@ export function getFeature(id: string): FeatureDecl {
 	return decl;
 }
 
+/** Preset declaration by name (display metadata, extends, docs). */
+export function getPreset(name: string): PresetDecl {
+	const decl = presetDecls.get(name);
+	if (!decl) throw new Error(`unknown preset "${name}"`);
+	return decl;
+}
+
 function expandPreset(name: string, lineage: string[] = []): string[] {
 	const preset = presetDecls.get(name);
 	if (!preset) throw new Error(`unknown preset "${name}"`);

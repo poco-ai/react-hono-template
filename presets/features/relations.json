@@ -1,5 +1,7 @@
 {
 	"id": "relations",
+	"label": "Relations",
+	"description": "Issue relations: blocks, relates, duplicates",
 	"tier": 2,
 	"dependsOn": ["core", "issues", "projects"],
 	"softDependsOn": ["webhooks"],

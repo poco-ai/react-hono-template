@@ -1,5 +1,7 @@
 {
 	"name": "minimal",
+	"label": "Minimal",
+	"description": "The baseline issue tracker: projects, issues, comments, search, notifications",
 	"features": [
 		"core",
 		"projects",

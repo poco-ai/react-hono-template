@@ -1,5 +1,7 @@
 {
 	"id": "ai",
+	"label": "AI chat",
+	"description": "AI SDK streaming chat with tool approvals and usage",
 	"tier": 4,
 	"dependsOn": [
 		"core",

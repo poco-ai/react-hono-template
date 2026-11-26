@@ -1,5 +1,7 @@
 {
 	"id": "billing",
+	"label": "Billing",
+	"description": "Stripe subscriptions, plan quotas, storage usage",
 	"tier": 3,
 	"dependsOn": ["core", "webhooks", "projects", "attachments"],
 	"env": {

@@ -1,5 +1,7 @@
 {
 	"name": "saas",
+	"label": "SaaS",
+	"description": "Collaboration plus planning features, billing, API keys and the public API",
 	"extends": "collaboration",
 	"features": [
 		"+cycles",

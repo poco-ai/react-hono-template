@@ -1,5 +1,7 @@
 {
 	"id": "mcp",
+	"label": "MCP",
+	"description": "Model Context Protocol endpoint with OAuth clients",
 	"tier": 4,
 	"dependsOn": ["core", "capabilities", "ai", "api-keys"],
 	"softDependsOn": [],

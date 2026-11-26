@@ -1,5 +1,7 @@
 {
 	"name": "full",
+	"label": "Full",
+	"description": "Every feature in the template — identical to this repository",
 	"features": [
 		"core",
 		"projects",

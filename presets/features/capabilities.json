@@ -1,5 +1,7 @@
 {
 	"id": "capabilities",
+	"label": "Capabilities",
+	"description": "Typed read/write capability registry shared by AI chat and MCP",
 	"tier": 4,
 	"dependsOn": [
 		"core",

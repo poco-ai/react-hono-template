@@ -1,5 +1,7 @@
 {
 	"name": "collaboration",
+	"label": "Collaboration",
+	"description": "Minimal plus attachments, webhooks, favorites, relations, project updates",
 	"extends": "minimal",
 	"features": [
 		"+attachments",

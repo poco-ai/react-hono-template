@@ -1,5 +1,7 @@
 {
 	"id": "api-keys",
+	"label": "API keys",
+	"description": "Bearer keys for the public API",
 	"tier": 3,
 	"dependsOn": ["core"],
 	"claims": [

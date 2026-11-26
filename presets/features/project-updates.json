@@ -1,5 +1,7 @@
 {
 	"id": "project-updates",
+	"label": "Project updates",
+	"description": "Project status update posts",
 	"tier": 2,
 	"dependsOn": ["core", "projects"],
 	"claims": [

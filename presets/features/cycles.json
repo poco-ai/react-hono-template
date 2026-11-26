@@ -1,5 +1,7 @@
 {
 	"id": "cycles",
+	"label": "Cycles",
+	"description": "Time-boxed iterations with progress rollups",
 	"tier": 2,
 	"dependsOn": ["core", "projects", "statuses"],
 	"claims": [

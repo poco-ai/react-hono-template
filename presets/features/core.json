@@ -1,5 +1,7 @@
 {
 	"id": "core",
+	"label": "Core platform",
+	"description": "better-auth sign-in, orgs, members, admin, audit and the KV runtime config",
 	"tier": 0,
 	"dependsOn": [],
 	"env": {

@@ -1,5 +1,7 @@
 {
 	"id": "templates",
+	"label": "Issue templates",
+	"description": "Reusable issue templates",
 	"tier": 2,
 	"dependsOn": ["core", "issues", "projects", "labels", "statuses"],
 	"claims": [

@@ -1,5 +1,7 @@
 {
 	"id": "favorites",
+	"label": "Favorites",
+	"description": "Starred projects and issues",
 	"tier": 2,
 	"dependsOn": ["core", "issues", "projects"],
 	"claims": [

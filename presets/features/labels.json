@@ -1,5 +1,7 @@
 {
 	"id": "labels",
+	"label": "Labels",
+	"description": "Colored issue labels",
 	"tier": 1,
 	"dependsOn": ["core"],
 	"claims": [

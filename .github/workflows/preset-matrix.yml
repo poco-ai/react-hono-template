@@ -24,13 +24,26 @@ concurrency:
 
 jobs:
   generate:
-    name: Generate '${{ matrix.preset }}'
+    name: Generate '${{ matrix.name }}'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         # `full` is the repository itself and is covered by ci.yml.
-        preset: [minimal, collaboration, planning, saas, ai]
+        # `custom` proves the --features path (minimal base + closure).
+        include:
+          - name: minimal
+            args: "--preset minimal"
+          - name: collaboration
+            args: "--preset collaboration"
+          - name: planning
+            args: "--preset planning"
+          - name: saas
+            args: "--preset saas"
+          - name: ai
+            args: "--preset ai"
+          - name: custom
+            args: "--features billing,webhooks,ai"
     steps:
       - uses: actions/checkout@v4
 
@@ -44,14 +57,14 @@ jobs:
       - name: Generate and verify
         run: >-
           bun run create-app
-          --preset ${{ matrix.preset }}
-          --out "${{ runner.temp }}/generated-${{ matrix.preset }}"
+          ${{ matrix.args }}
+          --out "${{ runner.temp }}/generated-${{ matrix.name }}"
           --verify
 
       - name: Upload generated project on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: generated-${{ matrix.preset }}
-          path: ${{ runner.temp }}/generated-${{ matrix.preset }}
+          name: generated-${{ matrix.name }}
+          path: ${{ runner.temp }}/generated-${{ matrix.name }}
           retention-days: 3

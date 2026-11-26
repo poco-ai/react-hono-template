@@ -1,5 +1,7 @@
 {
 	"name": "planning",
+	"label": "Planning",
+	"description": "Minimal plus cycles, roadmap, recurrences, views and issue templates",
 	"extends": "minimal",
 	"features": ["+cycles", "+roadmap", "+recurrences", "+views", "+templates"],
 	"platform": ["cloudflare", "bun-selfhost"]

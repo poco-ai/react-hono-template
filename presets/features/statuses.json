@@ -1,5 +1,7 @@
 {
 	"id": "statuses",
+	"label": "Statuses",
+	"description": "Custom issue statuses and workflow states",
 	"tier": 1,
 	"dependsOn": ["core"],
 	"claims": [

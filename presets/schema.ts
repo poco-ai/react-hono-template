@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 /**
- * Declarative feature/preset manifest schemas (template refactor Phase 0).
+ * Declarative feature/preset manifest schemas.
  *
- * `presets/features/*.json` and `presets/presets/*.json` are validated
- * against these schemas by `apps/api/tests/architecture.test.ts`. The
- * create-app CLI (Phase 6) becomes the real consumer later; until then the
- * JSON files are the single source of truth for feature ownership and the
- * dependency graph.
+ * `presets/features/*.json` and `presets/presets/*.json` are the single
+ * source of truth for feature ownership and the dependency graph.
+ * `apps/api/tests/architecture.test.ts` validates them against these
+ * schemas, and the create-app CLI (`packages/create-app`) resolves both
+ * preset and custom selections from them before trimming the template.
  */
 
 const FEATURE_ID = /^[a-z][a-z0-9-]*$/;
@@ -17,6 +17,10 @@ const featureId = z.string().regex(FEATURE_ID);
 /** `+feature` — appended on top of the preset named by `extends`. */
 const addedFeatureId = z.string().regex(/^\+[a-z][a-z0-9-]*$/);
 
+/** Display metadata rendered by the create-app interactive picker. */
+const displayLabel = z.string().min(1).optional();
+const displayDescription = z.string().min(1).optional();
+
 const envDeclSchema = z.object({
 	required: z.array(z.string()).optional(),
 	optional: z.array(z.string()).optional(),
@@ -25,6 +29,10 @@ const envDeclSchema = z.object({
 
 export const featureDeclSchema = z.object({
 	id: featureId,
+	/** Display name rendered by the create-app interactive picker. */
+	label: displayLabel,
+	/** One-line summary rendered as the option hint. */
+	description: displayDescription,
 	/** 0 core, 1 workspace, 2 collaboration/planning, 3 commercial, 4 intelligence. */
 	tier: z.number().int().min(0).max(4),
 	/** Hard dependencies: the feature cannot be generated without them. */
@@ -44,6 +52,10 @@ export const featureDeclSchema = z.object({
 export const presetDeclSchema = z
 	.object({
 		name: featureId,
+		/** Display name rendered by the create-app interactive picker. */
+		label: displayLabel,
+		/** One-line summary rendered as the option hint. */
+		description: displayDescription,
 		/** Base preset whose feature set this preset extends. */
 		extends: featureId.optional(),
 		/**

@@ -1,5 +1,7 @@
 {
 	"id": "activities",
+	"label": "Activity feed",
+	"description": "Organization-wide activity timeline",
 	"tier": 1,
 	"dependsOn": ["core", "issues", "labels"],
 	"claims": [

@@ -1,5 +1,7 @@
 {
 	"id": "notifications",
+	"label": "Notifications",
+	"description": "In-app notifications and issue subscriptions",
 	"tier": 2,
 	"dependsOn": ["core", "issues"],
 	"claims": [

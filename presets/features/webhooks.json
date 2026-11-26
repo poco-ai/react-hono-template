@@ -1,5 +1,7 @@
 {
 	"id": "webhooks",
+	"label": "Webhooks",
+	"description": "Outbound webhooks with Queues retries and a DLQ",
 	"tier": 2,
 	"dependsOn": ["core"],
 	"softDependsOn": ["issues"],

@@ -1,5 +1,7 @@
 {
 	"id": "views",
+	"label": "Views",
+	"description": "Saved filter views",
 	"tier": 2,
 	"dependsOn": ["core", "projects", "issues"],
 	"softDependsOn": ["billing"],

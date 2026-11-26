@@ -1,5 +1,7 @@
 {
 	"id": "attachments",
+	"label": "Attachments",
+	"description": "S3-compatible uploads on issues and comments",
 	"tier": 2,
 	"dependsOn": ["core", "issues", "comments", "projects"],
 	"softDependsOn": ["billing", "webhooks"],

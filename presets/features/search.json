@@ -1,5 +1,7 @@
 {
 	"id": "search",
+	"label": "Search",
+	"description": "FTS5 full-text search over issues and comments",
 	"tier": 2,
 	"dependsOn": ["core", "issues", "comments"],
 	"claims": [

@@ -1,5 +1,7 @@
 {
 	"id": "public-api",
+	"label": "Public API v1",
+	"description": "OpenAPI endpoints with per-plan rate limits",
 	"tier": 3,
 	"dependsOn": ["core", "api-keys", "issues", "labels", "projects", "statuses"],
 	"claims": [

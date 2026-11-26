@@ -1,5 +1,7 @@
 {
 	"id": "comments",
+	"label": "Comments",
+	"description": "Markdown comments with @mentions",
 	"tier": 1,
 	"dependsOn": ["core", "issues", "projects"],
 	"softDependsOn": ["attachments", "notifications", "billing", "webhooks"],

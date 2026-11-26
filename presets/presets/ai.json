@@ -1,5 +1,7 @@
 {
 	"name": "ai",
+	"label": "AI",
+	"description": "SaaS plus the capability registry, AI chat and MCP",
 	"extends": "saas",
 	"features": ["+capabilities", "+ai", "+mcp"],
 	"platform": ["cloudflare", "bun-selfhost"]

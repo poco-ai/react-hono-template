@@ -1,33 +1,44 @@
 import { existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { type CliOptions, parseCli } from "./cli";
-import { copyTemplate, prepareOutDir } from "./copy";
-import { generateBaselines, runOrThrow } from "./db-baseline";
+import { type CliOptions, packageVersion, parseCli } from "./cli";
+import { generate } from "./generate";
 import { log } from "./log";
+import { REPO_ROOT, resolveSelection, type SelectionInput } from "./manifest";
 import {
-	customBaseFeatures,
-	REPO_ROOT,
-	resolveSelection,
-	type SelectionInput,
-} from "./manifest";
-import { rewriteAggregators } from "./rewrite";
-import { deleteTemplateOnlyFiles, trimClaims } from "./trim";
-import { verifyOutput } from "./verify";
+	buildSummary,
+	clackUi,
+	collectMissingInput,
+	type PromptUi,
+} from "./prompt";
+
+/** Interactive when the flags left something unanswered and stdin is a TTY. */
+function isInteractive(options: CliOptions): boolean {
+	if (process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
+		return false;
+	}
+	return (
+		options.dir === undefined ||
+		(options.preset === undefined && options.features === undefined)
+	);
+}
 
 /** `[dir]` and `--out` are alternative spellings; only one may be given. */
-function resolveOutDir(options: CliOptions): string {
-	if (options.dir !== undefined && options.out !== undefined) {
-		if (path.resolve(options.dir) !== path.resolve(options.out)) {
+function resolveOutDir(
+	dir: string | undefined,
+	out: string | undefined,
+): string {
+	if (dir !== undefined && out !== undefined) {
+		if (path.resolve(dir) !== path.resolve(out)) {
 			throw new Error(
-				`conflicting output directories: "${options.dir}" (positional) and "${options.out}" (--out) — pass only one`,
+				`conflicting output directories: "${dir}" (positional) and "${out}" (--out) — pass only one`,
 			);
 		}
 	}
-	const target = options.out ?? options.dir;
+	const target = out ?? dir;
 	if (target === undefined) {
 		throw new Error(
-			"no output directory given — pass a positional [dir] or --out <dir> (an interactive directory prompt arrives in Phase 3)",
+			"no output directory given — pass a positional [dir] or --out <dir>, or run create-app in a TTY to be prompted",
 		);
 	}
 	return path.resolve(target);
@@ -43,16 +54,12 @@ function resolveSelectionInput(options: CliOptions): SelectionInput {
 	if (options.preset !== undefined) return { preset: options.preset };
 	if (options.features !== undefined) return { features: options.features };
 	throw new Error(
-		"no selection given — pass --preset <name> or --features <ids> (an interactive selection prompt arrives in Phase 3)",
+		"no selection given — pass --preset <name> or --features <ids>, or run create-app in a TTY to be prompted",
 	);
 }
 
-function main(): void {
-	const options = parseCli(process.argv);
-	if (!options) return; // --help / --version: cac already printed the output.
-
-	const selection = resolveSelection(resolveSelectionInput(options));
-	const outDir = resolveOutDir(options);
+/** Guards shared by both modes; runs before any filesystem write. */
+function assertSafeOutDir(outDir: string): void {
 	const realOutDir = existsSync(outDir) ? realpathSync(outDir) : outDir;
 	const realRepo = realpathSync(REPO_ROOT);
 	if (
@@ -69,93 +76,82 @@ function main(): void {
 			`refusing to replace "${realOutDir}": it contains a .git directory`,
 		);
 	}
+}
 
-	if (selection.mode === "custom") {
-		const base = new Set(customBaseFeatures());
-		const added = selection.features.filter(
-			(feature) => !base.has(feature.id),
-		).length;
-		log.step(
-			`custom selection: minimal 基座 + ${added} 附加 → ${selection.features.length} features`,
-		);
-	} else {
-		log.step(
-			`preset "${selection.name}" expands to ${selection.features.length} features`,
-		);
+function outroMessage(outDir: string): string {
+	const relOut = path.relative(process.cwd(), outDir) || ".";
+	const shown = relOut.startsWith("..") ? outDir : relOut;
+	return [
+		`Project ready in ${shown}`,
+		"",
+		"Next steps:",
+		`  cd ${shown}`,
+		"  cp apps/api/.dev.vars.example apps/api/.dev.vars",
+		"  bun run dev",
+		"",
+		"Selection saved to .create-app.json — see docs/本地开发.md",
+	].join("\n");
+}
+
+async function runInteractive(
+	options: CliOptions,
+	ui: PromptUi,
+): Promise<void> {
+	ui.intro(`create-react-hono-app v${packageVersion()}`);
+
+	const collected = await collectMissingInput(options, ui);
+	if (collected.status === "cancelled") {
+		ui.cancel("Generation cancelled — nothing was written.");
+		return;
 	}
-	log.info(selection.features.map((feature) => feature.id).join(", "));
 
-	log.step(`prepare ${outDir}`);
-	prepareOutDir(outDir, options.force);
+	const outDir = resolveOutDir(collected.dir, options.out);
+	const selection = resolveSelection(collected.selection);
+	assertSafeOutDir(outDir);
 
-	log.step("copy template tree");
-	const copied = copyTemplate(outDir);
-	log.info(
-		`${copied} paths copied (presets/, packages/create-app/, node_modules/, .git/ excluded)`,
+	ui.note(
+		buildSummary(collected.requestedFeatures, selection, outDir),
+		"Ready to generate",
 	);
+	const confirmed = await ui.confirm({ message: "Generate the project?" });
+	if (ui.isCancel(confirmed) || !confirmed) {
+		ui.cancel("Generation cancelled — nothing was written.");
+		return;
+	}
 
-	log.step("trim claims of disabled features");
-	const trimmed = trimClaims(outDir, selection);
-	log.info(`${trimmed.deleted} files removed`);
-
-	log.step("remove template-only files");
-	const templateOnly = deleteTemplateOnlyFiles(outDir, selection);
-	log.info(`${templateOnly} files removed`);
-
-	log.step("rewrite aggregation files");
-	rewriteAggregators(outDir, selection);
-	log.info(
-		"manifest.ts, routes.ts, registry.ts, i18n, shared index, schema exports, web-types, wrangler, .dev.vars.example, README, tests",
-	);
-
-	log.step("install workspace dependencies");
-	runOrThrow("bun", ["install"], outDir, "bun install");
-
-	// The generated project commits `routeTree.gen.ts`; always regenerate it
-	// (not only under --verify) so the output typechecks out of the box.
-	log.step("regenerate route tree");
-	runOrThrow(
-		"bunx",
-		["vite", "build"],
-		path.join(outDir, "apps/web"),
-		"web vite build (route tree)",
-	);
-
-	log.step("regenerate database baselines");
-	const baselines = generateBaselines(outDir, selection.enabled.has("search"));
-	log.info(`sqlite: ${baselines.sqlite.join(", ")}`);
-	log.info(`postgres: ${baselines.postgres.join(", ")}`);
-
-	log.step("format generated files");
-	runOrThrow(
-		"bunx",
-		["biome", "check", "--write", "."],
+	await generate({
 		outDir,
-		"biome check --write",
-	);
+		selection,
+		force: options.force,
+		verify: options.verify,
+	});
+	ui.outro(outroMessage(outDir));
+}
 
-	if (options.verify) {
-		log.step("self-check the generated project");
-		verifyOutput(outDir);
-		log.step("all verification steps passed");
-	}
+function runHeadless(options: CliOptions): Promise<void> {
+	const selection = resolveSelection(resolveSelectionInput(options));
+	const outDir = resolveOutDir(options.dir, options.out);
+	assertSafeOutDir(outDir);
+	return generate({
+		outDir,
+		selection,
+		force: options.force,
+		verify: options.verify,
+	});
+}
 
-	log.step("done");
-	log.info(`output: ${outDir}`);
-	if (selection.mode === "custom") {
-		log.info(`selection: custom (${selection.features.length} features)`);
+async function main(): Promise<void> {
+	const options = parseCli(process.argv);
+	if (!options) return; // --help / --version: cac already printed the output.
+	if (isInteractive(options)) {
+		await runInteractive(options, clackUi);
 	} else {
-		log.info(
-			`preset: ${selection.name} (${selection.features.length} features)`,
-		);
-	}
-	if (!options.verify) {
-		log.warn("run with --verify to execute the full quality gate");
+		await runHeadless(options);
 	}
 }
 
 try {
-	main();
+	await main();
 } catch (error) {
 	log.error(error instanceof Error ? error.message : String(error));
 	process.exit(1);

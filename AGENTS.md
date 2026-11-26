@@ -14,7 +14,7 @@ Package manager is **bun** (`packageManager: bun@1.4.2`, `bun.lock`). Do not use
 - `bun run format` — `biome format --write .`
 - `bun run typecheck` — turbo typecheck across all packages (web uses `tsc -b` project references and includes `tests` via `tsconfig.test.json`; others `tsc --noEmit`)
 - `bun run build` — turbo build (builds `web` only; api deploys from source, wrangler bundles it)
-- `bun run create-app [dir] --preset <name> | --features <a,b,...> [--out <dir>] [--verify] [--force]` — generate a trimmed project from `presets/`, either from a named preset (`minimal`/`collaboration`/`planning`/`saas`/`ai`/`full`) or from a custom feature list (minimal base + listed features, hard dependencies auto-included); `--verify` runs install + check + typecheck + build + test inside the output
+- `bun run create-app [dir] [--preset <name> | --features <a,b,...>] [--out <dir>] [--verify] [--force]` — interactive project generator (preset quick-starts or a custom feature picker on the locked minimal base, hard dependencies auto-included, clack prompts with a pre-flight confirm); with `--preset`/`--features` and a directory it runs fully non-interactive for CI. `--features` selects custom features on the minimal base; `--verify` runs install + check + typecheck + build + test inside the output; generated projects record their selection in `.create-app.json`.
 
 Single workspace: run the script from inside the app/package dir, or `bunx turbo dev --filter=api`.
 
@@ -131,6 +131,6 @@ Push to `main` auto-deploys via GitHub Actions (needs repo secrets `CLOUDFLARE_A
 - `deploy-api.yml` — triggers on `apps/api/**`, `packages/shared/**`, `bun.lock`, root `package.json`, `tsconfig.base.json`, or workflow changes; deploys source directly (wrangler bundles Hono, no build step). Shares a concurrency group with `configure-ai.yml`: an active run is not cancelled, but only one pending run is retained.
 - `deploy-web.yml` — triggers on `apps/web/**`, `packages/ui/**`, `packages/shared/**`, `apps/api/**` (web's `tsc -b` type-checks api source via the `@api/*` alias), `bun.lock`, root `package.json`, `tsconfig.base.json`, or workflow changes; builds with `VITE_API_URL=https://react-hono-api.poco-ai.workers.dev`, then deploys.
 - `configure-ai.yml` — manual workflow that applies remote D1 migrations, sets the AI provider secret and deploys the API. It calls the CI `quality` job first, so migrations never run on unchecked code.
-- `preset-matrix.yml` — on PRs/pushes that can affect generated output, generates `minimal`/`collaboration`/`planning`/`saas`/`ai` and runs the full quality gate inside each generated project; failures upload the generated tree.
+- `preset-matrix.yml` — on PRs/pushes that can affect generated output, generates `minimal`/`collaboration`/`planning`/`saas`/`ai` plus one `--features` custom combination and runs the full quality gate inside each generated project; failures upload the generated tree.
 
 Manual: `bun run deploy` inside the app dir; build Web with `VITE_API_URL` first for cross-origin hosting. For a new deployment, follow `docs/部署.md` to update the public API/Web URLs and `TRUSTED_ORIGINS` together.

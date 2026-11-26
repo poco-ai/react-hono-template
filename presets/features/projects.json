@@ -1,5 +1,7 @@
 {
 	"id": "projects",
+	"label": "Projects",
+	"description": "Project CRUD and per-project workspaces",
 	"tier": 1,
 	"dependsOn": ["core"],
 	"claims": [

@@ -1,5 +1,7 @@
 {
 	"id": "issues",
+	"label": "Issue tracker",
+	"description": "Issues with assignees, priorities, slugs and history",
 	"tier": 1,
 	"dependsOn": ["core", "projects", "labels", "statuses"],
 	"claims": [

@@ -1,3 +1,5 @@
+import * as p from "@clack/prompts";
+
 const started = Date.now();
 
 const elapsed = () => {
@@ -5,17 +7,22 @@ const elapsed = () => {
 	return `${seconds.toFixed(1)}s`;
 };
 
+/**
+ * Pipeline logging. clack's log renders the familiar framed lines and
+ * disables colors automatically when stdout is not a TTY, so CI output
+ * stays plain.
+ */
 export const log = {
 	step(message: string): void {
-		console.log(`\n[create-app ${elapsed()}] ${message}`);
+		p.log.step(`${message} (${elapsed()})`);
 	},
 	info(message: string): void {
-		console.log(`  - ${message}`);
+		p.log.info(message);
 	},
 	warn(message: string): void {
-		console.warn(`  ! ${message}`);
+		p.log.warn(message);
 	},
 	error(message: string): void {
-		console.error(`  x ${message}`);
+		p.log.error(message);
 	},
 };
