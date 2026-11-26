@@ -764,6 +764,11 @@ function rewriteAgentsDoc(outDir: string, preset: ResolvedSelection): void {
 		if (line.includes("presets/") || line.includes("packages/create-app")) {
 			return false;
 		}
+		// The create-app command itself is template-only; the generated
+		// project's package.json drops that script.
+		if (line.startsWith("- `bun run create-app")) {
+			return false;
+		}
 		if (line.includes("route-contributions.test.ts")) return false;
 		if (!preset.enabled.has("billing") && line.startsWith("- Billing:")) {
 			return false;
