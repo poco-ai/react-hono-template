@@ -8,7 +8,7 @@ import { createTestDb } from "./helpers/test-db";
 /**
  * Drift guard (Phase 2b): `routes.ts` is a static Hono chain (the only shape
  * that preserves `hc<AppType>` inference), while the feature modules declare
- * `routes` contributions as scaffold metadata. This test pins both views
+ * `routes` contributions as create-app CLI metadata. This test pins both views
  * together — every contributed sub-app path must be mounted by the static
  * chain, so regenerating the chain per preset cannot silently drop a route.
  */

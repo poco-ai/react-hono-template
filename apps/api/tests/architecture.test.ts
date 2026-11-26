@@ -65,7 +65,7 @@ const EXEMPT_PREFIXES = ["apps/api/src/db/"];
  * boundary purposes: the shared barrel re-exports every feature schema by
  * design in the full-form template repo and is split per feature in Phase 2,
  * and the web feature registry is the web mirror of `apps/api/src/manifest.ts`
- * (the scaffold rewrites it per preset, so it must import every `web.ts`).
+ * (the create-app CLI rewrites it per preset, so it must import every `web.ts`).
  */
 const BOUNDARY_EXEMPT_FILES = new Set([
 	"packages/shared/src/index.ts",
@@ -221,7 +221,7 @@ const allMatchableFiles = [
 
 /**
  * Coverage is enforced on the scan roots above. Claims additionally cover
- * scaffold-only surfaces (web routes/pages/components/i18n namespaces) that
+ * create-app-only surfaces (web routes/pages/components/i18n namespaces) that
  * Phase 6 deletes per preset; those are checked for existence here so a typo
  * cannot silently orphan a feature path. They stay out of `ownerOf` until the
  * preset matrix adds them to the scanned roots.

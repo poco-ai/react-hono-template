@@ -40,7 +40,7 @@ web contributions.
   `apps/api/src/core/lib/ports/` and resolved with `ctx.features.find(...)`
   (undefined ⇒ the integration degrades). Hard dependencies use
   `ctx.features.get(...)` and are guaranteed present by preset closure.
-- `presets/features/*.json` also drives the scaffold's regeneration list:
+- `presets/features/*.json` also drives the create-app CLI's regeneration list:
   `apps/api/src/manifest.ts`, `apps/api/src/routes.ts`,
   `apps/web/src/features/registry.ts`, the i18n aggregators,
   `packages/shared/src/index.ts`, the schema aggregators
@@ -88,4 +88,4 @@ preset must honour these implicit edges:
   better-auth factory in `core/lib/auth.ts`. `core/lib/auth.ts` imports the
   plugin from `@better-auth/mcp` and gates it on `mcp.enabled`, so trimming
   `mcp` only needs the generated `db/auth-schema.ts` exports rewritten (the
-  scaffold does this; no source patch).
+  create-app CLI does this; no source patch).

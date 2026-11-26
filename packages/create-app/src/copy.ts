@@ -13,7 +13,7 @@ const EXCLUDED_SEGMENTS = new Set([
 ]);
 
 const EXCLUDED_ROOT_DIRS = new Set(["presets"]);
-const EXCLUDED_PREFIXES = ["packages/scaffold"];
+const EXCLUDED_PREFIXES = ["packages/create-app"];
 const EXCLUDED_FILES = [".dev.vars", ".env"];
 
 export function prepareOutDir(outDir: string, force: boolean): void {

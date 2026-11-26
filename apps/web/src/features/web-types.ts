@@ -403,8 +403,8 @@ export type WebStorageLimits = {
 
 /**
  * What a feature contributes to the web shell. `features/<id>/web.ts` exports
- * one of these; `features/registry.ts` aggregates them. Scaffold (Phase 6)
- * rewrites the registry per preset, so trimming a feature also removes every
+ * one of these; `features/registry.ts` aggregates them. The create-app CLI
+ * (Phase 6) rewrites the registry per preset, so trimming a feature also removes every
  * contribution declared here.
  */
 export type WebFeatureDecl = {

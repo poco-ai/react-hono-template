@@ -202,7 +202,7 @@ test("endpoint extras resolve: mcp config, v1 app and endpoint factory", () => {
 
 test("a trimmed module list composes without the removed features", () => {
 	// The same combiner runs with a single feature: the search service
-	// resolves and its route contribution folds, proving the scaffold's
+	// resolves and its route contribution folds, proving the create-app CLI's
 	// trimming injection point works without core edits.
 	const { db } = createTestDb();
 	const probe = composeModules(

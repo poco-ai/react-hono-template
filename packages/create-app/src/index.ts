@@ -43,7 +43,7 @@ function parseArgs(argv: string[]): Options {
 }
 
 function usage(): string {
-	return `Usage: bun run scaffold --preset <${listPresets().join("|")}> --out <dir> [--verify] [--force]
+	return `Usage: bun run create-app --preset <${listPresets().join("|")}> --out <dir> [--verify] [--force]
 
   --preset, -p   preset name (${listPresets().join(", ")})
   --out, -o      output directory (empty or missing unless --force)
@@ -91,7 +91,7 @@ function main(): void {
 	log.step("copy template tree");
 	const copied = copyTemplate(outDir);
 	log.info(
-		`${copied} paths copied (presets/, packages/scaffold/, node_modules/, .git/ excluded)`,
+		`${copied} paths copied (presets/, packages/create-app/, node_modules/, .git/ excluded)`,
 	);
 
 	log.step("trim claims of disabled features");

@@ -41,9 +41,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Scaffold and verify
+      - name: Generate and verify
         run: >-
-          bun run scaffold
+          bun run create-app
           --preset ${{ matrix.preset }}
           --out "${{ runner.temp }}/generated-${{ matrix.preset }}"
           --verify

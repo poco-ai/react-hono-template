@@ -48,7 +48,7 @@ import { createWebhooksRoutes } from "./features/webhooks/routes/webhooks";
  * typed contract the web app consumes.
  *
  * The feature modules still declare `routes` contributions (see
- * `core/compose.ts`); those are the scaffold's route metadata and are
+ * `core/compose.ts`); those are the create-app CLI's route metadata and are
  * regenerated into this chain per preset. `tests/route-contributions.test.ts`
  * pins the two views together so they cannot drift.
  *

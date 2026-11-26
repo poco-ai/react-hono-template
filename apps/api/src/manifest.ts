@@ -24,8 +24,8 @@ import { viewsModule } from "./features/views/module";
 import { webhooksModule } from "./features/webhooks/module";
 
 /**
- * Feature manifest — the single injection point the scaffold (Phase 6)
- * rewrites per preset. The template repository always ships the full set.
+ * Feature manifest — the single injection point the create-app CLI
+ * (Phase 6) rewrites per preset. The template repository always ships the full set.
  *
  * ORDER MATTERS: modules register in this sequence, mirroring the
  * construction order of the former dependencies.ts so every service a

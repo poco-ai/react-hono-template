@@ -10,7 +10,7 @@
 		"test": "bun test apps/api/tests && bun run --cwd apps/web test",
 		"format": "biome format --write .",
 		"typecheck": "turbo typecheck",
-		"scaffold": "bun packages/scaffold/src/index.ts",
+		"create-app": "bun packages/create-app/src/index.ts",
 		"prepare": "husky"
 	},
 	"devDependencies": {

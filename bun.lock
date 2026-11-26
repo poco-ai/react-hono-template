@@ -94,8 +94,8 @@
         "wrangler": "^4.141.0",
       },
     },
-    "packages/scaffold": {
-      "name": "@workspace/scaffold",
+    "packages/create-app": {
+      "name": "@workspace/create-app",
       "version": "0.0.0",
       "dependencies": {
         "zod": "^4.6.5",
@@ -859,9 +859,9 @@
 
     "@workflow/serde": ["@workflow/serde@4.1.0", "", {}, "sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ=="],
 
-    "@workspace/presets": ["@workspace/presets@workspace:presets"],
+    "@workspace/create-app": ["@workspace/create-app@workspace:packages/create-app"],
 
-    "@workspace/scaffold": ["@workspace/scaffold@workspace:packages/scaffold"],
+    "@workspace/presets": ["@workspace/presets@workspace:presets"],
 
     "@workspace/shared": ["@workspace/shared@workspace:packages/shared"],
 

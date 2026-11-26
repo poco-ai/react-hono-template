@@ -18,7 +18,7 @@ import en from "../src/i18n/locales/en";
  * Phase 5 registry invariants (docs/模板化重构方案.md §9).
  *
  * The shell renders from `features/registry.ts`; these tests keep the
- * scaffold-facing declarations honest:
+ * create-app-facing declarations honest:
  * 1. every registered id exists in `presets/features/*.json`;
  * 2. every declared locale namespace has an en + zh file;
  * 3. every label key resolves in the en translation object;
@@ -273,7 +273,7 @@ test("mobile tabs keep the HEAD ids and order", () => {
 });
 
 test("trimming a feature removes its shell contributions", () => {
-	// The scaffold rewrites `features/registry.ts`; simulate the shape by
+	// The create-app CLI rewrites `features/registry.ts`; simulate the shape by
 	// keeping only issues + projects and asserting the contributions collapse
 	// to that subset (the shell order maps tolerate absent ids).
 	const trimmed = WEB_FEATURES.filter((feature) =>

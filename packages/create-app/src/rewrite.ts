@@ -752,7 +752,7 @@ function rewriteAgentsDoc(outDir: string, preset: ResolvedPreset): void {
 		!preset.enabled.has("ai"),
 	);
 	const lines = source.split("\n").filter((line) => {
-		if (line.includes("presets/") || line.includes("packages/scaffold")) {
+		if (line.includes("presets/") || line.includes("packages/create-app")) {
 			return false;
 		}
 		if (line.includes("route-contributions.test.ts")) return false;
@@ -809,7 +809,7 @@ function rewriteRootPackage(outDir: string): void {
 		scripts?: Record<string, string>;
 		workspaces?: string[];
 	};
-	if (parsed.scripts) delete parsed.scripts.scaffold;
+	if (parsed.scripts) delete parsed.scripts["create-app"];
 	if (parsed.workspaces) {
 		parsed.workspaces = parsed.workspaces.filter(
 			(entry) => entry !== "presets",

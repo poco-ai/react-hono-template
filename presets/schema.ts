@@ -5,7 +5,7 @@ import { z } from "zod";
  *
  * `presets/features/*.json` and `presets/presets/*.json` are validated
  * against these schemas by `apps/api/tests/architecture.test.ts`. The
- * scaffold CLI (Phase 6) becomes the real consumer later; until then the
+ * create-app CLI (Phase 6) becomes the real consumer later; until then the
  * JSON files are the single source of truth for feature ownership and the
  * dependency graph.
  */

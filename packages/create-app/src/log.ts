@@ -7,7 +7,7 @@ const elapsed = () => {
 
 export const log = {
 	step(message: string): void {
-		console.log(`\n[scaffold ${elapsed()}] ${message}`);
+		console.log(`\n[create-app ${elapsed()}] ${message}`);
 	},
 	info(message: string): void {
 		console.log(`  - ${message}`);

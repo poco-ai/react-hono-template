@@ -48,8 +48,8 @@ import type {
 import { webhooksWeb } from "./webhooks/web";
 
 /**
- * Web feature registry — the single injection point the scaffold (Phase 6)
- * rewrites per preset, mirroring `apps/api/src/manifest.ts`.
+ * Web feature registry — the single injection point the create-app CLI
+ * (Phase 6) rewrites per preset, mirroring `apps/api/src/manifest.ts`.
  *
  * The template repository always ships the full set. Features without a web
  * surface (`capabilities`, `public-api`, `search`) and
@@ -90,7 +90,7 @@ export const WEB_FEATURES: readonly WebFeatureDecl[] = [
  * Shell-owned render order. A contribution whose id is missing from its map
  * fails fast at startup so a new entry cannot silently disappear; ids that
  * are present in the map but not contributed are ignored, which is what a
- * scaffold-trimmed registry relies on.
+ * create-app-trimmed registry relies on.
  */
 const SIDEBAR_ORDER = [
 	"inbox",
