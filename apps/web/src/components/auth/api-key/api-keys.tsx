@@ -1,11 +1,9 @@
 // Adapted from Better Auth UI base-nova registry. Query/mutation policy stays in
 // features/api-keys/data.ts to preserve existing keys, revocation history and auth.
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent } from "@workspace/ui/components/card";
 import { ItemGroup, ItemSeparator } from "@workspace/ui/components/item";
-import { ExternalLink } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/empty-state";
@@ -15,6 +13,7 @@ import { apiKeysQuery } from "@/features/api-keys/data";
 import { membersQuery } from "@/features/members/data";
 import { useOrgFrozen } from "@/features/organizations/use-org-frozen";
 import { useOrgRole } from "@/features/organizations/use-org-role";
+import { webApiKeysDocsAction } from "@/features/registry";
 import { apiErrorMessage } from "@/lib/errors";
 import { pageCount } from "@/lib/pagination";
 import { ApiKey } from "./api-key";
@@ -38,6 +37,7 @@ export function ApiKeys({
 	const locked = frozen || !canManage;
 	const [createOpen, setCreateOpen] = useState(false);
 	const totalPages = keys.data ? pageCount(keys.data) : 1;
+	const ApiKeysDocsAction = webApiKeysDocsAction();
 	useEffect(() => {
 		if (keys.isSuccess && page > totalPages) onPageChange(totalPages);
 	}, [keys.isSuccess, page, totalPages, onPageChange]);
@@ -47,10 +47,7 @@ export function ApiKeys({
 				title={t("settings.apiKeys")}
 				actions={
 					<>
-						<Button variant="outline" render={<Link to="/api-docs" />}>
-							<ExternalLink />
-							{t("apiKeys.viewDocs")}
-						</Button>
+						{ApiKeysDocsAction ? <ApiKeysDocsAction /> : null}
 						<Button
 							disabled={locked || keys.isPending}
 							onClick={() => setCreateOpen(true)}

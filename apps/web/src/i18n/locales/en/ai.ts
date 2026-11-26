@@ -49,6 +49,8 @@ const ai = {
 		requests: "Requests",
 		toolCalls: "Tool calls",
 		limits: "{{plan}} plan",
+		planFree: "Free",
+		planPro: "Pro",
 	},
 	tools: {
 		title: "Tool activity",

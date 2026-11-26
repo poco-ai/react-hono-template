@@ -100,8 +100,8 @@ function AiUsageMeter() {
 									t("ai.usage.limits", {
 										plan: t(
 											data.limits.plan === "pro"
-												? "billing.planPro"
-												: "billing.planFree",
+												? "ai.usage.planPro"
+												: "ai.usage.planFree",
 										),
 									}),
 									providerLabel,

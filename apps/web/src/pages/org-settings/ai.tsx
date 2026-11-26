@@ -171,8 +171,8 @@ export function AiSettingsPage({ orgId }: { orgId: string }) {
 							<span className="text-foreground">
 								{t(
 									data.usage.limits.plan === "pro"
-										? "billing.planPro"
-										: "billing.planFree",
+										? "ai.usage.planPro"
+										: "ai.usage.planFree",
 								)}
 							</span>
 						</span>

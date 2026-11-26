@@ -365,6 +365,16 @@ export function webApiDocsAction(): WebFeatureDecl["apiDocsAction"] | null {
 	);
 }
 
+/** API keys settings header action; null when public-api is trimmed. */
+export function webApiKeysDocsAction():
+	| WebFeatureDecl["apiKeysDocsAction"]
+	| null {
+	return (
+		WEB_FEATURES.find((feature) => feature.apiKeysDocsAction)
+			?.apiKeysDocsAction ?? null
+	);
+}
+
 /** Attachment hooks for the comment composer; empty when attachments is trimmed. */
 export function webCommentExtras(): CommentAttachmentExtras {
 	const extras: CommentAttachmentExtras = {};

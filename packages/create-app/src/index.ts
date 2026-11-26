@@ -17,9 +17,9 @@ function isInteractive(options: CliOptions): boolean {
 	if (process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
 		return false;
 	}
+	const hasDir = options.dir !== undefined || options.out !== undefined;
 	return (
-		options.dir === undefined ||
-		(options.preset === undefined && options.features === undefined)
+		!hasDir || (options.preset === undefined && options.features === undefined)
 	);
 }
 
@@ -99,7 +99,15 @@ async function runInteractive(
 ): Promise<void> {
 	ui.intro(`create-react-hono-app v${packageVersion()}`);
 
-	const collected = await collectMissingInput(options, ui);
+	const collected = await collectMissingInput(
+		{
+			// `--out` satisfies the directory just like the positional does.
+			dir: options.dir ?? options.out,
+			preset: options.preset,
+			features: options.features,
+		},
+		ui,
+	);
 	if (collected.status === "cancelled") {
 		ui.cancel("Generation cancelled — nothing was written.");
 		return;

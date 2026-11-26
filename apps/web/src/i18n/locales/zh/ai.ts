@@ -48,6 +48,8 @@ const ai: typeof en.ai = {
 		requests: "请求数",
 		toolCalls: "工具调用",
 		limits: "{{plan}} 方案",
+		planFree: "Free",
+		planPro: "Pro",
 	},
 	tools: {
 		title: "工具活动",

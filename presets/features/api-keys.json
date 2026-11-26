@@ -4,6 +4,7 @@
 	"description": "Bearer keys for the public API",
 	"tier": 3,
 	"dependsOn": ["core"],
+	"softDependsOn": ["public-api"],
 	"claims": [
 		"apps/api/src/features/api-keys/**",
 		"apps/web/src/features/api-keys/**",

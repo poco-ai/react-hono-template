@@ -760,6 +760,14 @@ function rewriteAgentsDoc(outDir: string, preset: ResolvedSelection): void {
 	// The generated project has no packages/create-app: the template's test
 	// description mentions its selection tests, which do not exist there.
 	source = source.replaceAll("create-app selection-resolution, ", "");
+	if (!preset.enabled.has("ai")) {
+		// configure-ai.yml is trimmed with the feature; keep the deploy-api
+		// description but drop its stale concurrency-group sentence.
+		source = source.replaceAll(
+			" Shares a concurrency group with `configure-ai.yml`: an active run is not cancelled, but only one pending run is retained.",
+			"",
+		);
+	}
 	const lines = source.split("\n").filter((line) => {
 		if (line.includes("presets/") || line.includes("packages/create-app")) {
 			return false;
@@ -770,6 +778,12 @@ function rewriteAgentsDoc(outDir: string, preset: ResolvedSelection): void {
 			return false;
 		}
 		if (line.includes("route-contributions.test.ts")) return false;
+		// The generated project never ships the template-only CI matrix, and
+		// configure-ai.yml is deleted together with the ai feature.
+		if (line.startsWith("- `preset-matrix.yml`")) return false;
+		if (!preset.enabled.has("ai") && line.startsWith("- `configure-ai.yml`")) {
+			return false;
+		}
 		if (!preset.enabled.has("billing") && line.startsWith("- Billing:")) {
 			return false;
 		}
@@ -877,7 +891,16 @@ const TEST_REQUIREMENTS: Record<string, string[]> = {
 		"api-keys",
 	],
 	"apps/web/tests/feature-requests.test.ts": ["attachments", "webhooks"],
-	"apps/web/tests/command-palette-actions.test.ts": ["ai"],
+	// The palette expectations pin the full merged order, so the test needs
+	// every feature that contributes an entry (a custom selection can keep
+	// ai while trimming e.g. public-api, which drops the api-docs action).
+	"apps/web/tests/command-palette-actions.test.ts": [
+		"ai",
+		"api-keys",
+		"webhooks",
+		"billing",
+		"public-api",
+	],
 	"apps/web/tests/issue-route-state.test.ts": ["cycles"],
 };
 

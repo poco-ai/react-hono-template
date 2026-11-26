@@ -461,4 +461,6 @@ export type WebFeatureDecl = {
 	projectRowActions?: readonly WebOrderedComponent<ProjectRowContext>[];
 	/** API docs header action (manage API keys). */
 	apiDocsAction?: ComponentType<{ orgId: string }>;
+	/** API keys settings header action (view API docs); null when public-api is trimmed. */
+	apiKeysDocsAction?: ComponentType;
 };

@@ -18,7 +18,8 @@
 		"search",
 		"favorites",
 		"templates",
-		"recurrences"
+		"recurrences",
+		"api-keys"
 	],
 	"claims": ["apps/api/src/features/capabilities/**"]
 }
